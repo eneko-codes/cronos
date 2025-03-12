@@ -1,0 +1,43 @@
+<?php
+
+namespace App\Jobs;
+
+use App\Jobs\BaseSyncJob;
+use Exception;
+
+/**
+ * Class SyncSystempinAttendances
+ *
+ * Synchronizes Systempin attendances into the local database.
+ */
+class SyncSystempinAttendances extends BaseSyncJob
+{
+  /**
+   * The priority of the job in the queue.
+   *
+   * @var int
+   */
+  public int $priority = 2;
+
+  /**
+   * SyncSystempinAttendances constructor.
+   *
+   * @return void
+   */
+  public function __construct()
+  {
+    // Initialize any required properties or dependencies
+  }
+
+  /**
+   * Executes the synchronization process.
+   *
+   * @return void
+   *
+   * @throws Exception
+   */
+  protected function execute(): void
+  {
+    // Implement the synchronization logic here.
+  }
+}

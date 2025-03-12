@@ -1,0 +1,29 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+class CreateProjectsTable extends Migration
+{
+  /**
+   * Run the migrations.
+   */
+  public function up(): void
+  {
+    Schema::create('projects', function (Blueprint $table) {
+      $table->comment('Stores the projects fetched from ProofHub');
+      $table->unsignedBigInteger('proofhub_project_id')->primary(); // ProofHub project ID
+      $table->string('name');
+      $table->timestamps();
+    });
+  }
+
+  /**
+   * Reverse the migrations.
+   */
+  public function down(): void
+  {
+    Schema::dropIfExists('projects');
+  }
+}

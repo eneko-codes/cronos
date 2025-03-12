@@ -1,0 +1,85 @@
+<?php
+
+namespace App\Livewire;
+
+use App\Models\User;
+use Livewire\Attributes\On;
+use Livewire\Attributes\Title;
+use Livewire\Component;
+use Livewire\WithPagination;
+
+#[Title('Users')]
+class UsersTable extends Component
+{
+  use WithPagination;
+
+  public int $itemsPerPage = 30;
+  public string $search = '';
+  public string $filter = 'all';
+  public string $active = 'all';
+
+  public bool $isLoading = false;
+
+  protected $queryString = [
+    'search' => ['except' => ''],
+    'filter' => ['except' => 'all'],
+    'page' => ['except' => 1],
+  ];
+
+  #[On('updated:search')]
+  public function resetPageWhenSearchIsUpdated(): void
+  {
+    $this->resetPage();
+  }
+
+  public function setFilter(string $filter): void
+  {
+    $this->filter = $filter;
+    $this->active = $filter;
+    $this->resetPage();
+  }
+
+  public function redirectToUserPage(int $userId)
+  {
+    return redirect()->route('user.page', ['id' => $userId]);
+  }
+
+  public function render()
+  {
+    $users = User::query()
+      ->when($this->search, function ($query) {
+        $query->where('name', 'like', '%' . $this->search . '%');
+      })
+      ->when(
+        $this->filter === 'admins',
+        fn($query) => $query->where('is_admin', true)
+      )
+      ->when(
+        $this->filter === 'employees',
+        fn($query) => $query->where('is_admin', false)
+      )
+      ->when(
+        $this->filter === 'not-tracked',
+        fn($query) => $query->where('do_not_track', true)
+      )
+      ->when(
+        $this->filter === 'muted',
+        fn($query) => $query->where('muted_notifications', true)
+      )
+      ->orderBy('name')
+      ->paginate($this->itemsPerPage);
+
+    $counts = [
+      'all' => User::count(),
+      'admins' => User::where('is_admin', true)->count(),
+      'employees' => User::where('is_admin', false)->count(),
+      'not_tracked' => User::where('do_not_track', true)->count(),
+      'muted' => User::where('muted_notifications', true)->count(),
+    ];
+
+    return view('livewire.users-table', [
+      'users' => $users,
+      'counts' => $counts,
+    ]);
+  }
+}

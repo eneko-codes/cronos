@@ -3,6 +3,7 @@
 namespace App\Livewire\Alerts;
 
 use App\Models\Alert;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
@@ -27,7 +28,7 @@ class AlertsToggle extends Component
         Alert::syncUnreadNotifications();
         
         return Alert::active()
-            ->visibleTo(auth()->user())
+            ->visibleTo(Auth::user())
             ->count();
     }
 

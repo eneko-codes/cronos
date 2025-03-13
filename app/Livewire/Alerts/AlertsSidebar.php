@@ -4,6 +4,7 @@ namespace App\Livewire\Alerts;
 
 use App\Models\Alert;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -72,7 +73,7 @@ class AlertsSidebar extends Component
         
         // Get active alerts visible to the current user
         $alerts = Alert::active()
-            ->visibleTo(auth()->user())
+            ->visibleTo(Auth::user())
             ->latest() // Most recent first
             ->get();
             
@@ -94,7 +95,7 @@ class AlertsSidebar extends Component
     {
         // Get resolved alerts visible to the current user
         $alerts = Alert::where('resolved', true)
-            ->visibleTo(auth()->user())
+            ->visibleTo(Auth::user())
             ->latest() // Most recent first
             ->limit(50) // Limit to prevent overwhelming the UI
             ->get();
@@ -119,7 +120,7 @@ class AlertsSidebar extends Component
         Alert::syncUnreadNotifications();
         
         return Alert::active()
-            ->visibleTo(auth()->user())
+            ->visibleTo(Auth::user())
             ->exists();
     }
 
@@ -132,7 +133,7 @@ class AlertsSidebar extends Component
     public function hasResolvedAlerts(): bool
     {
         return Alert::where('resolved', true)
-            ->visibleTo(auth()->user())
+            ->visibleTo(Auth::user())
             ->exists();
     }
 
@@ -148,7 +149,7 @@ class AlertsSidebar extends Component
         Alert::syncUnreadNotifications();
         
         return Alert::active()
-            ->visibleTo(auth()->user())
+            ->visibleTo(Auth::user())
             ->count();
     }
 
@@ -161,7 +162,7 @@ class AlertsSidebar extends Component
     public function resolvedAlertCount(): int
     {
         return Alert::where('resolved', true)
-            ->visibleTo(auth()->user())
+            ->visibleTo(Auth::user())
             ->count();
     }
 
@@ -172,12 +173,12 @@ class AlertsSidebar extends Component
     {
         // Get all matching alerts as models
         $alerts = Alert::active()
-            ->visibleTo(auth()->user())
+            ->visibleTo(Auth::user())
             ->get();
             
         // Handle each alert individually to avoid collection operations on models
         foreach ($alerts as $alert) {
-            $alert->resolve(auth()->user());
+            $alert->resolve(Auth::user());
         }
             
         // Refresh the component
@@ -194,8 +195,8 @@ class AlertsSidebar extends Component
         // Find the single alert model by ID
         $alert = Alert::find($alertId);
         
-        if ($alert && Alert::visibleTo(auth()->user())->where('id', $alertId)->exists()) {
-            $alert->resolve(auth()->user());
+        if ($alert && Alert::visibleTo(Auth::user())->where('id', $alertId)->exists()) {
+            $alert->resolve(Auth::user());
             
             // Refresh the component
             $this->dispatch('alerts-updated');

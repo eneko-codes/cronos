@@ -10,6 +10,7 @@ use App\Jobs\{
   SyncOdooDepartments,
   SyncOdooCategories,
   SyncProofhubProjects,
+  SyncProofhubTasks,
   SyncProofhubTimeEntries,
   SyncProofhubUsers
 };
@@ -42,6 +43,7 @@ $jobs = [
   // Data jobs after user info is synced
   SyncOdooSchedules::class,
   SyncProofhubProjects::class,
+  SyncProofhubTasks::class,
   SyncOdooLeaves::class,
   SyncProofhubTimeEntries::class,
   SyncDesktimeAttendances::class,

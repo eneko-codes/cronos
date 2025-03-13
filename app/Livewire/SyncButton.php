@@ -7,6 +7,9 @@ use App\Jobs\SyncDesktimeUsers;
 use App\Jobs\SyncOdooLeaves;
 use App\Jobs\SyncOdooSchedules;
 use App\Jobs\SyncOdooUsers;
+use App\Jobs\SyncProofhubProjects;
+use App\Jobs\SyncProofhubTasks;
+use App\Jobs\SyncProofhubTimeEntries;
 use App\Jobs\SyncProofhubUsers;
 use App\Models\JobBatch;
 use App\Services\DesktimeApiCalls;
@@ -56,6 +59,9 @@ class SyncButton extends Component
         new SyncOdooSchedules($odooService),
         new SyncDesktimeAttendances($desktimeService),
         new SyncOdooLeaves($odooService),
+        new SyncProofhubProjects($proofhubService),
+        new SyncProofhubTasks($proofhubService),
+        new SyncProofhubTimeEntries($proofhubService),
       ];
 
       $this->total_jobs = count($jobs);

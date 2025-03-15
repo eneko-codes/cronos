@@ -83,9 +83,6 @@ class UserDetailsModal extends Component
 
   protected function prepareDetails($user): void
   {
-    // Retrieve the timezone from the session or default to 'Europe/Madrid'
-    $timezone = session('timezone', 'Europe/Madrid');
-
     $this->name = $user->name ?? '-';
     $this->email = $user->email ?? '-';
     $this->odooId = $user->odoo_id ?? '-';
@@ -93,10 +90,10 @@ class UserDetailsModal extends Component
     $this->desktimeId = $user->desktime_id ?? '-';
     $this->systempinId = $user->systempin_id ?? '-';
     $this->createdAt = $user->created_at
-      ? $user->created_at->setTimezone($timezone)->diffForHumans()
+      ? $user->created_at->diffForHumans()
       : '-';
     $this->updatedAt = $user->updated_at
-      ? $user->updated_at->setTimezone($timezone)->diffForHumans()
+      ? $user->updated_at->diffForHumans()
       : '-';
     $this->isAdmin = $user->is_admin;
     $this->isDoNotTrack = $user->do_not_track;
@@ -104,7 +101,6 @@ class UserDetailsModal extends Component
 
     $this->details = [
       'Email' => $this->email,
-      'Timezone' => $user->timezone ?? 'Europe/Madrid',
       'Odoo ID' => $this->odooId,
       'Proofhub ID' => $this->proofhubId,
       'Desktime ID' => $this->desktimeId,

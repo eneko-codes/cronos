@@ -73,11 +73,11 @@
 
             <h2 class="text-sm font-semibold">
               @php
-                $tz = session('timezone', 'UTC');
-                $carbonDate = \Carbon\Carbon::parse($currentDate, 'UTC')->setTimezone($tz);
+                // Simplified - use UTC directly without timezone conversion
+                $carbonDate = \Carbon\Carbon::parse($currentDate, 'UTC');
               @endphp
 
-              Week of {{ $carbonDate->format('F d, Y') }}
+              Week of {{ $carbonDate->format('F d, Y') }} (UTC)
             </h2>
 
             <button
@@ -204,7 +204,61 @@
                 <!-- Worked -->
                 <td class="px-4 py-2">
                   <div class="flex flex-col gap-1">
-                    <span>{{ $day['worked']['duration'] }}</span>
+                    <x-tooltip>
+                      <x-slot name="text">
+                        <div class="flex flex-col gap-2 max-w-xs">
+                          <span class="font-semibold text-sm border-b pb-1 mb-1">Time Entries</span>
+                          @if(isset($day['worked']['detailed_entries']) && count($day['worked']['detailed_entries']) > 0)
+                            @foreach ($day['worked']['detailed_entries'] as $entry)
+                              <div class="flex flex-col border-b border-gray-200 dark:border-gray-600 pb-1 mb-1 last:border-b-0">
+                                <div class="flex items-center justify-between">
+                                  <span class="text-xs font-semibold text-gray-600 dark:text-gray-200">
+                                    {{ $entry['project'] }}
+                                  </span>
+                                  <span class="text-xs">{{ $entry['duration'] }}</span>
+                                </div>
+                                @if (isset($entry['task']) && $entry['task'])
+                                  <span class="text-xs text-gray-500 dark:text-gray-300 ml-2">
+                                    Task: {{ $entry['task'] }}
+                                  </span>
+                                @endif
+                                @if (isset($entry['description']) && $entry['description'])
+                                  <span class="text-xs text-gray-500 dark:text-gray-300 ml-2">
+                                    "{{ Str::limit($entry['description'], 100) }}"
+                                  </span>
+                                @endif
+                                @if(isset($entry['status']) && $entry['status'] && $entry['status'] !== 'none')
+                                  <span class="text-xs text-gray-500 dark:text-gray-300 ml-2">
+                                    Status: {{ ucfirst($entry['status']) }}
+                                  </span>
+                                @endif
+                              </div>
+                            @endforeach
+                          @else
+                            <div class="flex flex-col">
+                              @foreach ($day['worked']['projects'] as $project)
+                                <div class="mb-2">
+                                  <span class="text-xs font-semibold text-gray-600 dark:text-gray-200">
+                                    {{ $project['name'] }}
+                                  </span>
+                                  @if (! empty($project['tasks']))
+                                    <div class="ml-2 text-xs text-gray-500 dark:text-gray-300">
+                                      Tasks: {{ implode(', ', $project['tasks']) }}
+                                    </div>
+                                  @endif
+                                </div>
+                              @endforeach
+                              @if(count($day['worked']['projects']) === 0)
+                                <span class="text-xs text-gray-500 dark:text-gray-300">
+                                  No detailed time entries available
+                                </span>
+                              @endif
+                            </div>
+                          @endif
+                        </div>
+                      </x-slot>
+                      <span>{{ $day['worked']['duration'] }}</span>
+                    </x-tooltip>
                     @foreach ($day['worked']['projects'] as $project)
                       <div class="text-xs text-gray-500">
                         {{ $project['name'] }}

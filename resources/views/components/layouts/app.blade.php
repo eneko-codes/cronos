@@ -6,15 +6,6 @@
     <title>{{ $title ?? 'Page Title' }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
-    <script>
-      document.addEventListener('livewire:init', () => {
-        Livewire.on('timezone-changed', ({ timezone }) => {
-          document
-            .querySelectorAll('[data-timezone-display]')
-            .forEach((el) => (el.textContent = timezone));
-        });
-      });
-    </script>
   </head>
   <body
     x-data="{
@@ -67,37 +58,9 @@
                     </div>
                   </x-slot>
 
-                  <div class="space-y-2">
-                    <div class="flex flex-col">
-                      <div class="flex flex-col">
-                        <div class="flex flex-row items-center gap-1">
-                          <span
-                            class="text-xs font-bold text-gray-700 dark:text-gray-200"
-                          >
-                            Your timezone
-                          </span>
-                          <x-tooltip
-                            text="The default timezone is fetched from your Odoo employee data. Changes are stored in your session."
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke-width="1.5"
-                              stroke="currentColor"
-                              class="size-3"
-                            >
-                              <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-                              />
-                            </svg>
-                          </x-tooltip>
-                        </div>
-                        <livewire:timezone-selector />
-                      </div>
-                    </div>
+                  <div class="flex flex-col gap-2">
+                    <!-- Last Synced Component -->
+                      @livewire('last-synced')
 
                     <form
                       action="{{ route('logout') }}"
@@ -187,40 +150,15 @@
                   <!-- User profile info -->
                   <div class="flex flex-col items-start gap-3">
                     <div class="flex flex-col">
-                      <span class="text-xs font-semibold">
-                        {{ Auth::user()->name }}
-                      </span>
-                      <span class="text-xs text-gray-500 dark:text-gray-400">
+                      <span class="font-semibold">{{ Auth::user()->name }}</span>
+                      <span class="text-sm text-gray-500 dark:text-gray-400">
                         {{ Auth::user()->email }}
                       </span>
                     </div>
-                    <div class="flex flex-col">
-                      <div class="flex flex-row items-center gap-1">
-                        <span
-                          class="text-xs font-bold text-gray-700 dark:text-gray-200"
-                        >
-                          Your timezone
-                        </span>
-                        <x-tooltip
-                          text="The default timezone is fetched from your Odoo employee data. Changes are stored in your session."
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke-width="1.5"
-                            stroke="currentColor"
-                            class="size-3"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-                            />
-                          </svg>
-                        </x-tooltip>
-                      </div>
-                      <livewire:timezone-selector />
+                    
+                    <!-- Last Synced Component (Mobile) -->
+                    <div class="w-full border-b border-gray-200 py-2 dark:border-gray-700">
+                      @livewire('last-synced')
                     </div>
                   </div>
                   <!-- logout form -->

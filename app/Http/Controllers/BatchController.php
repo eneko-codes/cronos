@@ -12,6 +12,8 @@ use App\Jobs\SyncOdooLeaves;
 use App\Jobs\SyncProofhubProjects;
 use App\Jobs\SyncProofhubTasks;
 use App\Jobs\SyncProofhubTimeEntries;
+use App\Jobs\SyncOdooLeaveTypes;
+use App\Jobs\SyncDesktimeAttendances;
 use App\Services\OdooApiCalls;
 use App\Services\DesktimeApiCalls;
 use App\Services\ProofhubApiCalls;
@@ -23,83 +25,174 @@ use Throwable;
 
 class BatchController extends Controller
 {
-  public function dispatchUserDetailsBatch(): JsonResponse
+  /**
+   * Dispatch a consolidated batch of all synchronization jobs.
+   *
+   * @return JsonResponse
+   */
+  public function dispatchFullSyncBatch(): JsonResponse
   {
-    // This batch has no jobs that use date ranges
+    // We'll pass "today" to jobs that need date ranges
+    $today = now()->format('Y-m-d');
+
     $batch = Bus::batch([
+      // User details (metadata)
       new SyncOdooUsers(app(OdooApiCalls::class)),
       new SyncOdooDepartments(app(OdooApiCalls::class)),
       new SyncOdooCategories(app(OdooApiCalls::class)),
+      new SyncOdooLeaveTypes(app(OdooApiCalls::class)),
       new SyncDesktimeUsers(app(DesktimeApiCalls::class)),
       new SyncProofhubUsers(app(ProofhubApiCalls::class)),
+      
+      // Activity data
+      new SyncOdooSchedules(app(OdooApiCalls::class)),
+      new SyncOdooLeaves(app(OdooApiCalls::class), $today, $today),
+      new SyncProofhubProjects(app(ProofhubApiCalls::class)),
+      new SyncProofhubTasks(app(ProofhubApiCalls::class)),
+      new SyncProofhubTimeEntries(app(ProofhubApiCalls::class), $today, $today),
+      new SyncDesktimeAttendances(app(DesktimeApiCalls::class))
     ])
-      ->name('sync-user-details')
+      ->name('full-sync')
       ->then(function (Batch $batch) {
-        Log::info(
-          'User details synchronization batch completed successfully.',
-          ['batch_id' => $batch->id]
-        );
+        Log::info('Full synchronization batch completed successfully.', [
+          'batch_id' => $batch->id,
+        ]);
       })
       ->catch(function (Batch $batch, Throwable $e) {
-        Log::error('User details synchronization batch failed.', [
+        Log::error('Full synchronization batch failed.', [
           'batch_id' => $batch->id,
           'error' => $e->getMessage(),
         ]);
       })
       ->finally(function (Batch $batch) {
-        Log::info('User details synchronization batch has finished.', [
+        Log::info('Full synchronization batch has finished.', [
           'batch_id' => $batch->id,
         ]);
       })
       ->dispatch();
 
     return response()->json([
-      'message' =>
-        'User details synchronization batch dispatched successfully.',
+      'message' => 'Full synchronization batch dispatched successfully.',
       'batch_id' => $batch->id,
     ]);
   }
 
-  public function dispatchUserDataBatch(): JsonResponse
+  /**
+   * Dispatch a batch of Odoo synchronization jobs.
+   *
+   * @return JsonResponse
+   */
+  public function dispatchOdooBatch(): JsonResponse
   {
-    // We'll pass "today" to Odoo leaves and ProofHub time entries
+    // We'll pass "today" to jobs that need date ranges
     $today = now()->format('Y-m-d');
 
     $batch = Bus::batch([
-      // Schedules fetch all, no date logic
+      new SyncOdooUsers(app(OdooApiCalls::class)),
+      new SyncOdooDepartments(app(OdooApiCalls::class)),
+      new SyncOdooCategories(app(OdooApiCalls::class)),
+      new SyncOdooLeaveTypes(app(OdooApiCalls::class)),
       new SyncOdooSchedules(app(OdooApiCalls::class)),
-
-      // Leaves => only fetch leaves overlapping today's date
       new SyncOdooLeaves(app(OdooApiCalls::class), $today, $today),
-
-      // Projects & tasks always fetch everything
-      new SyncProofhubProjects(app(ProofhubApiCalls::class)),
-      new SyncProofhubTasks(app(ProofhubApiCalls::class)),
-
-      // Time entries => only fetch today's entries
-      new SyncProofhubTimeEntries(app(ProofhubApiCalls::class), $today, $today),
     ])
-      ->name('sync-user-data')
+      ->name('odoo-sync')
       ->then(function (Batch $batch) {
-        Log::info('User data synchronization batch completed successfully.', [
+        Log::info('Odoo synchronization batch completed successfully.', [
           'batch_id' => $batch->id,
         ]);
       })
       ->catch(function (Batch $batch, Throwable $e) {
-        Log::error('User data synchronization batch failed.', [
+        Log::error('Odoo synchronization batch failed.', [
           'batch_id' => $batch->id,
           'error' => $e->getMessage(),
         ]);
       })
       ->finally(function (Batch $batch) {
-        Log::info('User data synchronization batch has finished.', [
+        Log::info('Odoo synchronization batch has finished.', [
           'batch_id' => $batch->id,
         ]);
       })
       ->dispatch();
 
     return response()->json([
-      'message' => 'User data synchronization batch dispatched successfully.',
+      'message' => 'Odoo synchronization batch dispatched successfully.',
+      'batch_id' => $batch->id,
+    ]);
+  }
+
+  /**
+   * Dispatch a batch of ProofHub synchronization jobs.
+   *
+   * @return JsonResponse
+   */
+  public function dispatchProofhubBatch(): JsonResponse
+  {
+    // We'll pass "today" to jobs that need date ranges
+    $today = now()->format('Y-m-d');
+
+    $batch = Bus::batch([
+      new SyncProofhubUsers(app(ProofhubApiCalls::class)),
+      new SyncProofhubProjects(app(ProofhubApiCalls::class)),
+      new SyncProofhubTasks(app(ProofhubApiCalls::class)),
+      new SyncProofhubTimeEntries(app(ProofhubApiCalls::class), $today, $today),
+    ])
+      ->name('proofhub-sync')
+      ->then(function (Batch $batch) {
+        Log::info('ProofHub synchronization batch completed successfully.', [
+          'batch_id' => $batch->id,
+        ]);
+      })
+      ->catch(function (Batch $batch, Throwable $e) {
+        Log::error('ProofHub synchronization batch failed.', [
+          'batch_id' => $batch->id,
+          'error' => $e->getMessage(),
+        ]);
+      })
+      ->finally(function (Batch $batch) {
+        Log::info('ProofHub synchronization batch has finished.', [
+          'batch_id' => $batch->id,
+        ]);
+      })
+      ->dispatch();
+
+    return response()->json([
+      'message' => 'ProofHub synchronization batch dispatched successfully.',
+      'batch_id' => $batch->id,
+    ]);
+  }
+
+  /**
+   * Dispatch a batch of DeskTime synchronization jobs.
+   *
+   * @return JsonResponse
+   */
+  public function dispatchDesktimeBatch(): JsonResponse
+  {
+    $batch = Bus::batch([
+      new SyncDesktimeUsers(app(DesktimeApiCalls::class)),
+      new SyncDesktimeAttendances(app(DesktimeApiCalls::class)),
+    ])
+      ->name('desktime-sync')
+      ->then(function (Batch $batch) {
+        Log::info('DeskTime synchronization batch completed successfully.', [
+          'batch_id' => $batch->id,
+        ]);
+      })
+      ->catch(function (Batch $batch, Throwable $e) {
+        Log::error('DeskTime synchronization batch failed.', [
+          'batch_id' => $batch->id,
+          'error' => $e->getMessage(),
+        ]);
+      })
+      ->finally(function (Batch $batch) {
+        Log::info('DeskTime synchronization batch has finished.', [
+          'batch_id' => $batch->id,
+        ]);
+      })
+      ->dispatch();
+
+    return response()->json([
+      'message' => 'DeskTime synchronization batch dispatched successfully.',
       'batch_id' => $batch->id,
     ]);
   }

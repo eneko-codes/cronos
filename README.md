@@ -73,3 +73,186 @@ For the web app to work, you will need to install a queue manager such as Superv
 > `php artisan config:clear` > `php artisan cache:clear`
 
 ---
+
+## 🔄 Data Synchronization
+
+The application provides a unified command to synchronize data from external platforms (Odoo, ProofHub, Desktime).
+
+### Data Types Synchronized
+
+- **Odoo**:
+  - Users
+  - Departments
+  - Categories
+  - Leave Types
+  - Schedules
+  - Leaves
+
+- **ProofHub**:
+  - Users
+  - Projects
+  - Tasks
+  - Time Entries
+
+- **DeskTime**:
+  - Users
+  - Attendances
+
+### Sync Command Usage
+
+```bash
+php artisan sync {platform} {type} [options]
+```
+
+Where:
+- `platform`: The platform to sync (odoo, proofhub, desktime, all)
+- `type`: Optional data type to sync within that platform
+- `options`: Additional parameters like date ranges
+
+### Examples
+
+#### Sync All Data
+
+```bash
+# Sync all data from all platforms
+php artisan sync all
+
+# Sync all data from a specific platform
+php artisan sync odoo
+php artisan sync proofhub
+php artisan sync desktime
+```
+
+#### Sync Specific Data Types
+
+```bash
+# Sync specific Odoo data
+php artisan sync odoo users
+php artisan sync odoo departments
+php artisan sync odoo categories
+php artisan sync odoo schedules
+php artisan sync odoo leave-types
+php artisan sync odoo leaves
+
+# Sync specific ProofHub data
+php artisan sync proofhub users
+php artisan sync proofhub projects
+php artisan sync proofhub tasks
+php artisan sync proofhub time-entries
+
+# Sync specific DeskTime data
+php artisan sync desktime users
+php artisan sync desktime attendances
+```
+
+#### Using Date Ranges and Other Options
+
+```bash
+# Sync with date range
+php artisan sync odoo leaves --from=2023-01-01 --to=2023-12-31
+php artisan sync proofhub time-entries --from=2023-01-01
+
+# Sync with user filter
+php artisan sync desktime attendances --user-id=123 --from=2023-01-01
+```
+
+### Help Information
+
+To see available options and data types:
+
+```bash
+# Show general help
+php artisan sync
+
+# Show platform-specific help
+php artisan sync odoo
+php artisan sync proofhub
+php artisan sync desktime
+```
+
+### Scheduled Synchronization
+
+Cronos uses Laravel's scheduler to automatically sync data on a configurable schedule.
+
+#### Configuration
+
+The sync frequency is configured in the database using the `job_frequencies` table. The current setting can be viewed with:
+
+```bash
+php artisan tinker --execute="App\Models\JobFrequency::first()"
+```
+
+Available frequencies include:
+- `never` - Jobs won't run
+- `everyMinute` - Every minute
+- `everyFiveMinutes` - Every 5 minutes
+- `everyFifteenMinutes` - Every 15 minutes
+- `everyThirtyMinutes` - Every 30 minutes
+- `hourly` - Every hour (default)
+- `daily` - Once per day at midnight
+
+To update the frequency:
+
+```bash
+php artisan tinker --execute="App\Models\JobFrequency::first()->update(['frequency' => 'hourly'])"
+```
+
+#### How It Works
+
+1. The Laravel scheduler (`php artisan schedule:run`) runs every minute via cron
+2. It checks what jobs are scheduled to run
+3. When it's time, it runs the sync command
+4. This creates a batch containing all sync jobs
+5. The batched jobs are processed by the queue worker
+
+### Queue Management
+
+#### Starting the Queue Worker
+
+```bash
+php artisan queue:work
+```
+
+#### Checking Job Status
+
+To view active jobs:
+```bash
+php artisan queue:monitor
+```
+
+To view failed jobs:
+```bash
+php artisan queue:failed
+```
+
+### Troubleshooting
+
+#### Common Issues
+
+- **"No scheduled commands are ready to run"**: This means the scheduler ran successfully but no commands were due to run at that moment. This is normal.
+
+- **"Failed to schedule sync batch"**: Check the logs in `storage/logs/laravel-*.log` for detailed error messages. Common causes include:
+  - Database connection issues
+  - Missing API credentials
+  - API rate limits
+
+#### Reset Procedure
+
+If you need to start fresh:
+
+1. Clear the queue:
+```bash
+php artisan queue:clear
+```
+
+2. Clear failed jobs:
+```bash
+php artisan queue:flush
+```
+
+3. Run a manual sync:
+```bash
+php artisan sync all
+```
+
+---

@@ -17,7 +17,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -65,10 +64,7 @@ abstract class BaseSyncJob implements ShouldQueue, ShouldBeEncrypted
   {
     try {
       $this->execute();
-      $this->invalidateAllCache();
-      $this->logSuccess();
     } catch (Exception $e) {
-      $this->logFailure($e);
       throw $e; // rethrow so Laravel's retry/fail logic triggers
     }
   }
@@ -87,29 +83,6 @@ abstract class BaseSyncJob implements ShouldQueue, ShouldBeEncrypted
   {
     // Check API health once the job is truly marked as "failed"
     $this->checkApisHealth();
-  }
-
-  /**
-   * Flushes the entire cache upon success.
-   */
-  protected function invalidateAllCache(): void
-  {
-    Cache::flush();
-    Log::info(static::class . ': Flushed all cache entries.');
-  }
-
-  protected function logSuccess(): void
-  {
-    Log::info(static::class . ' completed successfully.');
-  }
-
-  protected function logFailure(Exception $e): void
-  {
-    Log::error(static::class . ' failed.', [
-      'job_id' => $this->job?->getJobId(),
-      'error' => $e->getMessage(),
-      'trace' => $e->getTraceAsString(),
-    ]);
   }
 
   /**

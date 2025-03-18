@@ -254,8 +254,11 @@ class SyncOdooSchedules extends BaseSyncJob
     $userAssignments = $odooEmployees->filter()->mapWithKeys(function ($emp) {
       return [$emp['id'] => $emp['resource_calendar_id'][0] ?? null];
     });
+    
+    // Get start of the current day in UTC
+    $startOfDay = Carbon::now()->startOfDay();
 
-    $userAssignments->each(function ($newOdooScheduleId, $odooUserId) {
+    $userAssignments->each(function ($newOdooScheduleId, $odooUserId) use ($startOfDay) {
       $user = User::where('odoo_id', $odooUserId)
         ->where('do_not_track', false)
         ->first();
@@ -273,7 +276,7 @@ class SyncOdooSchedules extends BaseSyncJob
       // If no new schedule, close out the old
       if (!$newOdooScheduleId) {
         if ($activeSchedule) {
-          $activeSchedule->update(['effective_until' => now()]);
+          $activeSchedule->update(['effective_until' => $startOfDay]);
         }
         return;
       }
@@ -293,13 +296,13 @@ class SyncOdooSchedules extends BaseSyncJob
 
       // Close old schedule
       if ($activeSchedule) {
-        $activeSchedule->update(['effective_until' => now()]);
+        $activeSchedule->update(['effective_until' => $startOfDay]);
       }
 
       // Create new schedule assignment
       $user->userSchedules()->create([
         'odoo_schedule_id' => $newOdooScheduleId,
-        'effective_from' => now(),
+        'effective_from' => $startOfDay,
         'effective_until' => null,
       ]);
     });

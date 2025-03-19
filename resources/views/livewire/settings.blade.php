@@ -184,7 +184,7 @@
             </select>
           </div>
         </div>
-        <div class="mt-4 flex justify-end pt-4">
+        <div class="mt-4 flex justify-end ">
           <x-button
             wire:target="updateFrequencies"
             type="submit"
@@ -515,7 +515,7 @@
           </label>
         </div>
 
-        <div class="mt-4 flex justify-end pt-4">
+        <div class="mt-4 flex justify-end ">
           <x-button
             wire:target="updateNotificationToggles"
             type="submit"
@@ -557,18 +557,14 @@
           </div>
           <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
             Configure automatic deletion of old time-related user data.
-            <span class="mt-2 block text-sm text-amber-600 dark:text-amber-400">
-              Note: This will only delete time data (entries, attendances,
-              schedules, leaves), not user accounts.
-            </span>
           </p>
         </div>
 
         <!-- Single data retention period selector -->
         <div class="mt-4">
           <div class="flex items-center justify-between">
-            <label class="text-sm font-medium text-gray-600 dark:text-gray-300">
-              Retain time-related data for:
+            <label class="flex flex-row items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300">
+              Retain time-related data for
               <x-tooltip>
                 <x-slot name="text">
                   Select how long to keep time entries, user attendances,
@@ -616,24 +612,7 @@
             </ul>
           </div>
         </div>
-
-        <div class="mt-6 flex items-center justify-between pt-4">
-          <x-button
-            wire:click="runDataRetention"
-            wire:target="runDataRetention"
-            type="button"
-            size="md"
-            variant="secondary"
-            disabled="{{ $globalRetentionPeriod == 0 ? true : false }}"
-          >
-            <span>Run Cleanup Now</span>
-            <x-spinner
-              size="4"
-              wire:loading.delay
-              wire:target="runDataRetention"
-            />
-          </x-button>
-
+        <div class="mt-4 flex justify-end">
           <x-button
             wire:target="updateDataRetentionSettings"
             type="submit"

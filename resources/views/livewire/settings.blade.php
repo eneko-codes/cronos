@@ -152,81 +152,11 @@
             <label
               class="inline-flex flex-row items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300"
             >
-              Daily Data Synchronization
+              Data Synchronization Frequency
               <x-tooltip>
                 <x-slot name="text">
-                  Runs a complete data synchronization process from all
-                  connected services to update local database
-                </x-slot>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                  stroke="currentColor"
-                  class="size-3"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-                  />
-                </svg>
-              </x-tooltip>
-            </label>
-            <select
-              wire:model="frequency"
-              class="block w-40 rounded-md border border-gray-300 bg-gray-200 text-sm dark:border-gray-700 dark:bg-gray-700"
-            >
-              @foreach ($options as $value => $label)
-                <option value="{{ $value }}">{{ $label }}</option>
-              @endforeach
-            </select>
-          </div>
-          <div class="flex items-center justify-between">
-            <label
-              class="inline-flex flex-row items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300"
-            >
-              Weekly Data Synchronization
-              <x-tooltip>
-                <x-slot name="text">
-                  Runs a complete data synchronization process from all
-                  connected services to update local database
-                </x-slot>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                  stroke="currentColor"
-                  class="size-3"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-                  />
-                </svg>
-              </x-tooltip>
-            </label>
-            <select
-              wire:model="frequency"
-              class="block w-40 rounded-md border border-gray-300 bg-gray-200 text-sm dark:border-gray-700 dark:bg-gray-700"
-            >
-              @foreach ($options as $value => $label)
-                <option value="{{ $value }}">{{ $label }}</option>
-              @endforeach
-            </select>
-          </div>
-          <div class="flex items-center justify-between">
-            <label
-              class="inline-flex flex-row items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300"
-            >
-              Monthly Data Synchronization
-              <x-tooltip>
-                <x-slot name="text">
-                  Runs a complete data synchronization process from all
-                  connected services to update local database
+                  Determines how often the system runs a complete data synchronization 
+                  process from all connected services to update local database
                 </x-slot>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -393,7 +323,197 @@
           </label>
         </div>
 
-        <!-- If more toggles, repeat similar structure. -->
+        <!-- Toggle notification 'User Activity Alerts' -->
+        <div class="flex items-center justify-between">
+          <label
+            class="inline-flex items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300"
+          >
+            Activity Alerts
+            <x-tooltip>
+              <x-slot name="text">
+                Send alerts about missing time entries or unusual attendance patterns
+              </x-slot>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="size-3"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+                />
+              </svg>
+            </x-tooltip>
+            <x-badge variant="primary" size="sm" class="ml-2">Managers</x-badge>
+          </label>
+          <label class="relative inline-flex cursor-pointer items-center">
+            <input
+              type="checkbox"
+              class="peer sr-only"
+              disabled
+            />
+            <div
+              class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700"
+            ></div>
+          </label>
+        </div>
+
+        <!-- Toggle notification 'Schedule Changes' -->
+        <div class="flex items-center justify-between">
+          <label
+            class="inline-flex items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300"
+          >
+            Schedule Notifications
+            <x-tooltip>
+              <x-slot name="text">
+                Notify users about schedule changes and schedule conflicts
+              </x-slot>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="size-3"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+                />
+              </svg>
+            </x-tooltip>
+          </label>
+          <label class="relative inline-flex cursor-pointer items-center">
+            <input
+              type="checkbox"
+              class="peer sr-only"
+              disabled
+            />
+            <div
+              class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700"
+            ></div>
+          </label>
+        </div>
+
+        <!-- Toggle notification 'Time Entry Approvals' -->
+        <div class="flex items-center justify-between">
+          <label
+            class="inline-flex items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300"
+          >
+            Time Entry Notifications
+            <x-tooltip>
+              <x-slot name="text">
+                Notify about time entry approvals, rejections, and entries requiring review
+              </x-slot>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="size-3"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+                />
+              </svg>
+            </x-tooltip>
+          </label>
+          <label class="relative inline-flex cursor-pointer items-center">
+            <input
+              type="checkbox"
+              class="peer sr-only"
+              disabled
+            />
+            <div
+              class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700"
+            ></div>
+          </label>
+        </div>
+
+        <!-- Toggle notification 'System Maintenance' -->
+        <div class="flex items-center justify-between">
+          <label
+            class="inline-flex items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300"
+          >
+            Maintenance Alerts
+            <x-tooltip>
+              <x-slot name="text">
+                Notify users about scheduled maintenance and system updates
+              </x-slot>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="size-3"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+                />
+              </svg>
+            </x-tooltip>
+            <x-badge variant="primary" size="sm" class="ml-2">Admins</x-badge>
+          </label>
+          <label class="relative inline-flex cursor-pointer items-center">
+            <input
+              type="checkbox"
+              class="peer sr-only"
+              disabled
+            />
+            <div
+              class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700"
+            ></div>
+          </label>
+        </div>
+
+        <!-- Toggle notification 'Report Generation' -->
+        <div class="flex items-center justify-between">
+          <label
+            class="inline-flex items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300"
+          >
+            Report Notifications
+            <x-tooltip>
+              <x-slot name="text">
+                Notify when scheduled reports are generated and ready for viewing
+              </x-slot>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="size-3"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+                />
+              </svg>
+            </x-tooltip>
+          </label>
+          <label class="relative inline-flex cursor-pointer items-center">
+            <input
+              type="checkbox"
+              class="peer sr-only"
+              disabled
+            />
+            <div
+              class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700"
+            ></div>
+          </label>
+        </div>
 
         <div class="mt-4 flex justify-end pt-4">
           <x-button

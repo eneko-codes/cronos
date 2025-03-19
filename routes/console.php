@@ -1,9 +1,6 @@
 <?php
 
 use App\Models\JobFrequency;
-use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Schedule;
@@ -26,15 +23,9 @@ Schedule::command('queue:prune-failed --hours=48')->daily();
 /**
  * Schedule regular queue worker restart to prevent memory leaks.
  * This is important to ensure long-running queue workers don't accumulate memory.
+ * Supervisor will start a new worker automatically after the command is executed.
  */
 Schedule::command('queue:restart')->hourly();
-
-/**
- * Display an inspiring quote
- */
-Artisan::command('inspire', function () {
-    $this->comment(Inspiring::quote());
-})->purpose('Display an inspiring quote');
 
 /**
  * Schedule synchronization jobs using the configured frequency from the database.
@@ -54,7 +45,6 @@ try {
                 $scheduleMethod(Schedule::command('sync all')
                     ->name('sync-scheduler')
                     ->withoutOverlapping()
-                    ->onOneServer() // Only run on one server in a multi-server setup
                     ->runInBackground() // Run in background to prevent blocking scheduler
                     ->onFailure(function ($e) {
                         Log::error('Scheduled sync job failed: ' . $e->getMessage(), [
@@ -79,20 +69,3 @@ try {
         'trace' => $e->getTraceAsString(),
     ]);
 }
-
-// Always schedule a daily fallback sync in case the job_frequencies configuration fails
-Schedule::command('sync all')
-    ->name('sync-daily-fallback')
-    ->dailyAt('01:00')
-    ->onOneServer()
-    ->onFailure(function ($e) {
-        Log::error('Daily fallback sync job failed: ' . $e->getMessage(), [
-            'trace' => $e->getTraceAsString(),
-        ]);
-    })
-    ->before(function () {
-        Log::info('Starting daily fallback sync job');
-    })
-    ->after(function () {
-        Log::info('Daily fallback sync job completed');
-    });

@@ -39,7 +39,7 @@ class SyncDesktimeAttendances extends BaseSyncJob
     ?string $fromDate = null,
     ?string $toDate = null
   ) {
-    // Assign to parent’s protected $desktime
+    // Assign to parent's protected $desktime
     $this->desktime = $desktime;
 
     $this->userId = $userId;
@@ -123,43 +123,30 @@ class SyncDesktimeAttendances extends BaseSyncJob
     string $date,
     Collection $attendance
   ): void {
-    $existingAttendance = UserAttendance::where('user_id', $user->id)
-      ->whereDate('date', $date)
-      ->where('is_remote', true)
-      ->first();
-
     // Case 1: No DeskTime data - Delete any existing remote record for this day
     if ($attendance->isEmpty() || $attendance->get('desktimeTime', 0) === 0) {
-      if ($existingAttendance) {
-        Log::debug('Deleting obsolete attendance record:', [
-          'user_id' => $user->id,
-          'date' => $date,
-        ]);
-        $existingAttendance->delete();
-      }
+      UserAttendance::where('user_id', $user->id)
+        ->whereDate('date', $date)
+        ->where('is_remote', true)
+        ->delete();
+      
       return;
     }
 
     $newPresenceSeconds = $attendance->get('desktimeTime', 0);
 
-    // Case 2: Update existing record if presence duration changed
-    if ($existingAttendance) {
-      if ($existingAttendance->presence_seconds !== $newPresenceSeconds) {
-        $existingAttendance->update([
-          'presence_seconds' => $newPresenceSeconds,
-        ]);
-      }
-      return;
-    }
-
-    // Case 3: Create new record if none exists
-    UserAttendance::create([
-      'user_id' => $user->id,
-      'date' => $date,
-      'presence_seconds' => $newPresenceSeconds,
-      'is_remote' => true,
-      'start' => null,
-      'end' => null,
-    ]);
+    // Use updateOrCreate to either create a new record or update an existing one
+    UserAttendance::updateOrCreate(
+      [
+        'user_id' => $user->id,
+        'date' => $date,
+        'is_remote' => true
+      ],
+      [
+        'presence_seconds' => $newPresenceSeconds,
+        'start' => null,
+        'end' => null,
+      ]
+    );
   }
 }

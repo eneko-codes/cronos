@@ -27,7 +27,7 @@ class SyncDesktimeUsers extends BaseSyncJob
    */
   public function __construct(DesktimeApiCalls $desktime)
   {
-    // Assign to parent’s protected $desktime
+    // Assign to parent's protected $desktime
     $this->desktime = $desktime;
   }
 
@@ -57,18 +57,16 @@ class SyncDesktimeUsers extends BaseSyncJob
         ]
       );
 
-    // Find local users matching these emails
-    $localUsers = User::whereIn('email', $validUsers->pluck('email'))->get();
-
-    foreach ($localUsers as $localUser) {
-      $desktimeUser = $validUsers->firstWhere('email', $localUser->email);
-      if (
-        $desktimeUser &&
-        $localUser->desktime_id !== $desktimeUser['desktime_id']
-      ) {
-        $localUser->desktime_id = $desktimeUser['desktime_id'];
-        $localUser->save();
-      }
+    // Update existing users with Desktime IDs
+    foreach ($validUsers as $desktimeUser) {
+      User::where('email', $desktimeUser['email'])
+        ->update(['desktime_id' => $desktimeUser['desktime_id']]);
     }
+
+    // Clear out any user who has a desktime_id but isn't in Desktime users
+    $desktimeUserEmails = $validUsers->pluck('email')->toArray();
+    User::whereNotIn('email', $desktimeUserEmails)
+      ->whereNotNull('desktime_id')
+      ->update(['desktime_id' => null]);
   }
 }

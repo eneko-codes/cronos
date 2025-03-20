@@ -35,13 +35,8 @@
 
           @auth
             <div class="flex items-center gap-3">
-              <!-- Notification bell button -->
-              <livewire:notification-toggle />
-              
-              <!-- Alerts button (only visible if user can see alerts) -->
-              @if(auth()->user()->isAdmin())
-                <livewire:alerts.alerts-toggle />
-              @endif
+              <!-- Alerts button (visible to all logged in users) -->
+              <livewire:alerts.alerts-toggle />
               
               <div x-show="!isMobile" x-cloak class="hidden md:block">
                 <x-dropdown-menu>

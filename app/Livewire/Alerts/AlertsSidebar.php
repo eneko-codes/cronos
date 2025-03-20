@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use App\Models\User;
 
 class AlertsSidebar extends Component
 {
@@ -17,7 +18,7 @@ class AlertsSidebar extends Component
     public bool $isOpen = false;
 
     /**
-     * The currently active tab: 'active' or 'resolved'
+     * The currently active tab: 'active' or 'resolved' or 'settings'
      */
     public string $activeTab = 'active';
 
@@ -43,7 +44,7 @@ class AlertsSidebar extends Component
      */
     public function switchTab(string $tab)
     {
-        if (in_array($tab, ['active', 'resolved'])) {
+        if (in_array($tab, ['active', 'resolved', 'settings'])) {
             $this->activeTab = $tab;
         }
     }
@@ -201,6 +202,35 @@ class AlertsSidebar extends Component
             // Refresh the component
             $this->dispatch('alerts-updated');
         }
+    }
+
+    /**
+     * Compute property to check if notifications are muted for the current user.
+     *
+     * @return bool
+     */
+    #[Computed]
+    public function isNotificationsMuted(): bool
+    {
+        return Auth::user()->muted_notifications;
+    }
+
+    /**
+     * Toggle the mute state of notifications for the current user.
+     */
+    public function toggleNotifications(): void
+    {
+        /** @var User $user */
+        $user = Auth::user();
+        $user->muted_notifications = !$user->muted_notifications;
+        $user->save();
+        
+        // Show a toast notification
+        $this->dispatch(
+            'add-toast',
+            message: $user->muted_notifications ? 'Notifications muted successfully.' : 'Notifications enabled successfully.',
+            variant: 'success'
+        );
     }
 
     /**

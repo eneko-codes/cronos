@@ -252,7 +252,7 @@ class UserPage extends Component
       // Parse times in UTC
       $start = Carbon::parse($detail->start)->setTimezone('UTC');
       $end = Carbon::parse($detail->end)->setTimezone('UTC');
-      $totalMinutes += $end->diffInMinutes($start);
+      $totalMinutes += $start->diffInMinutes($end);
 
       $slots[] =
         ucfirst($detail->day_period) .
@@ -324,7 +324,7 @@ class UserPage extends Component
       // In-office attendance: calculate duration from start-end times.
       $start = Carbon::parse($attendance->start)->setTimezone('UTC');
       $end = Carbon::parse($attendance->end)->setTimezone('UTC');
-      $durationMinutes = $end->diffInMinutes($start);
+      $durationMinutes = $start->diffInMinutes($end);
 
       if ($start && $end) {
         $times = [$start->format('H:i'), $end->format('H:i')];

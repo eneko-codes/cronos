@@ -35,9 +35,16 @@ class SyncProofhubProjects extends BaseSyncJob
   protected function execute(): void
   {
     $projects = $this->proofhub->getProjects();
+    $syncedProjectIds = [];
 
     foreach ($projects as $projectData) {
       $projectId = data_get($projectData, 'id');
+      if (!$projectId) {
+        continue;
+      }
+      
+      $syncedProjectIds[] = $projectId;
+      
       $projectName = data_get($projectData, 'title');
       $assignedUserIds = data_get($projectData, 'assigned', []);
 
@@ -63,7 +70,7 @@ class SyncProofhubProjects extends BaseSyncJob
           }
         } catch (\Exception $e) {
           Log::error('Failed to detach user from project', [
-            'project_id' => $project->id,
+            'project_id' => $project->proofhub_project_id,
             'user_id' => $userId,
             'error' => $e->getMessage(),
           ]);
@@ -78,15 +85,15 @@ class SyncProofhubProjects extends BaseSyncJob
     }
 
     // Delete local projects not present in ProofHub
-    $proofhubProjectIds = collect($projects)->pluck('id');
-    $localProjectIds = Project::pluck('proofhub_project_id');
+    if (!empty($syncedProjectIds)) {
+      $localProjectIds = Project::pluck('proofhub_project_id');
+      $projectsToDelete = $localProjectIds->diff($syncedProjectIds);
 
-    $projectsToDelete = $localProjectIds->diff($proofhubProjectIds);
-
-    if ($projectsToDelete->isNotEmpty()) {
-      Project::whereIn('proofhub_project_id', $projectsToDelete)
-        ->get()
-        ->each(fn(Project $p) => $p->delete());
+      if ($projectsToDelete->isNotEmpty()) {
+        Project::whereIn('proofhub_project_id', $projectsToDelete)
+          ->get()
+          ->each(fn(Project $p) => $p->delete());
+      }
     }
   }
 }

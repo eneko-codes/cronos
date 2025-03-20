@@ -83,7 +83,10 @@ class ProofhubApiCalls implements Pingable
         );
       }
 
-      return $response->json();
+      // Get response data without storing it
+      $responseData = $response->json();
+      
+      return $responseData;
     } catch (Exception $e) {
       Log::error('ProofHub API Call Failed', [
         'endpoint' => $endpoint,

@@ -10,6 +10,7 @@ use App\Services\ProofhubApiCalls;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Class SyncProofhubTimeEntries
@@ -79,6 +80,9 @@ class SyncProofhubTimeEntries extends BaseSyncJob
       // Map creator ID -> local user
       $creatorProofhubId = data_get($entry, 'creator.id');
       if (!$creatorProofhubId) {
+        Log::info("Skipping time entry - creator ID missing", [
+          'time_entry_id' => data_get($entry, 'id')
+        ]);
         continue;
       }
 
@@ -87,23 +91,68 @@ class SyncProofhubTimeEntries extends BaseSyncJob
         ->first();
 
       if (!$user) {
+        // Check if user exists but has do_not_track enabled
+        $userExists = User::where('proofhub_id', $creatorProofhubId)->exists();
+        if ($userExists) {
+          Log::info("Skipping time entry - user has do_not_track enabled", [
+            'time_entry_id' => data_get($entry, 'id'),
+            'creator_id' => $creatorProofhubId
+          ]);
+        } else {
+          Log::info("Skipping time entry - user not found in database", [
+            'time_entry_id' => data_get($entry, 'id'),
+            'creator_id' => $creatorProofhubId
+          ]);
+        }
         continue;
       }
 
       // Retrieve project
       $projectId = data_get($entry, 'project.id');
-      if (!$projectId || !Project::find($projectId)) {
+      if (!$projectId) {
+        continue;
+      }
+      
+      // Check if project exists locally
+      $projectExists = Project::where('proofhub_project_id', $projectId)->exists();
+      if (!$projectExists) {
+        Log::info("Skipping time entry - project not found", [
+          'time_entry_id' => data_get($entry, 'id'),
+          'project_id' => $projectId
+        ]);
         continue;
       }
 
-      // Retrieve optional task
+      // Extract task information
+      $taskData = data_get($entry, 'task');
       $taskId = null;
-      $taskProofhubId = data_get($entry, 'task.id');
-      if ($taskProofhubId) {
-        $task = Task::where('proofhub_task_id', $taskProofhubId)->first();
-        if ($task) {
-          $taskId = $task->proofhub_task_id;
+      $taskName = null;
+      
+      if ($taskData) {
+        // The ProofHub API returns task information in a different format than expected
+        // Time entries contain 'task.task_id' not 'task.id'
+        $taskId = data_get($taskData, 'task_id');
+        $taskName = data_get($taskData, 'task_name');
+        
+        // If there's also a subtask, prioritize it
+        $subtaskId = data_get($taskData, 'subtask_id');
+        $subtaskName = data_get($taskData, 'subtask_name');
+        
+        if ($subtaskId) {
+          $taskId = $subtaskId;
+          $taskName = $subtaskName;
         }
+      }
+      
+      // Check if the task exists in our database, or create it if needed
+      if ($taskId) {
+        $task = Task::firstOrCreate(
+          ['proofhub_task_id' => $taskId],
+          [
+            'proofhub_project_id' => $projectId,
+            'name' => $taskName ?: 'Unknown Task'
+          ]
+        );
       }
 
       // Build entry data
@@ -121,12 +170,38 @@ class SyncProofhubTimeEntries extends BaseSyncJob
         'proofhub_created_at' => $createdAtUtc,
       ];
 
-      // Upsert
-      $timeEntry = TimeEntry::find($timeEntryData['proofhub_time_entry_id']);
-      if ($timeEntry) {
-        $timeEntry->update($timeEntryData);
-      } else {
-        TimeEntry::create($timeEntryData);
+      try {
+        // Extract the unique constraint fields from the time entry data
+        $uniqueConstraintData = [
+          'user_id' => $timeEntryData['user_id'],
+          'proofhub_project_id' => $timeEntryData['proofhub_project_id'],
+          'date' => $timeEntryData['date'],
+        ];
+        
+        // Handle task_id properly for the unique constraint
+        if ($timeEntryData['proofhub_task_id'] === null) {
+          $uniqueConstraintData['proofhub_task_id'] = null;
+        } else {
+          $uniqueConstraintData['proofhub_task_id'] = $timeEntryData['proofhub_task_id'];
+        }
+        
+        // Use updateOrCreate to either update an existing entry or create a new one
+        // This prevents unique constraint violations by checking for existing records
+        $timeEntry = TimeEntry::updateOrCreate(
+          $uniqueConstraintData,
+          $timeEntryData
+        );
+        
+        Log::info("Time entry processed successfully", [
+          'proofhub_time_entry_id' => $timeEntryData['proofhub_time_entry_id'],
+          'action' => $timeEntry->wasRecentlyCreated ? 'created' : 'updated'
+        ]);
+      } catch (\Exception $e) {
+        Log::error("Error processing time entry", [
+          'proofhub_time_entry_id' => $timeEntryData['proofhub_time_entry_id'],
+          'user_id' => $timeEntryData['user_id'],
+          'error' => $e->getMessage()
+        ]);
       }
     }
   }

@@ -207,29 +207,25 @@
                     <x-tooltip>
                       <x-slot name="text">
                         <div class="flex flex-col gap-2 max-w-xs">
-                          <span class="font-semibold text-sm border-b pb-1 mb-1">Time Entries</span>
                           @if(isset($day['worked']['detailed_entries']) && count($day['worked']['detailed_entries']) > 0)
                             @foreach ($day['worked']['detailed_entries'] as $entry)
-                              <div class="flex flex-col border-b border-gray-200 dark:border-gray-600 pb-1 mb-1 last:border-b-0">
-                                <div class="flex items-center justify-between">
-                                  <span class="text-xs font-semibold text-gray-600 dark:text-gray-200">
+                              <div class="flex flex-col {{ !$loop->last ? 'border-b border-gray-200 dark:border-gray-600 pb-3 mb-3' : '' }}">
+                                <div class="flex items-center justify-between mb-1">
+                                  <span class="font-medium text-xs text-gray-800 dark:text-gray-100">
                                     {{ $entry['project'] }}
                                   </span>
-                                  <span class="text-xs">{{ $entry['duration'] }}</span>
+                                  <span class="ml-2 whitespace-nowrap text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-gray-700 dark:text-gray-300">
+                                    {{ $entry['duration'] }}
+                                  </span>
                                 </div>
                                 @if (isset($entry['task']) && $entry['task'])
-                                  <span class="text-xs text-gray-500 dark:text-gray-300">
+                                  <span class="text-xs text-gray-600 dark:text-gray-300 mb-0.5">
                                     {{ $entry['task'] }}
                                   </span>
                                 @endif
                                 @if (isset($entry['description']) && $entry['description'])
-                                  <span class="text-xs text-gray-500 dark:text-gray-300">
-                                    "{{ Str::limit($entry['description'], 100) }}"
-                                  </span>
-                                @endif
-                                @if(isset($entry['status']) && $entry['status'] && $entry['status'] !== 'none')
-                                  <span class="text-xs text-gray-500 dark:text-gray-300">
-                                    Status: {{ ucfirst($entry['status']) }}
+                                  <span class="text-xs text-gray-500 dark:text-gray-400 italic">
+                                    {{ Str::limit($entry['description'], 80) }}
                                   </span>
                                 @endif
                               </div>
@@ -237,20 +233,20 @@
                           @else
                             <div class="flex flex-col">
                               @foreach ($day['worked']['projects'] as $project)
-                                <div class="mb-2">
-                                  <span class="text-xs font-semibold text-gray-600 dark:text-gray-200">
+                                <div class="{{ !$loop->last ? 'mb-3' : '' }}">
+                                  <span class="font-medium text-xs text-gray-800 dark:text-gray-100">
                                     {{ $project['name'] }}
                                   </span>
                                   @if (! empty($project['tasks']))
-                                    <div class="ml-2 text-xs text-gray-500 dark:text-gray-300">
-                                      Tasks: {{ implode(', ', $project['tasks']) }}
+                                    <div class="text-xs text-gray-600 dark:text-gray-300 mt-1">
+                                      {{ implode(', ', $project['tasks']) }}
                                     </div>
                                   @endif
                                 </div>
                               @endforeach
                               @if(count($day['worked']['projects']) === 0)
-                                <span class="text-xs text-gray-500 dark:text-gray-300">
-                                  No detailed time entries available
+                                <span class="text-xs text-gray-500 dark:text-gray-400">
+                                  No time entries available
                                 </span>
                               @endif
                             </div>

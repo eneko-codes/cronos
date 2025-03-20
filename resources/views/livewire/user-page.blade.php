@@ -218,17 +218,17 @@
                                   <span class="text-xs">{{ $entry['duration'] }}</span>
                                 </div>
                                 @if (isset($entry['task']) && $entry['task'])
-                                  <span class="text-xs text-gray-500 dark:text-gray-300 ml-2">
-                                    Task: {{ $entry['task'] }}
+                                  <span class="text-xs text-gray-500 dark:text-gray-300">
+                                    {{ $entry['task'] }}
                                   </span>
                                 @endif
                                 @if (isset($entry['description']) && $entry['description'])
-                                  <span class="text-xs text-gray-500 dark:text-gray-300 ml-2">
+                                  <span class="text-xs text-gray-500 dark:text-gray-300">
                                     "{{ Str::limit($entry['description'], 100) }}"
                                   </span>
                                 @endif
                                 @if(isset($entry['status']) && $entry['status'] && $entry['status'] !== 'none')
-                                  <span class="text-xs text-gray-500 dark:text-gray-300 ml-2">
+                                  <span class="text-xs text-gray-500 dark:text-gray-300">
                                     Status: {{ ucfirst($entry['status']) }}
                                   </span>
                                 @endif
@@ -259,16 +259,6 @@
                       </x-slot>
                       <span>{{ $day['worked']['duration'] }}</span>
                     </x-tooltip>
-                    @foreach ($day['worked']['projects'] as $project)
-                      <div class="text-xs text-gray-500">
-                        {{ $project['name'] }}
-                        @if (! empty($project['tasks']))
-                          <div class="ml-2 text-xs text-gray-400">
-                            {{ implode(', ', $project['tasks']) }}
-                          </div>
-                        @endif
-                      </div>
-                    @endforeach
                   </div>
                 </td>
               </tr>

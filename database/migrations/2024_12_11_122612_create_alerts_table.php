@@ -32,8 +32,16 @@ return new class extends Migration
             // Who resolved the alert and when
             $table->foreignId('resolved_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamp('resolved_at')->nullable();
+            // Link to a notification if applicable
+            $table->uuid('notification_id')->nullable();
             // Standard created and updated timestamps
             $table->timestamps();
+            
+            // Add foreign key constraint for notification_id
+            $table->foreign('notification_id')
+                  ->references('id')
+                  ->on('notifications')
+                  ->onDelete('set null');
         });
     }
 

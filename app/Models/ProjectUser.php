@@ -29,13 +29,6 @@ class ProjectUser extends Pivot
   public $incrementing = false;
 
   /**
-   * The primary key for the model.
-   *
-   * @var array
-   */
-  protected $primaryKey = ['user_id', 'proofhub_project_id'];
-
-  /**
    * Indicates if the model should manage timestamps.
    *
    * @var bool
@@ -48,6 +41,16 @@ class ProjectUser extends Pivot
    * @var array
    */
   protected $fillable = ['user_id', 'proofhub_project_id'];
+
+  /**
+   * Get the value of the model's primary key.
+   *
+   * @return string
+   */
+  public function getKey()
+  {
+    return $this->user_id . '-' . $this->proofhub_project_id;
+  }
 
   /**
    * The "booted" method of the model.

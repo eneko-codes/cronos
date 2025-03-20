@@ -9,7 +9,6 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  *
  * Represents the pivot model between Task and User.
  *
- * @property int $id
  * @property int $user_id
  * @property int $proofhub_task_id
  */
@@ -34,14 +33,17 @@ class TaskUser extends Pivot
    *
    * @var bool
    */
-  public $incrementing = true;
+  public $incrementing = false;
 
   /**
-   * The primary key for the model.
+   * Get the value of the model's primary key.
    *
-   * @var string
+   * @return string
    */
-  protected $primaryKey = 'id';
+  public function getKey()
+  {
+    return $this->user_id . '-' . $this->proofhub_task_id;
+  }
 
   /**
    * Indicates if the model should manage timestamps.

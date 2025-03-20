@@ -29,11 +29,14 @@ class CategoryUser extends Pivot
   public $incrementing = false;
 
   /**
-   * The primary key for the model.
+   * Get the value of the model's primary key.
    *
-   * @var array
+   * @return string
    */
-  protected $primaryKey = ['user_id', 'category_id'];
+  public function getKey()
+  {
+    return $this->user_id . '-' . $this->category_id;
+  }
 
   /**
    * Indicates if the model should manage timestamps.

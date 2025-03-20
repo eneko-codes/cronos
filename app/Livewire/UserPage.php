@@ -349,7 +349,15 @@ class UserPage extends Component
     Log::debug("Processing worked data for date: {$dateString}", [
       'user_id' => $this->user->id,
       'entry_count' => $timeEntries->count(),
-      'dates_available' => $timeEntries->pluck('date')->map(fn($date) => Carbon::parse($date)->toDateString())->unique()->values()->all()
+      'dates_available' => $timeEntries->pluck('date')->map(fn($date) => Carbon::parse($date)->toDateString())->unique()->values()->all(),
+      'entries_raw' => $timeEntries->toArray(),
+      'date_data_types' => $timeEntries->map(fn($entry) => [
+        'date' => $entry->date,
+        'date_type' => gettype($entry->date),
+        'toDateString' => $entry->date ? Carbon::parse($entry->date)->toDateString() : null,
+        'compare_to' => $dateString,
+        'matches' => $entry->date ? Carbon::parse($entry->date)->toDateString() === $dateString : false
+      ])->toArray()
     ]);
     
     // Default return structure - always include detailed_entries even when empty

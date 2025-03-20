@@ -61,7 +61,11 @@ class SyncButton extends Component
         new SyncOdooLeaves($odooService),
         new SyncProofhubProjects($proofhubService),
         new SyncProofhubTasks($proofhubService),
-        new SyncProofhubTimeEntries($proofhubService),
+        new SyncProofhubTimeEntries(
+          $proofhubService, 
+          now()->subDays(30)->format('Y-m-d'), 
+          now()->format('Y-m-d')
+        ),
       ];
 
       $this->total_jobs = count($jobs);

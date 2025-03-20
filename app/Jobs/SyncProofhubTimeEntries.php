@@ -49,9 +49,22 @@ class SyncProofhubTimeEntries extends BaseSyncJob
     $params = [];
     if ($this->startDate) {
       $params['from_date'] = $this->startDate;
+    } else {
+      // Default to 30 days ago if no start date is provided
+      $params['from_date'] = now()->subDays(30)->format('Y-m-d');
+      Log::info("No start date provided for SyncProofhubTimeEntries, defaulting to 30 days ago", [
+        'default_from_date' => $params['from_date']
+      ]);
     }
+    
     if ($this->endDate) {
       $params['to_date'] = $this->endDate;
+    } else {
+      // Default to today if no end date is provided
+      $params['to_date'] = now()->format('Y-m-d');
+      Log::info("No end date provided for SyncProofhubTimeEntries, defaulting to today", [
+        'default_to_date' => $params['to_date']
+      ]);
     }
 
     // Fetch entries

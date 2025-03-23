@@ -5,6 +5,8 @@ namespace App\Models;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
 /**
  * Class UserAttendance
@@ -15,9 +17,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property \Carbon\Carbon $date
  * @property int $presence_seconds
  * @property bool $is_remote
+ * @property \Carbon\Carbon|null $start
+ * @property \Carbon\Carbon|null $end
  */
 class UserAttendance extends Model
 {
+  use HasFactory;
+
   /**
    * The table associated with the model.
    *
@@ -30,7 +36,7 @@ class UserAttendance extends Model
    *
    * @var array
    */
-  protected $fillable = ['user_id', 'date', 'presence_seconds', 'is_remote'];
+  protected $fillable = ['user_id', 'date', 'presence_seconds', 'is_remote', 'start', 'end'];
 
   /**
    * The attributes that should be cast to native types.
@@ -41,6 +47,8 @@ class UserAttendance extends Model
     'is_remote' => 'boolean',
     'presence_seconds' => 'integer',
     'date' => 'date',
+    'start' => 'datetime',
+    'end' => 'datetime',
   ];
 
   /**
@@ -54,17 +62,16 @@ class UserAttendance extends Model
   }
 
   /**
-   * Set the date in UTC.
-   *
-   * @param string $value
-   * @return void
+   * Set and get the date attribute with proper UTC timezone handling.
    */
-  public function setDateAttribute($value): void
+  protected function date(): Attribute
   {
-    $this->attributes['date'] =
-      $value instanceof Carbon
+    return Attribute::make(
+      get: fn ($value) => Carbon::parse($value)->setTimezone('UTC'),
+      set: fn ($value) => $value instanceof Carbon 
         ? $value->setTimezone('UTC')->toDateString()
-        : Carbon::parse($value)->setTimezone('UTC')->toDateString();
+        : Carbon::parse($value)->setTimezone('UTC')->toDateString()
+    );
   }
 
   /**

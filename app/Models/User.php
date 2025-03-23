@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
-use App\Notifications\WelcomeEmail;
 use Carbon\Carbon;
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
+use App\Models\Department;
+use App\Notifications\WelcomeEmail;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Collection;
 
 /**
  * Class User
@@ -32,7 +35,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  */
 class User extends Authenticatable
 {
-  use Notifiable;
+  use Notifiable, HasFactory;
 
   /**
    * The table associated with the model.
@@ -355,73 +358,60 @@ class User extends Authenticatable
   }
 
   /**
-   * Get the user's data for a given UTC date range.
-   * This data includes schedules, leaves, attendances, and time entries.
-   *
-   * @param Carbon $startDate The start date (UTC)
-   * @param Carbon $endDate   The end date (UTC)
-   *
-   * @return array An associative array with keys: schedules, leaves, attendances, time_entries
+   * Returns data for the user within a specified date range.
    */
   public function getDataForDateRange(Carbon $startDate, Carbon $endDate): array
   {
+    // Ensure we're working with dates at day precision
+    $startDateObject = $startDate->copy()->startOfDay();
+    $endDateObject = $endDate->copy()->endOfDay();
+    
     return [
       'schedules' => $this->userSchedules()
         ->with('schedule.scheduleDetails')
-        ->where('effective_from', '<=', $endDate)
-        ->where(function ($query) use ($startDate) {
+        ->where('effective_from', '<=', $endDateObject)
+        ->where(function ($query) use ($startDateObject) {
           $query
-            ->where('effective_until', '>=', $startDate)
+            ->where('effective_until', '>=', $startDateObject)
             ->orWhereNull('effective_until');
         })
         ->get(),
 
-      'leaves' => $this->getLeaves($startDate, $endDate),
+      'leaves' => $this->getLeaves($startDateObject, $endDateObject),
 
       'attendances' => $this->userAttendances()
-        ->whereBetween('date', [$startDate, $endDate])
+        ->whereBetween('date', [
+          $startDateObject->toDateString(), 
+          $endDateObject->toDateString()
+        ])
         ->get(),
 
       'time_entries' => $this->timeEntries()
         ->with(['project', 'task'])
-        ->whereBetween('date', [$startDate, $endDate])
+        ->whereBetween('date', [
+          $startDateObject->toDateString(), 
+          $endDateObject->toDateString()
+        ])
         ->get(),
     ];
   }
 
   /**
-   * Retrieves leaves active for the user or the user's department/categories within a date range.
-   *
-   * @param Carbon|null $start The start date (UTC) or null
-   * @param Carbon|null $end   The end date (UTC) or null
-   *
-   * @return \Illuminate\Database\Eloquent\Collection
+   * Get leaves that overlap with the given date range.
    */
-  public function getLeaves(?Carbon $start = null, ?Carbon $end = null)
+  public function getLeaves(Carbon $startDate, Carbon $endDate): Collection
   {
-    $query = UserLeave::where(function ($query) {
-      $query
-        ->where('type', 'employee')
-        ->where('user_id', $this->id)
-        ->orWhere(function ($q) {
-          $q->where('type', 'department')->where(
-            'department_id',
-            $this->department_id
-          );
-        })
-        ->orWhere(function ($q) {
-          $q->where('type', 'category')->whereIn(
-            'category_id',
-            $this->categories()->pluck('categories.odoo_category_id')
-          );
-        });
-    });
-
-    if ($start && $end) {
-      $query->activeBetween($start, $end);
-    }
-
-    return $query->get();
+    return $this->userLeaves()
+      ->with(['leaveType', 'department', 'category'])
+      ->where(function ($query) use ($startDate, $endDate) {
+        $query->whereBetween('start_date', [$startDate, $endDate])
+              ->orWhereBetween('end_date', [$startDate, $endDate])
+              ->orWhere(function ($innerQuery) use ($startDate, $endDate) {
+                $innerQuery->where('start_date', '<=', $startDate)
+                           ->where('end_date', '>=', $endDate);
+              });
+      })
+      ->get();
   }
 
   /**

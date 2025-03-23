@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Carbon\Carbon;
 
 /**
  * Class TimeEntry
@@ -22,6 +25,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class TimeEntry extends Model
 {
+  use HasFactory;
+
   /**
    * The table associated with the model.
    *
@@ -66,10 +71,27 @@ class TimeEntry extends Model
    * @var array
    */
   protected $casts = [
-    'date' => 'date:Y-m-d',
+    'date' => 'date',
     'duration_seconds' => 'integer',
+    'logged_hours' => 'integer',
+    'logged_mins' => 'integer',
+    'end_date' => 'date',
+    'start_date' => 'date',
     'proofhub_created_at' => 'datetime',
   ];
+
+  /**
+   * Set and get the date attribute with proper UTC timezone handling.
+   */
+  protected function date(): Attribute
+  {
+    return Attribute::make(
+      get: fn ($value) => $value ? Carbon::parse($value)->setTimezone('UTC') : null,
+      set: fn ($value) => $value instanceof Carbon 
+        ? $value->setTimezone('UTC')->toDateString()
+        : ($value ? Carbon::parse($value)->setTimezone('UTC')->toDateString() : null)
+    );
+  }
 
   /**
    * Get the user that owns the time entry.

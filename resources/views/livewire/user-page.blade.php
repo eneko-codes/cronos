@@ -190,13 +190,18 @@
                 <!-- Attendance -->
                 <td class="px-4 py-2">
                   <div class="flex flex-row items-center gap-2">
-                    <span>{{ $day['attendance']['duration'] }}</span>
                     @if ($day['attendance']['is_remote'])
+                      <span>{{ $day['attendance']['duration'] }}</span>
                       <x-badge variant="info" size="sm">Remote</x-badge>
                     @elseif (! empty($day['attendance']['times']))
-                      <span class="text-xs text-gray-500">
-                        {{ implode(' -> ', $day['attendance']['times']) }}
-                      </span>
+                      <x-tooltip text="{{ implode(' → ', $day['attendance']['times']) }}">
+                        <div class="flex flex-row items-center gap-2">
+                          <span>{{ $day['attendance']['duration'] }}</span>
+                          <x-badge variant="success" size="sm">In Office</x-badge>
+                        </div>
+                      </x-tooltip>
+                    @else
+                      <span>{{ $day['attendance']['duration'] }}</span>
                     @endif
                   </div>
                 </td>

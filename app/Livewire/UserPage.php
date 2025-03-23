@@ -12,6 +12,7 @@ use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 #[Title('User Page')]
 class UserPage extends Component
@@ -303,37 +304,61 @@ class UserPage extends Component
     Collection $attendances,
     string $dateString
   ): array {
-    // Work only in UTC
-    $filtered = $attendances->filter(
-      fn($a) => Carbon::parse($a->date)->toDateString() === $dateString
-    );
+    // Parse the target date
+    $targetDate = Carbon::parse($dateString)->startOfDay();
+    $isMonday = $targetDate->isMonday();
+    
+    // Optional debug logging
+    if ($isMonday) {
+      Log::debug("Processing Monday data for {$dateString}", [
+        'total_attendances' => $attendances->count(),
+      ]);
+    }
 
-    if ($filtered->isEmpty()) {
+    // Use Collection methods for filtering
+    $attendance = $attendances
+      ->filter(function($record) use ($targetDate) {
+        // Skip records with no date
+        if (!$record->date) return false;
+        
+        // Convert to Carbon if needed and compare at day precision
+        $recordDate = $record->date instanceof Carbon 
+          ? $record->date 
+          : Carbon::parse($record->date);
+          
+        return $recordDate->startOfDay()->equalTo($targetDate);
+      })
+      ->first();
+    
+    // Default values for empty result
+    if (!$attendance) {
       return ['duration' => '0h 0m', 'is_remote' => false, 'times' => []];
     }
 
-    // For simplicity, only use the first attendance record on that day.
-    $attendance = $filtered->first();
+    // Extract attendance data
+    $isRemote = (bool)$attendance->is_remote;
     $durationMinutes = 0;
     $times = [];
 
-    if ($attendance->is_remote) {
-      // Remote attendance: duration is based on presence seconds.
+    // Handle different attendance types
+    if ($isRemote) {
+      // Remote: use presence_seconds
       $durationMinutes = $attendance->presence_seconds / 60;
     } else {
-      // In-office attendance: calculate duration from start-end times.
-      $start = Carbon::parse($attendance->start)->setTimezone('UTC');
-      $end = Carbon::parse($attendance->end)->setTimezone('UTC');
-      $durationMinutes = $start->diffInMinutes($end);
-
-      if ($start && $end) {
+      // In-office: try to use start/end times, fall back to presence_seconds
+      if ($attendance->start && $attendance->end) {
+        $start = Carbon::parse($attendance->start);
+        $end = Carbon::parse($attendance->end);
+        $durationMinutes = $start->diffInMinutes($end);
         $times = [$start->format('H:i'), $end->format('H:i')];
+      } else {
+        $durationMinutes = $attendance->presence_seconds / 60;
       }
     }
 
     return [
       'duration' => $this->formatDuration((int) $durationMinutes),
-      'is_remote' => $attendance->is_remote,
+      'is_remote' => $isRemote,
       'times' => $times,
     ];
   }
@@ -345,41 +370,29 @@ class UserPage extends Component
     Collection $timeEntries,
     string $dateString
   ): array {
-    // Add logging to check what entries are being processed
-    Log::debug("Processing worked data for date: {$dateString}", [
-      'user_id' => $this->user->id,
-      'entry_count' => $timeEntries->count(),
-      'dates_available' => $timeEntries->pluck('date')->map(fn($date) => Carbon::parse($date)->toDateString())->unique()->values()->all(),
-      'entries_raw' => $timeEntries->toArray(),
-      'date_data_types' => $timeEntries->map(fn($entry) => [
-        'date' => $entry->date,
-        'date_type' => gettype($entry->date),
-        'toDateString' => $entry->date ? Carbon::parse($entry->date)->toDateString() : null,
-        'compare_to' => $dateString,
-        'matches' => $entry->date ? Carbon::parse($entry->date)->toDateString() === $dateString : false
-      ])->toArray()
-    ]);
-    
-    // Default return structure - always include detailed_entries even when empty
+    // Default structure - include all fields
     $defaultStructure = [
       'duration' => '0h 0m', 
       'projects' => [], 
       'detailed_entries' => []
     ];
     
-    // Filter entries for this day - work only with UTC dates
-    // Compare the date strings directly
-    $filtered = $timeEntries->filter(
-      fn($entry) => Carbon::parse($entry->date)->toDateString() === $dateString
-    );
+    // Filter entries for this specific day
+    $targetDate = Carbon::parse($dateString)->startOfDay();
+    $filtered = $timeEntries->filter(function($entry) use ($targetDate) {
+      if (!$entry->date) return false;
+      
+      $entryDate = $entry->date instanceof Carbon 
+        ? $entry->date 
+        : Carbon::parse($entry->date);
+        
+      return $entryDate->startOfDay()->equalTo($targetDate);
+    });
     
-    // Add more logging to debug the filtering
-    Log::debug("Filtered entries for date: {$dateString}", [
+    // Log details for debugging if needed
+    Log::debug("Time entries for {$dateString}", [
       'user_id' => $this->user->id,
-      'original_count' => $timeEntries->count(),
-      'filtered_count' => $filtered->count(),
-      'filtered_dates' => $filtered->pluck('date')->map(fn($date) => Carbon::parse($date)->toDateString())->values()->all(),
-      'comparison_date' => $dateString,
+      'filtered_count' => $filtered->count()
     ]);
     
     // Early return with default structure if no entries
@@ -388,14 +401,14 @@ class UserPage extends Component
     }
 
     try {
-      // Calculate total minutes worked for the day.
+      // Calculate total minutes worked this day
       $totalMinutes = $filtered->sum(function ($entry) {
         return isset($entry->duration_seconds) 
           ? round($entry->duration_seconds / 60) 
           : (($entry->logged_hours ?? 0) * 60 + ($entry->logged_mins ?? 0));
       });
 
-      // Group time entries by project, list tasks.
+      // Group entries by project and extract tasks
       $projects = $filtered
         ->groupBy(function($entry) {
           return data_get($entry, 'project.name', 'Unknown Project');
@@ -403,13 +416,8 @@ class UserPage extends Component
         ->map(function ($group, $projectName) {
           return [
             'name' => $projectName,
-            'tasks' => $group
-              ->filter(function($entry) {
-                return data_get($entry, 'task.name') !== null;
-              })
-              ->map(function($entry) {
-                return data_get($entry, 'task.name');
-              })
+            'tasks' => $group->pluck('task.name')
+              ->filter()
               ->unique()
               ->values()
               ->all(),
@@ -431,7 +439,9 @@ class UserPage extends Component
           'duration' => $this->formatDuration($minutes),
           'status' => $entry->status ?? 'none',
         ];
-      })->values()->all();
+      })
+      ->values()
+      ->all();
 
       return [
         'duration' => $this->formatDuration($totalMinutes),
@@ -439,14 +449,13 @@ class UserPage extends Component
         'detailed_entries' => $detailedEntries,
       ];
     } catch (\Exception $e) {
-      // Log the error but return a valid structure to prevent UI errors
+      // Log error and return default structure on failure
       Log::error('Error processing worked data', [
         'exception' => $e->getMessage(),
         'date' => $dateString,
         'user_id' => $this->user->id
       ]);
       
-      // Return default structure on error
       return $defaultStructure;
     }
   }
@@ -519,18 +528,13 @@ class UserPage extends Component
    */
   protected function durationToMinutes(string $duration): int
   {
-    // We'll parse "Xh" and "Ym".
-    // If "Xh" is missing, hours is 0; if "Ym" is missing, minutes is 0.
-    $hours = 0;
-    $mins = 0;
-
-    if (preg_match('/(\d+)h/', $duration, $h)) {
-      $hours = (int) $h[1];
-    }
-    if (preg_match('/(\d+)m/', $duration, $m)) {
-      $mins = (int) $m[1];
-    }
-
+    // Parse a string in the format "Xh Ym" using Str helper
+    $hoursMatch = Str::of($duration)->match('/(\d+)h/');
+    $hours = $hoursMatch->isNotEmpty() ? (int) $hoursMatch->toString() : 0;
+    
+    $minsMatch = Str::of($duration)->match('/(\d+)m/');
+    $mins = $minsMatch->isNotEmpty() ? (int) $minsMatch->toString() : 0;
+    
     return $hours * 60 + $mins;
   }
 
@@ -539,10 +543,9 @@ class UserPage extends Component
    */
   protected function formatDuration(int $minutes): string
   {
-    $hours = intdiv($minutes, 60);
-    $remaining = $minutes % 60;
-
-    return sprintf('%dh %dm', $hours, $remaining);
+    return CarbonInterval::minutes($minutes)
+      ->cascade()
+      ->format('%hh %im');
   }
 
   /**

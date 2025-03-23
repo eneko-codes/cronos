@@ -216,7 +216,7 @@
                           <span class="text-xs text-gray-600 dark:text-gray-200">Remote work</span>
                         @elseif (! empty($day['attendance']['times']))
                           <span class="text-xs text-gray-600 dark:text-gray-200">
-                            In office: {{ implode(' → ', $day['attendance']['times']) }}
+                            {{ implode(' → ', $day['attendance']['times']) }}
                           </span>
                         @else
                           <span class="text-xs text-gray-500 dark:text-gray-400">No data</span>

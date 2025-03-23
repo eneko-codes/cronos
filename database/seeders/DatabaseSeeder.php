@@ -21,89 +21,168 @@ use Illuminate\Support\Str;
 
 // MUST BE RUN ON AN EMPTY DATABASE FOR SHOWCASE PURPOUSES.
 // This is the main seeder that will be used to seed the database with synthetic fake data.
-// It will create 5 users with specified roles (1 admin, 1 muted) and assign them to departments, schedules, projects, and tasks.
-// It will also create software development projects and tasks, and assign them to users.
-// It will also create leave types and assign them to users.
-// It will also create schedules and assign them to users.
-// It will also create time entries for users.
-
+// It will create users with different work schedules (4h and 8h) and assign them to departments, projects, and tasks.
+// It generates realistic attendance data and time entries based on each user's schedule.
 
 class DatabaseSeeder extends Seeder
 {
+    private $departments;
+    private $categories;
+    private $leaveTypes;
+    private $projects;
+    private $tasks;
+    private $schedules;
+    
     /**
      * Run the database seeds.
      */
     public function run(): void
     {
-        // Hardcoded time frame for 2025 Q1
+        echo "\n\n";
+        echo "╔═══════════════════════════════════════════════════════════╗\n";
+        echo "║            CRONOS DEMO DATABASE SEEDER STARTED            ║\n";
+        echo "╚═══════════════════════════════════════════════════════════╝\n\n";
+
+        // Reset auto increment values for clean sequence
+        echo "📊 Cleaning database and resetting auto-increment values...\n";
+        $this->resetAutoIncrement();
+        echo "✅ Database cleaned successfully!\n\n";
+        
+        // Hardcoded time frame
         $from = Carbon::now()->subMonth()->startOfDay();
         $to = Carbon::now()->endOfDay();
+        echo "📅 Generating data for time period: {$from->format('Y-m-d')} to {$to->format('Y-m-d')}\n\n";
         
-        // Create departments (will be assigned to users)
-        $departments = [
+        // Create core data that will be used by all users
+        echo "🏢 Creating core data (departments, categories, leave types)...\n";
+        $this->createCoreData();
+        echo "✅ Core data created successfully!\n\n";
+        
+        // Create users and assign core data
+        echo "👥 Creating users with predefined roles...\n";
+        $users = $this->createUsers();
+        echo "✅ Created " . count($users) . " users successfully!\n\n";
+        
+        // Create and assign 8-hour work schedule data (full-time)
+        echo "⏰ Creating full-time (8h) schedules and data for users...\n";
+        $fullTimeUsers = $this->createFullTimeData($users, 0, 2, 4);
+        echo "✅ Full-time schedules assigned to " . count($fullTimeUsers) . " users!\n\n";
+        
+        // Create and assign 4-hour work schedule data (part-time)
+        echo "⏰ Creating part-time (4h) schedules and data for users...\n";
+        $partTimeUsers = $this->createPartTimeData($users, 1, 3);
+        echo "✅ Part-time schedules assigned to " . count($partTimeUsers) . " users!\n\n";
+        
+        // Create additional leaves to ensure there's always some leave data
+        echo "🏖️ Creating guaranteed leave records for all users...\n";
+        $this->createGuaranteedLeaves($users, $from, $to);
+        echo "✅ Leave records created successfully!\n\n";
+        
+        echo "╔═══════════════════════════════════════════════════════════╗\n";
+        echo "║            CRONOS DEMO DATABASE SEEDER COMPLETED          ║\n";
+        echo "╚═══════════════════════════════════════════════════════════╝\n\n";
+        echo "🎉 Seeding completed successfully! The database now contains demo data for testing.\n";
+        echo "🔍 Login with any user: john@example.com, jane@example.com, etc. (password: password)\n";
+        echo "👑 Admin account: john@example.com (password: password)\n\n";
+    }
+    
+    /**
+     * Reset auto increment values for clean sequence
+     */
+    private function resetAutoIncrement(): void
+    {
+        // For SQLite, we need to use different commands than MySQL
+        DB::statement('PRAGMA foreign_keys = OFF;');
+        
+        $tables = [
+            'users',
+            'departments',
+            'categories',
+            'category_user',
+            'leave_types',
+            'projects',
+            'project_user',
+            'schedules',
+            'schedule_details',
+            'tasks',
+            'task_user',
+            'time_entries',
+            'user_attendances',
+            'user_leaves',
+            'user_schedules'
+        ];
+        
+        foreach ($tables as $table) {
+            // For SQLite, we need to delete all data instead of using TRUNCATE
+            DB::table($table)->delete();
+            
+            // SQLite auto-increment is handled with "delete from sqlite_sequence"
+            DB::statement("DELETE FROM sqlite_sequence WHERE name = '{$table}';");
+        }
+        
+        DB::statement('PRAGMA foreign_keys = ON;');
+    }
+    
+    /**
+     * Create core data that is shared across users (departments, categories, leave types, projects, tasks, schedules)
+     */
+    private function createCoreData(): void
+    {
+        // Create departments
+        echo "  📊 Creating departments...\n";
+        $this->departments = [
             Department::factory()->create(['name' => 'Engineering']),
             Department::factory()->create(['name' => 'Design']),
             Department::factory()->create(['name' => 'Product'])
         ];
+        echo "    ✓ Created " . count($this->departments) . " departments\n";
         
-        // Create categories (will be used for leaves)
-        $categories = [
+        // Create categories
+        echo "  🏷️ Creating categories...\n";
+        $this->categories = [
             Category::factory()->create(['name' => 'Development']),
             Category::factory()->create(['name' => 'Design']),
             Category::factory()->create(['name' => 'Testing']),
             Category::factory()->create(['name' => 'Documentation']),
             Category::factory()->create(['name' => 'Management'])
         ];
+        echo "    ✓ Created " . count($this->categories) . " categories\n";
         
         // Create leave types
-        $leaveTypes = [
+        echo "  🏖️ Creating leave types...\n";
+        $this->leaveTypes = [
             LeaveType::factory()->create(['name' => 'Vacation']),
             LeaveType::factory()->create(['name' => 'Sick Leave']),
             LeaveType::factory()->create(['name' => 'Personal Leave']),
             LeaveType::factory()->create(['name' => 'Parental Leave']),
-            LeaveType::factory()->create(['name' => 'Work From Home'])
+            LeaveType::factory()->create(['name' => 'Bereavement Leave'])
         ];
+        echo "    ✓ Created " . count($this->leaveTypes) . " leave types\n";
         
-        // Create schedules with details (4h and 8h workdays)
-        $schedules = $this->createSchedules();
+        // Create work schedules
+        echo "  ⏰ Creating schedule templates...\n";
+        $this->createSchedules();
+        echo "    ✓ Created 2 schedule templates (4h and 8h workdays)\n";
         
-        // Create 5 users (1 admin, 1 muted)
-        $users = $this->createUsers($departments);
-        
-        // Assign schedules to users
-        $this->assignSchedulesToUsers($users, $schedules);
-        
-        // Create software development projects and tasks
-        [$projects, $tasks] = $this->createProjectsAndTasks();
-        
-        // Assign projects to users
-        $this->assignProjectsToUsers($users, $projects);
-        
-        // Assign categories to users
-        $this->assignCategoriesToUsers($users, $categories);
-        
-        // Assign tasks to users
-        $this->assignTasksToUsers($users, $tasks);
-        
-        // Create data for these users within the specified time frame
-        $this->createTimeFrameData($users, $projects, $tasks, $leaveTypes, $from, $to);
-        
-        // Create additional leaves to ensure there's always some leave data
-        $this->createGuaranteedLeaves($users, $leaveTypes, $from, $to);
+        // Create projects and tasks
+        echo "  📋 Creating projects and tasks...\n";
+        $this->createProjectsAndTasks();
+        echo "    ✓ Created " . $this->projects->count() . " projects with " . $this->tasks->count() . " tasks\n";
     }
     
     /**
-     * Create work schedules with time slots (4h and 8h workdays)
+     * Create work schedules (4h and 8h workdays)
      */
-    private function createSchedules(): array
+    private function createSchedules(): void
     {
-        // Create part-time (4h) and full-time (8h) schedules
+        // Create part-time (4h) schedule
         $partTimeSchedule = Schedule::factory()->create([
             'odoo_schedule_id' => 101,
             'description' => 'Part-Time, 4h/day',
             'average_hours_day' => 4,
         ]);
         
+        // Create full-time (8h) schedule
         $fullTimeSchedule = Schedule::factory()->create([
             'odoo_schedule_id' => 102,
             'description' => 'Full-Time, 8h/day',
@@ -146,105 +225,21 @@ class DatabaseSeeder extends Seeder
             ]);
         }
         
-        return [$partTimeSchedule, $fullTimeSchedule];
-    }
-    
-    /**
-     * Create 5 users with specified roles (1 admin, 1 muted)
-     */
-    private function createUsers($departments)
-    {
-        $users = collect();
-        
-        // Create 5 users with pre-defined details
-        $userDetails = [
-            [
-                'name' => 'John Developer',
-                'email' => 'john@example.com',
-                'department_id' => $departments[0]->odoo_department_id, // Engineering
-                'is_admin' => true, // Admin user
-                'muted_notifications' => false,
-            ],
-            [
-                'name' => 'Jane Designer',
-                'email' => 'jane@example.com',
-                'department_id' => $departments[1]->odoo_department_id, // Design
-                'is_admin' => false,
-                'muted_notifications' => true, // Muted user
-            ],
-            [
-                'name' => 'Sarah Engineer',
-                'email' => 'sarah@example.com',
-                'department_id' => $departments[0]->odoo_department_id, // Engineering
-                'is_admin' => false,
-                'muted_notifications' => false,
-            ],
-            [
-                'name' => 'Michael Tester',
-                'email' => 'michael@example.com',
-                'department_id' => $departments[0]->odoo_department_id, // Engineering
-                'is_admin' => false,
-                'muted_notifications' => false,
-            ],
-            [
-                'name' => 'Emily Manager',
-                'email' => 'emily@example.com',
-                'department_id' => $departments[2]->odoo_department_id, // Product
-                'is_admin' => false,
-                'muted_notifications' => false,
-            ],
+        $this->schedules = [
+            'part_time' => $partTimeSchedule,
+            'full_time' => $fullTimeSchedule
         ];
-        
-        foreach ($userDetails as $i => $details) {
-            $user = User::factory()->create(array_merge($details, [
-                'odoo_id' => 1001 + $i,
-                'desktime_id' => 2001 + $i,
-                'proofhub_id' => Str::uuid(),
-                'systempin_id' => 3001 + $i,
-            ]));
-            
-            $users->push($user);
-        }
-        
-        return $users;
     }
     
     /**
-     * Assign schedules to users (mix of 4h and 8h)
+     * Create projects and tasks for users to work on
      */
-    private function assignSchedulesToUsers($users, $schedules)
-    {
-        $partTimeSchedule = $schedules[0];
-        $fullTimeSchedule = $schedules[1];
-        
-        // Assign 4h schedule to users 1 and 3
-        foreach ([$users[1], $users[3]] as $user) {
-            UserSchedule::factory()->current()->create([
-                'user_id' => $user->id,
-                'odoo_schedule_id' => $partTimeSchedule->odoo_schedule_id,
-                'effective_from' => Carbon::parse('2024-12-01'), // From beginning of December 2024
-            ]);
-        }
-        
-        // Assign 8h schedule to users 0, 2, and 4
-        foreach ([$users[0], $users[2], $users[4]] as $user) {
-            UserSchedule::factory()->current()->create([
-                'user_id' => $user->id,
-                'odoo_schedule_id' => $fullTimeSchedule->odoo_schedule_id,
-                'effective_from' => Carbon::parse('2024-12-01'), // From beginning of December 2024
-            ]);
-        }
-    }
-    
-    /**
-     * Create software development projects and tasks
-     */
-    private function createProjectsAndTasks()
+    private function createProjectsAndTasks(): void
     {
         $projects = collect();
         $tasks = collect();
         
-        // Create 3 software development projects
+        // Create software development projects
         $projectData = [
             [
                 'name' => 'API Development',
@@ -282,7 +277,7 @@ class DatabaseSeeder extends Seeder
         ];
         
         foreach ($projectData as $data) {
-            $project = Project::create([
+            $project = Project::factory()->create([
                 'name' => $data['name'],
                 'proofhub_project_id' => $data['proofhub_project_id']
             ]);
@@ -291,7 +286,7 @@ class DatabaseSeeder extends Seeder
             // Create tasks for this project
             foreach ($data['tasks'] as $i => $taskName) {
                 $taskId = (int)($project->proofhub_project_id * 100 + $i + 1);
-                $task = Task::create([
+                $task = Task::factory()->create([
                     'proofhub_task_id' => $taskId,
                     'proofhub_project_id' => $project->proofhub_project_id,
                     'name' => $taskName,
@@ -300,192 +295,328 @@ class DatabaseSeeder extends Seeder
             }
         }
         
-        return [$projects, $tasks];
+        $this->projects = $projects;
+        $this->tasks = $tasks;
     }
     
     /**
-     * Assign projects to users
+     * Method 1: Create users with predefined roles and details
      */
-    private function assignProjectsToUsers($users, $projects)
+    private function createUsers(): array
     {
-        // Assign all projects to admin user (user 0)
-        foreach ($projects as $project) {
-            $users[0]->projects()->attach($project->proofhub_project_id);
+        $users = [];
+        
+        // Create 5 users with pre-defined details
+        $userDetails = [
+            [
+                'name' => 'John Developer',
+                'email' => 'john@example.com',
+                'department_id' => $this->departments[0]->odoo_department_id, // Engineering
+                'is_admin' => true, // Admin user
+                'muted_notifications' => false,
+            ],
+            [
+                'name' => 'Jane Designer',
+                'email' => 'jane@example.com',
+                'department_id' => $this->departments[1]->odoo_department_id, // Design
+                'is_admin' => false,
+                'muted_notifications' => true, // Muted user
+            ],
+            [
+                'name' => 'Sarah Engineer',
+                'email' => 'sarah@example.com',
+                'department_id' => $this->departments[0]->odoo_department_id, // Engineering
+                'is_admin' => false,
+                'muted_notifications' => false,
+            ],
+            [
+                'name' => 'Michael Tester',
+                'email' => 'michael@example.com',
+                'department_id' => $this->departments[0]->odoo_department_id, // Engineering
+                'is_admin' => false,
+                'muted_notifications' => false,
+            ],
+            [
+                'name' => 'Emily Manager',
+                'email' => 'emily@example.com',
+                'department_id' => $this->departments[2]->odoo_department_id, // Product
+                'is_admin' => false,
+                'muted_notifications' => false,
+            ],
+        ];
+        
+        foreach ($userDetails as $i => $details) {
+            $user = User::factory()->create(array_merge($details, [
+                'odoo_id' => 1001 + $i,
+                'desktime_id' => 2001 + $i,
+                'proofhub_id' => Str::uuid(),
+                'systempin_id' => 3001 + $i,
+            ]));
+            
+            $users[] = $user;
         }
         
-        // User 1 (Jane) - Frontend Dashboard
-        $users[1]->projects()->attach($projects[1]->proofhub_project_id);
-        
-        // User 2 (Sarah) - API Development and Mobile App
-        $users[2]->projects()->attach([
-            $projects[0]->proofhub_project_id,
-            $projects[2]->proofhub_project_id
-        ]);
-        
-        // User 3 (Michael) - API Development and Frontend Dashboard
-        $users[3]->projects()->attach([
-            $projects[0]->proofhub_project_id,
-            $projects[1]->proofhub_project_id
-        ]);
-        
-        // User 4 (Emily) - All projects (project manager)
-        foreach ($projects as $project) {
-            $users[4]->projects()->attach($project->proofhub_project_id);
-        }
+        return $users;
     }
     
     /**
-     * Assign categories to users
+     * Method 2: Create 8-hour workday schedule (full-time) with all associated data
      */
-    private function assignCategoriesToUsers($users, $categories)
+    private function createFullTimeData(array $users, int ...$userIndices)
     {
-        // Assign categories to users based on their role
+        $fullTimeUsers = [];
+        $fullTimeSchedule = $this->schedules['full_time'];
         
-        // John (Admin) - Gets all categories
-        foreach ($categories as $category) {
-            $users[0]->categories()->attach($category->odoo_category_id);
+        // Assign users to full-time schedule (8h)
+        foreach ($userIndices as $index) {
+            if (isset($users[$index])) {
+                $user = $users[$index];
+                $fullTimeUsers[] = $user;
+                
+                // Assign 8h schedule
+                UserSchedule::factory()->current()->create([
+                    'user_id' => $user->id,
+                    'odoo_schedule_id' => $fullTimeSchedule->odoo_schedule_id,
+                    'effective_from' => Carbon::parse('2024-12-01'),
+                ]);
+                
+                // Assign projects based on user role
+                $this->assignProjectsToUser($user);
+                
+                // Assign categories based on user role
+                $this->assignCategoriesToUser($user);
+                
+                // Assign tasks based on user role
+                $this->assignTasksToUser($user);
+            }
         }
         
-        // Jane (Designer) - Design
-        $users[1]->categories()->attach($categories[1]->odoo_category_id);
+        // Create time data (attendance, time entries) for these users
+        $this->createTimeData($fullTimeUsers, $fullTimeSchedule->average_hours_day);
         
-        // Sarah (Engineer) - Development, Testing, Documentation
-        $users[2]->categories()->attach([
-            $categories[0]->odoo_category_id,
-            $categories[2]->odoo_category_id,
-            $categories[3]->odoo_category_id
-        ]);
-        
-        // Michael (Tester) - Testing, Documentation
-        $users[3]->categories()->attach([
-            $categories[2]->odoo_category_id,
-            $categories[3]->odoo_category_id
-        ]);
-        
-        // Emily (Manager) - Management, Development
-        $users[4]->categories()->attach([
-            $categories[0]->odoo_category_id,
-            $categories[4]->odoo_category_id
-        ]);
+        return $fullTimeUsers;
     }
     
     /**
-     * Assign tasks to users
+     * Method 3: Create 4-hour workday schedule (part-time) with all associated data
      */
-    private function assignTasksToUsers($users, $tasks)
+    private function createPartTimeData(array $users, int ...$userIndices)
+    {
+        $partTimeUsers = [];
+        $partTimeSchedule = $this->schedules['part_time'];
+        
+        // Assign users to part-time schedule (4h)
+        foreach ($userIndices as $index) {
+            if (isset($users[$index])) {
+                $user = $users[$index];
+                $partTimeUsers[] = $user;
+                
+                // Assign 4h schedule
+                UserSchedule::factory()->current()->create([
+                    'user_id' => $user->id,
+                    'odoo_schedule_id' => $partTimeSchedule->odoo_schedule_id,
+                    'effective_from' => Carbon::parse('2024-12-01'),
+                ]);
+                
+                // Assign projects based on user role
+                $this->assignProjectsToUser($user);
+                
+                // Assign categories based on user role
+                $this->assignCategoriesToUser($user);
+                
+                // Assign tasks based on user role
+                $this->assignTasksToUser($user);
+            }
+        }
+        
+        // Create time data (attendance, time entries) for these users
+        $this->createTimeData($partTimeUsers, $partTimeSchedule->average_hours_day);
+        
+        return $partTimeUsers;
+    }
+    
+    /**
+     * Assign projects based on user role
+     */
+    private function assignProjectsToUser(User $user): void
+    {
+        if ($user->name === 'John Developer' || $user->name === 'Emily Manager') {
+            // Admin and Manager get all projects
+            foreach ($this->projects as $project) {
+                $user->projects()->attach($project->proofhub_project_id);
+            }
+        } elseif ($user->name === 'Jane Designer') {
+            // Designer gets Frontend
+            $user->projects()->attach($this->projects[1]->proofhub_project_id);
+        } elseif ($user->name === 'Sarah Engineer') {
+            // Engineer gets API and Mobile
+            $user->projects()->attach([
+                $this->projects[0]->proofhub_project_id,
+                $this->projects[2]->proofhub_project_id
+            ]);
+        } elseif ($user->name === 'Michael Tester') {
+            // Tester gets API and Frontend
+            $user->projects()->attach([
+                $this->projects[0]->proofhub_project_id,
+                $this->projects[1]->proofhub_project_id
+            ]);
+        }
+    }
+    
+    /**
+     * Assign categories based on user role
+     */
+    private function assignCategoriesToUser(User $user): void
+    {
+        if ($user->name === 'John Developer') {
+            // Admin gets all categories
+            foreach ($this->categories as $category) {
+                $user->categories()->attach($category->odoo_category_id);
+            }
+        } elseif ($user->name === 'Jane Designer') {
+            // Designer gets Design
+            $user->categories()->attach($this->categories[1]->odoo_category_id);
+        } elseif ($user->name === 'Sarah Engineer') {
+            // Engineer gets Development, Testing, Documentation
+            $user->categories()->attach([
+                $this->categories[0]->odoo_category_id,
+                $this->categories[2]->odoo_category_id,
+                $this->categories[3]->odoo_category_id
+            ]);
+        } elseif ($user->name === 'Michael Tester') {
+            // Tester gets Testing, Documentation
+            $user->categories()->attach([
+                $this->categories[2]->odoo_category_id,
+                $this->categories[3]->odoo_category_id
+            ]);
+        } elseif ($user->name === 'Emily Manager') {
+            // Manager gets Management, Development
+            $user->categories()->attach([
+                $this->categories[0]->odoo_category_id,
+                $this->categories[4]->odoo_category_id
+            ]);
+        }
+    }
+    
+    /**
+     * Assign tasks based on user role
+     */
+    private function assignTasksToUser(User $user): void
     {
         // Group tasks by project
-        $apiTasks = $tasks->where('proofhub_project_id', 10001)->values(); // API Development
-        $frontendTasks = $tasks->where('proofhub_project_id', 10002)->values(); // Frontend Dashboard
-        $mobileTasks = $tasks->where('proofhub_project_id', 10003)->values(); // Mobile App
+        $apiTasks = $this->tasks->where('proofhub_project_id', 10001)->values(); // API Development
+        $frontendTasks = $this->tasks->where('proofhub_project_id', 10002)->values(); // Frontend Dashboard
+        $mobileTasks = $this->tasks->where('proofhub_project_id', 10003)->values(); // Mobile App
         
         // Only proceed if we have tasks for each project
         if ($apiTasks->isEmpty() || $frontendTasks->isEmpty() || $mobileTasks->isEmpty()) {
             return;
         }
         
-        // John (Admin) - Gets a few tasks from each project
-        $users[0]->tasks()->attach([
+        if ($user->name === 'John Developer') {
+            // Admin gets a task from each project
+            $user->tasks()->attach([
             $apiTasks->first()->proofhub_task_id, 
             $frontendTasks->first()->proofhub_task_id, 
             $mobileTasks->first()->proofhub_task_id
         ]);
-        
-        // Jane (Designer) - Gets frontend UI tasks
-        $users[1]->tasks()->attach([
-            $frontendTasks->first()->proofhub_task_id
-        ]);
-        if ($frontendTasks->count() >= 2) {
-            $users[1]->tasks()->attach([$frontendTasks[1]->proofhub_task_id]);
-        }
-        if ($frontendTasks->count() >= 4) {
-            $users[1]->tasks()->attach([$frontendTasks[3]->proofhub_task_id]);
-        }
-        
-        // Sarah (Engineer) - Gets API and Mobile development tasks
-        $sarah_tasks = [];
-        if ($apiTasks->count() >= 2) $sarah_tasks[] = $apiTasks[1]->proofhub_task_id;
-        if ($apiTasks->count() >= 4) $sarah_tasks[] = $apiTasks[3]->proofhub_task_id;
-        if ($mobileTasks->count() >= 1) $sarah_tasks[] = $mobileTasks[0]->proofhub_task_id;
-        if ($mobileTasks->count() >= 2) $sarah_tasks[] = $mobileTasks[1]->proofhub_task_id;
-        if (!empty($sarah_tasks)) {
-            $users[2]->tasks()->attach($sarah_tasks);
-        }
-        
-        // Michael (Tester) - Gets testing related tasks
-        $michael_tasks = [];
-        if ($apiTasks->count() >= 1) $michael_tasks[] = $apiTasks[0]->proofhub_task_id;
-        if ($apiTasks->count() >= 3) $michael_tasks[] = $apiTasks[2]->proofhub_task_id;
-        if ($frontendTasks->count() >= 3) $michael_tasks[] = $frontendTasks[2]->proofhub_task_id;
-        if ($frontendTasks->count() >= 4) $michael_tasks[] = $frontendTasks[3]->proofhub_task_id;
-        if (!empty($michael_tasks)) {
-            $users[3]->tasks()->attach($michael_tasks);
-        }
-        
-        // Emily (Manager) - Gets management/planning tasks
-        $emily_tasks = [];
-        if ($apiTasks->count() >= 3) $emily_tasks[] = $apiTasks[2]->proofhub_task_id;
-        if ($frontendTasks->count() >= 5) $emily_tasks[] = $frontendTasks[4]->proofhub_task_id;
-        if ($mobileTasks->count() >= 5) $emily_tasks[] = $mobileTasks[4]->proofhub_task_id;
-        if (!empty($emily_tasks)) {
-            $users[4]->tasks()->attach($emily_tasks);
+        } elseif ($user->name === 'Jane Designer') {
+            // Designer gets frontend UI tasks
+            $designerTasks = [];
+            if ($frontendTasks->count() >= 1) $designerTasks[] = $frontendTasks[0]->proofhub_task_id;
+            if ($frontendTasks->count() >= 2) $designerTasks[] = $frontendTasks[1]->proofhub_task_id;
+            if ($frontendTasks->count() >= 4) $designerTasks[] = $frontendTasks[3]->proofhub_task_id;
+            
+            if (!empty($designerTasks)) {
+                $user->tasks()->attach($designerTasks);
+            }
+        } elseif ($user->name === 'Sarah Engineer') {
+            // Engineer gets API and Mobile development tasks
+            $engineerTasks = [];
+            if ($apiTasks->count() >= 2) $engineerTasks[] = $apiTasks[1]->proofhub_task_id;
+            if ($apiTasks->count() >= 4) $engineerTasks[] = $apiTasks[3]->proofhub_task_id;
+            if ($mobileTasks->count() >= 1) $engineerTasks[] = $mobileTasks[0]->proofhub_task_id;
+            if ($mobileTasks->count() >= 2) $engineerTasks[] = $mobileTasks[1]->proofhub_task_id;
+            
+            if (!empty($engineerTasks)) {
+                $user->tasks()->attach($engineerTasks);
+            }
+        } elseif ($user->name === 'Michael Tester') {
+            // Tester gets testing related tasks
+            $testerTasks = [];
+            if ($apiTasks->count() >= 1) $testerTasks[] = $apiTasks[0]->proofhub_task_id;
+            if ($apiTasks->count() >= 3) $testerTasks[] = $apiTasks[2]->proofhub_task_id;
+            if ($frontendTasks->count() >= 3) $testerTasks[] = $frontendTasks[2]->proofhub_task_id;
+            if ($frontendTasks->count() >= 4) $testerTasks[] = $frontendTasks[3]->proofhub_task_id;
+            
+            if (!empty($testerTasks)) {
+                $user->tasks()->attach($testerTasks);
+            }
+        } elseif ($user->name === 'Emily Manager') {
+            // Manager gets management/planning tasks
+            $managerTasks = [];
+            if ($apiTasks->count() >= 3) $managerTasks[] = $apiTasks[2]->proofhub_task_id;
+            if ($frontendTasks->count() >= 5) $managerTasks[] = $frontendTasks[4]->proofhub_task_id;
+            if ($mobileTasks->count() >= 5) $managerTasks[] = $mobileTasks[4]->proofhub_task_id;
+            
+            if (!empty($managerTasks)) {
+                $user->tasks()->attach($managerTasks);
+            }
         }
     }
     
     /**
-     * Create data for each user within the specified time frame
+     * Create time data (attendance, time entries) for users
      */
-    private function createTimeFrameData($users, $projects, $tasks, $leaveTypes, Carbon $from, Carbon $to)
+    private function createTimeData(array $users, float $scheduleHours): void
     {
-        echo "Creating data from {$from->toDateString()} to {$to->toDateString()}\n";
+        $from = Carbon::now()->subMonth()->startOfDay();
+        $to = Carbon::now()->endOfDay();
+        
+        $scheduleType = $scheduleHours >= 8 ? "full-time (8h)" : "part-time (4h)";
+        echo "  🕒 Creating attendance and time entry data for " . count($users) . " " . $scheduleType . " users...\n";
+        echo "    ⏳ Processing " . $from->diffInDays($to) + 1 . " days of data, please wait...\n";
+        
+        // Track progress counters
+        $daysProcessed = 0;
+        $totalDays = $from->diffInDays($to) + 1;
+        $attendanceRecords = 0;
+        $timeEntryRecords = 0;
+        $leaveRecords = 0;
+        $mondayCount = 0;
         
         // For each day in the specified time frame
         $currentDate = $from->copy()->startOfDay();
         
-        // Force-create some Monday attendance records for testing
-        $mondayCount = 0;
-        
         while ($currentDate->lte($to)) {
+            $daysProcessed++;
             $isWeekend = $currentDate->isWeekend();
-            $dayOfWeek = $currentDate->dayOfWeek;
-            $isMonday = $dayOfWeek === 1;
+            $isMonday = $currentDate->dayOfWeek === 1;
             
             // Extra info for Mondays
             if ($isMonday) {
                 $mondayCount++;
-                echo "Processing MONDAY: {$currentDate->toDateString()} (day {$dayOfWeek})\n";
             }
             
-            // Skip weekends for most data (except some random entries and ensure all Mondays)
-            if ((!$isWeekend || $isMonday || rand(1, 100) <= 15)) {  // Always include Mondays, 15% chance of weekend data
+            // Skip weekends for most data (except Mondays and random entries)
+            if ((!$isWeekend || $isMonday || rand(1, 100) <= 15)) {
                 foreach ($users as $user) {
-                    // Get user's schedule to determine workday hours
-                    $userSchedule = $user->activeSchedule;
-                    $isFullTime = false;
-                    
-                    if ($userSchedule) {
-                        $schedule = Schedule::where('odoo_schedule_id', $userSchedule->odoo_schedule_id)->first();
-                        $isFullTime = $schedule && $schedule->average_hours_day >= 8;
-                    }
-                    
-                    // Skip if it's a weekend and user has 4h schedule (less likely to work)
-                    // IMPORTANT: Never skip Mondays for testing
+                    // Skip if it's a weekend (unless it's Monday or the user is full-time)
+                    $isFullTime = $scheduleHours >= 8;
                     if ($isWeekend && !$isMonday && !$isFullTime && rand(1, 100) > 5) {
                         continue;
                     }
                     
-                    // For 8-hour workday users: chance of having leave (increased to 15% for full-time)
-                    // IMPORTANT: Never have leave on Mondays for testing
+                    // For users: chance of having leave (never on Mondays for testing)
                     $hasLeave = false;
-                    if (!$isMonday && $isFullTime && !$isWeekend && rand(1, 100) <= 15) {
-                        $leaveType = $leaveTypes[array_rand($leaveTypes)];
+                    if (!$isMonday && !$isWeekend && rand(1, 100) <= 15) {
+                        $leaveType = $this->leaveTypes[array_rand($this->leaveTypes)];
                         $leaveDuration = rand(1, 3); // 1-3 days
                         
                         $leaveStart = $currentDate->copy();
                         $leaveEnd = $currentDate->copy()->addDays($leaveDuration - 1);
                         
-                        UserLeave::create([
-                            'odoo_leave_id' => 'OL' . rand(1000, 9999),
+                        UserLeave::factory()->create([
                             'user_id' => $user->id,
                             'type' => 'employee',
                             'status' => 'validate',
@@ -496,76 +627,57 @@ class DatabaseSeeder extends Seeder
                         ]);
                         
                         $hasLeave = true;
+                        $leaveRecords++;
                     }
                     
                     // If no leave, create attendance and time entries
                     if (!$hasLeave) {
-                        // Create attendance record with random selection between office/remote
-                        // 7-9 hours for full-time, 3.5-4.5 for part-time
-                        $attendanceHours = $isFullTime ? rand(7 * 60, 9 * 60) / 60 : rand(210, 270) / 60;
+                        // Calculate attendance hours with ±15% variation
+                        $variation = $scheduleHours * (rand(-15, 15) / 100);
+                        $attendanceHours = $scheduleHours + $variation;
+                        
+                        // Ensure hours stay within ±15% of schedule hours
+                        $minHours = $scheduleHours * 0.85;
+                        $maxHours = $scheduleHours * 1.15;
+                        $attendanceHours = max($minHours, min($maxHours, $attendanceHours));
+                        
                         $isRemote = rand(0, 1) === 1;
                         
-                        if ($isMonday) {
-                            echo "  Creating Monday attendance for user {$user->id} on {$currentDate->toDateString()}\n";
-                        }
-                        
                         $this->createAttendanceForDate($user, $currentDate, $attendanceHours, $isRemote);
+                        $attendanceRecords++;
                         
-                        // Create time entries - 6-11 hours for full-time, 3-5 hours for part-time
-                        $timeEntryHours = $isFullTime ? rand(6 * 60, 11 * 60) / 60 : rand(180, 300) / 60;
-                        $this->createTimeEntriesForUser($user, $currentDate, $projects, $tasks, $timeEntryHours);
+                        // Create time entries with slight variation from attendance
+                        $variation = $scheduleHours * (rand(-15, 15) / 100);
+                        $timeEntryHours = $scheduleHours + $variation;
+                        
+                        // Ensure hours stay within ±15% of schedule hours
+                        $timeEntryHours = max($minHours, min($maxHours, $timeEntryHours));
+                        
+                        $newTimeEntries = $this->createTimeEntriesForUser($user, $currentDate, $timeEntryHours);
+                        $timeEntryRecords += $newTimeEntries;
                     }
                 }
+            }
+            
+            // Show progress every 25% of days processed
+            if ($daysProcessed % max(1, intval($totalDays / 4)) === 0 || $daysProcessed === $totalDays) {
+                $percentage = round(($daysProcessed / $totalDays) * 100);
+                echo "    ↳ {$percentage}% complete: processed " . $daysProcessed . " days of data\n";
             }
             
             $currentDate->addDay();
         }
         
-        echo "Created data for {$mondayCount} Mondays\n";
-    }
-    
-    /**
-     * Create guaranteed leaves to ensure leave data exists
-     */
-    private function createGuaranteedLeaves($users, $leaveTypes, Carbon $from, Carbon $to)
-    {
-        // Create at least one scheduled leave for each user
-        foreach ($users as $i => $user) {
-            // Skip if user already has leaves
-            if (UserLeave::where('user_id', $user->id)->exists()) {
-                continue;
-            }
-            
-            // Calculate leave date (different for each user to spread them out)
-            $midpoint = $from->copy()->addDays(($to->diffInDays($from) / 2) + ($i * 3));
-            
-            // Skip weekends
-            if ($midpoint->isWeekend()) {
-                $midpoint->nextWeekday();
-            }
-            
-            // Pick a random leave type
-            $leaveType = $leaveTypes[array_rand($leaveTypes)];
-            $leaveDuration = rand(1, 5); // 1-5 days
-            
-            // Create the leave
-            UserLeave::create([
-                'odoo_leave_id' => 'OL' . rand(10000, 99999),
-                'user_id' => $user->id,
-                'type' => 'employee',
-                'status' => 'validate',
-                'start_date' => $midpoint,
-                'end_date' => $midpoint->copy()->addDays($leaveDuration - 1),
-                'duration_days' => $leaveDuration,
-                'leave_type_id' => $leaveType->odoo_leave_type_id,
-            ]);
-        }
+        echo "    ✓ Created " . $attendanceRecords . " attendance records\n";
+        echo "    ✓ Created " . $timeEntryRecords . " time entry records\n";
+        echo "    ✓ Created " . $leaveRecords . " leave records\n";
+        echo "    ✓ Included data for " . $mondayCount . " Mondays\n";
     }
     
     /**
      * Create attendance record for a user on a specific date
      */
-    private function createAttendanceForDate($user, $date, $hours, $isRemote)
+    private function createAttendanceForDate($user, $date, $hours, $isRemote): void
     {
         // Always ensure date is in UTC and at start of day
         $utcDate = $date->copy()->startOfDay()->setTimezone('UTC');
@@ -573,30 +685,43 @@ class DatabaseSeeder extends Seeder
         // Ensure isRemote is explicitly boolean
         $isRemote = (bool) $isRemote;
         
+        // Calculate exact presence seconds
+        $presenceSeconds = (int) round($hours * 3600);
+        
         if ($isRemote) {
             UserAttendance::factory()
                 ->remote()
                 ->create([
                     'user_id' => $user->id,
                     'date' => $utcDate,
-                    'presence_seconds' => round($hours * 3600),
+                    'presence_seconds' => $presenceSeconds,
                     'is_remote' => true,
                 ]);
         } else {
             $startHour = rand(8, 10);
-            $endHour = (int)($startHour + $hours);
+            $startMinute = rand(0, 30);
             
-            $startTime = $date->copy()->setTime($startHour, rand(0, 30), 0);
-            $endTime = $date->copy()->setTime($endHour, rand(0, 59), 0);
+            // For more accurate time calculations
+            $totalMinutes = $hours * 60;
+            $endHour = $startHour + floor($totalMinutes / 60);
+            $endMinute = $startMinute + ($totalMinutes % 60);
+            
+            // Adjust if minutes overflow
+            if ($endMinute >= 60) {
+                $endHour++;
+                $endMinute -= 60;
+            }
+            
+            $startTime = $date->copy()->setTime($startHour, $startMinute, 0);
+            $endTime = $date->copy()->setTime($endHour, $endMinute, 0);
             
             UserAttendance::factory()
-                ->inOffice()
                 ->create([
                     'user_id' => $user->id,
                     'date' => $utcDate,
                     'start' => $startTime,
                     'end' => $endTime,
-                    'presence_seconds' => round($hours * 3600),
+                    'presence_seconds' => $presenceSeconds,
                     'is_remote' => false,
                 ]);
         }
@@ -605,26 +730,30 @@ class DatabaseSeeder extends Seeder
     /**
      * Create time entries for a user on a specific date
      */
-    private function createTimeEntriesForUser($user, $date, $projects, $tasks, $totalHours)
+    private function createTimeEntriesForUser($user, $date, $totalHours): int
     {
         // Get projects this user is assigned to
         $userProjects = $user->projects;
         
         if ($userProjects->isEmpty()) {
-            return;
+            return 0;
         }
         
         // Create 1-4 time entries for this day
-        $numEntries = rand(1, 4);
+        $numEntries = min(rand(1, 4), $userProjects->count());
         $remainingHours = $totalHours;
-        $hoursPerEntry = $remainingHours / $numEntries;
+        $createdEntries = 0;
         
         // Keep track of already used combinations
         $usedCombinations = [];
         
+        // Track total seconds to ensure we match the intended total exactly
+        $totalSeconds = (int) round($totalHours * 3600);
+        $usedSeconds = 0;
+        
         foreach ($userProjects as $project) {
             // Find tasks for this project
-            $projectTasks = $tasks->where('proofhub_project_id', $project->proofhub_project_id);
+            $projectTasks = $this->tasks->where('proofhub_project_id', $project->proofhub_project_id);
             
             if ($projectTasks->isEmpty() || $remainingHours <= 0) {
                 continue;
@@ -647,7 +776,10 @@ class DatabaseSeeder extends Seeder
                 $entryHours = min(rand(30, 240) / 60, $remainingHours, 4);
                 $remainingHours -= $entryHours;
                 
-                // Generate a unique ID for the time entry using timestamp and random number
+                // Calculate seconds for this entry - this is key for accuracy
+                $entrySeconds = (int) round($entryHours * 3600);
+                
+                // Generate a unique ID for the time entry
                 $uniqueId = rand(100000, 999999);
                 
                 // Create development-related descriptions
@@ -660,7 +792,7 @@ class DatabaseSeeder extends Seeder
                     'Documentation for ' . strtolower($task->name)
                 ];
                 
-                TimeEntry::create([
+                TimeEntry::factory()->create([
                     'proofhub_time_entry_id' => $uniqueId,
                     'user_id' => $user->id,
                     'proofhub_project_id' => $project->proofhub_project_id,
@@ -668,17 +800,20 @@ class DatabaseSeeder extends Seeder
                     'status' => 'active',
                     'description' => $descriptions[array_rand($descriptions)],
                     'date' => $date,
-                    'duration_seconds' => round($entryHours * 3600),
+                    'duration_seconds' => $entrySeconds,
                     'proofhub_created_at' => $date->copy()->addHours(rand(1, 8)),
                 ]);
+                
+                $createdEntries++;
+                $usedSeconds += $entrySeconds;
             }
         }
         
         // If we still have hours left, add them to a random project without task
-        if ($remainingHours > 0.5 && $userProjects->isNotEmpty()) {
+        if ($remainingHours > 0.1 && $userProjects->isNotEmpty()) {
             $project = $userProjects->random();
             
-            // Generate a unique ID for the time entry using timestamp and random number
+            // Generate a unique ID for the time entry
             $uniqueId = rand(100000, 999999);
             
             $genericDescriptions = [
@@ -690,7 +825,10 @@ class DatabaseSeeder extends Seeder
                 'Bug fixes'
             ];
             
-            TimeEntry::create([
+            // Ensure we match the total exactly
+            $remainingSeconds = $totalSeconds - $usedSeconds;
+            
+            TimeEntry::factory()->create([
                 'proofhub_time_entry_id' => $uniqueId,
                 'user_id' => $user->id,
                 'proofhub_project_id' => $project->proofhub_project_id,
@@ -698,9 +836,57 @@ class DatabaseSeeder extends Seeder
                 'status' => 'active',
                 'description' => $genericDescriptions[array_rand($genericDescriptions)],
                 'date' => $date,
-                'duration_seconds' => round($remainingHours * 3600),
+                'duration_seconds' => $remainingSeconds,
                 'proofhub_created_at' => $date->copy()->addHours(rand(1, 8)),
             ]);
+            
+            $createdEntries++;
         }
+        
+        return $createdEntries;
+    }
+    
+    /**
+     * Create guaranteed leaves to ensure leave data exists
+     */
+    private function createGuaranteedLeaves($users, Carbon $from, Carbon $to): void
+    {
+        echo "  🏖️ Creating additional leave records...\n";
+        $leaveCount = 0;
+        
+        // Create at least one scheduled leave for each user
+        foreach ($users as $i => $user) {
+            // Skip if user already has leaves
+            if (UserLeave::where('user_id', $user->id)->exists()) {
+                continue;
+            }
+            
+            // Calculate leave date (different for each user to spread them out)
+            $midpoint = $from->copy()->addDays(($to->diffInDays($from) / 2) + ($i * 3));
+            
+            // Skip weekends
+            if ($midpoint->isWeekend()) {
+                $midpoint->nextWeekday();
+            }
+            
+            // Pick a random leave type
+            $leaveType = $this->leaveTypes[array_rand($this->leaveTypes)];
+            $leaveDuration = rand(1, 5); // 1-5 days
+            
+            // Create the leave
+            UserLeave::factory()->create([
+                'user_id' => $user->id,
+                'type' => 'employee',
+                'status' => 'validate',
+                'start_date' => $midpoint,
+                'end_date' => $midpoint->copy()->addDays($leaveDuration - 1),
+                'duration_days' => $leaveDuration,
+                'leave_type_id' => $leaveType->odoo_leave_type_id,
+            ]);
+            
+            $leaveCount++;
+        }
+        
+        echo "    ✓ Created " . $leaveCount . " additional leave records\n";
     }
 } 

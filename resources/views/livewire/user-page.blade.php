@@ -150,17 +150,18 @@
                 <!-- Scheduled -->
                 <td class="px-4 py-2">
                   <div class="flex flex-col gap-1">
-                    <!-- Tooltip with schedule slots -->
                     <x-tooltip>
                       <x-slot name="text">
                         <div class="flex flex-col gap-1">
-                          @foreach ($day['scheduled']['slots'] as $slot)
-                            <span
-                              class="text-xs text-gray-600 dark:text-gray-200"
-                            >
-                              {{ $slot }}
-                            </span>
-                          @endforeach
+                          @if(count($day['scheduled']['slots']) > 0)
+                            @foreach ($day['scheduled']['slots'] as $slot)
+                              <span class="text-xs text-gray-600 dark:text-gray-200">
+                                {{ $slot }}
+                              </span>
+                            @endforeach
+                          @else
+                            <span class="text-xs text-gray-500 dark:text-gray-400">No data</span>
+                          @endif
                         </div>
                       </x-slot>
                       <span>{{ $day['scheduled']['duration'] }}</span>
@@ -170,40 +171,67 @@
 
                 <!-- Leave -->
                 <td class="px-4 py-2">
-                  @if ($day['leave'])
-                    <div class="flex flex-col gap-1">
-                      <span
-                        class="w-fit rounded bg-blue-100 px-2 py-1 text-xs text-blue-800"
-                      >
-                        {{ $day['leave']['leave_type'] }}
-                        @if ($day['leave']['context'])
-                            ({{ $day['leave']['context'] }})
+                  <x-tooltip>
+                    <x-slot name="text">
+                      <div class="flex flex-col gap-1">
+                        @if ($day['leave'])
+                          <span class="text-xs text-gray-600 dark:text-gray-200">
+                            {{ $day['leave']['leave_type'] }}
+                            @if ($day['leave']['context'])
+                              ({{ $day['leave']['context'] }})
+                            @endif
+                          </span>
+                          <span class="text-xs text-gray-500 dark:text-gray-400">
+                            {{ $day['leave']['duration'] }}
+                          </span>
+                        @else
+                          <span class="text-xs text-gray-500 dark:text-gray-400">No data</span>
                         @endif
-                      </span>
-                      <span class="text-xs text-gray-500">
-                        {{ $day['leave']['duration'] }}
-                      </span>
+                      </div>
+                    </x-slot>
+                    <div>
+                      @if ($day['leave'])
+                        <div class="flex flex-col gap-1">
+                          <span class="w-fit rounded bg-blue-100 px-2 py-1 text-xs text-blue-800">
+                            {{ $day['leave']['leave_type'] }}
+                            @if ($day['leave']['context'])
+                              ({{ $day['leave']['context'] }})
+                            @endif
+                          </span>
+                          <span class="text-xs text-gray-500">
+                            {{ $day['leave']['duration'] }}
+                          </span>
+                        </div>
+                      @endif
                     </div>
-                  @endif
+                  </x-tooltip>
                 </td>
 
                 <!-- Attendance -->
                 <td class="px-4 py-2">
-                  <div class="flex flex-row items-center gap-2">
-                    @if ($day['attendance']['is_remote'])
+                  <x-tooltip>
+                    <x-slot name="text">
+                      <div class="flex flex-col gap-1">
+                        @if ($day['attendance']['is_remote'])
+                          <span class="text-xs text-gray-600 dark:text-gray-200">Remote work</span>
+                        @elseif (! empty($day['attendance']['times']))
+                          <span class="text-xs text-gray-600 dark:text-gray-200">
+                            In office: {{ implode(' → ', $day['attendance']['times']) }}
+                          </span>
+                        @else
+                          <span class="text-xs text-gray-500 dark:text-gray-400">No data</span>
+                        @endif
+                      </div>
+                    </x-slot>
+                    <div class="flex flex-row items-center gap-2">
                       <span>{{ $day['attendance']['duration'] }}</span>
-                      <x-badge variant="info" size="sm">Remote</x-badge>
-                    @elseif (! empty($day['attendance']['times']))
-                      <x-tooltip text="{{ implode(' → ', $day['attendance']['times']) }}">
-                        <div class="flex flex-row items-center gap-2">
-                          <span>{{ $day['attendance']['duration'] }}</span>
-                          <x-badge variant="success" size="sm">In Office</x-badge>
-                        </div>
-                      </x-tooltip>
-                    @else
-                      <span>{{ $day['attendance']['duration'] }}</span>
-                    @endif
-                  </div>
+                      @if ($day['attendance']['is_remote'])
+                        <x-badge variant="info" size="sm">Remote</x-badge>
+                      @elseif (! empty($day['attendance']['times']))
+                        <x-badge variant="success" size="sm">In Office</x-badge>
+                      @endif
+                    </div>
+                  </x-tooltip>
                 </td>
 
                 <!-- Worked -->
@@ -235,7 +263,7 @@
                                 @endif
                               </div>
                             @endforeach
-                          @else
+                          @elseif(count($day['worked']['projects']) > 0)
                             <div class="flex flex-col">
                               @foreach ($day['worked']['projects'] as $project)
                                 <div class="{{ !$loop->last ? 'mb-3' : '' }}">
@@ -249,12 +277,9 @@
                                   @endif
                                 </div>
                               @endforeach
-                              @if(count($day['worked']['projects']) === 0)
-                                <span class="text-xs text-gray-500 dark:text-gray-400">
-                                  No time entries available
-                                </span>
-                              @endif
                             </div>
+                          @else
+                            <span class="text-xs text-gray-500 dark:text-gray-400">No data</span>
                           @endif
                         </div>
                       </x-slot>

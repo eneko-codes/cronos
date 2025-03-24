@@ -21,11 +21,8 @@ class ScheduleFactory extends Factory
             'description' => fake()->randomElement([
                 'Full-Time, 40h/week',
                 'Part-Time, 20h/week',
-                'Flexible, 30h/week',
-                'Remote, 40h/week',
-                'Hybrid, 40h/week',
             ]),
-            'average_hours_day' => fake()->randomElement([8, 6, 4]),
+            'average_hours_day' => fake()->randomElement([8, 4]),
         ];
     }
     

@@ -77,7 +77,7 @@
                 $carbonDate = \Carbon\Carbon::parse($currentDate, 'UTC');
               @endphp
 
-              Week of {{ $carbonDate->format('F d, Y') }} (UTC)
+              Week of {{ $carbonDate->format('F d, Y') }}
             </h2>
 
             <button
@@ -141,10 +141,20 @@
           </thead>
           <tbody class="bg-gray-100 dark:bg-gray-700">
             @foreach ($this->getPeriodData() as $day)
-              <tr class="border-t border-gray-200 dark:border-gray-600">
+              @php
+                $dayDate = \Carbon\Carbon::parse($day['date']);
+                $isFutureDate = $dayDate->isFuture();
+              @endphp
+              <tr class="border-t border-gray-200 dark:border-gray-600 {{ $isFutureDate ? 'bg-gray-200 dark:bg-gray-800 text-gray-500 dark:text-gray-400' : '' }}">
                 <!-- Date Column -->
                 <td class="whitespace-nowrap px-4 py-2 font-semibold">
-                  {{ \Carbon\Carbon::parse($day['date'])->format('l d') }}
+                  <div class="flex items-center gap-2">
+                    {{ $dayDate->format('l d') }}
+                    
+                    @if($dayDate->isToday())
+                      <x-badge size="sm" variant="primary">Today</x-badge>
+                    @endif
+                  </div>
                 </td>
 
                 <!-- Scheduled -->

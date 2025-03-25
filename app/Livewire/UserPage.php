@@ -242,24 +242,104 @@ class UserPage extends Component
     // By default, Carbon(0=Sun, 1=Mon, ..., 6=Sat).
     $weekday = ($localDate->dayOfWeek + 6) % 7; // 0=Monday, ..., 6=Sunday
 
-    // Retrieve schedule details matching the current weekday.
+    // Retrieve schedule details matching the current weekday
     $details = $activeSchedule->schedule->scheduleDetails
-      ->where('weekday', $weekday)
-      ->sortBy('start');
+      ->where('weekday', $weekday);
+    
+    // Get the target hours from the schedule's average_hours_day
+    $targetHours = $activeSchedule->schedule->average_hours_day ?? 8.0; // Default to 8 hours if not specified
+    $targetMinutes = $targetHours * 60;
+    
+    Log::debug('Processing schedule data', [
+      'date' => $localDate->toDateString(),
+      'weekday' => $weekday,
+      'details_count' => $details->count(),
+      'all_details_count' => $activeSchedule->schedule->scheduleDetails->count(),
+      'target_hours' => $targetHours
+    ]);
+
+    // If we have duplicates, we need to find the best combination
+    if ($details->count() > 0) {
+      // Group details by day_period (morning/afternoon)
+      $periodGroups = $details->groupBy('day_period');
+      
+      // For each period, select the best entry if there are duplicates
+      $selectedDetails = collect();
+      
+      foreach ($periodGroups as $period => $periodDetails) {
+        if ($periodDetails->count() == 1) {
+          // If only one entry for this period, use it
+          $selectedDetails->push($periodDetails->first());
+        } else {
+          // For duplicate entries in the same period, select the one closest to standard hours
+          // For morning, typically 4 hours (240 mins); for afternoon, typically 4 hours (240 mins)
+          $standardPeriodMins = 240; // 4 hours is standard half-day
+          
+          // Find the entry closest to the standard duration
+          $closestDetail = $periodDetails->sortBy(function($detail) use ($standardPeriodMins) {
+            $start = Carbon::parse($detail->start);
+            $end = Carbon::parse($detail->end);
+            $mins = $start->diffInMinutes($end);
+            return abs($mins - $standardPeriodMins);
+          })->first();
+          
+          $selectedDetails->push($closestDetail);
+        }
+      }
+      
+      // Sort the selected details by start time
+      $selectedDetails = $selectedDetails->sortBy('start');
+      
+      // Check if the total is close enough to the target hours
+      $totalSelectedMinutes = 0;
+      foreach ($selectedDetails as $detail) {
+        $start = Carbon::parse($detail->start);
+        $end = Carbon::parse($detail->end);
+        $totalSelectedMinutes += $start->diffInMinutes($end);
+      }
+      
+      // Log the selected combination
+      Log::debug('Selected schedule details', [
+        'selected_count' => $selectedDetails->count(),
+        'total_minutes' => $totalSelectedMinutes,
+        'target_minutes' => $targetMinutes
+      ]);
+    } else {
+      // No duplicates, just use all details
+      $selectedDetails = $details->sortBy('start');
+    }
 
     $totalMinutes = 0;
     $slots = [];
 
-    foreach ($details as $detail) {
+    foreach ($selectedDetails as $detail) {
       // Parse times in UTC
       $start = Carbon::parse($detail->start)->setTimezone('UTC');
       $end = Carbon::parse($detail->end)->setTimezone('UTC');
-      $totalMinutes += $start->diffInMinutes($end);
+      $minutesForSlot = $start->diffInMinutes($end);
+      $totalMinutes += $minutesForSlot;
+      
+      Log::debug('Slot details', [
+        'weekday' => $detail->weekday,
+        'day_period' => $detail->day_period,
+        'start' => $start->format('H:i'),
+        'end' => $end->format('H:i'),
+        'minutes' => $minutesForSlot
+      ]);
 
       $slots[] =
         ucfirst($detail->day_period) .
         ": {$start->format('H:i')} - {$end->format('H:i')}";
     }
+
+    Log::debug('Final schedule data', [
+      'date' => $localDate->toDateString(),
+      'total_minutes' => $totalMinutes,
+      'duration' => $this->formatDuration($totalMinutes),
+      'slots_count' => count($slots),
+      'original_details_count' => $details->count(),
+      'selected_details_count' => $selectedDetails->count()
+    ]);
 
     return [
       'duration' => $this->formatDuration($totalMinutes),

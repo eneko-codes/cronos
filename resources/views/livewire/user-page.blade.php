@@ -164,7 +164,7 @@
                           @endif
                         </div>
                       </x-slot>
-                      <span>{{ $day['scheduled']['duration'] }}</span>
+                      <span>{{ $day['scheduled']['duration'] !== '0h 0m' ? $day['scheduled']['duration'] : '' }}</span>
                     </x-tooltip>
                   </div>
                 </td>
@@ -308,7 +308,7 @@
                       </div>
                     </x-slot>
                     <div class="flex flex-row items-center gap-2">
-                      <span>{{ $day['attendance']['duration'] }}</span>
+                      <span>{{ $day['attendance']['duration'] !== '0h 0m' ? $day['attendance']['duration'] : '' }}</span>
                       @if ($day['attendance']['is_remote'])
                         <x-badge variant="info" size="sm">Remote</x-badge>
                       @elseif (! empty($day['attendance']['times']))
@@ -367,7 +367,7 @@
                           @endif
                         </div>
                       </x-slot>
-                      <span>{{ $day['worked']['duration'] }}</span>
+                      <span>{{ $day['worked']['duration'] !== '0h 0m' ? $day['worked']['duration'] : '' }}</span>
                     </x-tooltip>
                   </div>
                 </td>
@@ -387,7 +387,7 @@
                   $scheduledR = $scheduledMins % 60;
                 @endphp
 
-                {{ $scheduledH }}h {{ $scheduledR }}m
+                {{ $scheduledMins > 0 ? "{$scheduledH}h {$scheduledR}m" : '' }}
               </td>
               <td class="px-4 py-2">
                 @php
@@ -396,7 +396,7 @@
                   $leaveR = $leaveMins % 60;
                 @endphp
 
-                {{ $leaveH }}h {{ $leaveR }}m
+                {{ $leaveMins > 0 ? "{$leaveH}h {$leaveR}m" : '' }}
               </td>
               <td class="px-4 py-2">
                 @php
@@ -405,7 +405,7 @@
                   $attendanceR = $attendanceMins % 60;
                 @endphp
 
-                {{ $attendanceH }}h {{ $attendanceR }}m
+                {{ $attendanceMins > 0 ? "{$attendanceH}h {$attendanceR}m" : '' }}
               </td>
               <td class="px-4 py-2">
                 @php
@@ -414,7 +414,7 @@
                   $workedR = $workedMins % 60;
                 @endphp
 
-                {{ $workedH }}h {{ $workedR }}m
+                {{ $workedMins > 0 ? "{$workedH}h {$workedR}m" : '' }}
               </td>
             </tr>
           </tbody>

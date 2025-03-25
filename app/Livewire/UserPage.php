@@ -41,6 +41,7 @@ class UserPage extends Component
     'scheduled' => 0, // in minutes
     'attendance' => 0, // in minutes
     'worked' => 0, // in minutes
+    'leave' => 0, // in minutes
   ];
 
   /**
@@ -194,7 +195,7 @@ class UserPage extends Component
 
       // Extract and process data subsets for the current day.
       $scheduleData = $this->processScheduleData($data['schedules'], $cursor);
-      $leaveData = $this->processLeaveData($data['leaves'], $dateString);
+      $leaveData = $this->processLeaveData($data['leaves'], $dateString, $data['schedules']);
       $attendanceData = $this->processAttendanceData(
         $data['attendances'],
         $dateString
@@ -271,7 +272,8 @@ class UserPage extends Component
    */
   protected function processLeaveData(
     Collection $leaves,
-    string $dateString
+    string $dateString,
+    Collection $schedules = null
   ): ?array {
     $leave = $this->findActiveLeave($leaves, $dateString);
     if (!$leave) {
@@ -285,15 +287,102 @@ class UserPage extends Component
       default => '',
     };
 
+    // Format the time information using start_date and end_date
+    $startTime = $leave->start_date->format('H:i');
+    $endTime = $leave->end_date->format('H:i');
+    $timeRange = "{$startTime} - {$endTime}";
+    
+    // Log leave info for debugging
+    Log::debug("Leave data for {$dateString}", [
+      'leave_id' => $leave->id ?? 'unknown',
+      'start_date' => $leave->start_date->format('Y-m-d H:i:s'),
+      'end_date' => $leave->end_date->format('Y-m-d H:i:s'),
+      'duration_days' => $leave->duration_days,
+      'time_range' => $timeRange,
+      'is_half_day' => $leave->isHalfDay(),
+      'request_hour_from' => $leave->request_hour_from,
+      'request_hour_to' => $leave->request_hour_to,
+    ]);
+    
+    // Get formatted half-day time using the helper method
+    $halfDayTime = $leave->getFormattedHalfDayHours();
+
+    // Calculate duration in minutes for display based on user's scheduled hours
+    $durationMinutes = 0;
+    
+    // For full-day leaves, we need to look at the employee's schedule for that day
+    if ($leave->duration_days > 0) {
+      if ($leave->isHalfDay()) {
+        // For half-day leaves, use the exact hours from request_hour fields if available
+        if ($leave->request_hour_from !== null && $leave->request_hour_to !== null) {
+          // Convert decimal hours to minutes
+          $durationMinutes = ($leave->request_hour_to - $leave->request_hour_from) * 60;
+        } else {
+          // Try to get scheduled duration for a proper half-day calculation
+          if ($schedules !== null) {
+            $scheduledMinutes = $this->getScheduledDurationForDate($schedules, $dateString);
+            $durationMinutes = $scheduledMinutes / 2; // Half of scheduled time
+          } else {
+            // Fallback - half day is typically 4 hours (240 minutes)
+            $durationMinutes = 240;
+          }
+        }
+      } else {
+        // For full-day leaves, determine scheduled hours for this day
+        if ($schedules !== null) {
+          $durationMinutes = $this->getScheduledDurationForDate($schedules, $dateString);
+          
+          // If we have multiple days of leave, calculate accordingly
+          if ($leave->duration_days > 1) {
+            $durationMinutes = $durationMinutes * $leave->duration_days;
+          }
+          
+          Log::debug("Using scheduled duration for leave", [
+            'date' => $dateString,
+            'scheduled_minutes' => $durationMinutes,
+            'duration_days' => $leave->duration_days
+          ]);
+        } else {
+          // Fallback - standard work day (8 hours = 480 minutes)
+          $durationMinutes = $leave->duration_days * 8 * 60;
+          Log::debug("Using standard duration for leave", [
+            'date' => $dateString,
+            'duration_days' => $leave->duration_days,
+            'minutes' => $durationMinutes
+          ]);
+        }
+      }
+    }
+    
+    $durationFormatted = $this->formatDuration($durationMinutes);
+
+    // Format the duration appropriately for full and half days
+    $durationText = '';
+    if ($leave->duration_days == 0.5) {
+      $timeInfo = $leave->isMorningLeave() ? 'Morning' : ($leave->isAfternoonLeave() ? 'Afternoon' : '');
+      $durationText = 'Half day' . ($timeInfo ? " ($timeInfo)" : '');
+    } elseif ($leave->duration_days == 1) {
+      $durationText = '1 day';
+    } else {
+      $durationText = CarbonInterval::days($leave->duration_days)
+        ->cascade()
+        ->forHumans(['parts' => 2]);
+    }
+
     return [
       'type' => $leave->type,
       'context' => $contextInfo,
       'leave_type' => $leave->leaveType?->name ?? 'Unknown',
-      // We keep Odoo's original day-based interval for textual display (e.g. "1 day").
-      // This is not used in total hours, so it's fine as a readable string.
-      'duration' => CarbonInterval::days($leave->duration_days)
-        ->cascade()
-        ->forHumans(['parts' => 2]),
+      'duration' => $durationText,
+      'duration_hours' => $durationFormatted,
+      'status' => $leave->status ?? 'validate',
+      'is_half_day' => $leave->isHalfDay(),
+      'time_period' => $leave->isMorningLeave() ? 'morning' : ($leave->isAfternoonLeave() ? 'afternoon' : 'full-day'),
+      'time_range' => $timeRange,
+      'half_day_time' => $halfDayTime,
+      'start_time' => $startTime,
+      'end_time' => $endTime,
+      'actual_minutes' => $durationMinutes, // Add the actual minutes for accurate totals calculation
     ];
   }
 
@@ -499,7 +588,7 @@ class UserPage extends Component
   }
 
   /**
-   * Calculates totals (scheduled, attendance, worked) in minutes.
+   * Calculates totals (scheduled, attendance, worked, leave) in minutes.
    */
   protected function calculateTotals(array $periodData): array
   {
@@ -516,9 +605,22 @@ class UserPage extends Component
         $totals['worked'] += $this->durationToMinutes(
           $day['worked']['duration']
         );
+        
+        // Add leave minutes when a leave exists using actual_minutes
+        if (isset($day['leave']) && $day['leave']) {
+          // Use actual_minutes when available, which accounts for schedule
+          if (isset($day['leave']['actual_minutes'])) {
+            $totals['leave'] += $day['leave']['actual_minutes'];
+          } 
+          // Fallback to duration_hours
+          else if (isset($day['leave']['duration_hours'])) {
+            $totals['leave'] += $this->durationToMinutes($day['leave']['duration_hours']);
+          }
+        }
+        
         return $totals;
       },
-      ['scheduled' => 0, 'attendance' => 0, 'worked' => 0]
+      ['scheduled' => 0, 'attendance' => 0, 'worked' => 0, 'leave' => 0]
     );
   }
 
@@ -568,5 +670,15 @@ class UserPage extends Component
     if ($this->user->doNotTrack) {
       $this->canEdit = false;
     }
+  }
+
+  /**
+   * Gets the scheduled duration for a specified date in minutes.
+   */
+  protected function getScheduledDurationForDate(Collection $schedules, string $dateString): int
+  {
+    $localDate = Carbon::parse($dateString);
+    $scheduleData = $this->processScheduleData($schedules, $localDate);
+    return $this->durationToMinutes($scheduleData['duration']);
   }
 }

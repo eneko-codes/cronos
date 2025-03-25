@@ -248,7 +248,7 @@ class OdooApiCalls implements Pingable
     array $domain = []
   ): Collection {
     $baseFilters = [
-      ['state', '=', 'validate'],
+      ['state', 'in', ['validate', 'validate1', 'refuse', 'cancel']],
       ['holiday_type', 'in', ['employee', 'category', 'department']],
     ];
 
@@ -270,6 +270,10 @@ class OdooApiCalls implements Pingable
       'number_of_days',
       'state',
       'holiday_status_id',
+      'request_date_from',   // Additional field for local date
+      'request_date_to',     // Additional field for local date
+      'request_hour_from',   // For half-day morning/afternoon
+      'request_hour_to',     // For half-day morning/afternoon
     ]);
   }
 

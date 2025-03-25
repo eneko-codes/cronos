@@ -41,6 +41,10 @@ class CreateUserLeavesTable extends Migration
         ->foreign('leave_type_id')
         ->references('odoo_leave_type_id')
         ->on('leave_types');
+        
+      // For half-day information:
+      $table->float('request_hour_from')->nullable();
+      $table->float('request_hour_to')->nullable();
 
       $table->timestamps();
     });

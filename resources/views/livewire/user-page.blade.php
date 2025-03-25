@@ -184,6 +184,39 @@
                           <span class="text-xs text-gray-500 dark:text-gray-400">
                             {{ $day['leave']['duration'] }}
                           </span>
+                          @if ($day['leave']['is_half_day'] && $day['leave']['half_day_time'])
+                            <span class="text-xs text-gray-600 dark:text-gray-200">
+                              Hours: {{ $day['leave']['half_day_time'] }}
+                            </span>
+                          @else
+                            <span class="text-xs text-gray-600 dark:text-gray-200">
+                              Hours: {{ $day['leave']['time_range'] }}
+                            </span>
+                          @endif
+                          <span class="text-xs font-medium text-gray-600 dark:text-gray-200">
+                            Duration: {{ $day['leave']['duration_hours'] }}
+                          </span>
+                          @if ($day['leave']['status'] !== 'validate')
+                            <span class="text-xs font-medium {{ 
+                              match($day['leave']['status']) {
+                                'refuse' => 'text-red-500',
+                                'confirm' => 'text-yellow-500',
+                                'validate1' => 'text-blue-500',
+                                'draft' => 'text-gray-500',
+                                'cancel' => 'text-red-300',
+                                default => 'text-yellow-500'
+                              }
+                            }}">
+                              {{ match($day['leave']['status']) {
+                                'refuse' => 'Refused',
+                                'confirm' => 'Pending Approval',
+                                'validate1' => 'First Approval',
+                                'draft' => 'Draft',
+                                'cancel' => 'Cancelled',
+                                default => ucfirst($day['leave']['status'])
+                              } }}
+                            </span>
+                          @endif
                         @else
                           <span class="text-xs text-gray-500 dark:text-gray-400">No data</span>
                         @endif
@@ -192,15 +225,46 @@
                     <div>
                       @if ($day['leave'])
                         <div class="flex flex-col gap-1">
-                          <span class="w-fit rounded bg-blue-100 px-2 py-1 text-xs text-blue-800">
+                          <span class="w-fit rounded bg-blue-100 px-2 py-1 text-xs text-blue-800 {{ $day['leave']['status'] !== 'validate' ? 'opacity-60' : '' }}">
                             {{ $day['leave']['leave_type'] }}
                             @if ($day['leave']['context'])
                               ({{ $day['leave']['context'] }})
                             @endif
+                            @if (isset($day['leave']['is_half_day']) && $day['leave']['is_half_day'])
+                              <span class="ml-1 inline-flex items-center rounded-full bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-700">
+                                {{ ucfirst($day['leave']['time_period']) }}
+                              </span>
+                            @endif
                           </span>
                           <span class="text-xs text-gray-500">
-                            {{ $day['leave']['duration'] }}
+                            {{ $day['leave']['duration_hours'] }}
+                            @if ($day['leave']['is_half_day'] && $day['leave']['half_day_time']) 
+                              ({{ $day['leave']['half_day_time'] }})
+                            @elseif (!$day['leave']['is_half_day'] && $day['leave']['time_range'])
+                              ({{ $day['leave']['time_range'] }})
+                            @endif
                           </span>
+                          @if ($day['leave']['status'] !== 'validate')
+                            <span class="text-xs font-medium {{ 
+                              match($day['leave']['status']) {
+                                'refuse' => 'text-red-500',
+                                'confirm' => 'text-yellow-500',
+                                'validate1' => 'text-blue-500',
+                                'draft' => 'text-gray-500',
+                                'cancel' => 'text-red-300',
+                                default => 'text-yellow-500'
+                              }
+                            }}">
+                              {{ match($day['leave']['status']) {
+                                'refuse' => 'Refused',
+                                'confirm' => 'Pending Approval',
+                                'validate1' => 'First Approval',
+                                'draft' => 'Draft',
+                                'cancel' => 'Cancelled',
+                                default => ucfirst($day['leave']['status'])
+                              } }}
+                            </span>
+                          @endif
                         </div>
                       @endif
                     </div>
@@ -305,7 +369,15 @@
 
                 {{ $scheduledH }}h {{ $scheduledR }}m
               </td>
-              <td class="px-4 py-2"></td>
+              <td class="px-4 py-2">
+                @php
+                  $leaveMins = $this->getTotals()['leave'];
+                  $leaveH = intdiv($leaveMins, 60);
+                  $leaveR = $leaveMins % 60;
+                @endphp
+
+                {{ $leaveH }}h {{ $leaveR }}m
+              </td>
               <td class="px-4 py-2">
                 @php
                   $attendanceMins = $this->getTotals()['attendance'];

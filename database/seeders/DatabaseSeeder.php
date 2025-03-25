@@ -611,20 +611,68 @@ class DatabaseSeeder extends Seeder
                     $hasLeave = false;
                     if (!$isMonday && !$isWeekend && rand(1, 100) <= 15) {
                         $leaveType = $this->leaveTypes[array_rand($this->leaveTypes)];
-                        $leaveDuration = rand(1, 3); // 1-3 days
                         
-                        $leaveStart = $currentDate->copy();
-                        $leaveEnd = $currentDate->copy()->addDays($leaveDuration - 1);
+                        // 20% chance of creating a half-day leave
+                        $isHalfDay = rand(1, 100) <= 20;
                         
-                        UserLeave::factory()->create([
-                            'user_id' => $user->id,
-                            'type' => 'employee',
-                            'status' => 'validate',
-                            'start_date' => $leaveStart,
-                            'end_date' => $leaveEnd,
-                            'duration_days' => $leaveDuration,
-                            'leave_type_id' => $leaveType->odoo_leave_type_id,
-                        ]);
+                        if ($isHalfDay) {
+                            // Decide if it's morning or afternoon
+                            $isMorning = rand(0, 1) === 1;
+                            
+                            // Randomly decide the status (80% approved, 10% refused, 10% first validation)
+                            $leaveStatus = 'validate';
+                            $randomStatus = rand(1, 100);
+                            if ($randomStatus > 90) {
+                                $leaveStatus = 'refuse';
+                            } elseif ($randomStatus > 80) {
+                                $leaveStatus = 'validate1';
+                            }
+                            
+                            if ($isMorning) {
+                                UserLeave::factory()->halfDayMorning()->create([
+                                    'user_id' => $user->id,
+                                    'type' => 'employee',
+                                    'status' => $leaveStatus,
+                                    'start_date' => $currentDate->copy(),
+                                    'end_date' => $currentDate->copy(),
+                                    'leave_type_id' => $leaveType->odoo_leave_type_id,
+                                ]);
+                            } else {
+                                UserLeave::factory()->halfDayAfternoon()->create([
+                                    'user_id' => $user->id,
+                                    'type' => 'employee',
+                                    'status' => $leaveStatus,
+                                    'start_date' => $currentDate->copy(),
+                                    'end_date' => $currentDate->copy(),
+                                    'leave_type_id' => $leaveType->odoo_leave_type_id,
+                                ]);
+                            }
+                        } else {
+                            // Create a full-day leave as before
+                            $leaveDuration = rand(1, 3); // 1-3 days
+                            
+                            // Randomly decide the status (80% approved, 10% refused, 10% first validation)
+                            $leaveStatus = 'validate';
+                            $randomStatus = rand(1, 100);
+                            if ($randomStatus > 90) {
+                                $leaveStatus = 'refuse';
+                            } elseif ($randomStatus > 80) {
+                                $leaveStatus = 'validate1';
+                            }
+                            
+                            $leaveStart = $currentDate->copy();
+                            $leaveEnd = $currentDate->copy()->addDays($leaveDuration - 1);
+                            
+                            UserLeave::factory()->create([
+                                'user_id' => $user->id,
+                                'type' => 'employee',
+                                'status' => $leaveStatus,
+                                'start_date' => $leaveStart,
+                                'end_date' => $leaveEnd,
+                                'duration_days' => $leaveDuration,
+                                'leave_type_id' => $leaveType->odoo_leave_type_id,
+                            ]);
+                        }
                         
                         $hasLeave = true;
                         $leaveRecords++;
@@ -871,22 +919,75 @@ class DatabaseSeeder extends Seeder
             
             // Pick a random leave type
             $leaveType = $this->leaveTypes[array_rand($this->leaveTypes)];
-            $leaveDuration = rand(1, 5); // 1-5 days
             
-            // Create the leave
-            UserLeave::factory()->create([
-                'user_id' => $user->id,
-                'type' => 'employee',
-                'status' => 'validate',
-                'start_date' => $midpoint,
-                'end_date' => $midpoint->copy()->addDays($leaveDuration - 1),
-                'duration_days' => $leaveDuration,
-                'leave_type_id' => $leaveType->odoo_leave_type_id,
-            ]);
+            // Add some variety in leave statuses (for testing UI indicators)
+            $randomStatus = rand(1, 100);
+            $statusFactory = match(true) {
+                $randomStatus <= 10 => 'refused',  // 10% refused
+                $randomStatus <= 30 => 'pending',  // 20% pending
+                default => 'approved',             // 70% approved
+            };
+            
+            // 25% chance of creating a half-day leave for better testing variety
+            if (rand(1, 100) <= 25) {
+                // Half-day leave
+                $isMorning = rand(0, 1) === 1;
+                
+                if ($isMorning) {
+                    // Morning half-day leave
+                    UserLeave::factory()
+                        ->$statusFactory()
+                        ->halfDayMorning()
+                        ->create([
+                            'user_id' => $user->id,
+                            'type' => 'employee',
+                            'start_date' => $midpoint->copy()->startOfDay(),
+                            'leave_type_id' => $leaveType->odoo_leave_type_id,
+                        ]);
+                } else {
+                    // Afternoon half-day leave
+                    UserLeave::factory()
+                        ->$statusFactory()
+                        ->halfDayAfternoon()
+                        ->create([
+                            'user_id' => $user->id,
+                            'type' => 'employee',
+                            'start_date' => $midpoint->copy()->startOfDay(),
+                            'leave_type_id' => $leaveType->odoo_leave_type_id,
+                        ]);
+                }
+            } else {
+                // Full-day leave
+                $leaveDuration = rand(1, 5); // 1-5 days
+                
+                if ($leaveDuration == 1) {
+                    // Single day leave - use the fullDay method
+                    UserLeave::factory()
+                        ->$statusFactory()
+                        ->fullDay()
+                        ->create([
+                            'user_id' => $user->id,
+                            'type' => 'employee',
+                            'start_date' => $midpoint->copy()->startOfDay(),
+                            'leave_type_id' => $leaveType->odoo_leave_type_id,
+                        ]);
+                } else {
+                    // Multi-day leave - use forDateRange
+                    $leaveEnd = $midpoint->copy()->addDays($leaveDuration - 1);
+                    UserLeave::factory()
+                        ->$statusFactory()
+                        ->forDateRange($midpoint, $leaveEnd)
+                        ->create([
+                            'user_id' => $user->id,
+                            'type' => 'employee',
+                            'leave_type_id' => $leaveType->odoo_leave_type_id,
+                        ]);
+                }
+            }
             
             $leaveCount++;
         }
         
-        echo "    ✓ Created " . $leaveCount . " additional leave records\n";
+        echo "    ✓ Created " . $leaveCount . " leave records (approved, pending, and refused statuses)\n";
     }
 } 

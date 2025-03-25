@@ -51,6 +51,8 @@ class UserLeave extends Model
     'department_id',
     'category_id',
     'leave_type_id',
+    'request_hour_from',
+    'request_hour_to',
   ];
 
   /**
@@ -62,6 +64,8 @@ class UserLeave extends Model
     'start_date' => 'datetime:Y-m-d H:i:s',
     'end_date' => 'datetime:Y-m-d H:i:s',
     'duration_days' => 'float',
+    'request_hour_from' => 'float',
+    'request_hour_to' => 'float',
   ];
 
   /**
@@ -129,6 +133,72 @@ class UserLeave extends Model
       ->where('start_date', '<=', $end)
       ->where('end_date', '>=', $start)
       ->where('status', 'validate');
+  }
+
+  /**
+   * Determine if this is a half-day leave
+   * 
+   * @return bool
+   */
+  public function isHalfDay(): bool
+  {
+    // Odoo specifically uses duration_days = 0.5 for half-day leaves
+    return $this->duration_days == 0.5;
+  }
+
+  /**
+   * Determine if this is a half-day morning leave
+   * 
+   * @return bool
+   */
+  public function isMorningLeave(): bool
+  {
+    // Morning leaves typically start at the beginning of the work day
+    // In Odoo, morning leaves typically have request_hour_from < 12.0
+    if (!$this->isHalfDay() || $this->request_hour_from === null) {
+      return false;
+    }
+    
+    return $this->request_hour_from < 12.0;
+  }
+
+  /**
+   * Determine if this is a half-day afternoon leave
+   * 
+   * @return bool
+   */
+  public function isAfternoonLeave(): bool
+  {
+    // Afternoon leaves typically start after noon
+    // In Odoo, afternoon leaves typically have request_hour_from >= 12.0
+    if (!$this->isHalfDay() || $this->request_hour_from === null) {
+      return false;
+    }
+    
+    return $this->request_hour_from >= 12.0;
+  }
+
+  /**
+   * Get formatted hours for half-day leave
+   * 
+   * @return string|null
+   */
+  public function getFormattedHalfDayHours(): ?string
+  {
+    if (!$this->isHalfDay() || $this->request_hour_from === null || $this->request_hour_to === null) {
+      return null;
+    }
+    
+    // Convert decimal hours to hours and minutes format
+    $fromHour = floor($this->request_hour_from);
+    $fromMin = round(($this->request_hour_from - $fromHour) * 60);
+    $toHour = floor($this->request_hour_to);
+    $toMin = round(($this->request_hour_to - $toHour) * 60);
+    
+    return sprintf(
+      "%02d:%02d - %02d:%02d",
+      $fromHour, $fromMin, $toHour, $toMin
+    );
   }
 
   /**

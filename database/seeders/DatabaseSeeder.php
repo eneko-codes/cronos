@@ -895,99 +895,89 @@ class DatabaseSeeder extends Seeder
     }
     
     /**
-     * Create guaranteed leaves to ensure leave data exists
+     * Create guaranteed leaves to ensure we have examples of all status types
      */
     private function createGuaranteedLeaves($users, Carbon $from, Carbon $to): void
     {
-        echo "  🏖️ Creating additional leave records...\n";
+        echo "  🏖️ Creating leave records with various statuses...\n";
         $leaveCount = 0;
+        $statusTypes = ['validate', 'validate1', 'refuse', 'confirm', 'draft', 'cancel'];
         
-        // Create at least one scheduled leave for each user
+        // Create one leave per user, cycling through status types
         foreach ($users as $i => $user) {
             // Skip if user already has leaves
             if (UserLeave::where('user_id', $user->id)->exists()) {
                 continue;
             }
             
-            // Calculate leave date (different for each user to spread them out)
-            $midpoint = $from->copy()->addDays(($to->diffInDays($from) / 2) + ($i * 3));
+            // Choose a status type based on user index to ensure distribution
+            $statusType = $statusTypes[$i % count($statusTypes)];
             
-            // Skip weekends
-            if ($midpoint->isWeekend()) {
-                $midpoint->nextWeekday();
+            // Calculate leave date (different for each user to spread them out)
+            $leaveDate = $from->copy()->addDays(($to->diffInDays($from) / 2) + ($i * 3));
+            if ($leaveDate->isWeekend()) {
+                $leaveDate->nextWeekday();
             }
             
             // Pick a random leave type
             $leaveType = $this->leaveTypes[array_rand($this->leaveTypes)];
             
-            // Add some variety in leave statuses (for testing UI indicators)
-            $randomStatus = rand(1, 100);
-            $statusFactory = match(true) {
-                $randomStatus <= 10 => 'refused',  // 10% refused
-                $randomStatus <= 30 => 'pending',  // 20% pending
-                default => 'approved',             // 70% approved
+            // Set factory method based on status
+            $statusFactory = match($statusType) {
+                'validate' => 'approved',
+                'validate1' => 'firstApproved',
+                'refuse' => 'refused',
+                'confirm' => 'pending',
+                'draft' => 'draft',
+                'cancel' => 'cancelled',
+                default => 'approved'
             };
             
-            // 25% chance of creating a half-day leave for better testing variety
+            // 25% chance of half-day for variety
             if (rand(1, 100) <= 25) {
-                // Half-day leave
-                $isMorning = rand(0, 1) === 1;
+                $halfDayType = rand(0, 1) === 1 ? 'halfDayMorning' : 'halfDayAfternoon';
                 
-                if ($isMorning) {
-                    // Morning half-day leave
-                    UserLeave::factory()
-                        ->$statusFactory()
-                        ->halfDayMorning()
-                        ->create([
-                            'user_id' => $user->id,
-                            'type' => 'employee',
-                            'start_date' => $midpoint->copy()->startOfDay(),
-                            'leave_type_id' => $leaveType->odoo_leave_type_id,
-                        ]);
-                } else {
-                    // Afternoon half-day leave
-                    UserLeave::factory()
-                        ->$statusFactory()
-                        ->halfDayAfternoon()
-                        ->create([
-                            'user_id' => $user->id,
-                            'type' => 'employee',
-                            'start_date' => $midpoint->copy()->startOfDay(),
-                            'leave_type_id' => $leaveType->odoo_leave_type_id,
-                        ]);
-                }
+                UserLeave::factory()
+                    ->$statusFactory()
+                    ->$halfDayType()
+                    ->create([
+                        'user_id' => $user->id,
+                        'type' => 'employee',
+                        'start_date' => $leaveDate->copy()->startOfDay(),
+                        'leave_type_id' => $leaveType->odoo_leave_type_id,
+                    ]);
             } else {
-                // Full-day leave
-                $leaveDuration = rand(1, 5); // 1-5 days
-                
-                if ($leaveDuration == 1) {
-                    // Single day leave - use the fullDay method
-                    UserLeave::factory()
-                        ->$statusFactory()
-                        ->fullDay()
-                        ->create([
-                            'user_id' => $user->id,
-                            'type' => 'employee',
-                            'start_date' => $midpoint->copy()->startOfDay(),
-                            'leave_type_id' => $leaveType->odoo_leave_type_id,
-                        ]);
-                } else {
-                    // Multi-day leave - use forDateRange
-                    $leaveEnd = $midpoint->copy()->addDays($leaveDuration - 1);
-                    UserLeave::factory()
-                        ->$statusFactory()
-                        ->forDateRange($midpoint, $leaveEnd)
-                        ->create([
-                            'user_id' => $user->id,
-                            'type' => 'employee',
-                            'leave_type_id' => $leaveType->odoo_leave_type_id,
-                        ]);
-                }
+                // 75% chance of full day leave
+                UserLeave::factory()
+                    ->$statusFactory()
+                    ->fullDay()
+                    ->create([
+                        'user_id' => $user->id,
+                        'type' => 'employee',
+                        'start_date' => $leaveDate->copy()->startOfDay(),
+                        'leave_type_id' => $leaveType->odoo_leave_type_id,
+                    ]);
             }
             
             $leaveCount++;
         }
         
-        echo "    ✓ Created " . $leaveCount . " leave records (approved, pending, and refused statuses)\n";
+        $statusCounts = [
+            'approved' => UserLeave::where('status', 'validate')->count(),
+            'first_approved' => UserLeave::where('status', 'validate1')->count(),  
+            'refused' => UserLeave::where('status', 'refuse')->count(),
+            'pending' => UserLeave::where('status', 'confirm')->count(),
+            'draft' => UserLeave::where('status', 'draft')->count(),
+            'cancelled' => UserLeave::where('status', 'cancel')->count(),
+        ];
+        
+        echo "    ✓ Created " . $leaveCount . " leave records\n";
+        echo "    ✓ Distribution: " . 
+            "Approved: {$statusCounts['approved']}, " .
+            "First-approved: {$statusCounts['first_approved']}, " .
+            "Refused: {$statusCounts['refused']}, " . 
+            "Pending: {$statusCounts['pending']}, " .
+            "Draft: {$statusCounts['draft']}, " .
+            "Cancelled: {$statusCounts['cancelled']}\n";
     }
 } 

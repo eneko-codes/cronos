@@ -171,104 +171,124 @@
 
                 <!-- Leave -->
                 <td class="px-4 py-2">
-                  <x-tooltip>
-                    <x-slot name="text">
-                      <div class="flex flex-col gap-1">
-                        @if ($day['leave'])
-                          <span class="text-xs text-gray-600 dark:text-gray-200">
-                            {{ $day['leave']['leave_type'] }}
-                            @if ($day['leave']['context'])
-                              ({{ $day['leave']['context'] }})
-                            @endif
-                          </span>
-                          <span class="text-xs text-gray-500 dark:text-gray-400">
-                            {{ $day['leave']['duration'] }}
-                          </span>
-                          @if ($day['leave']['is_half_day'] && $day['leave']['half_day_time'])
-                            <span class="text-xs text-gray-600 dark:text-gray-200">
-                              Hours: {{ $day['leave']['half_day_time'] }}
+                  <!-- Simplified default view - only show when leave exists -->
+                  @if ($day['leave'])
+                    <div class="flex items-center gap-2 {{ $day['leave']['status'] !== 'validate' ? 'opacity-60' : '' }}">
+                      <!-- Main leave information with tooltip -->
+                      <div>
+                        <x-tooltip>
+                          <x-slot name="text">
+                            <div class="flex flex-col gap-2 max-w-xs">
+                              <!-- Duration in days -->
+                              <div class="flex flex-row items-center gap-1 mb-1">
+                                <span class="text-xs text-gray-600 dark:text-gray-300 font-medium">
+                                  {{ $day['leave']['duration'] }}
+                                </span>
+                              </div>
+                              
+                              <!-- Time details -->
+                              @if ($day['leave']['is_half_day'])
+                                <div>
+                                  <span class="text-xs text-gray-600 dark:text-gray-300">
+                                    {{ ucfirst($day['leave']['time_period']) }} ({{ $day['leave']['half_day_time'] ?? '—' }})
+                                  </span>
+                                </div>
+                              @else
+                                <div>
+                                  <span class="text-xs text-gray-600 dark:text-gray-300">
+                                    Time: {{ $day['leave']['time_range'] }}
+                                  </span>
+                                </div>
+                              @endif
+                            </div>
+                          </x-slot>
+                          
+                          <div class="flex items-center gap-2">
+                            <!-- Leave duration - show 8h 0m if it's approved but showing 0h 0m -->
+                            <span class="text-sm font-medium">
+                              @if ($day['leave']['status'] === 'validate' && $day['leave']['duration_hours'] === '0h 0m')
+                                8h 0m
+                              @else
+                                {{ $day['leave']['duration_hours'] }}
+                              @endif
                             </span>
-                          @else
-                            <span class="text-xs text-gray-600 dark:text-gray-200">
-                              Hours: {{ $day['leave']['time_range'] }}
+                            
+                            <!-- Leave type badge -->
+                            <span class="rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-800">
+                              {{ $day['leave']['leave_type'] }}
+                              @if ($day['leave']['context'])
+                                ({{ $day['leave']['context'] }})
+                              @endif
+                              
+                              <!-- Only show half-day indicator in badge -->
+                              @if (isset($day['leave']['is_half_day']) && $day['leave']['is_half_day'])
+                                <span class="ml-1 inline-flex items-center rounded-full bg-blue-50 px-1 text-xs font-medium text-blue-700">
+                                  {{ substr(ucfirst($day['leave']['time_period']), 0, 1) }}
+                                </span>
+                              @endif
                             </span>
-                          @endif
-                          <span class="text-xs font-medium text-gray-600 dark:text-gray-200">
-                            Duration: {{ $day['leave']['duration_hours'] }}
-                          </span>
-                          @if ($day['leave']['status'] !== 'validate')
-                            <span class="text-xs font-medium {{ 
-                              match($day['leave']['status']) {
-                                'refuse' => 'text-red-500',
-                                'confirm' => 'text-yellow-500',
-                                'validate1' => 'text-blue-500',
-                                'draft' => 'text-gray-500',
-                                'cancel' => 'text-red-300',
-                                default => 'text-yellow-500'
-                              }
-                            }}">
-                              {{ match($day['leave']['status']) {
-                                'refuse' => 'Refused',
-                                'confirm' => 'Pending Approval',
-                                'validate1' => 'First Approval',
-                                'draft' => 'Draft',
-                                'cancel' => 'Cancelled',
-                                default => ucfirst($day['leave']['status'])
-                              } }}
-                            </span>
-                          @endif
-                        @else
-                          <span class="text-xs text-gray-500 dark:text-gray-400">No data</span>
-                        @endif
+                          </div>
+                        </x-tooltip>
                       </div>
-                    </x-slot>
-                    <div>
-                      @if ($day['leave'])
-                        <div class="flex flex-col gap-1">
-                          <span class="w-fit rounded bg-blue-100 px-2 py-1 text-xs text-blue-800 {{ $day['leave']['status'] !== 'validate' ? 'opacity-60' : '' }}">
-                            {{ $day['leave']['leave_type'] }}
-                            @if ($day['leave']['context'])
-                              ({{ $day['leave']['context'] }})
-                            @endif
-                            @if (isset($day['leave']['is_half_day']) && $day['leave']['is_half_day'])
-                              <span class="ml-1 inline-flex items-center rounded-full bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-700">
-                                {{ ucfirst($day['leave']['time_period']) }}
-                              </span>
-                            @endif
+                      
+                      <!-- Status indicator icon with separate tooltip -->
+                      @if ($day['leave']['status'] === 'validate')
+                        <!-- Green checkmark for validated leaves -->
+                        <x-tooltip text="Fully approved leave - counts toward leave totals">
+                          <span class="text-green-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="size-4" viewBox="0 0 20 20" fill="currentColor">
+                              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                            </svg>
                           </span>
-                          <span class="text-xs text-gray-500">
-                            {{ $day['leave']['duration_hours'] }}
-                            @if ($day['leave']['is_half_day'] && $day['leave']['half_day_time']) 
-                              ({{ $day['leave']['half_day_time'] }})
-                            @elseif (!$day['leave']['is_half_day'] && $day['leave']['time_range'])
-                              ({{ $day['leave']['time_range'] }})
-                            @endif
-                          </span>
-                          @if ($day['leave']['status'] !== 'validate')
-                            <span class="text-xs font-medium {{ 
-                              match($day['leave']['status']) {
-                                'refuse' => 'text-red-500',
-                                'confirm' => 'text-yellow-500',
-                                'validate1' => 'text-blue-500',
-                                'draft' => 'text-gray-500',
-                                'cancel' => 'text-red-300',
-                                default => 'text-yellow-500'
-                              }
-                            }}">
-                              {{ match($day['leave']['status']) {
-                                'refuse' => 'Refused',
-                                'confirm' => 'Pending Approval',
-                                'validate1' => 'First Approval',
-                                'draft' => 'Draft',
-                                'cancel' => 'Cancelled',
-                                default => ucfirst($day['leave']['status'])
-                              } }}
-                            </span>
+                        </x-tooltip>
+                      @else
+                        <!-- Status-specific icon for non-validated statuses -->
+                        <span class="{{ 
+                          match($day['leave']['status']) {
+                            'refuse' => 'text-red-500',
+                            'confirm' => 'text-yellow-500',
+                            'validate1' => 'text-orange-500',
+                            'draft' => 'text-gray-400',
+                            'cancel' => 'text-red-300',
+                            default => 'text-yellow-500'
+                          }
+                        }}">
+                          <!-- Status-specific icon -->
+                          @if($day['leave']['status'] === 'refuse')
+                            <x-tooltip text="Leave request was denied by a manager">
+                              <svg xmlns="http://www.w3.org/2000/svg" class="size-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                              </svg>
+                            </x-tooltip>
+                          @elseif($day['leave']['status'] === 'confirm')
+                            <x-tooltip text="Leave request submitted, awaiting approval">
+                              <svg xmlns="http://www.w3.org/2000/svg" class="size-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                              </svg>
+                            </x-tooltip>
+                          @elseif($day['leave']['status'] === 'validate1')
+                            <x-tooltip text="First approval received, awaiting final validation">
+                              <svg xmlns="http://www.w3.org/2000/svg" class="size-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                              </svg>
+                            </x-tooltip>
+                          @elseif($day['leave']['status'] === 'draft')
+                            <x-tooltip text="Leave request created but not yet submitted">
+                              <svg xmlns="http://www.w3.org/2000/svg" class="size-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                              </svg>
+                            </x-tooltip>
+                          @elseif($day['leave']['status'] === 'cancel')
+                            <x-tooltip text="Leave request was cancelled">
+                              <svg xmlns="http://www.w3.org/2000/svg" class="size-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
+                              </svg>
+                            </x-tooltip>
                           @endif
-                        </div>
+                        </span>
                       @endif
                     </div>
-                  </x-tooltip>
+                  @endif
                 </td>
 
                 <!-- Attendance -->

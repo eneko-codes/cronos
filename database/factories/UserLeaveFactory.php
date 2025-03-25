@@ -182,4 +182,40 @@ class UserLeaveFactory extends Factory
             'end_date' => isset($attributes['start_date']) ? Carbon::parse($attributes['start_date'])->endOfDay() : now()->endOfDay(),
         ]);
     }
+
+    /**
+     * Create a leave with first approval status
+     *
+     * @return static
+     */
+    public function firstApproved()
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'validate1',
+        ]);
+    }
+    
+    /**
+     * Create a leave with draft status
+     *
+     * @return static
+     */
+    public function draft()
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'draft',
+        ]);
+    }
+    
+    /**
+     * Create a leave with cancelled status
+     *
+     * @return static
+     */
+    public function cancelled()
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'cancel',
+        ]);
+    }
 } 

@@ -292,23 +292,24 @@ class UserPage extends Component
     $endTime = $leave->end_date->format('H:i');
     $timeRange = "{$startTime} - {$endTime}";
     
-    // Log leave info for debugging
-    Log::debug("Leave data for {$dateString}", [
-      'leave_id' => $leave->id ?? 'unknown',
-      'start_date' => $leave->start_date->format('Y-m-d H:i:s'),
-      'end_date' => $leave->end_date->format('Y-m-d H:i:s'),
-      'duration_days' => $leave->duration_days,
-      'time_range' => $timeRange,
-      'is_half_day' => $leave->isHalfDay(),
-      'request_hour_from' => $leave->request_hour_from,
-      'request_hour_to' => $leave->request_hour_to,
-    ]);
-    
     // Get formatted half-day time using the helper method
     $halfDayTime = $leave->getFormattedHalfDayHours();
 
     // Calculate duration in minutes for display based on user's scheduled hours
     $durationMinutes = 0;
+    $dateCarbon = Carbon::parse($dateString);
+    $isMultiDayLeave = $leave->duration_days > 1;
+    $isWeekend = $dateCarbon->isWeekend();
+    
+    // Log leave processing information
+    Log::debug("Processing leave for date", [
+      'date' => $dateString,
+      'leave_id' => $leave->id,
+      'status' => $leave->status,
+      'duration_days' => $leave->duration_days,
+      'is_weekend' => $isWeekend,
+      'is_multi_day' => $isMultiDayLeave
+    ]);
     
     // For full-day leaves, we need to look at the employee's schedule for that day
     if ($leave->duration_days > 0) {
@@ -330,28 +331,67 @@ class UserPage extends Component
       } else {
         // For full-day leaves, determine scheduled hours for this day
         if ($schedules !== null) {
-          $durationMinutes = $this->getScheduledDurationForDate($schedules, $dateString);
+          $scheduledMinutes = $this->getScheduledDurationForDate($schedules, $dateString);
           
-          // If we have multiple days of leave, calculate accordingly
-          if ($leave->duration_days > 1) {
-            $durationMinutes = $durationMinutes * $leave->duration_days;
+          // If scheduled minutes is 0, use standard workday as fallback (except for weekends)
+          if ($scheduledMinutes == 0) {
+            if (!$isWeekend) {
+              $scheduledMinutes = 8 * 60; // 8 hours = 480 minutes standard workday
+              Log::debug("No scheduled hours found for weekday, using standard workday", [
+                'date' => $dateString,
+                'standard_minutes' => $scheduledMinutes
+              ]);
+            } else {
+              // For weekends, only count hours if explicitly scheduled
+              Log::debug("Weekend day with no scheduled hours, using 0 minutes", [
+                'date' => $dateString
+              ]);
+            }
           }
+          
+          // For this specific day, we only want the hours for THIS day, not multiplied by multi-day count
+          $durationMinutes = $scheduledMinutes;
           
           Log::debug("Using scheduled duration for leave", [
             'date' => $dateString,
             'scheduled_minutes' => $durationMinutes,
-            'duration_days' => $leave->duration_days
           ]);
         } else {
-          // Fallback - standard work day (8 hours = 480 minutes)
-          $durationMinutes = $leave->duration_days * 8 * 60;
+          // Fallback - standard work day (8 hours = 480 minutes) for weekdays only
+          if (!$isWeekend) {
+            $durationMinutes = 8 * 60; // Standard workday
+          } else {
+            $durationMinutes = 0; // No hours for weekend unless scheduled
+          }
+          
           Log::debug("Using standard duration for leave", [
             'date' => $dateString,
-            'duration_days' => $leave->duration_days,
+            'is_weekend' => $isWeekend,
             'minutes' => $durationMinutes
           ]);
         }
       }
+    }
+    
+    // Ensure we always have a minimum duration for approved leaves on weekdays
+    if ($leave->status === 'validate' && $durationMinutes == 0 && !$isWeekend) {
+      // Use a full standard day as fallback (8 hours) for weekdays
+      $durationMinutes = 8 * 60;
+      Log::debug("Setting minimum duration for approved weekday leave with 0 duration", [
+        'date' => $dateString,
+        'leave_id' => $leave->id,
+        'minimum_minutes' => $durationMinutes
+      ]);
+    }
+    
+    // For weekend validated leaves, ensure we have a standard duration if requested
+    if ($leave->status === 'validate' && $isWeekend && $durationMinutes == 0) {
+      $durationMinutes = 8 * 60; // Standard 8 hours for weekend leaves
+      Log::debug("Setting standard duration for approved weekend leave", [
+        'date' => $dateString,
+        'leave_id' => $leave->id,
+        'standard_minutes' => $durationMinutes
+      ]);
     }
     
     $durationFormatted = $this->formatDuration($durationMinutes);
@@ -606,8 +646,8 @@ class UserPage extends Component
           $day['worked']['duration']
         );
         
-        // Add leave minutes when a leave exists using actual_minutes
-        if (isset($day['leave']) && $day['leave']) {
+        // Add leave minutes when a leave exists AND it's validated
+        if (isset($day['leave']) && $day['leave'] && isset($day['leave']['status']) && $day['leave']['status'] === 'validate') {
           // Use actual_minutes when available, which accounts for schedule
           if (isset($day['leave']['actual_minutes'])) {
             $totals['leave'] += $day['leave']['actual_minutes'];

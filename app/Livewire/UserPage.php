@@ -107,23 +107,6 @@ class UserPage extends Component
     
     // Reload data for the new period
     $this->loadPeriodDataFromCacheOrDb();
-    
-    // Dispatch browser event to refresh chart if in graph view
-    if ($this->displayMode === 'graph') {
-      $this->dispatch('refresh-chart', ['data' => $this->getChartData()]);
-    }
-  }
-
-  /**
-   * Set the display mode to table or graph
-   */
-  public function setDisplayMode(string $mode): void
-  {
-    if (!in_array($mode, ['table', 'graph'])) {
-      return;
-    }
-
-    $this->displayMode = $mode;
   }
 
   /**
@@ -140,11 +123,6 @@ class UserPage extends Component
     }
     
     $this->loadPeriodDataFromCacheOrDb();
-    
-    // Dispatch browser event to refresh chart if in graph view
-    if ($this->displayMode === 'graph') {
-      $this->dispatch('refresh-chart', ['data' => $this->getChartData()]);
-    }
   }
 
   /**
@@ -161,11 +139,6 @@ class UserPage extends Component
     }
     
     $this->loadPeriodDataFromCacheOrDb();
-    
-    // Dispatch browser event to refresh chart if in graph view
-    if ($this->displayMode === 'graph') {
-      $this->dispatch('refresh-chart', ['data' => $this->getChartData()]);
-    }
   }
 
   /**
@@ -183,80 +156,6 @@ class UserPage extends Component
   public function getTotals(): array
   {
     return $this->totals;
-  }
-
-  /**
-   * Prepares data for the chart visualization in the graph view.
-   * Returns an array with dates as keys and hours data for each category.
-   */
-  public function getChartData(): array
-  {
-    $labels = [];
-    $scheduledData = [];
-    $attendanceData = [];
-    $workedData = [];
-    $leaveData = [];
-
-    // Sort data by date to ensure chronological order
-    $periodData = collect($this->getPeriodData())->sortBy('date');
-
-    foreach ($periodData as $date => $day) {
-      // Format date for display depending on view mode (weekly/monthly)
-      $dayDate = Carbon::parse($date);
-      $dateLabel = $this->viewMode === 'weekly'
-        ? $dayDate->format('D d') // e.g. "Mon 15"
-        : $dayDate->format('d'); // Just the day for monthly view
-
-      $labels[] = $dateLabel;
-
-      // Convert duration strings to hours (float) for the chart
-      $scheduledData[] = $this->durationToHours($day['scheduled']['duration']);
-      $attendanceData[] = $this->durationToHours($day['attendance']['duration']);
-      $workedData[] = $this->durationToHours($day['worked']['duration']);
-      
-      // For leave, check if it exists and has a validated status
-      $leaveHours = 0;
-      if (isset($day['leave']) && $day['leave'] && isset($day['leave']['status']) && $day['leave']['status'] === 'validate') {
-        $leaveHours = $this->durationToHours($day['leave']['duration_hours']);
-      }
-      $leaveData[] = $leaveHours;
-    }
-
-    return [
-      'labels' => $labels,
-      'datasets' => [
-        [
-          'name' => 'Scheduled',
-          'data' => $scheduledData,
-          'color' => '#3b82f6', // blue-500
-        ],
-        [
-          'name' => 'Attendance',
-          'data' => $attendanceData,
-          'color' => '#22c55e', // green-500
-        ],
-        [
-          'name' => 'Worked',
-          'data' => $workedData,
-          'color' => '#a855f7', // purple-500
-        ],
-        [
-          'name' => 'Leave',
-          'data' => $leaveData,
-          'color' => '#eab308', // yellow-500
-        ],
-      ],
-    ];
-  }
-
-  /**
-   * Converts an "Xh Ym" duration string to decimal hours.
-   * Example: "6h 30m" => 6.5
-   */
-  protected function durationToHours(string $duration): float
-  {
-    $minutes = $this->durationToMinutes($duration);
-    return round($minutes / 60, 1); // Round to 1 decimal place
   }
 
   /**

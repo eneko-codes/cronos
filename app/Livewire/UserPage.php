@@ -344,6 +344,7 @@ class UserPage extends Component
     return [
       'duration' => $this->formatDuration($totalMinutes),
       'slots' => $slots,
+      'schedule_name' => $activeSchedule->schedule->description ?? null,
     ];
   }
 

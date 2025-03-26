@@ -164,6 +164,11 @@
                       <x-slot name="text">
                         <div class="flex flex-col gap-1">
                           @if(count($day['scheduled']['slots']) > 0)
+                            @if(isset($day['scheduled']['schedule_name']))
+                              <span class="text-xs font-medium text-gray-700 dark:text-gray-100 mb-1">
+                                {{ $day['scheduled']['schedule_name'] }}
+                              </span>
+                            @endif
                             @foreach ($day['scheduled']['slots'] as $slot)
                               <span class="text-xs text-gray-600 dark:text-gray-200">
                                 {{ $slot }}

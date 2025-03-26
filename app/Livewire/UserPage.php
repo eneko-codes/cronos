@@ -850,6 +850,12 @@ class UserPage extends Component
     // We'll parse the "Xh Ym" values back into minutes for summation.
     return collect($periodData)->reduce(
       function ($totals, $day) {
+        // Skip future dates (only include past days and today)
+        $dayDate = Carbon::parse($day['date']);
+        if ($dayDate->isFuture()) {
+          return $totals; // Skip this day's data
+        }
+        
         $totals['scheduled'] += $this->durationToMinutes(
           $day['scheduled']['duration']
         );

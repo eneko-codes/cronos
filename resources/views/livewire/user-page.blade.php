@@ -109,6 +109,18 @@
               Monthly
             </button>
           </div>
+          
+          <!-- Deviations Toggle -->
+          <button
+            type="button"
+            wire:click="toggleDeviations"
+            class="{{ $showDeviations ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' }} inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold dark:border-gray-700 hover:bg-opacity-90"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+            </svg>
+            Deviations
+          </button>
         </div>
       </div>
 
@@ -130,7 +142,7 @@
                 ]
                 as $name => $tooltip)
                 @php $isLastColumn = $name === 'Worked'; @endphp
-                <th class="px-4 py-2 {{ $isLastColumn ? 'rounded-tr-lg' : '' }}">
+                <th class="px-4 py-2 {{ $isLastColumn && !$showDeviations ? 'rounded-tr-lg' : '' }}">
                   <div class="inline-flex flex-row items-center gap-1">
                     {{ $name }}
                     <x-tooltip text="{{ $tooltip }}">
@@ -152,6 +164,38 @@
                   </div>
                 </th>
               @endforeach
+              
+              @if($showDeviations)
+                @foreach ([
+                    'A vs S' => 'Attendance vs Scheduled deviation',
+                    'W vs S' => 'Worked vs Scheduled deviation',
+                    'W vs A' => 'Worked vs Attendance deviation'
+                  ]
+                  as $name => $tooltip)
+                  @php $isLastColumn = $name === 'W vs A'; @endphp
+                  <th class="px-4 py-2 {{ $isLastColumn ? 'rounded-tr-lg' : '' }}">
+                    <div class="inline-flex flex-row items-center gap-1">
+                      {{ $name }}
+                      <x-tooltip text="{{ $tooltip }}">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke-width="1.5"
+                          stroke="currentColor"
+                          class="size-4"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+                          />
+                        </svg>
+                      </x-tooltip>
+                    </div>
+                  </th>
+                @endforeach
+              @endif
             </tr>
           </thead>
           <tbody>
@@ -159,6 +203,9 @@
               @php
                 $dayDate = \Carbon\Carbon::parse($day['date']);
                 $isFutureDate = $dayDate->isFuture();
+                if ($showDeviations) {
+                  $deviations = $this->getDeviationPercentages($day);
+                }
               @endphp
               <tr class="border-t border-gray-200 dark:border-gray-600 {{ $isFutureDate ? 'bg-gray-200 dark:bg-gray-800 text-gray-500 dark:text-gray-400' : '' }}">
                 <!-- Date Column -->
@@ -353,6 +400,69 @@
                     </x-tooltip>
                   </div>
                 </td>
+                
+                <!-- Deviation Columns -->
+                @if($showDeviations)
+                  <!-- Attendance vs Scheduled -->
+                  <td class="px-4 py-2">
+                    @if(!$isFutureDate && $deviations['attendance_vs_scheduled'] !== 0)
+                      @php
+                        $scheduledMins = $this->durationToMinutes($day['scheduled']['duration']);
+                        $attendanceMins = $this->durationToMinutes($day['attendance']['duration']);
+                        $diffMins = $attendanceMins - $scheduledMins;
+                        $diffFormatted = $this->formatDuration(abs($diffMins));
+                        $attendanceTooltip = $diffMins > 0 
+                          ? "Attended $diffFormatted more than scheduled"
+                          : "Attended $diffFormatted less than scheduled";
+                      @endphp
+                      <x-tooltip text="{{ $attendanceTooltip }}">
+                        <span class="{{ $deviations['attendance_vs_scheduled'] > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
+                          {{ $deviations['attendance_vs_scheduled'] > 0 ? '+' : '' }}{{ $deviations['attendance_vs_scheduled'] }}%
+                        </span>
+                      </x-tooltip>
+                    @endif
+                  </td>
+                  
+                  <!-- Worked vs Scheduled -->
+                  <td class="px-4 py-2">
+                    @if(!$isFutureDate && $deviations['worked_vs_scheduled'] !== 0)
+                      @php
+                        $scheduledMins = $this->durationToMinutes($day['scheduled']['duration']);
+                        $workedMins = $this->durationToMinutes($day['worked']['duration']);
+                        $diffMins = $workedMins - $scheduledMins;
+                        $diffFormatted = $this->formatDuration(abs($diffMins));
+                        $workedTooltip = $diffMins > 0 
+                          ? "Worked $diffFormatted more than scheduled"
+                          : "Worked $diffFormatted less than scheduled";
+                      @endphp
+                      <x-tooltip text="{{ $workedTooltip }}">
+                        <span class="{{ $deviations['worked_vs_scheduled'] > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
+                          {{ $deviations['worked_vs_scheduled'] > 0 ? '+' : '' }}{{ $deviations['worked_vs_scheduled'] }}%
+                        </span>
+                      </x-tooltip>
+                    @endif
+                  </td>
+                  
+                  <!-- Worked vs Attendance -->
+                  <td class="px-4 py-2">
+                    @if(!$isFutureDate && $deviations['worked_vs_attendance'] !== 0)
+                      @php
+                        $attendanceMins = $this->durationToMinutes($day['attendance']['duration']);
+                        $workedMins = $this->durationToMinutes($day['worked']['duration']);
+                        $diffMins = $workedMins - $attendanceMins;
+                        $diffFormatted = $this->formatDuration(abs($diffMins));
+                        $workAttendanceTooltip = $diffMins > 0 
+                          ? "Worked $diffFormatted more than attended"
+                          : "Worked $diffFormatted less than attended";
+                      @endphp
+                      <x-tooltip text="{{ $workAttendanceTooltip }}">
+                        <span class="{{ $deviations['worked_vs_attendance'] > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
+                          {{ $deviations['worked_vs_attendance'] > 0 ? '+' : '' }}{{ $deviations['worked_vs_attendance'] }}%
+                        </span>
+                      </x-tooltip>
+                    @endif
+                  </td>
+                @endif
               </tr>
             @endforeach
 
@@ -389,7 +499,7 @@
 
                 {{ $attendanceMins > 0 ? "{$attendanceH}h {$attendanceR}m" : '' }}
               </td>
-              <td class="px-4 py-2 text-gray-800 dark:text-gray-200 rounded-br-lg">
+              <td class="px-4 py-2 text-gray-800 dark:text-gray-200 {{ !$showDeviations ? 'rounded-br-lg' : '' }}">
                 @php
                   $workedMins = $this->getTotals()['worked'];
                   $workedH = intdiv($workedMins, 60);
@@ -398,6 +508,71 @@
 
                 {{ $workedMins > 0 ? "{$workedH}h {$workedR}m" : '' }}
               </td>
+              
+              <!-- Total Deviations -->
+              @if($showDeviations)
+                @php $totalDeviations = $this->getTotalDeviations(); @endphp
+                
+                <!-- Attendance vs Scheduled -->
+                <td class="px-4 py-2 text-gray-800 dark:text-gray-200">
+                  @if($totalDeviations['attendance_vs_scheduled'] !== 0)
+                    @php
+                      $scheduledMins = $this->getTotals()['scheduled'];
+                      $attendanceMins = $this->getTotals()['attendance'];
+                      $diffMins = $attendanceMins - $scheduledMins;
+                      $diffFormatted = $this->formatDuration(abs($diffMins));
+                      $attendanceTooltip = $diffMins > 0 
+                        ? "Total attendance is $diffFormatted more than scheduled"
+                        : "Total attendance is $diffFormatted less than scheduled";
+                    @endphp
+                    <x-tooltip text="{{ $attendanceTooltip }}">
+                      <span class="{{ $totalDeviations['attendance_vs_scheduled'] > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
+                        {{ $totalDeviations['attendance_vs_scheduled'] > 0 ? '+' : '' }}{{ $totalDeviations['attendance_vs_scheduled'] }}%
+                      </span>
+                    </x-tooltip>
+                  @endif
+                </td>
+                
+                <!-- Worked vs Scheduled -->
+                <td class="px-4 py-2 text-gray-800 dark:text-gray-200">
+                  @if($totalDeviations['worked_vs_scheduled'] !== 0)
+                    @php
+                      $scheduledMins = $this->getTotals()['scheduled'];
+                      $workedMins = $this->getTotals()['worked'];
+                      $diffMins = $workedMins - $scheduledMins;
+                      $diffFormatted = $this->formatDuration(abs($diffMins));
+                      $workedTooltip = $diffMins > 0 
+                        ? "Total work logged is $diffFormatted more than scheduled"
+                        : "Total work logged is $diffFormatted less than scheduled";
+                    @endphp
+                    <x-tooltip text="{{ $workedTooltip }}">
+                      <span class="{{ $totalDeviations['worked_vs_scheduled'] > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
+                        {{ $totalDeviations['worked_vs_scheduled'] > 0 ? '+' : '' }}{{ $totalDeviations['worked_vs_scheduled'] }}%
+                      </span>
+                    </x-tooltip>
+                  @endif
+                </td>
+                
+                <!-- Worked vs Attendance -->
+                <td class="px-4 py-2 text-gray-800 dark:text-gray-200 rounded-br-lg">
+                  @if($totalDeviations['worked_vs_attendance'] !== 0)
+                    @php
+                      $attendanceMins = $this->getTotals()['attendance'];
+                      $workedMins = $this->getTotals()['worked'];
+                      $diffMins = $workedMins - $attendanceMins;
+                      $diffFormatted = $this->formatDuration(abs($diffMins));
+                      $workAttendanceTooltip = $diffMins > 0 
+                        ? "Total work logged is $diffFormatted more than attendance"
+                        : "Total work logged is $diffFormatted less than attendance";
+                    @endphp
+                    <x-tooltip text="{{ $workAttendanceTooltip }}">
+                      <span class="{{ $totalDeviations['worked_vs_attendance'] > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
+                        {{ $totalDeviations['worked_vs_attendance'] > 0 ? '+' : '' }}{{ $totalDeviations['worked_vs_attendance'] }}%
+                      </span>
+                    </x-tooltip>
+                  @endif
+                </td>
+              @endif
             </tr>
           </tbody>
         </table>

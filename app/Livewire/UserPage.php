@@ -41,6 +41,12 @@ class UserPage extends Component
   public string $displayMode = 'table';
 
   /**
+   * Whether to show deviation percentages
+   */
+  #[Url]
+  public bool $showDeviations = false;
+
+  /**
    * The final array of day-by-day data for the chosen period.
    * This array is used directly by the Blade template.
    */
@@ -85,6 +91,14 @@ class UserPage extends Component
     
     // Load cache data for the current period
     $this->loadPeriodDataFromCacheOrDb();
+  }
+
+  /**
+   * Toggle showing deviation percentages
+   */
+  public function toggleDeviations(): void
+  {
+    $this->showDeviations = !$this->showDeviations;
   }
 
   /**
@@ -156,6 +170,76 @@ class UserPage extends Component
   public function getTotals(): array
   {
     return $this->totals;
+  }
+
+  /**
+   * Calculate deviations between different data points
+   * Returns an array of deviation percentages 
+   */
+  public function getDeviationPercentages(array $day): array
+  {
+    $deviations = [
+      'attendance_vs_scheduled' => 0,
+      'worked_vs_scheduled' => 0,
+      'worked_vs_attendance' => 0,
+    ];
+    
+    // Convert durations to minutes for calculation
+    $scheduledMinutes = $this->durationToMinutes($day['scheduled']['duration']);
+    $attendanceMinutes = $this->durationToMinutes($day['attendance']['duration']);
+    $workedMinutes = $this->durationToMinutes($day['worked']['duration']);
+    
+    // Calculate attendance vs scheduled (if scheduled > 0)
+    if ($scheduledMinutes > 0) {
+      $deviations['attendance_vs_scheduled'] = round(($attendanceMinutes - $scheduledMinutes) / $scheduledMinutes * 100);
+    }
+    
+    // Calculate worked vs scheduled (if scheduled > 0)
+    if ($scheduledMinutes > 0) {
+      $deviations['worked_vs_scheduled'] = round(($workedMinutes - $scheduledMinutes) / $scheduledMinutes * 100);
+    }
+    
+    // Calculate worked vs attendance (if attendance > 0)
+    if ($attendanceMinutes > 0) {
+      $deviations['worked_vs_attendance'] = round(($workedMinutes - $attendanceMinutes) / $attendanceMinutes * 100);
+    }
+    
+    return $deviations;
+  }
+  
+  /**
+   * Calculate total deviations for the whole period
+   */
+  public function getTotalDeviations(): array
+  {
+    $deviations = [
+      'attendance_vs_scheduled' => 0,
+      'worked_vs_scheduled' => 0,
+      'worked_vs_attendance' => 0,
+    ];
+    
+    // Get totals for calculation
+    $totals = $this->getTotals();
+    $scheduledMinutes = $totals['scheduled'];
+    $attendanceMinutes = $totals['attendance'];
+    $workedMinutes = $totals['worked'];
+    
+    // Calculate attendance vs scheduled (if scheduled > 0)
+    if ($scheduledMinutes > 0) {
+      $deviations['attendance_vs_scheduled'] = round(($attendanceMinutes - $scheduledMinutes) / $scheduledMinutes * 100);
+    }
+    
+    // Calculate worked vs scheduled (if scheduled > 0)
+    if ($scheduledMinutes > 0) {
+      $deviations['worked_vs_scheduled'] = round(($workedMinutes - $scheduledMinutes) / $scheduledMinutes * 100);
+    }
+    
+    // Calculate worked vs attendance (if attendance > 0)
+    if ($attendanceMinutes > 0) {
+      $deviations['worked_vs_attendance'] = round(($workedMinutes - $attendanceMinutes) / $attendanceMinutes * 100);
+    }
+    
+    return $deviations;
   }
 
   /**

@@ -411,9 +411,15 @@
                         $attendanceMins = $this->durationToMinutes($day['attendance']['duration']);
                         $diffMins = $attendanceMins - $scheduledMins;
                         $diffFormatted = $this->formatDuration(abs($diffMins));
-                        $attendanceTooltip = $diffMins > 0 
-                          ? "Attended $diffFormatted more than scheduled"
-                          : "Attended $diffFormatted less than scheduled";
+                        
+                        if ($diffMins == 0) {
+                          $attendanceTooltip = "Attendance exactly matches scheduled time";
+                        } else {
+                          $attendanceTooltip = $diffMins > 0 
+                            ? "Attended $diffFormatted more than scheduled"
+                            : "Attended $diffFormatted less than scheduled";
+                        }
+                        
                         // Set color based on deviation severity
                         $deviationClass = $deviations['attendance_vs_scheduled'] >= 0 
                           ? 'text-green-600 dark:text-green-400' 
@@ -437,9 +443,15 @@
                         $workedMins = $this->durationToMinutes($day['worked']['duration']);
                         $diffMins = $workedMins - $scheduledMins;
                         $diffFormatted = $this->formatDuration(abs($diffMins));
-                        $workedTooltip = $diffMins > 0 
-                          ? "Worked $diffFormatted more than scheduled"
-                          : "Worked $diffFormatted less than scheduled";
+                        
+                        if ($diffMins == 0) {
+                          $workedTooltip = "Work logged exactly matches scheduled time";
+                        } else {
+                          $workedTooltip = $diffMins > 0 
+                            ? "Worked $diffFormatted more than scheduled"
+                            : "Worked $diffFormatted less than scheduled";
+                        }
+                        
                         // Set color based on deviation severity
                         $deviationClass = $deviations['worked_vs_scheduled'] >= 0 
                           ? 'text-green-600 dark:text-green-400' 
@@ -463,9 +475,15 @@
                         $workedMins = $this->durationToMinutes($day['worked']['duration']);
                         $diffMins = $workedMins - $attendanceMins;
                         $diffFormatted = $this->formatDuration(abs($diffMins));
-                        $workAttendanceTooltip = $diffMins > 0 
-                          ? "Worked $diffFormatted more than attended"
-                          : "Worked $diffFormatted less than attended";
+                        
+                        if ($diffMins == 0) {
+                          $workAttendanceTooltip = "Work logged exactly matches attendance time";
+                        } else {
+                          $workAttendanceTooltip = $diffMins > 0 
+                            ? "Worked $diffFormatted more than attended"
+                            : "Worked $diffFormatted less than attended";
+                        }
+                        
                         // Set color based on deviation severity
                         $deviationClass = $deviations['worked_vs_attendance'] >= 0 
                           ? 'text-green-600 dark:text-green-400' 
@@ -539,9 +557,15 @@
                       $attendanceMins = $this->getTotals()['attendance'];
                       $diffMins = $attendanceMins - $scheduledMins;
                       $diffFormatted = $this->formatDuration(abs($diffMins));
-                      $attendanceTooltip = $diffMins > 0 
-                        ? "Total attendance is $diffFormatted more than scheduled"
-                        : "Total attendance is $diffFormatted less than scheduled";
+                      
+                      if ($diffMins == 0) {
+                        $attendanceTooltip = "Total attendance exactly matches scheduled time";
+                      } else {
+                        $attendanceTooltip = $diffMins > 0 
+                          ? "Total attendance is $diffFormatted more than scheduled"
+                          : "Total attendance is $diffFormatted less than scheduled";
+                      }
+                      
                       // Set color based on deviation severity
                       $deviationClass = $totalDeviations['attendance_vs_scheduled'] >= 0 
                         ? 'text-green-600 dark:text-green-400' 
@@ -565,9 +589,15 @@
                       $workedMins = $this->getTotals()['worked'];
                       $diffMins = $workedMins - $scheduledMins;
                       $diffFormatted = $this->formatDuration(abs($diffMins));
-                      $workedTooltip = $diffMins > 0 
-                        ? "Total work logged is $diffFormatted more than scheduled"
-                        : "Total work logged is $diffFormatted less than scheduled";
+                      
+                      if ($diffMins == 0) {
+                        $workedTooltip = "Total work logged exactly matches scheduled time";
+                      } else {
+                        $workedTooltip = $diffMins > 0 
+                          ? "Total work logged is $diffFormatted more than scheduled"
+                          : "Total work logged is $diffFormatted less than scheduled";
+                      }
+                      
                       // Set color based on deviation severity
                       $deviationClass = $totalDeviations['worked_vs_scheduled'] >= 0 
                         ? 'text-green-600 dark:text-green-400' 
@@ -591,9 +621,15 @@
                       $workedMins = $this->getTotals()['worked'];
                       $diffMins = $workedMins - $attendanceMins;
                       $diffFormatted = $this->formatDuration(abs($diffMins));
-                      $workAttendanceTooltip = $diffMins > 0 
-                        ? "Total work logged is $diffFormatted more than attendance"
-                        : "Total work logged is $diffFormatted less than attendance";
+                      
+                      if ($diffMins == 0) {
+                        $workAttendanceTooltip = "Total work logged exactly matches attendance time";
+                      } else {
+                        $workAttendanceTooltip = $diffMins > 0 
+                          ? "Total work logged is $diffFormatted more than attendance"
+                          : "Total work logged is $diffFormatted less than attendance";
+                      }
+                      
                       // Set color based on deviation severity
                       $deviationClass = $totalDeviations['worked_vs_attendance'] >= 0 
                         ? 'text-green-600 dark:text-green-400' 

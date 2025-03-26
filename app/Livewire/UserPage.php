@@ -23,9 +23,14 @@ class UserPage extends Component
   public User $user;
 
   /**
-   * String date (YYYY-MM-DD) representing the start of the displayed week.
+   * String date (YYYY-MM-DD) representing the start of the displayed period.
    */
   public string $currentDate;
+
+  /**
+   * View mode: 'weekly' or 'monthly'
+   */
+  public string $viewMode = 'weekly';
 
   /**
    * The final array of day-by-day data for the chosen period.
@@ -65,12 +70,34 @@ class UserPage extends Component
         $this->user = Auth::user();
     }
 
-    // Always start with the current week
-    $this->setPeriodStart(now()->startOfWeek());
+    // Always start with the current period based on view mode
+    $this->setPeriodStart($this->viewMode === 'weekly' ? now()->startOfWeek() : now()->startOfMonth());
     
     $this->checkPermissions();
     
-    // Load cache data for the current week
+    // Load cache data for the current period
+    $this->loadPeriodDataFromCacheOrDb();
+  }
+
+  /**
+   * Set the view mode to weekly or monthly
+   */
+  public function setViewMode(string $mode): void
+  {
+    if (!in_array($mode, ['weekly', 'monthly'])) {
+      return;
+    }
+
+    $this->viewMode = $mode;
+    
+    // Always reset to the current week or month when switching view modes
+    $this->setPeriodStart(
+      $this->viewMode === 'weekly' 
+        ? now()->startOfWeek() 
+        : now()->startOfMonth()
+    );
+    
+    // Reload data for the new period
     $this->loadPeriodDataFromCacheOrDb();
   }
 
@@ -80,7 +107,13 @@ class UserPage extends Component
   public function previousPeriod(): void
   {
     $startDate = $this->getPeriodStart();
-    $this->setPeriodStart($startDate->subWeek());
+    
+    if ($this->viewMode === 'weekly') {
+      $this->setPeriodStart($startDate->subWeek());
+    } else {
+      $this->setPeriodStart($startDate->subMonth());
+    }
+    
     $this->loadPeriodDataFromCacheOrDb();
   }
 
@@ -90,16 +123,13 @@ class UserPage extends Component
   public function nextPeriod(): void
   {
     $startDate = $this->getPeriodStart();
-    $this->setPeriodStart($startDate->addWeek());
-    $this->loadPeriodDataFromCacheOrDb();
-  }
-
-  /**
-   * Navigate to current period.
-   */
-  public function currentPeriod(): void
-  {
-    $this->setPeriodStart(now()->startOfWeek());
+    
+    if ($this->viewMode === 'weekly') {
+      $this->setPeriodStart($startDate->addWeek());
+    } else {
+      $this->setPeriodStart($startDate->addMonth());
+    }
+    
     $this->loadPeriodDataFromCacheOrDb();
   }
 
@@ -135,8 +165,14 @@ class UserPage extends Component
   public function getIsNextPeriodDisabledProperty(): bool
   {
     $current = Carbon::parse($this->currentDate);
-    $candidate = $current->copy()->addWeek();
-    return $candidate->startOf('week')->gt(now());
+    
+    if ($this->viewMode === 'weekly') {
+      $candidate = $current->copy()->addWeek();
+      return $candidate->startOf('week')->gt(now());
+    } else {
+      $candidate = $current->copy()->addMonth();
+      return $candidate->startOf('month')->gt(now());
+    }
   }
 
   /**
@@ -152,7 +188,8 @@ class UserPage extends Component
    */
   protected function getPeriodStart(): Carbon
   {
-    return Carbon::parse($this->currentDate)->startOfWeek();
+    $date = Carbon::parse($this->currentDate);
+    return $this->viewMode === 'weekly' ? $date->startOfWeek() : $date->startOfMonth();
   }
 
   /**
@@ -161,7 +198,11 @@ class UserPage extends Component
   protected function loadPeriodDataFromCacheOrDb(): void
   {
     $startDate = $this->getPeriodStart();
-    $endDate = $startDate->copy()->endOfWeek();
+    
+    // Set end date based on view mode
+    $endDate = $this->viewMode === 'weekly' 
+      ? $startDate->copy()->endOfWeek() 
+      : $startDate->copy()->endOfMonth();
     
     // Get all user data for the date range
     $userData = $this->user->getDataForDateRange($startDate, $endDate);

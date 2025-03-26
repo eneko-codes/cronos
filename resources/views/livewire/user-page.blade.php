@@ -77,7 +77,7 @@
                 $carbonDate = \Carbon\Carbon::parse($currentDate, 'UTC');
               @endphp
 
-              Week of {{ $carbonDate->format('F d, Y') }}
+              {{ $viewMode === 'weekly' ? 'Week' : 'Month' }} of {{ $carbonDate->format('F d, Y') }}
             </h2>
 
             <button
@@ -90,13 +90,24 @@
           </div>
         </div>
 
-        <div class="flex items-center gap-4">
-          @if (auth()->user()->is_admin)
-            <!-- Manual sync button -->
-            <x-tooltip text="Synchronize data from all sources">
-              <livewire:sync-button :key="'users-page-sync'" sync-type="data" />
-            </x-tooltip>
-          @endif
+        <!-- View Mode Toggle -->
+        <div class="flex items-center gap-2">
+          <div class="inline-flex w-fit gap-1 whitespace-nowrap rounded-lg border border-gray-200 bg-gray-100 p-1 text-xs font-semibold dark:border-gray-700 dark:bg-gray-800">
+            <button
+              type="button"
+              wire:click="setViewMode('weekly')"
+              class="{{ $viewMode === 'weekly' ? 'bg-gray-50 text-gray-800 ring-1 ring-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:ring-gray-700' : 'text-gray-600 hover:bg-gray-200/50 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-700/50 dark:hover:text-gray-200' }} relative rounded px-3 py-1"
+            >
+              Weekly
+            </button>
+            <button
+              type="button"
+              wire:click="setViewMode('monthly')"
+              class="{{ $viewMode === 'monthly' ? 'bg-gray-50 text-gray-800 ring-1 ring-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:ring-gray-700' : 'text-gray-600 hover:bg-gray-200/50 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-700/50 dark:hover:text-gray-200' }} relative rounded px-3 py-1"
+            >
+              Monthly
+            </button>
+          </div>
         </div>
       </div>
 

@@ -167,12 +167,12 @@
               
               @if($showDeviations)
                 @foreach ([
-                    'A vs S' => 'Attendance vs Scheduled deviation',
-                    'W vs S' => 'Worked vs Scheduled deviation',
-                    'W vs A' => 'Worked vs Attendance deviation'
+                    'Attendance vs Scheduled' => 'Percentage deviation between attendance and scheduled hours',
+                    'Worked vs Scheduled' => 'Percentage deviation between worked and scheduled hours',
+                    'Worked vs Attendance' => 'Percentage deviation between worked and attendance hours'
                   ]
                   as $name => $tooltip)
-                  @php $isLastColumn = $name === 'W vs A'; @endphp
+                  @php $isLastColumn = $name === 'Worked vs Attendance'; @endphp
                   <th class="px-4 py-2 {{ $isLastColumn ? 'rounded-tr-lg' : '' }}">
                     <div class="inline-flex flex-row items-center gap-1">
                       {{ $name }}
@@ -421,15 +421,21 @@
                         }
                         
                         // Set color based on deviation severity
-                        $deviationClass = $deviations['attendance_vs_scheduled'] >= 0 
+                        $deviationValue = $deviations['attendance_vs_scheduled'];
+                        $deviationClass = $deviationValue >= 0 
                           ? 'text-green-600 dark:text-green-400' 
-                          : ($deviations['attendance_vs_scheduled'] > -15 
+                          : ($deviationValue > -15 
                               ? 'text-amber-600 dark:text-amber-400' 
                               : 'text-red-600 dark:text-red-400');
+                              
+                        // Ensure -100% is always red
+                        if ($deviationValue <= -100) {
+                          $deviationClass = 'text-red-600 dark:text-red-400';
+                        }
                       @endphp
                       <x-tooltip text="{{ $attendanceTooltip }}">
                         <span class="{{ $deviationClass }}">
-                          {{ $deviations['attendance_vs_scheduled'] > 0 ? '+' : '' }}{{ $deviations['attendance_vs_scheduled'] }}%
+                          {{ $deviationValue > 0 ? '+' : '' }}{{ $deviationValue }}%
                         </span>
                       </x-tooltip>
                     @endif
@@ -453,15 +459,21 @@
                         }
                         
                         // Set color based on deviation severity
-                        $deviationClass = $deviations['worked_vs_scheduled'] >= 0 
+                        $deviationValue = $deviations['worked_vs_scheduled'];
+                        $deviationClass = $deviationValue >= 0 
                           ? 'text-green-600 dark:text-green-400' 
-                          : ($deviations['worked_vs_scheduled'] > -15 
+                          : ($deviationValue > -15 
                               ? 'text-amber-600 dark:text-amber-400' 
                               : 'text-red-600 dark:text-red-400');
+                              
+                        // Ensure -100% is always red
+                        if ($deviationValue <= -100) {
+                          $deviationClass = 'text-red-600 dark:text-red-400';
+                        }
                       @endphp
                       <x-tooltip text="{{ $workedTooltip }}">
                         <span class="{{ $deviationClass }}">
-                          {{ $deviations['worked_vs_scheduled'] > 0 ? '+' : '' }}{{ $deviations['worked_vs_scheduled'] }}%
+                          {{ $deviationValue > 0 ? '+' : '' }}{{ $deviationValue }}%
                         </span>
                       </x-tooltip>
                     @endif
@@ -485,15 +497,21 @@
                         }
                         
                         // Set color based on deviation severity
-                        $deviationClass = $deviations['worked_vs_attendance'] >= 0 
+                        $deviationValue = $deviations['worked_vs_attendance'];
+                        $deviationClass = $deviationValue >= 0 
                           ? 'text-green-600 dark:text-green-400' 
-                          : ($deviations['worked_vs_attendance'] > -15 
+                          : ($deviationValue > -15 
                               ? 'text-amber-600 dark:text-amber-400' 
                               : 'text-red-600 dark:text-red-400');
+                              
+                        // Ensure -100% is always red
+                        if ($deviationValue <= -100) {
+                          $deviationClass = 'text-red-600 dark:text-red-400';
+                        }
                       @endphp
                       <x-tooltip text="{{ $workAttendanceTooltip }}">
                         <span class="{{ $deviationClass }}">
-                          {{ $deviations['worked_vs_attendance'] > 0 ? '+' : '' }}{{ $deviations['worked_vs_attendance'] }}%
+                          {{ $deviationValue > 0 ? '+' : '' }}{{ $deviationValue }}%
                         </span>
                       </x-tooltip>
                     @endif
@@ -587,15 +605,21 @@
                       }
                       
                       // Set color based on deviation severity
-                      $deviationClass = $totalDeviations['attendance_vs_scheduled'] >= 0 
+                      $deviationValue = $totalDeviations['attendance_vs_scheduled'];
+                      $deviationClass = $deviationValue >= 0 
                         ? 'text-green-600 dark:text-green-400' 
-                        : ($totalDeviations['attendance_vs_scheduled'] > -15 
+                        : ($deviationValue > -15 
                             ? 'text-amber-600 dark:text-amber-400' 
                             : 'text-red-600 dark:text-red-400');
+                              
+                      // Ensure -100% is always red
+                      if ($deviationValue <= -100) {
+                        $deviationClass = 'text-red-600 dark:text-red-400';
+                      }
                     @endphp
                     <x-tooltip text="{{ $attendanceTooltip }}">
                       <span class="{{ $deviationClass }}">
-                        {{ $totalDeviations['attendance_vs_scheduled'] > 0 ? '+' : '' }}{{ $totalDeviations['attendance_vs_scheduled'] }}%
+                        {{ $deviationValue > 0 ? '+' : '' }}{{ $deviationValue }}%
                       </span>
                     </x-tooltip>
                   @endif
@@ -619,15 +643,21 @@
                       }
                       
                       // Set color based on deviation severity
-                      $deviationClass = $totalDeviations['worked_vs_scheduled'] >= 0 
+                      $deviationValue = $totalDeviations['worked_vs_scheduled'];
+                      $deviationClass = $deviationValue >= 0 
                         ? 'text-green-600 dark:text-green-400' 
-                        : ($totalDeviations['worked_vs_scheduled'] > -15 
+                        : ($deviationValue > -15 
                             ? 'text-amber-600 dark:text-amber-400' 
                             : 'text-red-600 dark:text-red-400');
+                              
+                      // Ensure -100% is always red
+                      if ($deviationValue <= -100) {
+                        $deviationClass = 'text-red-600 dark:text-red-400';
+                      }
                     @endphp
                     <x-tooltip text="{{ $workedTooltip }}">
                       <span class="{{ $deviationClass }}">
-                        {{ $totalDeviations['worked_vs_scheduled'] > 0 ? '+' : '' }}{{ $totalDeviations['worked_vs_scheduled'] }}%
+                        {{ $deviationValue > 0 ? '+' : '' }}{{ $deviationValue }}%
                       </span>
                     </x-tooltip>
                   @endif
@@ -651,15 +681,21 @@
                       }
                       
                       // Set color based on deviation severity
-                      $deviationClass = $totalDeviations['worked_vs_attendance'] >= 0 
+                      $deviationValue = $totalDeviations['worked_vs_attendance'];
+                      $deviationClass = $deviationValue >= 0 
                         ? 'text-green-600 dark:text-green-400' 
-                        : ($totalDeviations['worked_vs_attendance'] > -15 
+                        : ($deviationValue > -15 
                             ? 'text-amber-600 dark:text-amber-400' 
                             : 'text-red-600 dark:text-red-400');
+                              
+                      // Ensure -100% is always red
+                      if ($deviationValue <= -100) {
+                        $deviationClass = 'text-red-600 dark:text-red-400';
+                      }
                     @endphp
                     <x-tooltip text="{{ $workAttendanceTooltip }}">
                       <span class="{{ $deviationClass }}">
-                        {{ $totalDeviations['worked_vs_attendance'] > 0 ? '+' : '' }}{{ $totalDeviations['worked_vs_attendance'] }}%
+                        {{ $deviationValue > 0 ? '+' : '' }}{{ $deviationValue }}%
                       </span>
                     </x-tooltip>
                   @endif

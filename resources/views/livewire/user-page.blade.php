@@ -218,7 +218,7 @@
                 </td>
 
                 <!-- Scheduled -->
-                <td class="px-4 py-2 border-r border-gray-800">
+                <td class="whitespace-nowrap px-4 py-2 border-r border-gray-800">
                   <div class="flex flex-col gap-1">
                     <x-tooltip>
                       <x-slot name="text">
@@ -245,7 +245,7 @@
                 </td>
 
                 <!-- Leave -->
-                <td class="px-4 py-2 border-r border-gray-800">
+                <td class="whitespace-nowrap px-4 py-2 border-r border-gray-800">
                   <!-- Simplified default view - only show when leave exists -->
                   @if ($day['leave'])
                     <div class="flex items-center gap-2 {{ $day['leave']['status'] !== 'validate' ? 'opacity-60' : '' }}">
@@ -319,7 +319,7 @@
                 </td>
 
                 <!-- Attendance -->
-                <td class="px-4 py-2 border-r border-gray-800">
+                <td class="whitespace-nowrap px-4 py-2 border-r border-gray-800">
                   <x-tooltip>
                     <x-slot name="text">
                       <div class="flex flex-col gap-1">
@@ -346,7 +346,7 @@
                 </td>
 
                 <!-- Worked -->
-                <td class="px-4 py-2 {{ $showDeviations ? 'border-r border-gray-800' : '' }}">
+                <td class="whitespace-nowrap px-4 py-2 {{ $showDeviations ? 'border-r border-gray-800' : '' }}">
                   <div class="flex flex-col gap-1">
                     <x-tooltip>
                       <x-slot name="text">
@@ -402,7 +402,7 @@
                 <!-- Deviation Columns -->
                 @if($showDeviations)
                   <!-- Attendance vs Scheduled -->
-                  <td class="px-4 py-2 border-r border-gray-800">
+                  <td class="whitespace-nowrap px-4 py-2 border-r border-gray-800">
                     @if(!$isFutureDate && $deviations['attendance_vs_scheduled'] !== 0)
                       @php
                         $scheduledMins = $this->durationToMinutes($day['scheduled']['duration']);
@@ -440,7 +440,7 @@
                   </td>
                   
                   <!-- Worked vs Scheduled -->
-                  <td class="px-4 py-2 border-r border-gray-800">
+                  <td class="whitespace-nowrap px-4 py-2 border-r border-gray-800">
                     @if(!$isFutureDate && $deviations['worked_vs_scheduled'] !== 0)
                       @php
                         $scheduledMins = $this->durationToMinutes($day['scheduled']['duration']);
@@ -478,7 +478,7 @@
                   </td>
                   
                   <!-- Worked vs Attendance -->
-                  <td class="px-4 py-2">
+                  <td class="whitespace-nowrap px-4 py-2">
                     @if(!$isFutureDate && $deviations['worked_vs_attendance'] !== 0)
                       @php
                         $attendanceMins = $this->durationToMinutes($day['attendance']['duration']);

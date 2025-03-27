@@ -91,6 +91,17 @@
 
       <!-- View Mode Toggles -->
       <div class="flex items-center gap-2">
+         <!-- Deviations Toggle -->
+         <x-toggle-button
+         :active="$showDeviations"
+         label="Deviations"
+         onClick="toggleDeviations"
+       >
+         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+         </svg>
+       </x-toggle-button>
+
         <!-- Period Toggle (Weekly/Monthly) -->
         <x-tabs
           :active="$viewMode"
@@ -101,17 +112,6 @@
           onFilterChange="setViewMode"
           :showCounts="false"
         />
-        
-        <!-- Deviations Toggle -->
-        <x-toggle-button
-          :active="$showDeviations"
-          label="Deviations"
-          onClick="toggleDeviations"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-          </svg>
-        </x-toggle-button>
       </div>
     </div>
 

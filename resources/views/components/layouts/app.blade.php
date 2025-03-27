@@ -187,13 +187,9 @@
     </header>
 
     <!-- Main Content -->
-    <main class="w-full pt-14">
-      <div class="mx-auto max-w-screen-2xl px-4 py-6">
-        <div class="flex flex-col md:flex-row gap-6">
-          <div class="flex-1">
-            {{ $slot }}
-          </div>
-        </div>
+    <main class="w-full max-w-screen-2xl pt-14 mx-auto">
+      <div class="px-4 py-6">
+        {{ $slot }}
       </div>
     </main>
 

@@ -59,7 +59,7 @@ class UsersTable extends Component
         fn($query) => $query->where('is_admin', false)
       )
       ->when(
-        $this->filter === 'not-tracked',
+        $this->filter === 'not_tracked',
         fn($query) => $query->where('do_not_track', true)
       )
       ->when(

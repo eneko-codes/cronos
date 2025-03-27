@@ -53,7 +53,7 @@
     @if ($user->do_not_track)
       <div class="rounded-lg bg-gray-50 p-8 text-center dark:bg-gray-800">
         <p class="text-md text-gray-600 dark:text-gray-300">
-          {{ $user->name }} is currently set to do not track
+          {{ $user->name }} is currently set to do not track. Data is not stored for this user.
         </p>
       </div>
     @else
@@ -73,7 +73,7 @@
 
             <h2 class="text-sm font-semibold">
               @php
-                // Simplified - use UTC directly without timezone conversion
+                // Use UTC directly without timezone conversion
                 $carbonDate = \Carbon\Carbon::parse($currentDate, 'UTC');
               @endphp
 
@@ -93,34 +93,26 @@
         <!-- View Mode Toggles -->
         <div class="flex items-center gap-2">
           <!-- Period Toggle (Weekly/Monthly) -->
-          <div class="inline-flex w-fit gap-1 whitespace-nowrap rounded-lg border border-gray-200 bg-gray-100 p-1 text-xs font-semibold dark:border-gray-700 dark:bg-gray-800">
-            <button
-              type="button"
-              wire:click="setViewMode('weekly')"
-              class="{{ $viewMode === 'weekly' ? 'bg-gray-50 text-gray-800 ring-1 ring-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:ring-gray-700' : 'text-gray-600 hover:bg-gray-200/50 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-700/50 dark:hover:text-gray-200' }} relative rounded px-3 py-1"
-            >
-              Weekly
-            </button>
-            <button
-              type="button"
-              wire:click="setViewMode('monthly')"
-              class="{{ $viewMode === 'monthly' ? 'bg-gray-50 text-gray-800 ring-1 ring-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:ring-gray-700' : 'text-gray-600 hover:bg-gray-200/50 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-700/50 dark:hover:text-gray-200' }} relative rounded px-3 py-1"
-            >
-              Monthly
-            </button>
-          </div>
+          <x-tabs
+            :active="$viewMode"
+            :filters="[
+              'weekly' => 'Weekly',
+              'monthly' => 'Monthly'
+            ]"
+            onFilterChange="setViewMode"
+            :showCounts="false"
+          />
           
           <!-- Deviations Toggle -->
-          <button
-            type="button"
-            wire:click="toggleDeviations"
-            class="{{ $showDeviations ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' }} inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold dark:border-gray-700 hover:bg-opacity-90"
+          <x-toggle-button
+            :active="$showDeviations"
+            label="Deviations"
+            onClick="toggleDeviations"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
             </svg>
-            Deviations
-          </button>
+          </x-toggle-button>
         </div>
       </div>
 
@@ -129,11 +121,11 @@
         class="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800"
       >
         <table
-          class="w-full min-w-[800px] rounded-lg bg-gray-50 text-sm dark:bg-gray-800 border-separate border-spacing-0"
+          class="w-full min-w-[800px] bg-gray-950 text-sm text-gray-300 border-separate border-spacing-0"
         >
           <thead class="sticky top-0 z-10">
-            <tr class="border-b border-gray-300 bg-gray-200 text-left font-bold text-gray-700 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200">
-              <th class="px-4 py-2 rounded-tl-lg">Day</th>
+            <tr class="text-left font-medium uppercase text-xs tracking-wider text-gray-400">
+              <th class="px-4 py-3 border-b border-gray-800 border-r border-gray-800">Day</th>
               @foreach ([
                   'Scheduled' => 'Hours from Odoo calendar',
                   'Leave' => 'Time off from Odoo',
@@ -141,8 +133,11 @@
                   'Worked' => 'Hours from Proofhub'
                 ]
                 as $name => $tooltip)
-                @php $isLastColumn = $name === 'Worked'; @endphp
-                <th class="px-4 py-2 {{ $isLastColumn && !$showDeviations ? 'rounded-tr-lg' : '' }}">
+                @php 
+                  $isLastColumn = $name === 'Worked';
+                  $borderClass = (!$isLastColumn || $showDeviations) ? 'border-r border-gray-800' : '';
+                @endphp
+                <th class="px-4 py-3 border-b border-gray-800 {{ $borderClass }}">
                   <div class="inline-flex flex-row items-center gap-1">
                     {{ $name }}
                     <x-tooltip text="{{ $tooltip }}">
@@ -152,7 +147,7 @@
                         viewBox="0 0 24 24"
                         stroke-width="1.5"
                         stroke="currentColor"
-                        class="size-4"
+                        class="size-4 text-gray-500"
                       >
                         <path
                           stroke-linecap="round"
@@ -172,8 +167,11 @@
                     'Worked vs Attendance' => 'Percentage deviation between worked and attendance hours'
                   ]
                   as $name => $tooltip)
-                  @php $isLastColumn = $name === 'Worked vs Attendance'; @endphp
-                  <th class="px-4 py-2 {{ $isLastColumn ? 'rounded-tr-lg' : '' }}">
+                  @php 
+                    $isLastColumn = $name === 'Worked vs Attendance'; 
+                    $borderClass = !$isLastColumn ? 'border-r border-gray-800' : '';
+                  @endphp
+                  <th class="px-4 py-3 border-b border-gray-800 {{ $borderClass }}">
                     <div class="inline-flex flex-row items-center gap-1">
                       {{ $name }}
                       <x-tooltip text="{{ $tooltip }}">
@@ -183,7 +181,7 @@
                           viewBox="0 0 24 24"
                           stroke-width="1.5"
                           stroke="currentColor"
-                          class="size-4"
+                          class="size-4 text-gray-500"
                         >
                           <path
                             stroke-linecap="round"
@@ -209,7 +207,7 @@
               @endphp
               <tr class="border-t border-gray-200 dark:border-gray-600 {{ $isFutureDate ? 'bg-gray-200 dark:bg-gray-800 text-gray-500 dark:text-gray-400' : '' }}">
                 <!-- Date Column -->
-                <td class="whitespace-nowrap px-4 py-2 font-semibold">
+                <td class="whitespace-nowrap px-4 py-2 font-semibold border-r border-gray-800">
                   <div class="flex items-center gap-2">
                     {{ $dayDate->format('l d') }}
                     
@@ -220,7 +218,7 @@
                 </td>
 
                 <!-- Scheduled -->
-                <td class="px-4 py-2">
+                <td class="px-4 py-2 border-r border-gray-800">
                   <div class="flex flex-col gap-1">
                     <x-tooltip>
                       <x-slot name="text">
@@ -247,7 +245,7 @@
                 </td>
 
                 <!-- Leave -->
-                <td class="px-4 py-2">
+                <td class="px-4 py-2 border-r border-gray-800">
                   <!-- Simplified default view - only show when leave exists -->
                   @if ($day['leave'])
                     <div class="flex items-center gap-2 {{ $day['leave']['status'] !== 'validate' ? 'opacity-60' : '' }}">
@@ -321,7 +319,7 @@
                 </td>
 
                 <!-- Attendance -->
-                <td class="px-4 py-2">
+                <td class="px-4 py-2 border-r border-gray-800">
                   <x-tooltip>
                     <x-slot name="text">
                       <div class="flex flex-col gap-1">
@@ -348,7 +346,7 @@
                 </td>
 
                 <!-- Worked -->
-                <td class="px-4 py-2">
+                <td class="px-4 py-2 {{ $showDeviations ? 'border-r border-gray-800' : '' }}">
                   <div class="flex flex-col gap-1">
                     <x-tooltip>
                       <x-slot name="text">
@@ -404,7 +402,7 @@
                 <!-- Deviation Columns -->
                 @if($showDeviations)
                   <!-- Attendance vs Scheduled -->
-                  <td class="px-4 py-2">
+                  <td class="px-4 py-2 border-r border-gray-800">
                     @if(!$isFutureDate && $deviations['attendance_vs_scheduled'] !== 0)
                       @php
                         $scheduledMins = $this->durationToMinutes($day['scheduled']['duration']);
@@ -442,7 +440,7 @@
                   </td>
                   
                   <!-- Worked vs Scheduled -->
-                  <td class="px-4 py-2">
+                  <td class="px-4 py-2 border-r border-gray-800">
                     @if(!$isFutureDate && $deviations['worked_vs_scheduled'] !== 0)
                       @php
                         $scheduledMins = $this->durationToMinutes($day['scheduled']['duration']);
@@ -524,7 +522,7 @@
             <tr
               class="border-t-2 border-gray-300 bg-gray-100 font-bold dark:border-gray-500 dark:bg-gray-700"
             >
-              <td class="whitespace-nowrap px-4 py-2 text-gray-800 dark:text-gray-200 rounded-bl-lg">
+              <td class="whitespace-nowrap px-4 py-2 text-gray-800 dark:text-gray-200 border-r border-gray-800">
                 <x-tooltip text="Totals only include past dates and today. Future dates are not counted in calculations.">
                   <div class="flex items-center gap-1">
                     Totals
@@ -545,7 +543,7 @@
                   </div>
                 </x-tooltip>
               </td>
-              <td class="px-4 py-2 text-gray-800 dark:text-gray-200">
+              <td class="px-4 py-2 text-gray-800 dark:text-gray-200 border-r border-gray-800">
                 <!-- Convert minutes to "Xh Ym" -->
                 @php
                   $scheduledMins = $this->getTotals()['scheduled'];
@@ -555,7 +553,7 @@
 
                 {{ $scheduledMins > 0 ? "{$scheduledH}h {$scheduledR}m" : '' }}
               </td>
-              <td class="px-4 py-2 text-gray-800 dark:text-gray-200">
+              <td class="px-4 py-2 text-gray-800 dark:text-gray-200 border-r border-gray-800">
                 @php
                   $leaveMins = $this->getTotals()['leave'];
                   $leaveH = intdiv($leaveMins, 60);
@@ -564,7 +562,7 @@
 
                 {{ $leaveMins > 0 ? "{$leaveH}h {$leaveR}m" : '' }}
               </td>
-              <td class="px-4 py-2 text-gray-800 dark:text-gray-200">
+              <td class="px-4 py-2 text-gray-800 dark:text-gray-200 border-r border-gray-800">
                 @php
                   $attendanceMins = $this->getTotals()['attendance'];
                   $attendanceH = intdiv($attendanceMins, 60);
@@ -573,7 +571,7 @@
 
                 {{ $attendanceMins > 0 ? "{$attendanceH}h {$attendanceR}m" : '' }}
               </td>
-              <td class="px-4 py-2 text-gray-800 dark:text-gray-200 {{ !$showDeviations ? 'rounded-br-lg' : '' }}">
+              <td class="px-4 py-2 text-gray-800 dark:text-gray-200 {{ !$showDeviations ? 'rounded-br-lg' : 'border-r border-gray-800' }}">
                 @php
                   $workedMins = $this->getTotals()['worked'];
                   $workedH = intdiv($workedMins, 60);
@@ -588,7 +586,7 @@
                 @php $totalDeviations = $this->getTotalDeviations(); @endphp
                 
                 <!-- Attendance vs Scheduled -->
-                <td class="px-4 py-2 text-gray-800 dark:text-gray-200">
+                <td class="px-4 py-2 text-gray-800 dark:text-gray-200 border-r border-gray-800">
                   @if($totalDeviations['attendance_vs_scheduled'] !== 0)
                     @php
                       $scheduledMins = $this->getTotals()['scheduled'];
@@ -626,7 +624,7 @@
                 </td>
                 
                 <!-- Worked vs Scheduled -->
-                <td class="px-4 py-2 text-gray-800 dark:text-gray-200">
+                <td class="px-4 py-2 text-gray-800 dark:text-gray-200 border-r border-gray-800">
                   @if($totalDeviations['worked_vs_scheduled'] !== 0)
                     @php
                       $scheduledMins = $this->getTotals()['scheduled'];

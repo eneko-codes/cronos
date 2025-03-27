@@ -14,6 +14,10 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Livewire\Attributes\Computed;
+use Livewire\Attributes\Reactive;
+use Livewire\Attributes\Lazy;
+use Illuminate\Support\Facades\Gate;
 
 #[Title('User Page')]
 class UserPage extends Component
@@ -26,6 +30,7 @@ class UserPage extends Component
   /**
    * String date (YYYY-MM-DD) representing the start of the displayed period.
    */
+  #[Url]
   public string $currentDate;
 
   /**
@@ -50,12 +55,14 @@ class UserPage extends Component
    * The final array of day-by-day data for the chosen period.
    * This array is used directly by the Blade template.
    */
+  #[Reactive]
   protected array $periodData = [];
 
   /**
    * Aggregated totals (scheduled, attendance, worked) for the displayed period,
    * stored in minutes so we can convert them into "X hours Y minutes" later.
    */
+  #[Reactive]
   protected array $totals = [
     'scheduled' => 0, // in minutes
     'attendance' => 0, // in minutes
@@ -64,14 +71,9 @@ class UserPage extends Component
   ];
 
   /**
-   * Whether the current user can edit this user's data
+   * Whether the current user is an admin
    */
-  public bool $canEdit = false;
-
-  /**
-   * Permissions
-   */
-  public bool $isAdmin;
+  public bool $isAdmin = false;
 
   /**
    * Mount lifecycle hook.
@@ -79,9 +81,25 @@ class UserPage extends Component
   public function mount($id = null): void
   {
     if ($id !== null) {
-        $this->user = User::findOrFail($id);
+        $this->user = User::with([
+            'userSchedules.schedule.scheduleDetails',
+            'userLeaves.leaveType',
+            'userLeaves.department',
+            'userLeaves.category',
+            'userAttendances',
+            'timeEntries.project',
+            'timeEntries.task'
+        ])->findOrFail($id);
     } else {
-        $this->user = Auth::user();
+        $this->user = Auth::user()->load([
+            'userSchedules.schedule.scheduleDetails',
+            'userLeaves.leaveType',
+            'userLeaves.department',
+            'userLeaves.category',
+            'userAttendances',
+            'timeEntries.project',
+            'timeEntries.task'
+        ]);
     }
 
     // Always start with the current period based on view mode
@@ -99,6 +117,9 @@ class UserPage extends Component
   public function toggleDeviations(): void
   {
     $this->showDeviations = !$this->showDeviations;
+    
+    // Force a re-computation of the data
+    $this->loadPeriodDataFromCacheOrDb();
   }
 
   /**
@@ -158,6 +179,7 @@ class UserPage extends Component
   /**
    * Retrieves the data for the displayed period (day-by-day).
    */
+  #[Computed]
   public function getPeriodData(): array
   {
     return $this->periodData;
@@ -167,6 +189,7 @@ class UserPage extends Component
    * Returns aggregated totals (Scheduled, Attendance, Worked) for the displayed period,
    * in minutes. The final display format is "X hours Y minutes" in Blade.
    */
+  #[Computed]
   public function getTotals(): array
   {
     return $this->totals;
@@ -176,6 +199,7 @@ class UserPage extends Component
    * Calculate deviations between different data points
    * Returns an array of deviation percentages 
    */
+  #[Computed]
   public function getDeviationPercentages(array $day): array
   {
     $deviations = [
@@ -210,6 +234,7 @@ class UserPage extends Component
   /**
    * Calculate total deviations for the whole period
    */
+  #[Computed]
   public function getTotalDeviations(): array
   {
     $deviations = [
@@ -254,7 +279,8 @@ class UserPage extends Component
   /**
    * Determines if the "next" button should be disabled in the UI.
    */
-  public function getIsNextPeriodDisabledProperty(): bool
+  #[Computed]
+  public function isNextPeriodDisabled(): bool
   {
     $current = Carbon::parse($this->currentDate);
     
@@ -923,13 +949,15 @@ class UserPage extends Component
    */
   protected function checkPermissions(): void
   {
-    $authUser = Auth::user();
-    $this->isAdmin = $authUser && $authUser->is_admin;
-    $this->canEdit = ($this->user->id === $authUser?->id || $this->isAdmin);
+    $currentUser = Auth::user();
     
-    if ($this->user->doNotTrack) {
-      $this->canEdit = false;
+    // Check if user can view this user's data
+    if (!Gate::allows('view', $this->user)) {
+        abort(403, 'You are not authorized to view this user\'s data.');
     }
+    
+    // Set admin status
+    $this->isAdmin = $currentUser->isAdmin();
   }
 
   /**

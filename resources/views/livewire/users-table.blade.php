@@ -15,62 +15,18 @@
 
       <!-- Filter Tabs - Only show if there are users -->
       @if ($counts['all'] > 0)
-        <div
-          class="inline-flex w-fit gap-1 whitespace-nowrap rounded-lg border border-gray-200 bg-gray-100 p-1 text-xs font-semibold dark:border-gray-700 dark:bg-gray-800"
-        >
-          <!-- All Users Filter -->
-          <button
-            wire:click="setFilter('all')"
-            class="{{ $active === 'all' ? 'bg-gray-50 text-gray-800 ring-1 ring-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:ring-gray-700' : 'text-gray-600 hover:bg-gray-200/50 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-700/50 dark:hover:text-gray-200' }} relative rounded px-3 py-1"
-          >
-            All Users
-            <span class="font-light">{{ $counts['all'] }}</span>
-          </button>
-
-          <!-- Only show employee filter if there are employees -->
-          @if ($counts['employees'] > 0)
-            <button
-              wire:click="setFilter('employees')"
-              class="{{ $active === 'employees' ? 'bg-gray-50 text-gray-800 ring-1 ring-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:ring-gray-700' : 'text-gray-600 hover:bg-gray-200/50 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-700/50 dark:hover:text-gray-200' }} relative rounded px-3 py-1"
-            >
-              Employees
-              <span class="font-light">{{ $counts['employees'] }}</span>
-            </button>
-          @endif
-
-          <!-- Only show admin filter if there are admins -->
-          @if ($counts['admins'] > 0)
-            <button
-              wire:click="setFilter('admins')"
-              class="{{ $active === 'admins' ? 'bg-gray-50 text-gray-800 ring-1 ring-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:ring-gray-700' : 'text-gray-600 hover:bg-gray-200/50 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-700/50 dark:hover:text-gray-200' }} relative rounded px-3 py-1"
-            >
-              Admins
-              <span class="font-light">{{ $counts['admins'] }}</span>
-            </button>
-          @endif
-
-          <!-- Only show not tracked filter if there are not tracked users -->
-          @if ($counts['not_tracked'] > 0)
-            <button
-              wire:click="setFilter('not-tracked')"
-              class="{{ $active === 'not-tracked' ? 'bg-gray-50 text-gray-800 ring-1 ring-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:ring-gray-700' : 'text-gray-600 hover:bg-gray-200/50 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-700/50 dark:hover:text-gray-200' }} relative rounded px-3 py-1"
-            >
-              Not Tracked
-              <span class="font-light">{{ $counts['not_tracked'] }}</span>
-            </button>
-          @endif
-
-          <!-- Only show muted filter if there are muted users -->
-          @if ($counts['muted'] > 0)
-            <button
-              wire:click="setFilter('muted')"
-              class="{{ $active === 'muted' ? 'bg-gray-50 text-gray-800 ring-1 ring-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:ring-gray-700' : 'text-gray-600 hover:bg-gray-200/50 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-700/50 dark:hover:text-gray-200' }} relative rounded px-3 py-1"
-            >
-              Muted
-              <span class="font-light">{{ $counts['muted'] }}</span>
-            </button>
-          @endif
-        </div>
+        <x-tabs
+          :active="$active"
+          :counts="$counts"
+          :filters="[
+            'all' => 'All Users',
+            'employees' => 'Employees',
+            'admins' => 'Admins',
+            'not_tracked' => 'Not Tracked',
+            'muted' => 'Muted'
+          ]"
+          onFilterChange="setFilter"
+        />
       @endif
     </div>
 

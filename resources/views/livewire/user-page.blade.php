@@ -52,7 +52,8 @@
   @if ($user->do_not_track)
     <div class="rounded-lg bg-gray-50 p-8 text-center dark:bg-gray-800">
       <p class="text-md text-gray-600 dark:text-gray-300">
-        {{ $user->name }} is currently set to do not track. Data is not stored for this user.
+        {{ $user->name }} is currently set to do not track. Data is not stored
+        for this user.
       </p>
     </div>
   @else
@@ -76,7 +77,8 @@
               $carbonDate = \Carbon\Carbon::parse($currentDate, 'UTC');
             @endphp
 
-            {{ $viewMode === 'weekly' ? 'Week' : 'Month' }} of {{ $carbonDate->format('F d, Y') }}
+            {{ $viewMode === 'weekly' ? 'Week' : 'Month' }} of
+            {{ $carbonDate->format('F d, Y') }}
           </h2>
 
           <button
@@ -91,16 +93,27 @@
 
       <!-- View Mode Toggles -->
       <div class="flex items-center gap-2">
-         <!-- Deviations Toggle -->
-         <x-toggle-button
-         :active="$showDeviations"
-         label="Deviations"
-         onClick="toggleDeviations"
-       >
-         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-         </svg>
-       </x-toggle-button>
+        <!-- Deviations Toggle -->
+        <x-toggle-button
+          :active="$showDeviations"
+          label="Deviations"
+          onClick="toggleDeviations"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+            />
+          </svg>
+        </x-toggle-button>
 
         <!-- Period Toggle (Weekly/Monthly) -->
         <x-tabs
@@ -116,15 +129,15 @@
     </div>
 
     <!-- Data Table -->
-    <div 
-      class="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800"
-    >
+    <div class="scrollbar-thin overflow-x-auto shadow-xl">
       <table
-        class="w-full min-w-[800px] bg-gray-950 text-sm text-gray-300 border-separate border-spacing-0"
+        class="w-full table-auto border-collapse text-sm text-gray-800 dark:text-gray-200"
       >
-        <thead class="sticky top-0 z-10">
-          <tr class="text-left font-medium uppercase text-xs tracking-wider text-gray-400">
-            <th class="px-4 py-3 border-b border-gray-800 border-r border-gray-800">Day</th>
+        <thead class="text-left font-medium">
+          <tr class="">
+            <th class="whitespace-nowrap border p-2 dark:border-gray-500">
+              Day
+            </th>
             @foreach ([
                 'Scheduled' => 'Hours from Odoo calendar',
                 'Leave' => 'Time off from Odoo',
@@ -132,11 +145,7 @@
                 'Worked' => 'Hours from Proofhub'
               ]
               as $name => $tooltip)
-              @php 
-                $isLastColumn = $name === 'Worked';
-                $borderClass = (!$isLastColumn || $showDeviations) ? 'border-r border-gray-800' : '';
-              @endphp
-              <th class="px-4 py-3 border-b border-gray-800 {{ $borderClass }}">
+              <th class="whitespace-nowrap border p-2 dark:border-gray-500">
                 <div class="inline-flex flex-row items-center gap-1">
                   {{ $name }}
                   <x-tooltip text="{{ $tooltip }}">
@@ -158,19 +167,18 @@
                 </div>
               </th>
             @endforeach
-            
-            @if($showDeviations)
+
+            @if ($showDeviations)
               @foreach ([
-                  'Attendance vs Scheduled' => 'Percentage deviation between attendance and scheduled hours',
-                  'Worked vs Scheduled' => 'Percentage deviation between worked and scheduled hours',
-                  'Worked vs Attendance' => 'Percentage deviation between worked and attendance hours'
+                  'Attendance vs Scheduled' =>
+                    'Percentage deviation between attendance and scheduled hours',
+                  'Worked vs Scheduled' =>
+                    'Percentage deviation between worked and scheduled hours',
+                  'Worked vs Attendance' =>
+                    'Percentage deviation between worked and attendance hours'
                 ]
                 as $name => $tooltip)
-                @php 
-                  $isLastColumn = $name === 'Worked vs Attendance'; 
-                  $borderClass = !$isLastColumn ? 'border-r border-gray-800' : '';
-                @endphp
-                <th class="px-4 py-3 border-b border-gray-800 {{ $borderClass }}">
+                <th class="whitespace-nowrap border p-2 dark:border-gray-500">
                   <div class="inline-flex flex-row items-center gap-1">
                     {{ $name }}
                     <x-tooltip text="{{ $tooltip }}">
@@ -204,88 +212,118 @@
                 $deviations = $this->getDeviationPercentages($day);
               }
             @endphp
-            <tr class="border-t border-gray-200 dark:border-gray-600 {{ $isFutureDate ? 'bg-gray-200 dark:bg-gray-800 text-gray-500 dark:text-gray-400' : '' }}">
+
+            <tr
+              class="{{ $isFutureDate ? 'bg-gray-200 text-gray-500 dark:bg-gray-900 dark:text-gray-400' : '' }} border border-gray-200 dark:border-gray-700 dark:bg-gray-800"
+            >
               <!-- Date Column -->
-              <td class="whitespace-nowrap px-4 py-2 font-semibold border-r border-gray-800">
+              <td class="whitespace-nowrap p-2 font-semibold">
                 <div class="flex items-center gap-2">
                   {{ $dayDate->format('l d') }}
-                  
-                  @if($dayDate->isToday())
+
+                  @if ($dayDate->isToday())
                     <x-badge size="sm" variant="primary">Today</x-badge>
                   @endif
                 </div>
               </td>
 
               <!-- Scheduled -->
-              <td class="whitespace-nowrap px-4 py-2 border-r border-gray-800">
+              <td class="whitespace-nowrap border p-2 dark:border-gray-700">
                 <div class="flex flex-col gap-1">
                   <x-tooltip>
                     <x-slot name="text">
                       <div class="flex flex-col gap-1">
-                        @if(count($day['scheduled']['slots']) > 0)
-                          @if(isset($day['scheduled']['schedule_name']))
-                            <span class="text-xs font-medium text-gray-700 dark:text-gray-100 mb-1">
+                        @if (count($day['scheduled']['slots']) > 0)
+                          @if (isset($day['scheduled']['schedule_name']))
+                            <span
+                              class="mb-1 text-xs font-medium text-gray-700 dark:text-gray-100"
+                            >
                               {{ $day['scheduled']['schedule_name'] }}
                             </span>
                           @endif
+
                           @foreach ($day['scheduled']['slots'] as $slot)
-                            <span class="text-xs text-gray-600 dark:text-gray-200">
+                            <span
+                              class="text-xs text-gray-600 dark:text-gray-200"
+                            >
                               {{ $slot }}
                             </span>
                           @endforeach
                         @else
-                          <span class="text-xs text-gray-500 dark:text-gray-400">No data</span>
+                          <span
+                            class="text-xs text-gray-500 dark:text-gray-400"
+                          >
+                            No data
+                          </span>
                         @endif
                       </div>
                     </x-slot>
-                    <span class="text-gray-700 dark:text-gray-300">{{ $day['scheduled']['duration'] !== '0h 0m' ? $day['scheduled']['duration'] : '' }}</span>
+                    <span class="text-gray-700 dark:text-gray-300">
+                      {{ $day['scheduled']['duration'] !== '0h 0m' ? $day['scheduled']['duration'] : '' }}
+                    </span>
                   </x-tooltip>
                 </div>
               </td>
 
               <!-- Leave -->
-              <td class="whitespace-nowrap px-4 py-2 border-r border-gray-800">
+              <td class="whitespace-nowrap border p-2 dark:border-gray-700">
                 <!-- Simplified default view - only show when leave exists -->
                 @if ($day['leave'])
-                  <div class="flex items-center gap-2 {{ $day['leave']['status'] !== 'validate' ? 'opacity-60' : '' }}">
+                  <div
+                    class="{{ $day['leave']['status'] !== 'validate' ? 'opacity-60' : '' }} flex items-center gap-2"
+                  >
                     <!-- Main leave information with tooltip -->
                     <div>
                       <x-tooltip>
                         <x-slot name="text">
-                          <div class="flex flex-col gap-2 max-w-xs">
+                          <div class="flex max-w-xs flex-col gap-2">
                             <!-- Duration in days -->
-                            <div class="flex flex-row items-center gap-1 mb-1">
-                              <span class="text-xs text-gray-600 dark:text-gray-300 font-medium">
+                            <div class="mb-1 flex flex-row items-center gap-1">
+                              <span
+                                class="text-xs font-medium text-gray-600 dark:text-gray-300"
+                              >
                                 {{ $day['leave']['duration'] }}
                               </span>
                             </div>
-                            
+
                             <!-- Time details -->
+
                             @if ($day['leave']['is_half_day'])
                               <div>
-                                <span class="text-xs text-gray-600 dark:text-gray-300">
-                                  {{ ucfirst($day['leave']['time_period']) }} ({{ $day['leave']['half_day_time'] ?? '—' }})
+                                <span
+                                  class="text-xs text-gray-600 dark:text-gray-300"
+                                >
+                                  {{ ucfirst($day['leave']['time_period']) }}
+                                  ({{ $day['leave']['half_day_time'] ?? '—' }})
                                 </span>
                               </div>
                             @else
                               <div>
-                                <span class="text-xs text-gray-600 dark:text-gray-300">
+                                <span
+                                  class="text-xs text-gray-600 dark:text-gray-300"
+                                >
                                   Full day
                                 </span>
                               </div>
                             @endif
-                            
+
                             <!-- Leave type -->
                             <div>
-                              <span class="text-xs text-gray-600 dark:text-gray-300 font-medium">
+                              <span
+                                class="text-xs font-medium text-gray-600 dark:text-gray-300"
+                              >
                                 {{ $day['leave']['type'] ?? 'Leave' }}
                               </span>
                             </div>
-                            
+
                             <!-- Status info if not validated -->
                             @if ($day['leave']['status'] !== 'validate')
-                              <div class="mt-1 pt-1 border-t border-dashed border-gray-200 dark:border-gray-600">
-                                <span class="text-xs text-gray-500 dark:text-gray-400 italic">
+                              <div
+                                class="mt-1 border border-dashed border-gray-200 pt-1 dark:border-gray-600"
+                              >
+                                <span
+                                  class="text-xs italic text-gray-500 dark:text-gray-400"
+                                >
                                   {{ $day['leave']['status'] === 'confirm' ? 'Waiting approval' : 'Cancelled' }}
                                 </span>
                               </div>
@@ -294,19 +332,37 @@
                         </x-slot>
                         <span class="text-gray-700 dark:text-gray-300">
                           {{ $day['leave']['duration_hours'] }}
-                          
-                          @if($day['leave']['status'] === 'validate')
-                            <x-badge variant="success" size="sm">{{ $day['leave']['is_half_day'] ? 'Half' : 'Full' }}</x-badge>
-                          @elseif($day['leave']['status'] === 'confirm')
+
+                          @if ($day['leave']['status'] === 'validate')
+                            <x-badge variant="success" size="sm">
+                              {{ $day['leave']['is_half_day'] ? 'Half' : 'Full' }}
+                            </x-badge>
+                          @elseif ($day['leave']['status'] === 'confirm')
                             <x-tooltip text="Leave request is pending approval">
-                              <svg xmlns="http://www.w3.org/2000/svg" class="size-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                class="size-4"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                              >
+                                <path
+                                  d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
+                                />
                               </svg>
                             </x-tooltip>
-                          @elseif($day['leave']['status'] === 'cancel')
+                          @elseif ($day['leave']['status'] === 'cancel')
                             <x-tooltip text="Leave request was cancelled">
-                              <svg xmlns="http://www.w3.org/2000/svg" class="size-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                class="size-4"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                              >
+                                <path
+                                  fill-rule="evenodd"
+                                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z"
+                                  clip-rule="evenodd"
+                                />
                               </svg>
                             </x-tooltip>
                           @endif
@@ -318,23 +374,29 @@
               </td>
 
               <!-- Attendance -->
-              <td class="whitespace-nowrap px-4 py-2 border-r border-gray-800">
+              <td class="whitespace-nowrap border p-2 dark:border-gray-700">
                 <x-tooltip>
                   <x-slot name="text">
                     <div class="flex flex-col gap-1">
                       @if ($day['attendance']['is_remote'])
-                        <span class="text-xs text-gray-600 dark:text-gray-200">Remote work</span>
+                        <span class="text-xs text-gray-600 dark:text-gray-200">
+                          Remote work
+                        </span>
                       @elseif (! empty($day['attendance']['times']))
                         <span class="text-xs text-gray-600 dark:text-gray-200">
                           {{ implode(' → ', $day['attendance']['times']) }}
                         </span>
                       @else
-                        <span class="text-xs text-gray-500 dark:text-gray-400">No data</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">
+                          No data
+                        </span>
                       @endif
                     </div>
                   </x-slot>
                   <div class="flex flex-row items-center gap-2">
-                    <span class="text-gray-700 dark:text-gray-300">{{ $day['attendance']['duration'] !== '0h 0m' ? $day['attendance']['duration'] : '' }}</span>
+                    <span class="text-gray-700 dark:text-gray-300">
+                      {{ $day['attendance']['duration'] !== '0h 0m' ? $day['attendance']['duration'] : '' }}
+                    </span>
                     @if ($day['attendance']['is_remote'])
                       <x-badge variant="info" size="sm">Remote</x-badge>
                     @elseif (! empty($day['attendance']['times']))
@@ -345,43 +407,62 @@
               </td>
 
               <!-- Worked -->
-              <td class="whitespace-nowrap px-4 py-2 {{ $showDeviations ? 'border-r border-gray-800' : '' }}">
+              <td
+                class="{{ $showDeviations ? 'border dark:border-gray-700' : '' }} whitespace-nowrap p-2"
+              >
                 <div class="flex flex-col gap-1">
                   <x-tooltip>
                     <x-slot name="text">
-                      <div class="flex flex-col gap-2 max-w-xs">
-                        @if(isset($day['worked']['detailed_entries']) && count($day['worked']['detailed_entries']) > 0)
+                      <div class="flex max-w-xs flex-col gap-2">
+                        @if (isset($day['worked']['detailed_entries']) && count($day['worked']['detailed_entries']) > 0)
                           @foreach ($day['worked']['detailed_entries'] as $entry)
-                            <div class="flex flex-col {{ !$loop->last ? 'border-b border-gray-200 dark:border-gray-600 pb-3 mb-3' : '' }}">
-                              <div class="flex items-center justify-between mb-1">
-                                <span class="font-medium text-xs text-gray-800 dark:text-gray-100">
+                            <div
+                              class="{{ ! $loop->last ? 'mb-3 border border-gray-200 pb-3 dark:border-gray-600' : '' }} flex flex-col"
+                            >
+                              <div
+                                class="mb-1 flex items-center justify-between"
+                              >
+                                <span
+                                  class="text-xs font-medium text-gray-800 dark:text-gray-100"
+                                >
                                   {{ $entry['project'] }}
                                 </span>
-                                <span class="ml-2 whitespace-nowrap text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-gray-700 dark:text-gray-300">
+                                <span
+                                  class="ml-2 whitespace-nowrap rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+                                >
                                   {{ $entry['duration'] }}
                                 </span>
                               </div>
                               @if (isset($entry['task']) && $entry['task'])
-                                <span class="text-xs text-gray-600 dark:text-gray-300 mb-0.5">
+                                <span
+                                  class="mb-0.5 text-xs text-gray-600 dark:text-gray-300"
+                                >
                                   {{ $entry['task'] }}
                                 </span>
                               @endif
+
                               @if (isset($entry['description']) && $entry['description'])
-                                <span class="text-xs text-gray-500 dark:text-gray-400 italic">
+                                <span
+                                  class="text-xs italic text-gray-500 dark:text-gray-400"
+                                >
                                   {{ Str::limit($entry['description'], 80) }}
                                 </span>
                               @endif
                             </div>
                           @endforeach
-                        @elseif(count($day['worked']['projects']) > 0)
+                        @elseif (count($day['worked']['projects']) > 0)
                           <div class="flex flex-col">
                             @foreach ($day['worked']['projects'] as $project)
-                              <div class="{{ !$loop->last ? 'mb-3' : '' }}">
-                                <span class="font-medium text-xs text-gray-800 dark:text-gray-100">
+                              <div class="{{ ! $loop->last ? 'mb-3' : '' }}">
+                                <span
+                                  class="text-xs font-medium text-gray-800 dark:text-gray-100"
+                                >
                                   {{ $project['name'] }}
                                 </span>
                                 @if (! empty($project['tasks']))
-                                  <div class="text-xs text-gray-600 dark:text-gray-300 mt-1">
+                                  <div
+                                    class="mt-1 text-xs text-gray-600 dark:text-gray-300"
+                                  >
                                     {{ implode(', ', $project['tasks']) }}
                                   </div>
                                 @endif
@@ -389,47 +470,56 @@
                             @endforeach
                           </div>
                         @else
-                          <span class="text-xs text-gray-500 dark:text-gray-400">No data</span>
+                          <span
+                            class="text-xs text-gray-500 dark:text-gray-400"
+                          >
+                            No data
+                          </span>
                         @endif
                       </div>
                     </x-slot>
-                    <span class="text-gray-700 dark:text-gray-300">{{ $day['worked']['duration'] !== '0h 0m' ? $day['worked']['duration'] : '' }}</span>
+                    <span class="text-gray-700 dark:text-gray-300">
+                      {{ $day['worked']['duration'] !== '0h 0m' ? $day['worked']['duration'] : '' }}
+                    </span>
                   </x-tooltip>
                 </div>
               </td>
-              
+
               <!-- Deviation Columns -->
-              @if($showDeviations)
+              @if ($showDeviations)
                 <!-- Attendance vs Scheduled -->
-                <td class="whitespace-nowrap px-4 py-2 border-r border-gray-800">
-                  @if(!$isFutureDate && $deviations['attendance_vs_scheduled'] !== 0)
+                <td class="whitespace-nowrap border p-2 dark:border-gray-700">
+                  @if (! $isFutureDate && $deviations['attendance_vs_scheduled'] !== 0)
                     @php
                       $scheduledMins = $this->durationToMinutes($day['scheduled']['duration']);
                       $attendanceMins = $this->durationToMinutes($day['attendance']['duration']);
                       $diffMins = $attendanceMins - $scheduledMins;
                       $diffFormatted = $this->formatDuration(abs($diffMins));
-                      
+
                       if ($diffMins == 0) {
-                        $attendanceTooltip = "Attendance exactly matches scheduled time";
+                        $attendanceTooltip = 'Attendance exactly matches scheduled time';
                       } else {
-                        $attendanceTooltip = $diffMins > 0 
-                          ? "Attended $diffFormatted more than scheduled"
-                          : "Attended $diffFormatted less than scheduled";
+                        $attendanceTooltip =
+                          $diffMins > 0
+                            ? "Attended $diffFormatted more than scheduled"
+                            : "Attended $diffFormatted less than scheduled";
                       }
-                      
+
                       // Set color based on deviation severity
                       $deviationValue = $deviations['attendance_vs_scheduled'];
-                      $deviationClass = $deviationValue >= 0 
-                        ? 'text-green-600 dark:text-green-400' 
-                        : ($deviationValue > -15 
-                            ? 'text-amber-600 dark:text-amber-400' 
+                      $deviationClass =
+                        $deviationValue >= 0
+                          ? 'text-green-600 dark:text-green-400'
+                          : ($deviationValue > -15
+                            ? 'text-amber-600 dark:text-amber-400'
                             : 'text-red-600 dark:text-red-400');
-                            
+
                       // Ensure -100% is always red
                       if ($deviationValue <= -100) {
                         $deviationClass = 'text-red-600 dark:text-red-400';
                       }
                     @endphp
+
                     <x-tooltip text="{{ $attendanceTooltip }}">
                       <span class="{{ $deviationClass }}">
                         {{ $deviationValue > 0 ? '+' : '' }}{{ $deviationValue }}%
@@ -437,37 +527,32 @@
                     </x-tooltip>
                   @endif
                 </td>
-                
+
                 <!-- Worked vs Scheduled -->
-                <td class="whitespace-nowrap px-4 py-2 border-r border-gray-800">
-                  @if(!$isFutureDate && $deviations['worked_vs_scheduled'] !== 0)
+                <td class="whitespace-nowrap border p-2 dark:border-gray-700">
+                  @if (! $isFutureDate && $deviations['worked_vs_scheduled'] !== 0)
                     @php
                       $scheduledMins = $this->durationToMinutes($day['scheduled']['duration']);
                       $workedMins = $this->durationToMinutes($day['worked']['duration']);
                       $diffMins = $workedMins - $scheduledMins;
                       $diffFormatted = $this->formatDuration(abs($diffMins));
-                      
+
                       if ($diffMins == 0) {
-                        $workedTooltip = "Work logged exactly matches scheduled time";
+                        $workedTooltip = 'Work logged exactly matches scheduled time';
                       } else {
-                        $workedTooltip = $diffMins > 0 
-                          ? "Worked $diffFormatted more than scheduled"
-                          : "Worked $diffFormatted less than scheduled";
+                        $workedTooltip = $diffMins > 0 ? "Worked $diffFormatted more than scheduled" : "Worked $diffFormatted less than scheduled";
                       }
-                      
+
                       // Set color based on deviation severity
                       $deviationValue = $deviations['worked_vs_scheduled'];
-                      $deviationClass = $deviationValue >= 0 
-                        ? 'text-green-600 dark:text-green-400' 
-                        : ($deviationValue > -15 
-                            ? 'text-amber-600 dark:text-amber-400' 
-                            : 'text-red-600 dark:text-red-400');
-                            
+                      $deviationClass = $deviationValue >= 0 ? 'text-green-600 dark:text-green-400' : ($deviationValue > -15 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400');
+
                       // Ensure -100% is always red
                       if ($deviationValue <= -100) {
                         $deviationClass = 'text-red-600 dark:text-red-400';
                       }
                     @endphp
+
                     <x-tooltip text="{{ $workedTooltip }}">
                       <span class="{{ $deviationClass }}">
                         {{ $deviationValue > 0 ? '+' : '' }}{{ $deviationValue }}%
@@ -475,37 +560,32 @@
                     </x-tooltip>
                   @endif
                 </td>
-                
+
                 <!-- Worked vs Attendance -->
-                <td class="whitespace-nowrap px-4 py-2">
-                  @if(!$isFutureDate && $deviations['worked_vs_attendance'] !== 0)
+                <td class="whitespace-nowrap p-2">
+                  @if (! $isFutureDate && $deviations['worked_vs_attendance'] !== 0)
                     @php
                       $attendanceMins = $this->durationToMinutes($day['attendance']['duration']);
                       $workedMins = $this->durationToMinutes($day['worked']['duration']);
                       $diffMins = $workedMins - $attendanceMins;
                       $diffFormatted = $this->formatDuration(abs($diffMins));
-                      
+
                       if ($diffMins == 0) {
-                        $workAttendanceTooltip = "Work logged exactly matches attendance time";
+                        $workAttendanceTooltip = 'Work logged exactly matches attendance time';
                       } else {
-                        $workAttendanceTooltip = $diffMins > 0 
-                          ? "Worked $diffFormatted more than attended"
-                          : "Worked $diffFormatted less than attended";
+                        $workAttendanceTooltip = $diffMins > 0 ? "Worked $diffFormatted more than attended" : "Worked $diffFormatted less than attended";
                       }
-                      
+
                       // Set color based on deviation severity
                       $deviationValue = $deviations['worked_vs_attendance'];
-                      $deviationClass = $deviationValue >= 0 
-                        ? 'text-green-600 dark:text-green-400' 
-                        : ($deviationValue > -15 
-                            ? 'text-amber-600 dark:text-amber-400' 
-                            : 'text-red-600 dark:text-red-400');
-                            
+                      $deviationClass = $deviationValue >= 0 ? 'text-green-600 dark:text-green-400' : ($deviationValue > -15 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400');
+
                       // Ensure -100% is always red
                       if ($deviationValue <= -100) {
                         $deviationClass = 'text-red-600 dark:text-red-400';
                       }
                     @endphp
+
                     <x-tooltip text="{{ $workAttendanceTooltip }}">
                       <span class="{{ $deviationClass }}">
                         {{ $deviationValue > 0 ? '+' : '' }}{{ $deviationValue }}%
@@ -518,11 +598,11 @@
           @endforeach
 
           <!-- Totals Row -->
-          <tr
-            class="border-t-2 border-gray-300 bg-gray-100 font-bold dark:border-gray-500 dark:bg-gray-700"
-          >
-            <td class="whitespace-nowrap px-4 py-2 text-gray-800 dark:text-gray-200 border-r border-gray-800">
-              <x-tooltip text="Totals only include past dates and today. Future dates are not counted in calculations.">
+          <tr class="bg-gray-100 font-bold dark:bg-gray-800">
+            <td class="whitespace-nowrap border p-2 dark:border-gray-700">
+              <x-tooltip
+                text="Totals only include past dates and today. Future dates are not counted in calculations."
+              >
                 <div class="flex items-center gap-1">
                   Totals
                   <svg
@@ -542,7 +622,7 @@
                 </div>
               </x-tooltip>
             </td>
-            <td class="px-4 py-2 text-gray-800 dark:text-gray-200 border-r border-gray-800">
+            <td class="whitespace-nowrap border p-2 dark:border-gray-700">
               <!-- Convert minutes to "Xh Ym" -->
               @php
                 $scheduledMins = $this->getTotals()['scheduled'];
@@ -552,7 +632,7 @@
 
               {{ $scheduledMins > 0 ? "{$scheduledH}h {$scheduledR}m" : '' }}
             </td>
-            <td class="px-4 py-2 text-gray-800 dark:text-gray-200 border-r border-gray-800">
+            <td class="whitespace-nowrap border p-2 dark:border-gray-700">
               @php
                 $leaveMins = $this->getTotals()['leave'];
                 $leaveH = intdiv($leaveMins, 60);
@@ -561,7 +641,7 @@
 
               {{ $leaveMins > 0 ? "{$leaveH}h {$leaveR}m" : '' }}
             </td>
-            <td class="px-4 py-2 text-gray-800 dark:text-gray-200 border-r border-gray-800">
+            <td class="whitespace-nowrap border p-2 dark:border-gray-700">
               @php
                 $attendanceMins = $this->getTotals()['attendance'];
                 $attendanceH = intdiv($attendanceMins, 60);
@@ -570,7 +650,9 @@
 
               {{ $attendanceMins > 0 ? "{$attendanceH}h {$attendanceR}m" : '' }}
             </td>
-            <td class="px-4 py-2 text-gray-800 dark:text-gray-200 {{ !$showDeviations ? 'rounded-br-lg' : 'border-r border-gray-800' }}">
+            <td
+              class="{{ ! $showDeviations ? 'rounded-br-lg' : '' }}whitespace-nowrap border p-2 dark:border-gray-700"
+            >
               @php
                 $workedMins = $this->getTotals()['worked'];
                 $workedH = intdiv($workedMins, 60);
@@ -579,41 +661,46 @@
 
               {{ $workedMins > 0 ? "{$workedH}h {$workedR}m" : '' }}
             </td>
-            
+
             <!-- Total Deviations -->
-            @if($showDeviations)
-              @php $totalDeviations = $this->getTotalDeviations(); @endphp
-              
+            @if ($showDeviations)
+              @php
+                $totalDeviations = $this->getTotalDeviations();
+              @endphp
+
               <!-- Attendance vs Scheduled -->
-              <td class="px-4 py-2 text-gray-800 dark:text-gray-200 border-r border-gray-800">
-                @if($totalDeviations['attendance_vs_scheduled'] !== 0)
+              <td class="whitespace-nowrap border p-2 dark:border-gray-700">
+                @if ($totalDeviations['attendance_vs_scheduled'] !== 0)
                   @php
                     $scheduledMins = $this->getTotals()['scheduled'];
                     $attendanceMins = $this->getTotals()['attendance'];
                     $diffMins = $attendanceMins - $scheduledMins;
                     $diffFormatted = $this->formatDuration(abs($diffMins));
-                    
+
                     if ($diffMins == 0) {
-                      $attendanceTooltip = "Total attendance exactly matches scheduled time";
+                      $attendanceTooltip = 'Total attendance exactly matches scheduled time';
                     } else {
-                      $attendanceTooltip = $diffMins > 0 
-                        ? "Total attendance is $diffFormatted more than scheduled"
-                        : "Total attendance is $diffFormatted less than scheduled";
+                      $attendanceTooltip =
+                        $diffMins > 0
+                          ? "Total attendance is $diffFormatted more than scheduled"
+                          : "Total attendance is $diffFormatted less than scheduled";
                     }
-                    
+
                     // Set color based on deviation severity
                     $deviationValue = $totalDeviations['attendance_vs_scheduled'];
-                    $deviationClass = $deviationValue >= 0 
-                      ? 'text-green-600 dark:text-green-400' 
-                      : ($deviationValue > -15 
-                          ? 'text-amber-600 dark:text-amber-400' 
+                    $deviationClass =
+                      $deviationValue >= 0
+                        ? 'text-green-600 dark:text-green-400'
+                        : ($deviationValue > -15
+                          ? 'text-amber-600 dark:text-amber-400'
                           : 'text-red-600 dark:text-red-400');
-                            
+
                     // Ensure -100% is always red
                     if ($deviationValue <= -100) {
                       $deviationClass = 'text-red-600 dark:text-red-400';
                     }
                   @endphp
+
                   <x-tooltip text="{{ $attendanceTooltip }}">
                     <span class="{{ $deviationClass }}">
                       {{ $deviationValue > 0 ? '+' : '' }}{{ $deviationValue }}%
@@ -621,37 +708,40 @@
                   </x-tooltip>
                 @endif
               </td>
-              
+
               <!-- Worked vs Scheduled -->
-              <td class="px-4 py-2 text-gray-800 dark:text-gray-200 border-r border-gray-800">
-                @if($totalDeviations['worked_vs_scheduled'] !== 0)
+              <td class="whitespace-nowrap border p-2 dark:border-gray-700">
+                @if ($totalDeviations['worked_vs_scheduled'] !== 0)
                   @php
                     $scheduledMins = $this->getTotals()['scheduled'];
                     $workedMins = $this->getTotals()['worked'];
                     $diffMins = $workedMins - $scheduledMins;
                     $diffFormatted = $this->formatDuration(abs($diffMins));
-                    
+
                     if ($diffMins == 0) {
-                      $workedTooltip = "Total work logged exactly matches scheduled time";
+                      $workedTooltip = 'Total work logged exactly matches scheduled time';
                     } else {
-                      $workedTooltip = $diffMins > 0 
-                        ? "Total work logged is $diffFormatted more than scheduled"
-                        : "Total work logged is $diffFormatted less than scheduled";
+                      $workedTooltip =
+                        $diffMins > 0
+                          ? "Total work logged is $diffFormatted more than scheduled"
+                          : "Total work logged is $diffFormatted less than scheduled";
                     }
-                    
+
                     // Set color based on deviation severity
                     $deviationValue = $totalDeviations['worked_vs_scheduled'];
-                    $deviationClass = $deviationValue >= 0 
-                      ? 'text-green-600 dark:text-green-400' 
-                      : ($deviationValue > -15 
-                          ? 'text-amber-600 dark:text-amber-400' 
+                    $deviationClass =
+                      $deviationValue >= 0
+                        ? 'text-green-600 dark:text-green-400'
+                        : ($deviationValue > -15
+                          ? 'text-amber-600 dark:text-amber-400'
                           : 'text-red-600 dark:text-red-400');
-                            
+
                     // Ensure -100% is always red
                     if ($deviationValue <= -100) {
                       $deviationClass = 'text-red-600 dark:text-red-400';
                     }
                   @endphp
+
                   <x-tooltip text="{{ $workedTooltip }}">
                     <span class="{{ $deviationClass }}">
                       {{ $deviationValue > 0 ? '+' : '' }}{{ $deviationValue }}%
@@ -659,37 +749,40 @@
                   </x-tooltip>
                 @endif
               </td>
-              
+
               <!-- Worked vs Attendance -->
-              <td class="px-4 py-2 text-gray-800 dark:text-gray-200 rounded-br-lg">
-                @if($totalDeviations['worked_vs_attendance'] !== 0)
+              <td class="whitespace-nowrap border p-2 dark:border-gray-700">
+                @if ($totalDeviations['worked_vs_attendance'] !== 0)
                   @php
                     $attendanceMins = $this->getTotals()['attendance'];
                     $workedMins = $this->getTotals()['worked'];
                     $diffMins = $workedMins - $attendanceMins;
                     $diffFormatted = $this->formatDuration(abs($diffMins));
-                    
+
                     if ($diffMins == 0) {
-                      $workAttendanceTooltip = "Total work logged exactly matches attendance time";
+                      $workAttendanceTooltip = 'Total work logged exactly matches attendance time';
                     } else {
-                      $workAttendanceTooltip = $diffMins > 0 
-                        ? "Total work logged is $diffFormatted more than attendance"
-                        : "Total work logged is $diffFormatted less than attendance";
+                      $workAttendanceTooltip =
+                        $diffMins > 0
+                          ? "Total work logged is $diffFormatted more than attendance"
+                          : "Total work logged is $diffFormatted less than attendance";
                     }
-                    
+
                     // Set color based on deviation severity
                     $deviationValue = $totalDeviations['worked_vs_attendance'];
-                    $deviationClass = $deviationValue >= 0 
-                      ? 'text-green-600 dark:text-green-400' 
-                      : ($deviationValue > -15 
-                          ? 'text-amber-600 dark:text-amber-400' 
+                    $deviationClass =
+                      $deviationValue >= 0
+                        ? 'text-green-600 dark:text-green-400'
+                        : ($deviationValue > -15
+                          ? 'text-amber-600 dark:text-amber-400'
                           : 'text-red-600 dark:text-red-400');
-                            
+
                     // Ensure -100% is always red
                     if ($deviationValue <= -100) {
                       $deviationClass = 'text-red-600 dark:text-red-400';
                     }
                   @endphp
+
                   <x-tooltip text="{{ $workAttendanceTooltip }}">
                     <span class="{{ $deviationClass }}">
                       {{ $deviationValue > 0 ? '+' : '' }}{{ $deviationValue }}%

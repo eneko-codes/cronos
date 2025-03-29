@@ -134,10 +134,12 @@
         class="w-full table-auto border-collapse text-sm text-gray-800 dark:text-gray-200"
       >
         <thead
-          class="bg-gray-700 text-left font-medium text-white dark:bg-gray-700 dark:text-gray-100"
+          class="bg-gray-200 text-left font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-100"
         >
           <tr>
-            <th class="whitespace-nowrap border p-2 dark:border-gray-700">
+            <th
+              class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-700"
+            >
               Day
             </th>
             @foreach ([
@@ -147,7 +149,9 @@
                 'Worked' => 'Hours from Proofhub'
               ]
               as $name => $tooltip)
-              <th class="whitespace-nowrap border p-2 dark:border-gray-700">
+              <th
+                class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-700"
+              >
                 <div class="inline-flex flex-row items-center gap-1">
                   {{ $name }}
                   <x-tooltip text="{{ $tooltip }}">
@@ -180,7 +184,9 @@
                     'Percentage deviation between worked and attendance hours'
                 ]
                 as $name => $tooltip)
-                <th class="whitespace-nowrap border p-2 dark:border-gray-700">
+                <th
+                  class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-700"
+                >
                   <div class="inline-flex flex-row items-center gap-1">
                     {{ $name }}
                     <x-tooltip text="{{ $tooltip }}">
@@ -216,10 +222,12 @@
             @endphp
 
             <tr
-              class="{{ $isFutureDate ? ' text-gray-500 dark:text-gray-500' : '' }} border border-gray-200 dark:border-gray-700 dark:bg-gray-800"
+              class="{{ $isFutureDate ? ' text-gray-500 dark:text-gray-500' : '' }} border border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800"
             >
               <!-- Date Column -->
-              <td class="whitespace-nowrap p-2 font-semibold">
+              <td
+                class="whitespace-nowrap border p-2 font-semibold dark:border-gray-700"
+              >
                 <div class="flex items-center gap-2">
                   {{ $dayDate->format('l d') }}
 
@@ -562,7 +570,7 @@
                 </td>
 
                 <!-- Worked vs Attendance -->
-                <td class="whitespace-nowrap p-2">
+                <td class="whitespace-nowrap border p-2 dark:border-gray-700">
                   @if (! $isFutureDate && $deviations['worked_vs_attendance'] !== 0)
                     @php
                       $attendanceMins = $this->durationToMinutes($day['attendance']['duration']);
@@ -598,8 +606,10 @@
           @endforeach
 
           <!-- Totals Row -->
-          <tr class="bg-gray-100 font-bold dark:bg-gray-700">
-            <td class="whitespace-nowrap p-2">
+          <tr class="bg-gray-200 font-bold dark:bg-gray-700">
+            <td
+              class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-700"
+            >
               <x-tooltip
                 text="Totals only include past dates and today. Future dates are not counted in calculations."
               >
@@ -622,7 +632,9 @@
                 </div>
               </x-tooltip>
             </td>
-            <td class="whitespace-nowrap p-2">
+            <td
+              class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-700"
+            >
               <!-- Convert minutes to "Xh Ym" -->
               @php
                 $scheduledMins = $this->getTotals()['scheduled'];
@@ -632,7 +644,9 @@
 
               {{ $scheduledMins > 0 ? "{$scheduledH}h {$scheduledR}m" : '' }}
             </td>
-            <td class="whitespace-nowrap p-2">
+            <td
+              class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-700"
+            >
               @php
                 $leaveMins = $this->getTotals()['leave'];
                 $leaveH = intdiv($leaveMins, 60);
@@ -641,7 +655,9 @@
 
               {{ $leaveMins > 0 ? "{$leaveH}h {$leaveR}m" : '' }}
             </td>
-            <td class="whitespace-nowrap border p-2 dark:border-gray-700">
+            <td
+              class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-700"
+            >
               @php
                 $attendanceMins = $this->getTotals()['attendance'];
                 $attendanceH = intdiv($attendanceMins, 60);
@@ -650,7 +666,9 @@
 
               {{ $attendanceMins > 0 ? "{$attendanceH}h {$attendanceR}m" : '' }}
             </td>
-            <td class="whitespace-nowrap border p-2 dark:border-gray-700">
+            <td
+              class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-700"
+            >
               @php
                 $workedMins = $this->getTotals()['worked'];
                 $workedH = intdiv($workedMins, 60);
@@ -667,7 +685,9 @@
               @endphp
 
               <!-- Attendance vs Scheduled -->
-              <td class="whitespace-nowrap border p-2 dark:border-gray-700">
+              <td
+                class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-700"
+              >
                 @if ($totalDeviations['attendance_vs_scheduled'] !== 0)
                   @php
                     $scheduledMins = $this->getTotals()['scheduled'];
@@ -708,7 +728,9 @@
               </td>
 
               <!-- Worked vs Scheduled -->
-              <td class="whitespace-nowrap border p-2 dark:border-gray-700">
+              <td
+                class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-700"
+              >
                 @if ($totalDeviations['worked_vs_scheduled'] !== 0)
                   @php
                     $scheduledMins = $this->getTotals()['scheduled'];
@@ -749,7 +771,9 @@
               </td>
 
               <!-- Worked vs Attendance -->
-              <td class="whitespace-nowrap border p-2 dark:border-gray-700">
+              <td
+                class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-700"
+              >
                 @if ($totalDeviations['worked_vs_attendance'] !== 0)
                   @php
                     $attendanceMins = $this->getTotals()['attendance'];

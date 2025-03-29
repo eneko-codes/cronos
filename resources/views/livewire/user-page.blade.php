@@ -133,9 +133,11 @@
       <table
         class="w-full table-auto border-collapse text-sm text-gray-800 dark:text-gray-200"
       >
-        <thead class="text-left font-medium">
-          <tr class="">
-            <th class="whitespace-nowrap border p-2 dark:border-gray-500">
+        <thead
+          class="bg-gray-700 text-left font-medium text-white dark:bg-gray-700 dark:text-gray-100"
+        >
+          <tr>
+            <th class="whitespace-nowrap border p-2 dark:border-gray-700">
               Day
             </th>
             @foreach ([
@@ -145,7 +147,7 @@
                 'Worked' => 'Hours from Proofhub'
               ]
               as $name => $tooltip)
-              <th class="whitespace-nowrap border p-2 dark:border-gray-500">
+              <th class="whitespace-nowrap border p-2 dark:border-gray-700">
                 <div class="inline-flex flex-row items-center gap-1">
                   {{ $name }}
                   <x-tooltip text="{{ $tooltip }}">
@@ -178,7 +180,7 @@
                     'Percentage deviation between worked and attendance hours'
                 ]
                 as $name => $tooltip)
-                <th class="whitespace-nowrap border p-2 dark:border-gray-500">
+                <th class="whitespace-nowrap border p-2 dark:border-gray-700">
                   <div class="inline-flex flex-row items-center gap-1">
                     {{ $name }}
                     <x-tooltip text="{{ $tooltip }}">
@@ -214,7 +216,7 @@
             @endphp
 
             <tr
-              class="{{ $isFutureDate ? 'bg-gray-200 text-gray-500 dark:bg-gray-900 dark:text-gray-400' : '' }} border border-gray-200 dark:border-gray-700 dark:bg-gray-800"
+              class="{{ $isFutureDate ? ' text-gray-500 dark:text-gray-500' : '' }} border border-gray-200 dark:border-gray-700 dark:bg-gray-800"
             >
               <!-- Date Column -->
               <td class="whitespace-nowrap p-2 font-semibold">
@@ -319,7 +321,7 @@
                             <!-- Status info if not validated -->
                             @if ($day['leave']['status'] !== 'validate')
                               <div
-                                class="mt-1 border border-dashed border-gray-200 pt-1 dark:border-gray-600"
+                                class="mt-1 border border-dashed border-gray-200 pt-1 dark:border-gray-700"
                               >
                                 <span
                                   class="text-xs italic text-gray-500 dark:text-gray-400"
@@ -407,9 +409,7 @@
               </td>
 
               <!-- Worked -->
-              <td
-                class="{{ $showDeviations ? 'border dark:border-gray-700' : '' }} whitespace-nowrap p-2"
-              >
+              <td class="whitespace-nowrap border p-2 dark:border-gray-700">
                 <div class="flex flex-col gap-1">
                   <x-tooltip>
                     <x-slot name="text">
@@ -417,7 +417,7 @@
                         @if (isset($day['worked']['detailed_entries']) && count($day['worked']['detailed_entries']) > 0)
                           @foreach ($day['worked']['detailed_entries'] as $entry)
                             <div
-                              class="{{ ! $loop->last ? 'mb-3 border border-gray-200 pb-3 dark:border-gray-600' : '' }} flex flex-col"
+                              class="{{ ! $loop->last ? 'mb-3 border border-gray-200 pb-3 dark:border-gray-700' : '' }} flex flex-col"
                             >
                               <div
                                 class="mb-1 flex items-center justify-between"
@@ -598,8 +598,8 @@
           @endforeach
 
           <!-- Totals Row -->
-          <tr class="bg-gray-100 font-bold dark:bg-gray-800">
-            <td class="whitespace-nowrap border p-2 dark:border-gray-700">
+          <tr class="bg-gray-100 font-bold dark:bg-gray-700">
+            <td class="whitespace-nowrap p-2">
               <x-tooltip
                 text="Totals only include past dates and today. Future dates are not counted in calculations."
               >
@@ -622,7 +622,7 @@
                 </div>
               </x-tooltip>
             </td>
-            <td class="whitespace-nowrap border p-2 dark:border-gray-700">
+            <td class="whitespace-nowrap p-2">
               <!-- Convert minutes to "Xh Ym" -->
               @php
                 $scheduledMins = $this->getTotals()['scheduled'];
@@ -632,7 +632,7 @@
 
               {{ $scheduledMins > 0 ? "{$scheduledH}h {$scheduledR}m" : '' }}
             </td>
-            <td class="whitespace-nowrap border p-2 dark:border-gray-700">
+            <td class="whitespace-nowrap p-2">
               @php
                 $leaveMins = $this->getTotals()['leave'];
                 $leaveH = intdiv($leaveMins, 60);
@@ -650,9 +650,7 @@
 
               {{ $attendanceMins > 0 ? "{$attendanceH}h {$attendanceR}m" : '' }}
             </td>
-            <td
-              class="{{ ! $showDeviations ? 'rounded-br-lg' : '' }}whitespace-nowrap border p-2 dark:border-gray-700"
-            >
+            <td class="whitespace-nowrap border p-2 dark:border-gray-700">
               @php
                 $workedMins = $this->getTotals()['worked'];
                 $workedH = intdiv($workedMins, 60);

@@ -54,6 +54,33 @@ class UserPage extends Component
   /**
    * The final array of day-by-day data for the chosen period.
    * This array is used directly by the Blade template.
+   *
+   * @var array<string, array{
+   *   date: string,
+   *   scheduled: array{duration: string, slots: array<string>, schedule_name?: string},
+   *   leave?: array{
+   *     type: string,
+   *     duration: string,
+   *     duration_hours: string,
+   *     status: string,
+   *     is_half_day: bool,
+   *     time_period: string,
+   *     half_day_time?: string,
+   *     actual_minutes: int
+   *   },
+   *   attendance: array{duration: string, is_remote: bool, times: array<string>},
+   *   worked: array{
+   *     duration: string,
+   *     projects: array<array{name: string, tasks: array<string>}>,
+   *     detailed_entries: array<array{
+   *       project: string,
+   *       task?: string,
+   *       description?: string,
+   *       duration: string,
+   *       status: string
+   *     }>
+   *   }
+   * }>
    */
   #[Reactive]
   protected array $periodData = [];
@@ -61,6 +88,13 @@ class UserPage extends Component
   /**
    * Aggregated totals (scheduled, attendance, worked) for the displayed period,
    * stored in minutes so we can convert them into "X hours Y minutes" later.
+   *
+   * @var array{
+   *   scheduled: int,
+   *   attendance: int,
+   *   worked: int,
+   *   leave: int
+   * }
    */
   #[Reactive]
   protected array $totals = [
@@ -81,32 +115,36 @@ class UserPage extends Component
   public function mount($id = null): void
   {
     if ($id !== null) {
-        $this->user = User::with([
-            'userSchedules.schedule.scheduleDetails',
-            'userLeaves.leaveType',
-            'userLeaves.department',
-            'userLeaves.category',
-            'userAttendances',
-            'timeEntries.project',
-            'timeEntries.task'
-        ])->findOrFail($id);
+      $this->user = User::with([
+        'userSchedules.schedule.scheduleDetails',
+        'userLeaves.leaveType',
+        'userLeaves.department',
+        'userLeaves.category',
+        'userAttendances',
+        'timeEntries.project',
+        'timeEntries.task',
+      ])->findOrFail($id);
     } else {
-        $this->user = Auth::user()->load([
-            'userSchedules.schedule.scheduleDetails',
-            'userLeaves.leaveType',
-            'userLeaves.department',
-            'userLeaves.category',
-            'userAttendances',
-            'timeEntries.project',
-            'timeEntries.task'
-        ]);
+      $this->user = Auth::user()->load([
+        'userSchedules.schedule.scheduleDetails',
+        'userLeaves.leaveType',
+        'userLeaves.department',
+        'userLeaves.category',
+        'userAttendances',
+        'timeEntries.project',
+        'timeEntries.task',
+      ]);
     }
 
     // Always start with the current period based on view mode
-    $this->setPeriodStart($this->viewMode === 'weekly' ? now()->startOfWeek() : now()->startOfMonth());
-    
+    $this->setPeriodStart(
+      $this->viewMode === 'weekly'
+        ? now()->startOfWeek()
+        : now()->startOfMonth()
+    );
+
     $this->checkPermissions();
-    
+
     // Load cache data for the current period
     $this->loadPeriodDataFromCacheOrDb();
   }
@@ -117,31 +155,52 @@ class UserPage extends Component
   public function toggleDeviations(): void
   {
     $this->showDeviations = !$this->showDeviations;
-    
+
     // Force a re-computation of the data
     $this->loadPeriodDataFromCacheOrDb();
+
+    // Dispatch an event to notify the frontend
+    $this->dispatch(
+      'deviations-toggled',
+      showDeviations: $this->showDeviations
+    );
+
+    // Force a re-render of the component
+    $this->dispatch('refresh');
   }
 
   /**
    * Set the view mode to weekly or monthly
+   *
+   * @param 'weekly'|'monthly' $mode
    */
   public function setViewMode(string $mode): void
   {
     if (!in_array($mode, ['weekly', 'monthly'])) {
-      return;
+      throw new \InvalidArgumentException(
+        'View mode must be either "weekly" or "monthly"'
+      );
     }
 
     $this->viewMode = $mode;
-    
+
     // Always reset to the current week or month when switching view modes
     $this->setPeriodStart(
-      $this->viewMode === 'weekly' 
-        ? now()->startOfWeek() 
+      $this->viewMode === 'weekly'
+        ? now()->startOfWeek()
         : now()->startOfMonth()
     );
-    
+
     // Reload data for the new period
     $this->loadPeriodDataFromCacheOrDb();
+  }
+
+  /**
+   * Setter for viewMode property
+   */
+  public function setViewModeAttribute(string $value): void
+  {
+    $this->setViewMode($value);
   }
 
   /**
@@ -150,13 +209,13 @@ class UserPage extends Component
   public function previousPeriod(): void
   {
     $startDate = $this->getPeriodStart();
-    
+
     if ($this->viewMode === 'weekly') {
       $this->setPeriodStart($startDate->subWeek());
     } else {
       $this->setPeriodStart($startDate->subMonth());
     }
-    
+
     $this->loadPeriodDataFromCacheOrDb();
   }
 
@@ -166,13 +225,13 @@ class UserPage extends Component
   public function nextPeriod(): void
   {
     $startDate = $this->getPeriodStart();
-    
+
     if ($this->viewMode === 'weekly') {
       $this->setPeriodStart($startDate->addWeek());
     } else {
       $this->setPeriodStart($startDate->addMonth());
     }
-    
+
     $this->loadPeriodDataFromCacheOrDb();
   }
 
@@ -197,7 +256,18 @@ class UserPage extends Component
 
   /**
    * Calculate deviations between different data points
-   * Returns an array of deviation percentages 
+   * Returns an array of deviation percentages
+   *
+   * @param array{
+   *   scheduled: array{duration: string},
+   *   attendance: array{duration: string},
+   *   worked: array{duration: string}
+   * } $day
+   * @return array{
+   *   attendance_vs_scheduled: int,
+   *   worked_vs_scheduled: int,
+   *   worked_vs_attendance: int
+   * }
    */
   #[Computed]
   public function getDeviationPercentages(array $day): array
@@ -207,30 +277,38 @@ class UserPage extends Component
       'worked_vs_scheduled' => 0,
       'worked_vs_attendance' => 0,
     ];
-    
+
     // Convert durations to minutes for calculation
     $scheduledMinutes = $this->durationToMinutes($day['scheduled']['duration']);
-    $attendanceMinutes = $this->durationToMinutes($day['attendance']['duration']);
+    $attendanceMinutes = $this->durationToMinutes(
+      $day['attendance']['duration']
+    );
     $workedMinutes = $this->durationToMinutes($day['worked']['duration']);
-    
+
     // Calculate attendance vs scheduled (if scheduled > 0)
     if ($scheduledMinutes > 0) {
-      $deviations['attendance_vs_scheduled'] = round(($attendanceMinutes - $scheduledMinutes) / $scheduledMinutes * 100);
+      $deviations['attendance_vs_scheduled'] = round(
+        (($attendanceMinutes - $scheduledMinutes) / $scheduledMinutes) * 100
+      );
     }
-    
+
     // Calculate worked vs scheduled (if scheduled > 0)
     if ($scheduledMinutes > 0) {
-      $deviations['worked_vs_scheduled'] = round(($workedMinutes - $scheduledMinutes) / $scheduledMinutes * 100);
+      $deviations['worked_vs_scheduled'] = round(
+        (($workedMinutes - $scheduledMinutes) / $scheduledMinutes) * 100
+      );
     }
-    
+
     // Calculate worked vs attendance (if attendance > 0)
     if ($attendanceMinutes > 0) {
-      $deviations['worked_vs_attendance'] = round(($workedMinutes - $attendanceMinutes) / $attendanceMinutes * 100);
+      $deviations['worked_vs_attendance'] = round(
+        (($workedMinutes - $attendanceMinutes) / $attendanceMinutes) * 100
+      );
     }
-    
+
     return $deviations;
   }
-  
+
   /**
    * Calculate total deviations for the whole period
    */
@@ -242,28 +320,34 @@ class UserPage extends Component
       'worked_vs_scheduled' => 0,
       'worked_vs_attendance' => 0,
     ];
-    
+
     // Get totals for calculation
     $totals = $this->getTotals();
     $scheduledMinutes = $totals['scheduled'];
     $attendanceMinutes = $totals['attendance'];
     $workedMinutes = $totals['worked'];
-    
+
     // Calculate attendance vs scheduled (if scheduled > 0)
     if ($scheduledMinutes > 0) {
-      $deviations['attendance_vs_scheduled'] = round(($attendanceMinutes - $scheduledMinutes) / $scheduledMinutes * 100);
+      $deviations['attendance_vs_scheduled'] = round(
+        (($attendanceMinutes - $scheduledMinutes) / $scheduledMinutes) * 100
+      );
     }
-    
+
     // Calculate worked vs scheduled (if scheduled > 0)
     if ($scheduledMinutes > 0) {
-      $deviations['worked_vs_scheduled'] = round(($workedMinutes - $scheduledMinutes) / $scheduledMinutes * 100);
+      $deviations['worked_vs_scheduled'] = round(
+        (($workedMinutes - $scheduledMinutes) / $scheduledMinutes) * 100
+      );
     }
-    
+
     // Calculate worked vs attendance (if attendance > 0)
     if ($attendanceMinutes > 0) {
-      $deviations['worked_vs_attendance'] = round(($workedMinutes - $attendanceMinutes) / $attendanceMinutes * 100);
+      $deviations['worked_vs_attendance'] = round(
+        (($workedMinutes - $attendanceMinutes) / $attendanceMinutes) * 100
+      );
     }
-    
+
     return $deviations;
   }
 
@@ -283,7 +367,7 @@ class UserPage extends Component
   public function isNextPeriodDisabled(): bool
   {
     $current = Carbon::parse($this->currentDate);
-    
+
     if ($this->viewMode === 'weekly') {
       $candidate = $current->copy()->addWeek();
       return $candidate->startOf('week')->gt(now());
@@ -307,7 +391,9 @@ class UserPage extends Component
   protected function getPeriodStart(): Carbon
   {
     $date = Carbon::parse($this->currentDate);
-    return $this->viewMode === 'weekly' ? $date->startOfWeek() : $date->startOfMonth();
+    return $this->viewMode === 'weekly'
+      ? $date->startOfWeek()
+      : $date->startOfMonth();
   }
 
   /**
@@ -316,22 +402,23 @@ class UserPage extends Component
   protected function loadPeriodDataFromCacheOrDb(): void
   {
     $startDate = $this->getPeriodStart();
-    
+
     // Set end date based on view mode
-    $endDate = $this->viewMode === 'weekly' 
-      ? $startDate->copy()->endOfWeek() 
-      : $startDate->copy()->endOfMonth();
-    
+    $endDate =
+      $this->viewMode === 'weekly'
+        ? $startDate->copy()->endOfWeek()
+        : $startDate->copy()->endOfMonth();
+
     // Get all user data for the date range
     $userData = $this->user->getDataForDateRange($startDate, $endDate);
-    
+
     // Process the data for each day in the period
     $this->periodData = $this->processPeriodData(
       $userData,
       $startDate,
       $endDate
     );
-    
+
     // Calculate totals
     $this->totals = $this->calculateTotals($this->periodData);
   }
@@ -354,7 +441,11 @@ class UserPage extends Component
 
       // Extract and process data subsets for the current day.
       $scheduleData = $this->processScheduleData($data['schedules'], $cursor);
-      $leaveData = $this->processLeaveData($data['leaves'], $dateString, $data['schedules']);
+      $leaveData = $this->processLeaveData(
+        $data['leaves'],
+        $dateString,
+        $data['schedules']
+      );
       $attendanceData = $this->processAttendanceData(
         $data['attendances'],
         $dateString
@@ -402,29 +493,31 @@ class UserPage extends Component
     $weekday = ($localDate->dayOfWeek + 6) % 7; // 0=Monday, ..., 6=Sunday
 
     // Retrieve schedule details matching the current weekday
-    $details = $activeSchedule->schedule->scheduleDetails
-      ->where('weekday', $weekday);
-    
+    $details = $activeSchedule->schedule->scheduleDetails->where(
+      'weekday',
+      $weekday
+    );
+
     // Get the target hours from the schedule's average_hours_day
     $targetHours = $activeSchedule->schedule->average_hours_day ?? 8.0; // Default to 8 hours if not specified
     $targetMinutes = $targetHours * 60;
-    
+
     Log::debug('Processing schedule data', [
       'date' => $localDate->toDateString(),
       'weekday' => $weekday,
       'details_count' => $details->count(),
       'all_details_count' => $activeSchedule->schedule->scheduleDetails->count(),
-      'target_hours' => $targetHours
+      'target_hours' => $targetHours,
     ]);
 
     // If we have duplicates, we need to find the best combination
     if ($details->count() > 0) {
       // Group details by day_period (morning/afternoon)
       $periodGroups = $details->groupBy('day_period');
-      
+
       // For each period, select the best entry if there are duplicates
       $selectedDetails = collect();
-      
+
       foreach ($periodGroups as $period => $periodDetails) {
         if ($periodDetails->count() == 1) {
           // If only one entry for this period, use it
@@ -433,22 +526,24 @@ class UserPage extends Component
           // For duplicate entries in the same period, select the one closest to standard hours
           // For morning, typically 4 hours (240 mins); for afternoon, typically 4 hours (240 mins)
           $standardPeriodMins = 240; // 4 hours is standard half-day
-          
+
           // Find the entry closest to the standard duration
-          $closestDetail = $periodDetails->sortBy(function($detail) use ($standardPeriodMins) {
-            $start = Carbon::parse($detail->start);
-            $end = Carbon::parse($detail->end);
-            $mins = $start->diffInMinutes($end);
-            return abs($mins - $standardPeriodMins);
-          })->first();
-          
+          $closestDetail = $periodDetails
+            ->sortBy(function ($detail) use ($standardPeriodMins) {
+              $start = Carbon::parse($detail->start);
+              $end = Carbon::parse($detail->end);
+              $mins = $start->diffInMinutes($end);
+              return abs($mins - $standardPeriodMins);
+            })
+            ->first();
+
           $selectedDetails->push($closestDetail);
         }
       }
-      
+
       // Sort the selected details by start time
       $selectedDetails = $selectedDetails->sortBy('start');
-      
+
       // Check if the total is close enough to the target hours
       $totalSelectedMinutes = 0;
       foreach ($selectedDetails as $detail) {
@@ -456,12 +551,12 @@ class UserPage extends Component
         $end = Carbon::parse($detail->end);
         $totalSelectedMinutes += $start->diffInMinutes($end);
       }
-      
+
       // Log the selected combination
       Log::debug('Selected schedule details', [
         'selected_count' => $selectedDetails->count(),
         'total_minutes' => $totalSelectedMinutes,
-        'target_minutes' => $targetMinutes
+        'target_minutes' => $targetMinutes,
       ]);
     } else {
       // No duplicates, just use all details
@@ -477,13 +572,13 @@ class UserPage extends Component
       $end = Carbon::parse($detail->end)->setTimezone('UTC');
       $minutesForSlot = $start->diffInMinutes($end);
       $totalMinutes += $minutesForSlot;
-      
+
       Log::debug('Slot details', [
         'weekday' => $detail->weekday,
         'day_period' => $detail->day_period,
         'start' => $start->format('H:i'),
         'end' => $end->format('H:i'),
-        'minutes' => $minutesForSlot
+        'minutes' => $minutesForSlot,
       ]);
 
       $slots[] =
@@ -497,7 +592,7 @@ class UserPage extends Component
       'duration' => $this->formatDuration($totalMinutes),
       'slots_count' => count($slots),
       'original_details_count' => $details->count(),
-      'selected_details_count' => $selectedDetails->count()
+      'selected_details_count' => $selectedDetails->count(),
     ]);
 
     return [
@@ -531,7 +626,7 @@ class UserPage extends Component
     $startTime = $leave->start_date->format('H:i');
     $endTime = $leave->end_date->format('H:i');
     $timeRange = "{$startTime} - {$endTime}";
-    
+
     // Get formatted half-day time using the helper method
     $halfDayTime = $leave->getFormattedHalfDayHours();
 
@@ -540,28 +635,35 @@ class UserPage extends Component
     $dateCarbon = Carbon::parse($dateString);
     $isMultiDayLeave = $leave->duration_days > 1;
     $isWeekend = $dateCarbon->isWeekend();
-    
+
     // Log leave processing information
-    Log::debug("Processing leave for date", [
+    Log::debug('Processing leave for date', [
       'date' => $dateString,
       'leave_id' => $leave->id,
       'status' => $leave->status,
       'duration_days' => $leave->duration_days,
       'is_weekend' => $isWeekend,
-      'is_multi_day' => $isMultiDayLeave
+      'is_multi_day' => $isMultiDayLeave,
     ]);
-    
+
     // For full-day leaves, we need to look at the employee's schedule for that day
     if ($leave->duration_days > 0) {
       if ($leave->isHalfDay()) {
         // For half-day leaves, use the exact hours from request_hour fields if available
-        if ($leave->request_hour_from !== null && $leave->request_hour_to !== null) {
+        if (
+          $leave->request_hour_from !== null &&
+          $leave->request_hour_to !== null
+        ) {
           // Convert decimal hours to minutes
-          $durationMinutes = ($leave->request_hour_to - $leave->request_hour_from) * 60;
+          $durationMinutes =
+            ($leave->request_hour_to - $leave->request_hour_from) * 60;
         } else {
           // Try to get scheduled duration for a proper half-day calculation
           if ($schedules !== null) {
-            $scheduledMinutes = $this->getScheduledDurationForDate($schedules, $dateString);
+            $scheduledMinutes = $this->getScheduledDurationForDate(
+              $schedules,
+              $dateString
+            );
             $durationMinutes = $scheduledMinutes / 2; // Half of scheduled time
           } else {
             // Fallback - half day is typically 4 hours (240 minutes)
@@ -571,28 +673,37 @@ class UserPage extends Component
       } else {
         // For full-day leaves, determine scheduled hours for this day
         if ($schedules !== null) {
-          $scheduledMinutes = $this->getScheduledDurationForDate($schedules, $dateString);
-          
+          $scheduledMinutes = $this->getScheduledDurationForDate(
+            $schedules,
+            $dateString
+          );
+
           // If scheduled minutes is 0, use standard workday as fallback (except for weekends)
           if ($scheduledMinutes == 0) {
             if (!$isWeekend) {
               $scheduledMinutes = 8 * 60; // 8 hours = 480 minutes standard workday
-              Log::debug("No scheduled hours found for weekday, using standard workday", [
-                'date' => $dateString,
-                'standard_minutes' => $scheduledMinutes
-              ]);
+              Log::debug(
+                'No scheduled hours found for weekday, using standard workday',
+                [
+                  'date' => $dateString,
+                  'standard_minutes' => $scheduledMinutes,
+                ]
+              );
             } else {
               // For weekends, only count hours if explicitly scheduled
-              Log::debug("Weekend day with no scheduled hours, using 0 minutes", [
-                'date' => $dateString
-              ]);
+              Log::debug(
+                'Weekend day with no scheduled hours, using 0 minutes',
+                [
+                  'date' => $dateString,
+                ]
+              );
             }
           }
-          
+
           // For this specific day, we only want the hours for THIS day, not multiplied by multi-day count
           $durationMinutes = $scheduledMinutes;
-          
-          Log::debug("Using scheduled duration for leave", [
+
+          Log::debug('Using scheduled duration for leave', [
             'date' => $dateString,
             'scheduled_minutes' => $durationMinutes,
           ]);
@@ -603,43 +714,50 @@ class UserPage extends Component
           } else {
             $durationMinutes = 0; // No hours for weekend unless scheduled
           }
-          
-          Log::debug("Using standard duration for leave", [
+
+          Log::debug('Using standard duration for leave', [
             'date' => $dateString,
             'is_weekend' => $isWeekend,
-            'minutes' => $durationMinutes
+            'minutes' => $durationMinutes,
           ]);
         }
       }
     }
-    
+
     // Ensure we always have a minimum duration for approved leaves on weekdays
     if ($leave->status === 'validate' && $durationMinutes == 0 && !$isWeekend) {
       // Use a full standard day as fallback (8 hours) for weekdays
       $durationMinutes = 8 * 60;
-      Log::debug("Setting minimum duration for approved weekday leave with 0 duration", [
-        'date' => $dateString,
-        'leave_id' => $leave->id,
-        'minimum_minutes' => $durationMinutes
-      ]);
+      Log::debug(
+        'Setting minimum duration for approved weekday leave with 0 duration',
+        [
+          'date' => $dateString,
+          'leave_id' => $leave->id,
+          'minimum_minutes' => $durationMinutes,
+        ]
+      );
     }
-    
+
     // For weekend validated leaves, ensure we have a standard duration if requested
     if ($leave->status === 'validate' && $isWeekend && $durationMinutes == 0) {
       $durationMinutes = 8 * 60; // Standard 8 hours for weekend leaves
-      Log::debug("Setting standard duration for approved weekend leave", [
+      Log::debug('Setting standard duration for approved weekend leave', [
         'date' => $dateString,
         'leave_id' => $leave->id,
-        'standard_minutes' => $durationMinutes
+        'standard_minutes' => $durationMinutes,
       ]);
     }
-    
+
     $durationFormatted = $this->formatDuration($durationMinutes);
 
     // Format the duration appropriately for full and half days
     $durationText = '';
     if ($leave->duration_days == 0.5) {
-      $timeInfo = $leave->isMorningLeave() ? 'Morning' : ($leave->isAfternoonLeave() ? 'Afternoon' : '');
+      $timeInfo = $leave->isMorningLeave()
+        ? 'Morning'
+        : ($leave->isAfternoonLeave()
+          ? 'Afternoon'
+          : '');
       $durationText = 'Half day' . ($timeInfo ? " ($timeInfo)" : '');
     } elseif ($leave->duration_days == 1) {
       $durationText = '1 day';
@@ -657,7 +775,11 @@ class UserPage extends Component
       'duration_hours' => $durationFormatted,
       'status' => $leave->status ?? 'validate',
       'is_half_day' => $leave->isHalfDay(),
-      'time_period' => $leave->isMorningLeave() ? 'morning' : ($leave->isAfternoonLeave() ? 'afternoon' : 'full-day'),
+      'time_period' => $leave->isMorningLeave()
+        ? 'morning'
+        : ($leave->isAfternoonLeave()
+          ? 'afternoon'
+          : 'full-day'),
       'time_range' => $timeRange,
       'half_day_time' => $halfDayTime,
       'start_time' => $startTime,
@@ -676,7 +798,7 @@ class UserPage extends Component
     // Parse the target date
     $targetDate = Carbon::parse($dateString)->startOfDay();
     $isMonday = $targetDate->isMonday();
-    
+
     // Optional debug logging
     if ($isMonday) {
       Log::debug("Processing Monday data for {$dateString}", [
@@ -686,26 +808,29 @@ class UserPage extends Component
 
     // Use Collection methods for filtering
     $attendance = $attendances
-      ->filter(function($record) use ($targetDate) {
+      ->filter(function ($record) use ($targetDate) {
         // Skip records with no date
-        if (!$record->date) return false;
-        
+        if (!$record->date) {
+          return false;
+        }
+
         // Convert to Carbon if needed and compare at day precision
-        $recordDate = $record->date instanceof Carbon 
-          ? $record->date 
-          : Carbon::parse($record->date);
-          
+        $recordDate =
+          $record->date instanceof Carbon
+            ? $record->date
+            : Carbon::parse($record->date);
+
         return $recordDate->startOfDay()->equalTo($targetDate);
       })
       ->first();
-    
+
     // Default values for empty result
     if (!$attendance) {
       return ['duration' => '0h 0m', 'is_remote' => false, 'times' => []];
     }
 
     // Extract attendance data
-    $isRemote = (bool)$attendance->is_remote;
+    $isRemote = (bool) $attendance->is_remote;
     $durationMinutes = 0;
     $times = [];
 
@@ -741,29 +866,32 @@ class UserPage extends Component
   ): array {
     // Default structure - include all fields
     $defaultStructure = [
-      'duration' => '0h 0m', 
-      'projects' => [], 
-      'detailed_entries' => []
+      'duration' => '0h 0m',
+      'projects' => [],
+      'detailed_entries' => [],
     ];
-    
+
     // Filter entries for this specific day
     $targetDate = Carbon::parse($dateString)->startOfDay();
-    $filtered = $timeEntries->filter(function($entry) use ($targetDate) {
-      if (!$entry->date) return false;
-      
-      $entryDate = $entry->date instanceof Carbon 
-        ? $entry->date 
-        : Carbon::parse($entry->date);
-        
+    $filtered = $timeEntries->filter(function ($entry) use ($targetDate) {
+      if (!$entry->date) {
+        return false;
+      }
+
+      $entryDate =
+        $entry->date instanceof Carbon
+          ? $entry->date
+          : Carbon::parse($entry->date);
+
       return $entryDate->startOfDay()->equalTo($targetDate);
     });
-    
+
     // Log details for debugging if needed
     Log::debug("Time entries for {$dateString}", [
       'user_id' => $this->user->id,
-      'filtered_count' => $filtered->count()
+      'filtered_count' => $filtered->count(),
     ]);
-    
+
     // Early return with default structure if no entries
     if ($filtered->isEmpty()) {
       return $defaultStructure;
@@ -772,20 +900,21 @@ class UserPage extends Component
     try {
       // Calculate total minutes worked this day
       $totalMinutes = $filtered->sum(function ($entry) {
-        return isset($entry->duration_seconds) 
-          ? round($entry->duration_seconds / 60) 
-          : (($entry->logged_hours ?? 0) * 60 + ($entry->logged_mins ?? 0));
+        return isset($entry->duration_seconds)
+          ? round($entry->duration_seconds / 60)
+          : ($entry->logged_hours ?? 0) * 60 + ($entry->logged_mins ?? 0);
       });
 
       // Group entries by project and extract tasks
       $projects = $filtered
-        ->groupBy(function($entry) {
+        ->groupBy(function ($entry) {
           return data_get($entry, 'project.name', 'Unknown Project');
         })
         ->map(function ($group, $projectName) {
           return [
             'name' => $projectName,
-            'tasks' => $group->pluck('task.name')
+            'tasks' => $group
+              ->pluck('task.name')
               ->filter()
               ->unique()
               ->values()
@@ -794,23 +923,24 @@ class UserPage extends Component
         })
         ->values()
         ->all();
-        
+
       // Create detailed entries for tooltip display
-      $detailedEntries = $filtered->map(function ($entry) {
-        $minutes = isset($entry->duration_seconds) 
-          ? round($entry->duration_seconds / 60) 
-          : (($entry->logged_hours ?? 0) * 60 + ($entry->logged_mins ?? 0));
-          
-        return [
-          'project' => data_get($entry, 'project.name', 'Unknown Project'),
-          'task' => data_get($entry, 'task.name'),
-          'description' => $entry->description ?? '',
-          'duration' => $this->formatDuration($minutes),
-          'status' => $entry->status ?? 'none',
-        ];
-      })
-      ->values()
-      ->all();
+      $detailedEntries = $filtered
+        ->map(function ($entry) {
+          $minutes = isset($entry->duration_seconds)
+            ? round($entry->duration_seconds / 60)
+            : ($entry->logged_hours ?? 0) * 60 + ($entry->logged_mins ?? 0);
+
+          return [
+            'project' => data_get($entry, 'project.name', 'Unknown Project'),
+            'task' => data_get($entry, 'task.name'),
+            'description' => $entry->description ?? '',
+            'duration' => $this->formatDuration($minutes),
+            'status' => $entry->status ?? 'none',
+          ];
+        })
+        ->values()
+        ->all();
 
       return [
         'duration' => $this->formatDuration($totalMinutes),
@@ -822,9 +952,9 @@ class UserPage extends Component
       Log::error('Error processing worked data', [
         'exception' => $e->getMessage(),
         'date' => $dateString,
-        'user_id' => $this->user->id
+        'user_id' => $this->user->id,
       ]);
-      
+
       return $defaultStructure;
     }
   }
@@ -881,7 +1011,7 @@ class UserPage extends Component
         if ($dayDate->isFuture()) {
           return $totals; // Skip this day's data
         }
-        
+
         $totals['scheduled'] += $this->durationToMinutes(
           $day['scheduled']['duration']
         );
@@ -891,19 +1021,26 @@ class UserPage extends Component
         $totals['worked'] += $this->durationToMinutes(
           $day['worked']['duration']
         );
-        
+
         // Add leave minutes when a leave exists AND it's validated
-        if (isset($day['leave']) && $day['leave'] && isset($day['leave']['status']) && $day['leave']['status'] === 'validate') {
+        if (
+          isset($day['leave']) &&
+          $day['leave'] &&
+          isset($day['leave']['status']) &&
+          $day['leave']['status'] === 'validate'
+        ) {
           // Use actual_minutes when available, which accounts for schedule
           if (isset($day['leave']['actual_minutes'])) {
             $totals['leave'] += $day['leave']['actual_minutes'];
-          } 
+          }
           // Fallback to duration_hours
-          else if (isset($day['leave']['duration_hours'])) {
-            $totals['leave'] += $this->durationToMinutes($day['leave']['duration_hours']);
+          elseif (isset($day['leave']['duration_hours'])) {
+            $totals['leave'] += $this->durationToMinutes(
+              $day['leave']['duration_hours']
+            );
           }
         }
-        
+
         return $totals;
       },
       ['scheduled' => 0, 'attendance' => 0, 'worked' => 0, 'leave' => 0]
@@ -913,27 +1050,34 @@ class UserPage extends Component
   /**
    * Converts an "Xh Ym" duration string to minutes.
    * Example: "6h 30m" => 390.
+   *
+   * @param string $duration Duration in format "Xh Ym"
+   * @return int Duration in minutes
+   * @throws \InvalidArgumentException If duration format is invalid
    */
   protected function durationToMinutes(string $duration): int
   {
-    // Parse a string in the format "Xh Ym" using Str helper
-    $hoursMatch = Str::of($duration)->match('/(\d+)h/');
-    $hours = $hoursMatch->isNotEmpty() ? (int) $hoursMatch->toString() : 0;
-    
-    $minsMatch = Str::of($duration)->match('/(\d+)m/');
-    $mins = $minsMatch->isNotEmpty() ? (int) $minsMatch->toString() : 0;
-    
-    return $hours * 60 + $mins;
+    if (!preg_match('/^(\d+)h(?:\s+(\d+)m)?$/', $duration, $matches)) {
+      throw new \InvalidArgumentException(
+        'Duration must be in format "Xh Ym" or "Xh"'
+      );
+    }
+
+    $hours = (int) $matches[1];
+    $minutes = isset($matches[2]) ? (int) $matches[2] : 0;
+
+    return $hours * 60 + $minutes;
   }
 
   /**
    * Formats a duration in minutes into "Xh Ym".
+   *
+   * @param int $minutes Duration in minutes
+   * @return string Formatted duration (e.g. "6h 30m")
    */
   protected function formatDuration(int $minutes): string
   {
-    return CarbonInterval::minutes($minutes)
-      ->cascade()
-      ->format('%hh %im');
+    return CarbonInterval::minutes($minutes)->cascade()->format('%hh %im');
   }
 
   /**
@@ -950,12 +1094,12 @@ class UserPage extends Component
   protected function checkPermissions(): void
   {
     $currentUser = Auth::user();
-    
+
     // Check if user can view this user's data
     if (!Gate::allows('view', $this->user)) {
-        abort(403, 'You are not authorized to view this user\'s data.');
+      abort(403, 'You are not authorized to view this user\'s data.');
     }
-    
+
     // Set admin status
     $this->isAdmin = $currentUser->isAdmin();
   }
@@ -963,10 +1107,26 @@ class UserPage extends Component
   /**
    * Gets the scheduled duration for a specified date in minutes.
    */
-  protected function getScheduledDurationForDate(Collection $schedules, string $dateString): int
-  {
+  protected function getScheduledDurationForDate(
+    Collection $schedules,
+    string $dateString
+  ): int {
     $localDate = Carbon::parse($dateString);
     $scheduleData = $this->processScheduleData($schedules, $localDate);
     return $this->durationToMinutes($scheduleData['duration']);
+  }
+
+  /**
+   * Setter for showDeviations property
+   */
+  public function setShowDeviationsAttribute(bool $value): void
+  {
+    $this->showDeviations = $value;
+    $this->loadPeriodDataFromCacheOrDb();
+    $this->dispatch(
+      'deviations-toggled',
+      showDeviations: $this->showDeviations
+    );
+    $this->dispatch('refresh');
   }
 }

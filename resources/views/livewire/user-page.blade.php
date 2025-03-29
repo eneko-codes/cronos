@@ -138,7 +138,7 @@
         >
           <tr>
             <th
-              class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-700"
+              class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-800"
             >
               Day
             </th>
@@ -150,7 +150,7 @@
               ]
               as $name => $tooltip)
               <th
-                class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-700"
+                class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-800"
               >
                 <div class="inline-flex flex-row items-center gap-1">
                   {{ $name }}
@@ -185,7 +185,7 @@
                 ]
                 as $name => $tooltip)
                 <th
-                  class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-700"
+                  class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-800"
                 >
                   <div class="inline-flex flex-row items-center gap-1">
                     {{ $name }}
@@ -608,7 +608,7 @@
           <!-- Totals Row -->
           <tr class="bg-gray-200 font-bold dark:bg-gray-700">
             <td
-              class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-700"
+              class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-800"
             >
               <x-tooltip
                 text="Totals only include past dates and today. Future dates are not counted in calculations."
@@ -633,7 +633,7 @@
               </x-tooltip>
             </td>
             <td
-              class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-700"
+              class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-800"
             >
               <!-- Convert minutes to "Xh Ym" -->
               @php
@@ -645,7 +645,7 @@
               {{ $scheduledMins > 0 ? "{$scheduledH}h {$scheduledR}m" : '' }}
             </td>
             <td
-              class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-700"
+              class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-800"
             >
               @php
                 $leaveMins = $this->getTotals()['leave'];
@@ -656,7 +656,7 @@
               {{ $leaveMins > 0 ? "{$leaveH}h {$leaveR}m" : '' }}
             </td>
             <td
-              class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-700"
+              class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-800"
             >
               @php
                 $attendanceMins = $this->getTotals()['attendance'];
@@ -667,7 +667,7 @@
               {{ $attendanceMins > 0 ? "{$attendanceH}h {$attendanceR}m" : '' }}
             </td>
             <td
-              class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-700"
+              class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-800"
             >
               @php
                 $workedMins = $this->getTotals()['worked'];
@@ -686,7 +686,7 @@
 
               <!-- Attendance vs Scheduled -->
               <td
-                class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-700"
+                class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-800"
               >
                 @if ($totalDeviations['attendance_vs_scheduled'] !== 0)
                   @php
@@ -729,7 +729,7 @@
 
               <!-- Worked vs Scheduled -->
               <td
-                class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-700"
+                class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-800"
               >
                 @if ($totalDeviations['worked_vs_scheduled'] !== 0)
                   @php
@@ -772,7 +772,7 @@
 
               <!-- Worked vs Attendance -->
               <td
-                class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-700"
+                class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-800"
               >
                 @if ($totalDeviations['worked_vs_attendance'] !== 0)
                   @php

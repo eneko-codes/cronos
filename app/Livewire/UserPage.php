@@ -257,17 +257,6 @@ class UserPage extends Component
   /**
    * Calculate deviations between different data points
    * Returns an array of deviation percentages
-   *
-   * @param array{
-   *   scheduled: array{duration: string},
-   *   attendance: array{duration: string},
-   *   worked: array{duration: string}
-   * } $day
-   * @return array{
-   *   attendance_vs_scheduled: int,
-   *   worked_vs_scheduled: int,
-   *   worked_vs_attendance: int
-   * }
    */
   #[Computed]
   public function getDeviationPercentages(array $day): array
@@ -432,7 +421,7 @@ class UserPage extends Component
     Carbon $end
   ): array {
     // Work only in UTC
-    $dates = [];
+    $dates = collect();
     $cursor = $start->copy();
 
     // Iterate through each day in the date range.
@@ -456,19 +445,19 @@ class UserPage extends Component
       );
 
       // Structure the data for the current day.
-      $dates[$dateString] = [
+      $dates->put($dateString, [
         'date' => $dateString, // Use UTC date string
         'scheduled' => $scheduleData,
         'leave' => $leaveData,
         'attendance' => $attendanceData,
         'worked' => $workedData,
-      ];
+      ]);
 
       // Move to the next day.
       $cursor->addDay();
     }
 
-    return $dates;
+    return $dates->all();
   }
 
   /**
@@ -545,12 +534,11 @@ class UserPage extends Component
       $selectedDetails = $selectedDetails->sortBy('start');
 
       // Check if the total is close enough to the target hours
-      $totalSelectedMinutes = 0;
-      foreach ($selectedDetails as $detail) {
+      $totalSelectedMinutes = $selectedDetails->sum(function ($detail) {
         $start = Carbon::parse($detail->start);
         $end = Carbon::parse($detail->end);
-        $totalSelectedMinutes += $start->diffInMinutes($end);
-      }
+        return $start->diffInMinutes($end);
+      });
 
       // Log the selected combination
       Log::debug('Selected schedule details', [
@@ -1050,10 +1038,6 @@ class UserPage extends Component
   /**
    * Converts an "Xh Ym" duration string to minutes.
    * Example: "6h 30m" => 390.
-   *
-   * @param string $duration Duration in format "Xh Ym"
-   * @return int Duration in minutes
-   * @throws \InvalidArgumentException If duration format is invalid
    */
   protected function durationToMinutes(string $duration): int
   {
@@ -1071,9 +1055,6 @@ class UserPage extends Component
 
   /**
    * Formats a duration in minutes into "Xh Ym".
-   *
-   * @param int $minutes Duration in minutes
-   * @return string Formatted duration (e.g. "6h 30m")
    */
   protected function formatDuration(int $minutes): string
   {

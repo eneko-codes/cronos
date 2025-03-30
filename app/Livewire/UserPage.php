@@ -592,7 +592,7 @@ class UserPage extends Component
   protected function processLeaveData(
     Collection $leaves,
     string $dateString,
-    Collection $schedules = null
+    ?Collection $schedules = null
   ): ?array {
     $leave = $this->findActiveLeave($leaves, $dateString);
     if (!$leave) {

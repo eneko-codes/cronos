@@ -88,7 +88,7 @@ class DatabaseSeeder extends Seeder
     echo "║            CRONOS DEMO DATABASE SEEDER COMPLETED          ║\n";
     echo "╚═══════════════════════════════════════════════════════════╝\n\n";
     echo "🎉 Seeding completed successfully! The database now contains demo data for testing.\n";
-    echo "🔍 Login with any user: john@example.com, jane@example.com, etc. (password: password)\n";
+    echo "🔍 Login with any user: john@example.com, jane@example.com, etc. (go to https://url.com/telescope Mail tab to see the emails)\n";
   }
 
   /**

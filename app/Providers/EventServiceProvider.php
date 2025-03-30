@@ -2,22 +2,15 @@
 
 namespace App\Providers;
 
-use App\Events\TimezoneUpdated;
-use App\Listeners\LogAuthenticationFailure;
-use App\Listeners\LogSuccessfulLogin;
 use App\Listeners\SendWelcomeEmail;
-use Illuminate\Auth\Events\Failed;
-use Illuminate\Auth\Events\Login;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 
 /**
  * Event Service Provider
  *
- * Handles all event-listener mappings for the application:
- * - UserCreated: Triggers welcome email
- * - TimezoneUpdated: Handles timezone changes
- * - Failed: Logs authentication failures
- * - Login: Logs successful logins
+ * Handles all event-listener mappings for the application.
+ * For authentication, we use custom magic link login with manual logging
+ * in LoginController and Livewire components.
  */
 class EventServiceProvider extends ServiceProvider
 {
@@ -26,13 +19,7 @@ class EventServiceProvider extends ServiceProvider
    *
    * @var array
    */
-  protected $listen = [
-    TimezoneUpdated::class => [],
-
-    // Authentication Events
-    Failed::class => [LogAuthenticationFailure::class],
-    Login::class => [LogSuccessfulLogin::class],
-  ];
+  protected $listen = [];
 
   /**
    * Register any events for your application.

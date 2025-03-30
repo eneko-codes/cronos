@@ -26,7 +26,7 @@ class Login extends Component
    *
    * @var string
    */
-  #[Validate('required|email|exists:users,email')]
+  #[Validate('required|email')]
   public $email = '';
 
   /**
@@ -58,22 +58,48 @@ class Login extends Component
    */
   public function sendMagicLink()
   {
-    $this->validate();
+    // First validate only required and email format
+    $this->validate([
+      'email' => 'required|email',
+      'remember' => 'boolean',
+    ]);
 
-    $user = User::where('email', $this->email)->first();
+    // Log the login attempt regardless of whether the email exists
     $ipAddress = Request::ip();
     $userAgent = Request::header('User-Agent');
-    $timestamp = Carbon::now()->toIso8601String();
 
-    Log::channel('auth')->info('Login attempt initiated', [
-      'user_id' => $user->id,
-      'email' => $user->email,
-      'name' => $user->name,
-      'ip_address' => $ipAddress,
-      'user_agent' => $userAgent,
-      'timestamp' => $timestamp,
-      'remember_me' => $this->remember,
-    ]);
+    // Check if user exists
+    $user = User::where('email', $this->email)->first();
+
+    // If user doesn't exist, log the invalid email attempt
+    if (!$user) {
+      Log::channel('auth')->info(
+        'Magic link requested for non-existent email: ' . $this->email,
+        [
+          'email' => $this->email,
+          'ip_address' => $ipAddress,
+          'user_agent' => $userAgent,
+        ]
+      );
+
+      $this->addError(
+        'email',
+        'The provided email does not match our records.'
+      );
+      return;
+    }
+
+    // Log successful magic link request
+    Log::channel('auth')->info(
+      'Magic link requested for user: ' . $user->name,
+      [
+        'email' => $this->email,
+        'name' => $user->name,
+        'user_id' => $user->id,
+        'ip_address' => $ipAddress,
+        'user_agent' => $userAgent,
+      ]
+    );
 
     // Generate a unique token
     $token = Str::random(60);
@@ -92,13 +118,6 @@ class Login extends Component
     Mail::to($user->email)->queue(
       new LoginEmail($user, $token, $this->remember)
     );
-
-    Log::channel('auth')->info('Login token generated and email queued', [
-      'user_id' => $user->id,
-      'email' => $user->email,
-      'token_expires_at' => Carbon::now()->addMinutes(15)->toIso8601String(),
-      'ip_address' => $ipAddress,
-    ]);
 
     // Set a local message
     $this->tokenSentMessage = 'Click on the login link we sent to your email.';

@@ -22,14 +22,15 @@ class LoginController extends Controller
   {
     $ipAddress = $request->ip();
     $userAgent = $request->header('User-Agent');
+    $email = ''; // Will be populated if we can find the token
     $timestamp = Carbon::now()->toIso8601String();
 
-    // Log the verification attempt
+    // Log the initial verification attempt
     Log::channel('auth')->info('Login token verification attempt', [
       'ip_address' => $ipAddress,
       'user_agent' => $userAgent,
-      'timestamp' => $timestamp,
       'token_present' => $request->has('token'),
+      'timestamp' => $timestamp,
     ]);
 
     // Validate the token input
@@ -39,9 +40,11 @@ class LoginController extends Controller
     ]);
 
     if ($validator->fails()) {
-      Log::channel('auth')->warning('Login token validation failed', [
+      // Log validation failure
+      Log::channel('auth')->info('Token validation failed - invalid format', [
+        'email' => $email,
         'ip_address' => $ipAddress,
-        'errors' => $validator->errors()->toArray(),
+        'user_agent' => $userAgent,
         'timestamp' => $timestamp,
       ]);
 
@@ -57,13 +60,22 @@ class LoginController extends Controller
     $loginToken = LoginToken::where('token', $hashedToken)->first();
 
     // Check if the token exists and is valid
+    if ($loginToken) {
+      $email = $loginToken->user->email;
+    }
+
     if (!$loginToken) {
-      Log::channel('auth')->warning('Login token not found or already used', [
-        'token' => substr($token, 0, 8) . '...', // Only log prefix of token for security
-        'ip_address' => $ipAddress,
-        'user_agent' => $userAgent,
-        'timestamp' => $timestamp,
-      ]);
+      // Log token not found
+      Log::channel('auth')->info(
+        'Token verification failed - token not found',
+        [
+          'email' => $email,
+          'ip_address' => $ipAddress,
+          'user_agent' => $userAgent,
+          'token_prefix' => substr($token, 0, 8) . '...', // Only log prefix for security
+          'timestamp' => $timestamp,
+        ]
+      );
 
       return redirect()
         ->route('login')
@@ -72,12 +84,13 @@ class LoginController extends Controller
 
     // Check if the token has expired
     if (Carbon::now()->greaterThan($loginToken->expires_at)) {
-      Log::channel('auth')->warning('Login token expired', [
-        'token_id' => $loginToken->id,
-        'user_id' => $loginToken->user_id,
+      // Log expired token
+      Log::channel('auth')->info('Token verification failed - token expired', [
+        'email' => $email,
+        'name' => $loginToken->user->name,
         'ip_address' => $ipAddress,
         'user_agent' => $userAgent,
-        'token_expired_at' => $loginToken->expires_at->toIso8601String(),
+        'token_expires_at' => $loginToken->expires_at->toIso8601String(),
         'timestamp' => $timestamp,
       ]);
 
@@ -88,27 +101,8 @@ class LoginController extends Controller
         ->withErrors(['token' => 'The token has expired.']);
     }
 
-    // Log the successful token validation before authentication
-    Log::channel('auth')->info('Valid login token found', [
-      'token_id' => $loginToken->id,
-      'user_id' => $loginToken->user_id,
-      'user_email' => $loginToken->user->email,
-      'user_name' => $loginToken->user->name,
-      'remember_me' => $remember,
-      'ip_address' => $ipAddress,
-      'user_agent' => $userAgent,
-      'timestamp' => $timestamp,
-    ]);
-
     // Authenticate the user and delete the token within a transaction
-    DB::transaction(function () use (
-      $loginToken,
-      $remember,
-      $request,
-      $ipAddress,
-      $userAgent,
-      $timestamp
-    ) {
+    DB::transaction(function () use ($loginToken, $remember, $request) {
       Auth::login($loginToken->user, $remember); // Pass the $remember flag
 
       // Optionally, set a session variable for last activity if needed
@@ -116,19 +110,22 @@ class LoginController extends Controller
 
       // Delete the token after it has been used
       $loginToken->delete();
+    });
 
-      // Log the successful login
-      Log::channel('auth')->info('User successfully authenticated', [
+    // Log the successful authentication
+    Log::channel('auth')->info(
+      'User authenticated successfully: ' . $loginToken->user->name,
+      [
+        'email' => $email,
+        'name' => $loginToken->user->name,
         'user_id' => $loginToken->user_id,
-        'user_email' => $loginToken->user->email,
-        'is_admin' => $loginToken->user->is_admin,
-        'session_id' => $request->session()->getId(),
-        'remember_me' => $remember,
         'ip_address' => $ipAddress,
         'user_agent' => $userAgent,
+        'session_id' => $request->session()->getId(),
+        'remember_me' => $remember,
         'timestamp' => $timestamp,
-      ]);
-    });
+      ]
+    );
 
     // Redirect to the dashboard with a success message
     return redirect()
@@ -144,8 +141,27 @@ class LoginController extends Controller
    */
   public function logout(Request $request)
   {
+    $ipAddress = $request->ip();
+    $userAgent = $request->header('User-Agent');
+    $email = Auth::user() ? Auth::user()->email : '';
+    $name = Auth::user() ? Auth::user()->name : 'Unknown user';
+    $userId = Auth::id();
+    $timestamp = Carbon::now()->toIso8601String();
+    $sessionId = session()->getId();
+
     // Log out the user
     Auth::logout();
+
+    // Log the logout
+    Log::channel('auth')->info('User logged out: ' . $name, [
+      'email' => $email,
+      'name' => $name,
+      'user_id' => $userId,
+      'ip_address' => $ipAddress,
+      'user_agent' => $userAgent,
+      'session_id' => $sessionId,
+      'timestamp' => $timestamp,
+    ]);
 
     // Invalidate the session and regenerate the CSRF token
     $request->session()->invalidate();

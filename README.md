@@ -81,6 +81,7 @@ The application provides a unified command to synchronize data from external pla
 ### Data Types Synchronized
 
 - **Odoo**:
+
   - Users
   - Departments
   - Categories
@@ -89,6 +90,7 @@ The application provides a unified command to synchronize data from external pla
   - Leaves
 
 - **ProofHub**:
+
   - Users
   - Projects
   - Tasks
@@ -105,6 +107,7 @@ php artisan sync {platform} {type} [options]
 ```
 
 Where:
+
 - `platform`: The platform to sync (odoo, proofhub, desktime, all)
 - `type`: Optional data type to sync within that platform
 - `options`: Additional parameters like date ranges
@@ -183,6 +186,7 @@ php artisan tinker --execute="App\Models\JobFrequency::first()"
 ```
 
 Available frequencies include:
+
 - `never` - Jobs won't run
 - `everyMinute` - Every minute
 - `everyFiveMinutes` - Every 5 minutes
@@ -216,11 +220,13 @@ php artisan queue:work
 #### Checking Job Status
 
 To view active jobs:
+
 ```bash
 php artisan queue:monitor
 ```
 
 To view failed jobs:
+
 ```bash
 php artisan queue:failed
 ```
@@ -241,18 +247,75 @@ php artisan queue:failed
 If you need to start fresh:
 
 1. Clear the queue:
+
 ```bash
 php artisan queue:clear
 ```
 
 2. Clear failed jobs:
+
 ```bash
 php artisan queue:flush
 ```
 
 3. Run a manual sync:
+
 ```bash
 php artisan sync all
+```
+
+---
+
+## 🔒 Security Features
+
+### Enhanced Authentication Logging
+
+The application includes detailed authentication logging for security monitoring and auditing:
+
+#### Authentication Log Features:
+
+- **Dedicated Log Channel**: All authentication events are logged to a separate `auth.log` file with 30-day retention
+- **Detailed Event Capture**: Logs include timestamps, IP addresses, user agents, and session IDs
+- **Comprehensive Coverage**: Logs all login-related events:
+  - Login attempts (successful and failed)
+  - Token generation
+  - Token verification
+  - Token expiration
+
+#### Log Events Captured:
+
+- Magic link login attempts
+- Magic link token generation
+- Token verification attempts
+- Failed token validations
+- Token expiration
+- Successful logins
+- Authentication failures
+
+#### Log Data Fields:
+
+- User ID and email (when available)
+- IP address
+- User agent
+- Timestamp (ISO 8601 format)
+- Session ID
+- Authentication guard
+- Login token information (when applicable)
+
+#### Viewing Authentication Logs:
+
+```bash
+# View the most recent authentication logs
+tail -f storage/logs/auth.log
+
+# Search for failed login attempts
+grep "failed\|warning" storage/logs/auth.log
+
+# Search for activity from a specific IP
+grep "192.168.1.1" storage/logs/auth.log
+
+# Search for activity from a specific user
+grep "user@example.com" storage/logs/auth.log
 ```
 
 ---

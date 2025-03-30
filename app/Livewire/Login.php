@@ -6,7 +6,9 @@ use App\Mail\LoginEmail;
 use App\Models\LoginToken;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Request;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -49,7 +51,6 @@ class Login extends Component
     $this->hasUsers = User::exists();
   }
 
-
   /**
    * Sends a magic login link to the user's email address.
    *
@@ -60,6 +61,19 @@ class Login extends Component
     $this->validate();
 
     $user = User::where('email', $this->email)->first();
+    $ipAddress = Request::ip();
+    $userAgent = Request::header('User-Agent');
+    $timestamp = Carbon::now()->toIso8601String();
+
+    Log::channel('auth')->info('Login attempt initiated', [
+      'user_id' => $user->id,
+      'email' => $user->email,
+      'name' => $user->name,
+      'ip_address' => $ipAddress,
+      'user_agent' => $userAgent,
+      'timestamp' => $timestamp,
+      'remember_me' => $this->remember,
+    ]);
 
     // Generate a unique token
     $token = Str::random(60);
@@ -78,6 +92,13 @@ class Login extends Component
     Mail::to($user->email)->queue(
       new LoginEmail($user, $token, $this->remember)
     );
+
+    Log::channel('auth')->info('Login token generated and email queued', [
+      'user_id' => $user->id,
+      'email' => $user->email,
+      'token_expires_at' => Carbon::now()->addMinutes(15)->toIso8601String(),
+      'ip_address' => $ipAddress,
+    ]);
 
     // Set a local message
     $this->tokenSentMessage = 'Click on the login link we sent to your email.';

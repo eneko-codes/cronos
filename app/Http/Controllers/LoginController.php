@@ -20,6 +20,18 @@ class LoginController extends Controller
    */
   public function verify(Request $request)
   {
+    $ipAddress = $request->ip();
+    $userAgent = $request->header('User-Agent');
+    $timestamp = Carbon::now()->toIso8601String();
+
+    // Log the verification attempt
+    Log::channel('auth')->info('Login token verification attempt', [
+      'ip_address' => $ipAddress,
+      'user_agent' => $userAgent,
+      'timestamp' => $timestamp,
+      'token_present' => $request->has('token'),
+    ]);
+
     // Validate the token input
     $validator = Validator::make($request->all(), [
       'token' => 'required|string|size:60',
@@ -27,9 +39,13 @@ class LoginController extends Controller
     ]);
 
     if ($validator->fails()) {
-      return redirect()
-        ->route('login')
-        ->withErrors($validator->errors());
+      Log::channel('auth')->warning('Login token validation failed', [
+        'ip_address' => $ipAddress,
+        'errors' => $validator->errors()->toArray(),
+        'timestamp' => $timestamp,
+      ]);
+
+      return redirect()->route('login')->withErrors($validator->errors());
     }
 
     // Retrieve the token and remember flag from the request query parameters
@@ -42,9 +58,11 @@ class LoginController extends Controller
 
     // Check if the token exists and is valid
     if (!$loginToken) {
-      Log::warning('Login token not found or already used.', [
-        'token' => $token,
-        'ip' => $request->ip(),
+      Log::channel('auth')->warning('Login token not found or already used', [
+        'token' => substr($token, 0, 8) . '...', // Only log prefix of token for security
+        'ip_address' => $ipAddress,
+        'user_agent' => $userAgent,
+        'timestamp' => $timestamp,
       ]);
 
       return redirect()
@@ -54,6 +72,15 @@ class LoginController extends Controller
 
     // Check if the token has expired
     if (Carbon::now()->greaterThan($loginToken->expires_at)) {
+      Log::channel('auth')->warning('Login token expired', [
+        'token_id' => $loginToken->id,
+        'user_id' => $loginToken->user_id,
+        'ip_address' => $ipAddress,
+        'user_agent' => $userAgent,
+        'token_expired_at' => $loginToken->expires_at->toIso8601String(),
+        'timestamp' => $timestamp,
+      ]);
+
       $loginToken->delete();
 
       return redirect()
@@ -61,8 +88,27 @@ class LoginController extends Controller
         ->withErrors(['token' => 'The token has expired.']);
     }
 
+    // Log the successful token validation before authentication
+    Log::channel('auth')->info('Valid login token found', [
+      'token_id' => $loginToken->id,
+      'user_id' => $loginToken->user_id,
+      'user_email' => $loginToken->user->email,
+      'user_name' => $loginToken->user->name,
+      'remember_me' => $remember,
+      'ip_address' => $ipAddress,
+      'user_agent' => $userAgent,
+      'timestamp' => $timestamp,
+    ]);
+
     // Authenticate the user and delete the token within a transaction
-    DB::transaction(function () use ($loginToken, $remember, $request) {
+    DB::transaction(function () use (
+      $loginToken,
+      $remember,
+      $request,
+      $ipAddress,
+      $userAgent,
+      $timestamp
+    ) {
       Auth::login($loginToken->user, $remember); // Pass the $remember flag
 
       // Optionally, set a session variable for last activity if needed
@@ -70,6 +116,18 @@ class LoginController extends Controller
 
       // Delete the token after it has been used
       $loginToken->delete();
+
+      // Log the successful login
+      Log::channel('auth')->info('User successfully authenticated', [
+        'user_id' => $loginToken->user_id,
+        'user_email' => $loginToken->user->email,
+        'is_admin' => $loginToken->user->is_admin,
+        'session_id' => $request->session()->getId(),
+        'remember_me' => $remember,
+        'ip_address' => $ipAddress,
+        'user_agent' => $userAgent,
+        'timestamp' => $timestamp,
+      ]);
     });
 
     // Redirect to the dashboard with a success message

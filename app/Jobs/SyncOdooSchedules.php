@@ -9,12 +9,14 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * Class SyncOdooSchedules
  *
- * Synchronizes schedule data from Odoo, including schedule details & user assignments,
- * and invalidates the entire cache store upon completion.
+ * Synchronizes schedule data from Odoo into local schedules table.
+ * This job ensures the local schedules database reflects the current state of Odoo,
+ * including schedules, schedule details, and user schedule assignments.
  */
 class SyncOdooSchedules extends BaseSyncJob
 {
@@ -26,13 +28,27 @@ class SyncOdooSchedules extends BaseSyncJob
   public int $priority = 2;
 
   /**
-   * Removed protected OdooApiCalls $odoo;
+   * SyncOdooSchedules constructor.
+   *
+   * @param OdooApiCalls $odoo An instance of the OdooApiCalls service.
    */
   public function __construct(OdooApiCalls $odoo)
   {
     $this->odoo = $odoo;
   }
 
+  /**
+   * Executes the synchronization process.
+   *
+   * This method performs these main operations:
+   * 1. Fetches all schedule data from Odoo API
+   * 2. Creates or updates local schedules
+   * 3. Logs schedules that no longer exist in Odoo
+   * 4. Syncs schedule details (time slots)
+   * 5. Updates user schedule assignments
+   *
+   * @throws Exception
+   */
   protected function execute(): void
   {
     try {
@@ -49,26 +65,29 @@ class SyncOdooSchedules extends BaseSyncJob
 
       // Sync schedules
       $this->syncSchedules($odooSchedules);
-      $this->deleteMissingSchedules($odooScheduleIds);
+      $this->logMissingSchedules($odooScheduleIds);
       $this->syncScheduleDetails($odooSchedules, $odooTimeSlots);
       $this->syncUserSchedulesHistorically($odooEmployees);
     } catch (Exception $e) {
-      // Log the error but don't rethrow for duplicates
+      // If it's a duplicate schedule issue, mark the job as failed rather than retrying
       if (
-        str_contains($e->getMessage(), 'duplicate') ||
-        str_contains($e->getMessage(), 'Schedule Duplication Error')
+        Str::contains($e->getMessage(), 'duplicate') ||
+        Str::contains($e->getMessage(), 'Schedule Duplication Error')
       ) {
-        Log::channel('sync')->info(
-          'SyncOdooSchedules: Encountered duplicate schedule error but will not retry: ' .
-            $e->getMessage()
-        );
+        $this->fail($e);
       } else {
-        // Rethrow other exceptions for normal retry behavior
+        // For other exceptions, let Laravel's retry mechanism work
         throw $e;
       }
     }
   }
 
+  /**
+   * Creates or updates schedules based on Odoo data.
+   *
+   * @param Collection $odooSchedules Collection of schedules from Odoo
+   * @return void
+   */
   protected function syncSchedules(Collection $odooSchedules): void
   {
     foreach ($odooSchedules as $scheduleData) {
@@ -82,18 +101,47 @@ class SyncOdooSchedules extends BaseSyncJob
     }
   }
 
-  protected function deleteMissingSchedules(Collection $odooScheduleIds): void
+  /**
+   * Logs schedules that exist locally but not in Odoo rather than deleting them.
+   * This preserves historical data integrity while keeping track of schedules
+   * that are no longer active in Odoo.
+   *
+   * @param Collection $odooScheduleIds IDs of schedules from Odoo
+   * @return void
+   */
+  protected function logMissingSchedules(Collection $odooScheduleIds): void
   {
     $localScheduleIds = Schedule::pluck('odoo_schedule_id');
-    $schedulesToDelete = $localScheduleIds->diff($odooScheduleIds);
+    $schedulesToLog = $localScheduleIds->diff($odooScheduleIds);
 
-    if ($schedulesToDelete->isNotEmpty()) {
-      Schedule::whereIn('odoo_schedule_id', $schedulesToDelete)
-        ->get()
-        ->each(fn($schedule) => $schedule->delete());
+    if ($schedulesToLog->isNotEmpty()) {
+      // Get schedule details for logging
+      $missingSchedules = Schedule::whereIn(
+        'odoo_schedule_id',
+        $schedulesToLog
+      )->get();
+
+      // Log each missing schedule instead of deleting
+      foreach ($missingSchedules as $schedule) {
+        Log::channel('sync')->info(
+          'Schedule no longer exists in Odoo but preserved for historical integrity',
+          [
+            'odoo_schedule_id' => $schedule->odoo_schedule_id,
+            'description' => $schedule->description,
+            'detected_at' => now()->toDateTimeString(),
+          ]
+        );
+      }
     }
   }
 
+  /**
+   * Synchronizes schedule details (time slots) for each schedule.
+   *
+   * @param Collection $odooSchedules Collection of schedules from Odoo
+   * @param Collection $odooTimeSlots Collection of time slots from Odoo grouped by schedule ID
+   * @return void
+   */
   protected function syncScheduleDetails(
     Collection $odooSchedules,
     Collection $odooTimeSlots
@@ -131,16 +179,13 @@ class SyncOdooSchedules extends BaseSyncJob
         ];
 
         // Log the issue as part of the sync log
-        Log::channel('sync')->info(
+        Log::channel('sync')->warning(
           "SyncOdooSchedules: Schedule #{$odooScheduleId} ({$scheduleData['name']}) has duplicate details",
           [
             'schedule_id' => $odooScheduleId,
             'duplicates' => $duplicates->toArray(),
           ]
         );
-
-        // NOTE: We continue processing instead of throwing an exception
-        // This prevents job retries for duplicate errors
       }
 
       $odooDetailIds = $odooDetailsById->keys();
@@ -151,7 +196,7 @@ class SyncOdooSchedules extends BaseSyncJob
       $toUpdateIds = $odooDetailIds->intersect($existingDetailIds);
       $toDeleteIds = $existingDetailIds->diff($odooDetailIds);
 
-      // Inserts
+      // Process new schedule details
       foreach ($toInsertIds as $idToInsert) {
         $detailData = $odooDetailsById[$idToInsert];
         $schedule->scheduleDetails()->create([
@@ -159,14 +204,14 @@ class SyncOdooSchedules extends BaseSyncJob
           'odoo_detail_id' => $detailData['id'],
           'weekday' => $detailData['dayofweek'],
           'day_period' => $detailData['day_period']
-            ? strtolower($detailData['day_period'])
+            ? Str::lower($detailData['day_period'])
             : 'morning',
           'start' => $this->formatOdooTime($detailData['hour_from'], $timezone),
           'end' => $this->formatOdooTime($detailData['hour_to'], $timezone),
         ]);
       }
 
-      // Updates
+      // Update existing schedule details
       foreach ($toUpdateIds as $idToUpdate) {
         $detailData = $odooDetailsById[$idToUpdate];
         $existingDetail = $existingDetails[$idToUpdate];
@@ -174,7 +219,7 @@ class SyncOdooSchedules extends BaseSyncJob
         $updatedAttributes = [
           'weekday' => $detailData['dayofweek'],
           'day_period' => $detailData['day_period']
-            ? strtolower($detailData['day_period'])
+            ? Str::lower($detailData['day_period'])
             : 'morning',
           'start' => $this->formatOdooTime($detailData['hour_from'], $timezone),
           'end' => $this->formatOdooTime($detailData['hour_to'], $timezone),
@@ -185,7 +230,7 @@ class SyncOdooSchedules extends BaseSyncJob
         }
       }
 
-      // Deletes
+      // Delete schedule details that no longer exist in Odoo
       if ($toDeleteIds->isNotEmpty()) {
         $toDeleteIds->each(function ($detailId) use ($existingDetails) {
           $detail = $existingDetails[$detailId] ?? null;
@@ -214,7 +259,7 @@ class SyncOdooSchedules extends BaseSyncJob
     // Group details by weekday and day_period
     $groupedDetails = $odooDetails->groupBy(function ($detail) {
       $dayPeriod = isset($detail['day_period'])
-        ? strtolower($detail['day_period'])
+        ? Str::lower($detail['day_period'])
         : 'morning';
 
       return $detail['dayofweek'] . '-' . $dayPeriod;
@@ -237,6 +282,13 @@ class SyncOdooSchedules extends BaseSyncJob
     return $duplicates;
   }
 
+  /**
+   * Determines if a schedule detail needs to be updated based on attribute changes.
+   *
+   * @param object $existingDetail The existing schedule detail
+   * @param array $newAttributes The new attributes to compare against
+   * @return bool True if update is needed, false otherwise
+   */
   protected function needsUpdate($existingDetail, array $newAttributes): bool
   {
     foreach ($newAttributes as $key => $value) {
@@ -247,6 +299,13 @@ class SyncOdooSchedules extends BaseSyncJob
     return false;
   }
 
+  /**
+   * Updates user schedule assignments to reflect current assignments in Odoo.
+   * This method preserves historical schedule assignments by adding effective dates.
+   *
+   * @param Collection $odooEmployees Collection of employees from Odoo
+   * @return void
+   */
   protected function syncUserSchedulesHistorically(
     Collection $odooEmployees
   ): void {
@@ -261,6 +320,7 @@ class SyncOdooSchedules extends BaseSyncJob
     $userAssignments->each(function ($newOdooScheduleId, $odooUserId) use (
       $startOfDay
     ) {
+      // Skip users marked do_not_track
       $user = User::where('odoo_id', $odooUserId)
         ->where('do_not_track', false)
         ->first();
@@ -312,6 +372,10 @@ class SyncOdooSchedules extends BaseSyncJob
 
   /**
    * Formats a decimal hour value (e.g., 9.5 => 09:30) in UTC "H:i" format.
+   *
+   * @param float $timeValue The decimal time value from Odoo
+   * @param string $timezone The timezone to use for conversion
+   * @return string Formatted time in UTC "H:i" format
    */
   protected function formatOdooTime(
     float $timeValue,

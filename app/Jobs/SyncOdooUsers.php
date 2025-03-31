@@ -5,13 +5,16 @@ namespace App\Jobs;
 use App\Models\User;
 use App\Services\OdooApiCalls;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Exception;
 
 /**
  * Class SyncOdooUsers
  *
- * Synchronizes hr.employee data from Odoo into the local users table,
- * and invalidates the entire cache store upon completion.
+ * Synchronizes hr.employee data from Odoo into the local users table.
+ * This job ensures the local users database reflects the current state
+ * of the Odoo system, including creating new users, updating existing ones,
+ * and removing users that no longer exist in Odoo.
  */
 class SyncOdooUsers extends BaseSyncJob
 {
@@ -36,32 +39,39 @@ class SyncOdooUsers extends BaseSyncJob
   /**
    * Executes the synchronization process.
    *
+   * This method performs three main operations:
+   * 1. Fetches and filters users from Odoo API
+   * 2. Creates or updates local users based on Odoo data
+   * 3. Removes local users that no longer exist in Odoo
+   *
    * @return void
    *
    * @throws Exception
    */
   protected function execute(): void
   {
+    // Retrieve Odoo users and filter out those without an email address (the email is required as primary key to sync users across all platforms)
     $odooUsers = $this->odoo->getUsers()->filter(function ($odooUser) {
-      return !empty($odooUser['work_email']);
+      return filled($odooUser['work_email']);
     });
 
-    $existingUsers = User::whereNotNull('odoo_id')->get()->keyBy('odoo_id');
-
+    // Create or update local users based on Odoo data
     foreach ($odooUsers as $odooUser) {
       $userData = [
         'name' => $odooUser['name'],
-        'email' => strtolower($odooUser['work_email']),
+        'email' => Str::lower($odooUser['work_email']),
         'timezone' => $odooUser['tz'] ?? 'UTC',
       ];
 
       User::updateOrCreate(['odoo_id' => $odooUser['id']], $userData);
     }
 
-    // Clear out any user who has an odoo_id but isn't in Odoo users
+    // Find and remove users that exist locally but not in Odoo anymore
+    // This ensures data consistency between systems
     $odooUserIds = $odooUsers->pluck('id');
     $localOdooIds = User::whereNotNull('odoo_id')->pluck('odoo_id');
 
+    // Find IDs that exist locally but not in Odoo
     $usersToDelete = $localOdooIds->diff($odooUserIds);
 
     if ($usersToDelete->isNotEmpty()) {
@@ -69,6 +79,7 @@ class SyncOdooUsers extends BaseSyncJob
       $users = User::whereIn('odoo_id', $usersToDelete)->get();
 
       // Delete each user individually to trigger model events
+      // This is preferred over bulk deletion which doesn't trigger events
       foreach ($users as $user) {
         $user->delete();
       }

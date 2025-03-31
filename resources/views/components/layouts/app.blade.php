@@ -35,9 +35,9 @@
 
           @auth
             <div class="flex items-center gap-3">
-              <!-- Alerts button (visible to all logged in users) -->
-              <livewire:alerts.alerts-toggle />
-              
+              <!-- Settings button (visible to all logged in users) -->
+              <livewire:sidebar-toggle />
+
               <div x-show="!isMobile" x-cloak class="hidden md:block">
                 <x-dropdown-menu>
                   <x-slot:trigger>
@@ -55,7 +55,7 @@
 
                   <div class="flex flex-col gap-2">
                     <!-- Last Synced Component -->
-                      @livewire('last-synced')
+                    @livewire('last-synced')
 
                     <form
                       action="{{ route('logout') }}"
@@ -145,14 +145,18 @@
                   <!-- User profile info -->
                   <div class="flex flex-col items-start gap-3">
                     <div class="flex flex-col">
-                      <span class="font-semibold">{{ Auth::user()->name }}</span>
+                      <span class="font-semibold">
+                        {{ Auth::user()->name }}
+                      </span>
                       <span class="text-sm text-gray-500 dark:text-gray-400">
                         {{ Auth::user()->email }}
                       </span>
                     </div>
-                    
+
                     <!-- Last Synced Component (Mobile) -->
-                    <div class="w-full border-b border-gray-200 py-2 dark:border-gray-700">
+                    <div
+                      class="w-full border-b border-gray-200 py-2 dark:border-gray-700"
+                    >
                       @livewire('last-synced')
                     </div>
                   </div>
@@ -187,15 +191,14 @@
     </header>
 
     <!-- Main Content -->
-    <main class="w-full max-w-screen-2xl pt-14 mx-auto">
+    <main class="mx-auto w-full max-w-screen-2xl pt-14">
       <div class="px-4 py-6">
         {{ $slot }}
       </div>
     </main>
 
-    <!-- Alerts Sidebar - Floating panel -->
     @auth
-      @livewire('alerts.alerts-sidebar')
+      @livewire('sidebar')
     @endauth
 
     @persist('toast')

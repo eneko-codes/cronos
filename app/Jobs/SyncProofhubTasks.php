@@ -44,9 +44,9 @@ class SyncProofhubTasks extends BaseSyncJob
       if (!$taskId) {
         continue;
       }
-      
+
       $syncedTaskIds[] = $taskId;
-      
+
       $projectId = data_get($taskData, 'project.id');
       $taskName = data_get($taskData, 'title');
       $assignedUserIds = data_get($taskData, 'assigned', []);
@@ -54,9 +54,9 @@ class SyncProofhubTasks extends BaseSyncJob
       // Ensure local project exists
       $project = Project::where('proofhub_project_id', $projectId)->first();
       if (!$project) {
-        Log::info("Skipping task - project not found", [
+        Log::channel('sync')->info('Skipping task - project not found', [
           'task_id' => $taskId,
-          'project_id' => $projectId
+          'project_id' => $projectId,
         ]);
         continue;
       }
@@ -87,7 +87,7 @@ class SyncProofhubTasks extends BaseSyncJob
       foreach ($toAttach as $userId) {
         $task->users()->attach($userId);
       }
-      
+
       // Check if there are subtasks and process them
       $subtasks = data_get($taskData, 'subtasks');
       if ($subtasks && is_array($subtasks)) {
@@ -96,35 +96,42 @@ class SyncProofhubTasks extends BaseSyncJob
           if (!$subtaskId) {
             continue;
           }
-          
+
           $syncedTaskIds[] = $subtaskId;
-          
+
           $subtaskName = data_get($subtask, 'title');
           $subtaskAssignedUserIds = data_get($subtask, 'assigned', []);
-          
+
           // Upsert the subtask
           $subtaskModel = Task::updateOrCreate(
             ['proofhub_task_id' => $subtaskId],
             [
-              'proofhub_project_id' => $projectId, 
+              'proofhub_project_id' => $projectId,
               'name' => $subtaskName,
             ]
           );
-          
+
           // Process subtask user assignments
-          $subtaskLocalUserIds = User::whereIn('proofhub_id', $subtaskAssignedUserIds)
+          $subtaskLocalUserIds = User::whereIn(
+            'proofhub_id',
+            $subtaskAssignedUserIds
+          )
             ->where('do_not_track', false)
             ->pluck('id');
-            
+
           // Detach users not in assigned list
           $existingSubtaskUserIds = $subtaskModel->users()->pluck('user_id');
-          $subtaskToDetach = $existingSubtaskUserIds->diff($subtaskLocalUserIds);
+          $subtaskToDetach = $existingSubtaskUserIds->diff(
+            $subtaskLocalUserIds
+          );
           foreach ($subtaskToDetach as $userId) {
             $subtaskModel->users()->detach($userId);
           }
-          
+
           // Attach newly assigned users
-          $subtaskToAttach = $subtaskLocalUserIds->diff($existingSubtaskUserIds);
+          $subtaskToAttach = $subtaskLocalUserIds->diff(
+            $existingSubtaskUserIds
+          );
           foreach ($subtaskToAttach as $userId) {
             $subtaskModel->users()->attach($userId);
           }

@@ -52,19 +52,25 @@ class SyncProofhubTimeEntries extends BaseSyncJob
     } else {
       // Default to 30 days ago if no start date is provided
       $params['from_date'] = now()->subDays(30)->format('Y-m-d');
-      Log::info("No start date provided for SyncProofhubTimeEntries, defaulting to 30 days ago", [
-        'default_from_date' => $params['from_date']
-      ]);
+      Log::channel('sync')->info(
+        'No start date provided for SyncProofhubTimeEntries, defaulting to 30 days ago',
+        [
+          'default_from_date' => $params['from_date'],
+        ]
+      );
     }
-    
+
     if ($this->endDate) {
       $params['to_date'] = $this->endDate;
     } else {
       // Default to today if no end date is provided
       $params['to_date'] = now()->format('Y-m-d');
-      Log::info("No end date provided for SyncProofhubTimeEntries, defaulting to today", [
-        'default_to_date' => $params['to_date']
-      ]);
+      Log::channel('sync')->info(
+        'No end date provided for SyncProofhubTimeEntries, defaulting to today',
+        [
+          'default_to_date' => $params['to_date'],
+        ]
+      );
     }
 
     // Fetch entries
@@ -93,8 +99,8 @@ class SyncProofhubTimeEntries extends BaseSyncJob
       // Map creator ID -> local user
       $creatorProofhubId = data_get($entry, 'creator.id');
       if (!$creatorProofhubId) {
-        Log::info("Skipping time entry - creator ID missing", [
-          'time_entry_id' => data_get($entry, 'id')
+        Log::channel('sync')->info('Skipping time entry - creator ID missing', [
+          'time_entry_id' => data_get($entry, 'id'),
         ]);
         continue;
       }
@@ -107,15 +113,21 @@ class SyncProofhubTimeEntries extends BaseSyncJob
         // Check if user exists but has do_not_track enabled
         $userExists = User::where('proofhub_id', $creatorProofhubId)->exists();
         if ($userExists) {
-          Log::info("Skipping time entry - user has do_not_track enabled", [
-            'time_entry_id' => data_get($entry, 'id'),
-            'creator_id' => $creatorProofhubId
-          ]);
+          Log::channel('sync')->info(
+            'Skipping time entry - user has do_not_track enabled',
+            [
+              'time_entry_id' => data_get($entry, 'id'),
+              'creator_id' => $creatorProofhubId,
+            ]
+          );
         } else {
-          Log::info("Skipping time entry - user not found in database", [
-            'time_entry_id' => data_get($entry, 'id'),
-            'creator_id' => $creatorProofhubId
-          ]);
+          Log::channel('sync')->info(
+            'Skipping time entry - user not found in database',
+            [
+              'time_entry_id' => data_get($entry, 'id'),
+              'creator_id' => $creatorProofhubId,
+            ]
+          );
         }
         continue;
       }
@@ -125,13 +137,16 @@ class SyncProofhubTimeEntries extends BaseSyncJob
       if (!$projectId) {
         continue;
       }
-      
+
       // Check if project exists locally
-      $projectExists = Project::where('proofhub_project_id', $projectId)->exists();
+      $projectExists = Project::where(
+        'proofhub_project_id',
+        $projectId
+      )->exists();
       if (!$projectExists) {
-        Log::info("Skipping time entry - project not found", [
+        Log::channel('sync')->info('Skipping time entry - project not found', [
           'time_entry_id' => data_get($entry, 'id'),
-          'project_id' => $projectId
+          'project_id' => $projectId,
         ]);
         continue;
       }
@@ -140,30 +155,30 @@ class SyncProofhubTimeEntries extends BaseSyncJob
       $taskData = data_get($entry, 'task');
       $taskId = null;
       $taskName = null;
-      
+
       if ($taskData) {
         // The ProofHub API returns task information in a different format than expected
         // Time entries contain 'task.task_id' not 'task.id'
         $taskId = data_get($taskData, 'task_id');
         $taskName = data_get($taskData, 'task_name');
-        
+
         // If there's also a subtask, prioritize it
         $subtaskId = data_get($taskData, 'subtask_id');
         $subtaskName = data_get($taskData, 'subtask_name');
-        
+
         if ($subtaskId) {
           $taskId = $subtaskId;
           $taskName = $subtaskName;
         }
       }
-      
+
       // Check if the task exists in our database, or create it if needed
       if ($taskId) {
         $task = Task::firstOrCreate(
           ['proofhub_task_id' => $taskId],
           [
             'proofhub_project_id' => $projectId,
-            'name' => $taskName ?: 'Unknown Task'
+            'name' => $taskName ?: 'Unknown Task',
           ]
         );
       }
@@ -190,30 +205,31 @@ class SyncProofhubTimeEntries extends BaseSyncJob
           'proofhub_project_id' => $timeEntryData['proofhub_project_id'],
           'date' => $timeEntryData['date'],
         ];
-        
+
         // Handle task_id properly for the unique constraint
         if ($timeEntryData['proofhub_task_id'] === null) {
           $uniqueConstraintData['proofhub_task_id'] = null;
         } else {
-          $uniqueConstraintData['proofhub_task_id'] = $timeEntryData['proofhub_task_id'];
+          $uniqueConstraintData['proofhub_task_id'] =
+            $timeEntryData['proofhub_task_id'];
         }
-        
+
         // Use updateOrCreate to either update an existing entry or create a new one
         // This prevents unique constraint violations by checking for existing records
         $timeEntry = TimeEntry::updateOrCreate(
           $uniqueConstraintData,
           $timeEntryData
         );
-        
-        Log::info("Time entry processed successfully", [
+
+        Log::channel('sync')->info('Time entry processed successfully', [
           'proofhub_time_entry_id' => $timeEntryData['proofhub_time_entry_id'],
-          'action' => $timeEntry->wasRecentlyCreated ? 'created' : 'updated'
+          'action' => $timeEntry->wasRecentlyCreated ? 'created' : 'updated',
         ]);
       } catch (\Exception $e) {
-        Log::error("Error processing time entry", [
+        Log::channel('sync')->error('Error processing time entry', [
           'proofhub_time_entry_id' => $timeEntryData['proofhub_time_entry_id'],
           'user_id' => $timeEntryData['user_id'],
-          'error' => $e->getMessage()
+          'error' => $e->getMessage(),
         ]);
       }
     }

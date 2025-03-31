@@ -169,7 +169,7 @@ return [
     Watchers\LogWatcher::class => [
       'enabled' => env('TELESCOPE_LOG_WATCHER', true),
       'level' => env('TELESCOPE_LOG_LEVEL', 'info'),
-      'channels' => ['stack', 'single', 'daily', 'auth'],
+      'channels' => ['stack', 'single', 'daily', 'auth', 'sync'],
     ],
 
     Watchers\MailWatcher::class => env('TELESCOPE_MAIL_WATCHER', true),

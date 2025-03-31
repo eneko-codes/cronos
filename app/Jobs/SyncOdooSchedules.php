@@ -58,7 +58,7 @@ class SyncOdooSchedules extends BaseSyncJob
         str_contains($e->getMessage(), 'duplicate') ||
         str_contains($e->getMessage(), 'Schedule Duplication Error')
       ) {
-        Log::info(
+        Log::channel('sync')->info(
           'SyncOdooSchedules: Encountered duplicate schedule error but will not retry: ' .
             $e->getMessage()
         );
@@ -131,7 +131,7 @@ class SyncOdooSchedules extends BaseSyncJob
         ];
 
         // Log the issue as part of the sync log
-        Log::info(
+        Log::channel('sync')->info(
           "SyncOdooSchedules: Schedule #{$odooScheduleId} ({$scheduleData['name']}) has duplicate details",
           [
             'schedule_id' => $odooScheduleId,

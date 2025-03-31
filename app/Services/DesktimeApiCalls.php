@@ -66,21 +66,25 @@ class DesktimeApiCalls implements Pingable
       $response = Http::get("{$this->baseUrl}{$endpoint}", $params);
 
       if ($response->failed()) {
-        Log::error('DeskTime API Error', [
+        Log::channel('sync')->error('DeskTime API Error', [
           'endpoint' => $endpoint,
           'status' => $response->status(),
           'body' => $response->body(),
         ]);
-        throw new Exception("DeskTime API returned error: {$response->status()}");
+        throw new Exception(
+          "DeskTime API returned error: {$response->status()}"
+        );
       }
 
       return $response->json();
     } catch (Exception $e) {
-      Log::error('DeskTime API Call Failed', [
+      Log::channel('sync')->error('DeskTime API Call Failed', [
         'endpoint' => $endpoint,
         'error' => $e->getMessage(),
       ]);
-      throw new Exception("DeskTime API call to {$endpoint} failed: {$e->getMessage()}");
+      throw new Exception(
+        "DeskTime API call to {$endpoint} failed: {$e->getMessage()}"
+      );
     }
   }
 

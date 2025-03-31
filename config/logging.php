@@ -71,6 +71,14 @@ return [
       'replace_placeholders' => true,
     ],
 
+    'sync' => [
+      'driver' => 'daily',
+      'path' => storage_path('logs/sync.log'),
+      'level' => env('LOG_LEVEL', 'debug'),
+      'days' => env('LOG_DAILY_DAYS', 14),
+      'replace_placeholders' => true,
+    ],
+
     'auth' => [
       'driver' => 'daily',
       'path' => storage_path('logs/auth.log'),

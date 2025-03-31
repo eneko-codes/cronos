@@ -77,13 +77,15 @@ class SyncOdooLeaves extends BaseSyncJob
     $deleteQuery
       ->whereNotIn('odoo_leave_id', $odooLeaveIds)
       ->get()
-      ->each(function($leave) use (&$deletedCount) {
+      ->each(function ($leave) use (&$deletedCount) {
         $leave->delete();
         $deletedCount++;
       });
 
     if ($deletedCount > 0) {
-      Log::info("Deleted {$deletedCount} leaves no longer in Odoo");
+      Log::channel('sync')->info(
+        "Deleted {$deletedCount} leaves no longer in Odoo"
+      );
     }
 
     $validLeaveTypeIds = LeaveType::pluck('odoo_leave_type_id')->toArray();
@@ -101,19 +103,25 @@ class SyncOdooLeaves extends BaseSyncJob
         ) ||
         !isset($leave['holiday_status_id'][0])
       ) {
-        Log::warning("Skipped Odoo leave due to missing required fields", [
-          'leave_id' => $leave['id'] ?? 'unknown'
-        ]);
+        Log::channel('sync')->warning(
+          'Skipped Odoo leave due to missing required fields',
+          [
+            'leave_id' => $leave['id'] ?? 'unknown',
+          ]
+        );
         $skippedCount++;
         continue;
       }
 
       $leaveTypeId = $leave['holiday_status_id'][0];
       if (!in_array($leaveTypeId, $validLeaveTypeIds)) {
-        Log::warning("Skipped Odoo leave due to invalid leave type", [
-          'leave_id' => $leave['id'] ?? 'unknown',
-          'leave_type_id' => $leaveTypeId
-        ]);
+        Log::channel('sync')->warning(
+          'Skipped Odoo leave due to invalid leave type',
+          [
+            'leave_id' => $leave['id'] ?? 'unknown',
+            'leave_type_id' => $leaveTypeId,
+          ]
+        );
         $skippedCount++;
         continue;
       }
@@ -141,16 +149,29 @@ class SyncOdooLeaves extends BaseSyncJob
       // - 'validate1': Leave request approved by first approval level
       // - 'validate': Leave request is fully approved and active
       // - 'cancel': Leave request was cancelled
-      if (isset($leave['state']) && !in_array($leave['state'], ['validate', 'refuse', 'confirm', 'validate1', 'draft', 'cancel'])) {
-        Log::warning("Found unexpected leave state", [
+      if (
+        isset($leave['state']) &&
+        !in_array($leave['state'], [
+          'validate',
+          'refuse',
+          'confirm',
+          'validate1',
+          'draft',
+          'cancel',
+        ])
+      ) {
+        Log::channel('sync')->warning('Found unexpected leave state', [
           'leave_id' => $leave['id'],
-          'state' => $leave['state']
+          'state' => $leave['state'],
         ]);
       }
 
       // Log half-day information for debug purposes when present
-      if (isset($leave['request_hour_from'], $leave['request_hour_to']) && $leave['number_of_days'] == 0.5) {
-        Log::debug("Processing half-day leave", [
+      if (
+        isset($leave['request_hour_from'], $leave['request_hour_to']) &&
+        $leave['number_of_days'] == 0.5
+      ) {
+        Log::channel('sync')->debug('Processing half-day leave', [
           'leave_id' => $leave['id'],
           'request_hour_from' => $leave['request_hour_from'],
           'request_hour_to' => $leave['request_hour_to'],
@@ -166,12 +187,15 @@ class SyncOdooLeaves extends BaseSyncJob
               ->where('do_not_track', false)
               ->first();
             $data['user_id'] = $user?->id;
-            
+
             if (!$user && isset($leave['employee_id'][1])) {
-              Log::info("Employee not found or marked do_not_track", [
-                'odoo_employee_id' => $leave['employee_id'][0],
-                'odoo_employee_name' => $leave['employee_id'][1]
-              ]);
+              Log::channel('sync')->info(
+                'Employee not found or marked do_not_track',
+                [
+                  'odoo_employee_id' => $leave['employee_id'][0],
+                  'odoo_employee_name' => $leave['employee_id'][1],
+                ]
+              );
             }
           }
           break;
@@ -190,10 +214,13 @@ class SyncOdooLeaves extends BaseSyncJob
       $processedCount++;
     }
 
-    Log::info("Odoo leaves sync completed", [
+    Log::channel('sync')->info('Odoo leaves sync completed', [
       'processed' => $processedCount,
       'skipped' => $skippedCount,
-      'date_range' => $this->startDate && $this->endDate ? "{$this->startDate} to {$this->endDate}" : 'all'
+      'date_range' =>
+        $this->startDate && $this->endDate
+          ? "{$this->startDate} to {$this->endDate}"
+          : 'all',
     ]);
   }
 }

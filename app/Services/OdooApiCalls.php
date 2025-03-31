@@ -129,7 +129,7 @@ class OdooApiCalls implements Pingable
       $responseBody = $response->json();
 
       if ($response->failed() || isset($responseBody['error'])) {
-        Log::error('Odoo API Error', [
+        Log::channel('sync')->error('Odoo API Error', [
           'payload' => $payload,
           'response' => $responseBody,
         ]);
@@ -141,7 +141,7 @@ class OdooApiCalls implements Pingable
 
       return $responseBody['result'] ?? null;
     } catch (Exception $e) {
-      Log::error('Odoo API Call Failed', [
+      Log::channel('sync')->error('Odoo API Call Failed', [
         'service' => $service,
         'method' => $method,
         'args' => $args,
@@ -270,10 +270,10 @@ class OdooApiCalls implements Pingable
       'number_of_days',
       'state',
       'holiday_status_id',
-      'request_date_from',   // Additional field for local date
-      'request_date_to',     // Additional field for local date
-      'request_hour_from',   // For half-day morning/afternoon
-      'request_hour_to',     // For half-day morning/afternoon
+      'request_date_from', // Additional field for local date
+      'request_date_to', // Additional field for local date
+      'request_hour_from', // For half-day morning/afternoon
+      'request_hour_to', // For half-day morning/afternoon
     ]);
   }
 

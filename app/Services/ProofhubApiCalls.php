@@ -73,7 +73,7 @@ class ProofhubApiCalls implements Pingable
         ->get($url, $params);
 
       if ($response->failed()) {
-        Log::error('ProofHub API Error', [
+        Log::channel('sync')->error('ProofHub API Error', [
           'endpoint' => $endpoint,
           'status' => $response->status(),
           'body' => $response->body(),
@@ -85,10 +85,10 @@ class ProofhubApiCalls implements Pingable
 
       // Get response data without storing it
       $responseData = $response->json();
-      
+
       return $responseData;
     } catch (Exception $e) {
-      Log::error('ProofHub API Call Failed', [
+      Log::channel('sync')->error('ProofHub API Call Failed', [
         'endpoint' => $endpoint,
         'error' => $e->getMessage(),
       ]);
@@ -124,7 +124,9 @@ class ProofhubApiCalls implements Pingable
     $response = $this->call('alltime', $params);
 
     if (!is_array($response)) {
-      Log::error('ProofHub alltime endpoint did not return an array.');
+      Log::channel('sync')->error(
+        'ProofHub alltime endpoint did not return an array.'
+      );
       return [];
     }
 

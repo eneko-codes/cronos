@@ -91,10 +91,12 @@ abstract class BaseSyncJob implements ShouldQueue, ShouldBeEncrypted
    */
   protected function checkApisHealth(): void
   {
-    Log::debug('Starting API health check');
+    Log::channel('sync')->debug('Starting API health check');
 
     if (!NotificationSetting::isEnabled('api_down_warning_mail')) {
-      Log::debug('API down warning notifications are disabled');
+      Log::channel('sync')->debug(
+        'API down warning notifications are disabled'
+      );
       return;
     }
 
@@ -105,18 +107,21 @@ abstract class BaseSyncJob implements ShouldQueue, ShouldBeEncrypted
     ];
 
     foreach ($apis as $serviceName => $service) {
-      Log::debug("Checking {$serviceName} API health");
+      Log::channel('sync')->debug("Checking {$serviceName} API health");
 
       if ($service instanceof Pingable) {
         try {
           $pingResult = $service->ping();
-          Log::debug("{$serviceName} ping result", $pingResult);
+          Log::channel('sync')->debug(
+            "{$serviceName} ping result",
+            $pingResult
+          );
 
           $isDown = !($pingResult['success'] ?? false);
 
           if ($isDown) {
             $errorMessage = $pingResult['message'] ?? 'API health check failed';
-            Log::error("{$serviceName} API is down", [
+            Log::channel('sync')->error("{$serviceName} API is down", [
               'error' => $errorMessage,
               'job' => static::class,
             ]);
@@ -124,31 +129,38 @@ abstract class BaseSyncJob implements ShouldQueue, ShouldBeEncrypted
             $adminUsers = User::where('is_admin', true)
               ->where('muted_notifications', false)
               ->get();
-            Log::debug("Found {$adminUsers->count()} admin users to notify");
+            Log::channel('sync')->debug(
+              "Found {$adminUsers->count()} admin users to notify"
+            );
 
             $adminUsers->each(function ($admin) use (
               $serviceName,
               $errorMessage
             ) {
-              Log::debug("Sending notification to admin {$admin->email}");
+              Log::channel('sync')->debug(
+                "Sending notification to admin {$admin->email}"
+              );
               $admin->notify(new ApiDownWarning($serviceName, $errorMessage));
             });
           }
         } catch (Exception $e) {
-          Log::error("{$serviceName} API health check failed", [
-            'error' => $e->getMessage(),
-            'job' => static::class,
-          ]);
+          Log::channel('sync')->error(
+            "{$serviceName} API health check failed",
+            [
+              'error' => $e->getMessage(),
+              'job' => static::class,
+            ]
+          );
 
           $adminUsers = User::where('is_admin', true)
             ->where('muted_notifications', false)
             ->get();
-          Log::debug(
+          Log::channel('sync')->debug(
             "Found {$adminUsers->count()} admin users to notify about exception"
           );
 
           $adminUsers->each(function ($admin) use ($serviceName, $e) {
-            Log::debug(
+            Log::channel('sync')->debug(
               "Sending exception notification to admin {$admin->email}"
             );
             $admin->notify(
@@ -160,7 +172,7 @@ abstract class BaseSyncJob implements ShouldQueue, ShouldBeEncrypted
           });
         }
       } else {
-        Log::debug(
+        Log::channel('sync')->debug(
           "{$serviceName} service does not implement Pingable interface"
         );
       }

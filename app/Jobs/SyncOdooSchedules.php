@@ -9,8 +9,6 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
-use App\Models\Alert;
 
 /**
  * Class SyncOdooSchedules
@@ -41,7 +39,9 @@ class SyncOdooSchedules extends BaseSyncJob
       // Fetch all schedule-related data
       $data = $this->odoo->getAllScheduleData();
       $odooSchedules = collect($data->get('schedules'));
-      $odooTimeSlots = collect($data->get('timeSlots'))->groupBy('calendar_id.0');
+      $odooTimeSlots = collect($data->get('timeSlots'))->groupBy(
+        'calendar_id.0'
+      );
       $odooEmployees = collect($data->get('employees'));
 
       // Extract Odoo schedule IDs
@@ -54,8 +54,14 @@ class SyncOdooSchedules extends BaseSyncJob
       $this->syncUserSchedulesHistorically($odooEmployees);
     } catch (Exception $e) {
       // Log the error but don't rethrow for duplicates
-      if (str_contains($e->getMessage(), 'duplicate') || str_contains($e->getMessage(), 'Schedule Duplication Error')) {
-        Log::warning('SyncOdooSchedules job encountered duplicate schedule error but will not retry: ' . $e->getMessage());
+      if (
+        str_contains($e->getMessage(), 'duplicate') ||
+        str_contains($e->getMessage(), 'Schedule Duplication Error')
+      ) {
+        Log::info(
+          'SyncOdooSchedules: Encountered duplicate schedule error but will not retry: ' .
+            $e->getMessage()
+        );
       } else {
         // Rethrow other exceptions for normal retry behavior
         throw $e;
@@ -114,7 +120,7 @@ class SyncOdooSchedules extends BaseSyncJob
 
       // Check for duplicate schedule details in Odoo data
       $duplicates = $this->detectDuplicateDetails($odooDetails, $schedule);
-      
+
       if ($duplicates->isNotEmpty()) {
         // Record duplicate details for this schedule
         $duplicateErrors[$odooScheduleId] = [
@@ -123,13 +129,16 @@ class SyncOdooSchedules extends BaseSyncJob
           'duplicates' => $duplicates->toArray(),
           'detected_at' => now()->toDateTimeString(),
         ];
-        
-        // Log the issue
-        Log::warning("Schedule Duplication Error: Schedule #{$odooScheduleId} ({$scheduleData['name']}) has duplicate details", [
-          'schedule_id' => $odooScheduleId, 
-          'duplicates' => $duplicates->toArray()
-        ]);
-        
+
+        // Log the issue as part of the sync log
+        Log::info(
+          "SyncOdooSchedules: Schedule #{$odooScheduleId} ({$scheduleData['name']}) has duplicate details",
+          [
+            'schedule_id' => $odooScheduleId,
+            'duplicates' => $duplicates->toArray(),
+          ]
+        );
+
         // NOTE: We continue processing instead of throwing an exception
         // This prevents job retries for duplicate errors
       }
@@ -186,54 +195,45 @@ class SyncOdooSchedules extends BaseSyncJob
         });
       }
     }
-
-    // Create alerts for duplicate errors found
-    if (!empty($duplicateErrors)) {
-      Log::info('Creating alerts for ' . count($duplicateErrors) . ' schedules with duplicates');
-      
-      foreach ($duplicateErrors as $errorData) {
-        // Alert::createScheduleDuplicateAlert now checks for existing alerts
-        // and only creates a new one if needed
-        Alert::createScheduleDuplicateAlert($errorData);
-      }
-    }
   }
 
   /**
    * Detects duplicate schedule details in Odoo data
    * A duplicate is defined as two or more entries with the same weekday and day_period
-   * 
+   *
    * @param Collection $odooDetails The Odoo schedule details
    * @param Schedule $schedule The schedule these details belong to
    * @return Collection Collection of duplicate details grouped by weekday and day_period
    */
-  protected function detectDuplicateDetails(Collection $odooDetails, Schedule $schedule): Collection 
-  {
+  protected function detectDuplicateDetails(
+    Collection $odooDetails,
+    Schedule $schedule
+  ): Collection {
     $duplicates = collect();
-    
+
     // Group details by weekday and day_period
     $groupedDetails = $odooDetails->groupBy(function ($detail) {
-      $dayPeriod = isset($detail['day_period']) 
-        ? strtolower($detail['day_period']) 
+      $dayPeriod = isset($detail['day_period'])
+        ? strtolower($detail['day_period'])
         : 'morning';
-      
+
       return $detail['dayofweek'] . '-' . $dayPeriod;
     });
-    
+
     // Find groups with more than one entry (duplicates)
     foreach ($groupedDetails as $key => $group) {
       if ($group->count() > 1) {
         list($weekday, $dayPeriod) = explode('-', $key);
-        
+
         $duplicates->push([
           'weekday' => $weekday,
           'day_period' => $dayPeriod,
           'count' => $group->count(),
-          'details' => $group->pluck('id')->toArray()
+          'details' => $group->pluck('id')->toArray(),
         ]);
       }
     }
-    
+
     return $duplicates;
   }
 
@@ -254,11 +254,13 @@ class SyncOdooSchedules extends BaseSyncJob
     $userAssignments = $odooEmployees->filter()->mapWithKeys(function ($emp) {
       return [$emp['id'] => $emp['resource_calendar_id'][0] ?? null];
     });
-    
+
     // Get start of the current day in UTC
     $startOfDay = Carbon::now()->startOfDay();
 
-    $userAssignments->each(function ($newOdooScheduleId, $odooUserId) use ($startOfDay) {
+    $userAssignments->each(function ($newOdooScheduleId, $odooUserId) use (
+      $startOfDay
+    ) {
       $user = User::where('odoo_id', $odooUserId)
         ->where('do_not_track', false)
         ->first();

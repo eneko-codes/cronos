@@ -17,11 +17,8 @@ use App\Jobs\SyncDesktimeAttendances;
 use App\Services\OdooApiCalls;
 use App\Services\DesktimeApiCalls;
 use App\Services\ProofhubApiCalls;
-use Illuminate\Bus\Batch;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\Log;
-use Throwable;
 
 class BatchController extends Controller
 {
@@ -43,32 +40,16 @@ class BatchController extends Controller
       new SyncOdooLeaveTypes(app(OdooApiCalls::class)),
       new SyncDesktimeUsers(app(DesktimeApiCalls::class)),
       new SyncProofhubUsers(app(ProofhubApiCalls::class)),
-      
+
       // Activity data
       new SyncOdooSchedules(app(OdooApiCalls::class)),
       new SyncOdooLeaves(app(OdooApiCalls::class), $today, $today),
       new SyncProofhubProjects(app(ProofhubApiCalls::class)),
       new SyncProofhubTasks(app(ProofhubApiCalls::class)),
       new SyncProofhubTimeEntries(app(ProofhubApiCalls::class), $today, $today),
-      new SyncDesktimeAttendances(app(DesktimeApiCalls::class))
+      new SyncDesktimeAttendances(app(DesktimeApiCalls::class)),
     ])
       ->name('full-sync')
-      ->then(function (Batch $batch) {
-        Log::info('Full synchronization batch completed successfully.', [
-          'batch_id' => $batch->id,
-        ]);
-      })
-      ->catch(function (Batch $batch, Throwable $e) {
-        Log::error('Full synchronization batch failed.', [
-          'batch_id' => $batch->id,
-          'error' => $e->getMessage(),
-        ]);
-      })
-      ->finally(function (Batch $batch) {
-        Log::info('Full synchronization batch has finished.', [
-          'batch_id' => $batch->id,
-        ]);
-      })
       ->dispatch();
 
     return response()->json([
@@ -96,22 +77,6 @@ class BatchController extends Controller
       new SyncOdooLeaves(app(OdooApiCalls::class), $today, $today),
     ])
       ->name('odoo-sync')
-      ->then(function (Batch $batch) {
-        Log::info('Odoo synchronization batch completed successfully.', [
-          'batch_id' => $batch->id,
-        ]);
-      })
-      ->catch(function (Batch $batch, Throwable $e) {
-        Log::error('Odoo synchronization batch failed.', [
-          'batch_id' => $batch->id,
-          'error' => $e->getMessage(),
-        ]);
-      })
-      ->finally(function (Batch $batch) {
-        Log::info('Odoo synchronization batch has finished.', [
-          'batch_id' => $batch->id,
-        ]);
-      })
       ->dispatch();
 
     return response()->json([
@@ -137,22 +102,6 @@ class BatchController extends Controller
       new SyncProofhubTimeEntries(app(ProofhubApiCalls::class), $today, $today),
     ])
       ->name('proofhub-sync')
-      ->then(function (Batch $batch) {
-        Log::info('ProofHub synchronization batch completed successfully.', [
-          'batch_id' => $batch->id,
-        ]);
-      })
-      ->catch(function (Batch $batch, Throwable $e) {
-        Log::error('ProofHub synchronization batch failed.', [
-          'batch_id' => $batch->id,
-          'error' => $e->getMessage(),
-        ]);
-      })
-      ->finally(function (Batch $batch) {
-        Log::info('ProofHub synchronization batch has finished.', [
-          'batch_id' => $batch->id,
-        ]);
-      })
       ->dispatch();
 
     return response()->json([
@@ -173,22 +122,6 @@ class BatchController extends Controller
       new SyncDesktimeAttendances(app(DesktimeApiCalls::class)),
     ])
       ->name('desktime-sync')
-      ->then(function (Batch $batch) {
-        Log::info('DeskTime synchronization batch completed successfully.', [
-          'batch_id' => $batch->id,
-        ]);
-      })
-      ->catch(function (Batch $batch, Throwable $e) {
-        Log::error('DeskTime synchronization batch failed.', [
-          'batch_id' => $batch->id,
-          'error' => $e->getMessage(),
-        ]);
-      })
-      ->finally(function (Batch $batch) {
-        Log::info('DeskTime synchronization batch has finished.', [
-          'batch_id' => $batch->id,
-        ]);
-      })
       ->dispatch();
 
     return response()->json([

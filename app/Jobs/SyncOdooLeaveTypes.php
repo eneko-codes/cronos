@@ -5,7 +5,6 @@ namespace App\Jobs;
 use App\Models\LeaveType;
 use App\Services\OdooApiCalls;
 use Exception;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -38,34 +37,18 @@ class SyncOdooLeaveTypes extends BaseSyncJob
   /**
    * Executes the synchronization process.
    *
-   * This method orchestrates the entire leave type synchronization workflow
-   * by calling more specific methods for each step in the process.
+   * This method performs the following operations:
+   * 1. Fetches leave types from Odoo API and maps them to local structure
+   * 2. Creates or updates local leave types based on Odoo data
+   * 3. Identifies leave types that exist locally but not in Odoo
+   * 4. Logs missing leave types for historical integrity
    *
    * @throws Exception If any part of the synchronization process fails
    */
   protected function execute(): void
   {
-    // Fetch and map leave types from Odoo
-    $mappedLeaveTypes = $this->fetchAndMapLeaveTypes();
-
-    // Synchronize local leave types with Odoo data
-    $this->syncLocalLeaveTypes($mappedLeaveTypes);
-
-    // Log leave types that exist locally but not in Odoo
-    $this->logMissingLeaveTypes($mappedLeaveTypes);
-  }
-
-  /**
-   * Fetches leave types from Odoo and maps them to our local structure.
-   *
-   * @return Collection Collection of mapped leave type data
-   * @throws Exception If API call fails
-   */
-  private function fetchAndMapLeaveTypes(): Collection
-  {
-    $odooLeaveTypes = $this->odoo->getLeaveTypes();
-
-    return $odooLeaveTypes->map(function ($lt) {
+    // Step 1: Fetch and map leave types from Odoo
+    $mappedLeaveTypes = $this->odoo->getLeaveTypes()->map(function ($lt) {
       return [
         'odoo_leave_type_id' => $lt['id'],
         'name' => $lt['name'],
@@ -74,15 +57,8 @@ class SyncOdooLeaveTypes extends BaseSyncJob
         'active' => $lt['active'] ?? true,
       ];
     });
-  }
 
-  /**
-   * Creates or updates local leave types based on Odoo data.
-   *
-   * @param Collection $mappedLeaveTypes Collection of mapped leave type data from Odoo
-   */
-  private function syncLocalLeaveTypes(Collection $mappedLeaveTypes): void
-  {
+    // Step 2: Create or update local leave types based on Odoo data individually to trigger model events
     $mappedLeaveTypes->each(function ($leaveType) {
       LeaveType::updateOrCreate(
         ['odoo_leave_type_id' => $leaveType['odoo_leave_type_id']],
@@ -94,21 +70,13 @@ class SyncOdooLeaveTypes extends BaseSyncJob
         ]
       );
     });
-  }
 
-  /**
-   * Identifies and logs leave types that exist locally but not in Odoo.
-   * Leave types are preserved for historical integrity rather than deleted.
-   *
-   * @param Collection $mappedLeaveTypes Collection of mapped leave type data from Odoo
-   */
-  private function logMissingLeaveTypes(Collection $mappedLeaveTypes): void
-  {
+    // Step 3: Identifies leave types that exist locally but not in Odoo
     $odooIds = $mappedLeaveTypes->pluck('odoo_leave_type_id');
     $localIds = LeaveType::pluck('odoo_leave_type_id');
-
     $leaveTypesToLog = $localIds->diff($odooIds);
 
+    // Step 4: Log leave types that exist locally but not in Odoo for historical integrity
     if ($leaveTypesToLog->isNotEmpty()) {
       LeaveType::whereIn('odoo_leave_type_id', $leaveTypesToLog)
         ->get()

@@ -114,7 +114,6 @@ class SyncProofhubTimeEntries extends BaseSyncJob
             [
               'time_entry_id' => data_get($entry, 'id'),
               'creator_id' => $creatorProofhubId,
-              'tags' => ['proofhub', 'sync', 'time-entries'],
             ]
           );
         }

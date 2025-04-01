@@ -3,13 +3,13 @@
 namespace App\Jobs;
 
 use App\Models\User;
-use App\Models\NotificationSetting;
 use App\Notifications\ApiDownWarning;
 use App\Contracts\Pingable;
 use App\Services\OdooApiCalls;
 use App\Services\DesktimeApiCalls;
 use App\Services\ProofhubApiCalls;
 use Exception;
+use Throwable;
 use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeEncrypted;
@@ -17,13 +17,23 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
 
 /**
  * Class BaseSyncJob
  *
  * - The base class for all sync jobs
  * - Provides standardized logging, caching, and error handling
+ *
+ * This class implements the Template Method pattern where:
+ * - The handle() method defines the skeleton of the algorithm (what Laravel calls)
+ * - The execute() method is the specific step that varies between job implementations
+ *
+ * This separation provides several benefits:
+ * 1. Framework Integration: handle() is what Laravel's queue system expects
+ * 2. Centralized Control: handle() can be extended to add functionality to all sync jobs at once
+ *    (like logging, transactions, timing, etc.) without modifying child classes
+ * 3. Separation of Concerns: Child classes only need to implement business logic without
+ *    worrying about queue integration details
  */
 abstract class BaseSyncJob implements ShouldQueue, ShouldBeEncrypted
 {
@@ -59,18 +69,29 @@ abstract class BaseSyncJob implements ShouldQueue, ShouldBeEncrypted
 
   /**
    * Handle the job.
+   *
+   * This is the "template method" that Laravel's queue system calls.
+   * By implementing this in the base class, we:
+   * 1. Ensure correct integration with Laravel's queue system for all child jobs
+   * 2. Provide a single point for adding common functionality to all sync jobs
+   * 3. Allow future extensions (like logging, metrics, transactions) without modifying child classes
+   *
+   * In a future implementation, this method could be enhanced to add functionality
+   * such as transaction support, logging, error handling, etc., providing these
+   * features to all child classes automatically.
    */
   public function handle(): void
   {
-    try {
-      $this->execute();
-    } catch (Exception $e) {
-      throw $e; // rethrow so Laravel's retry/fail logic triggers
-    }
+    $this->execute();
   }
 
   /**
    * The main sync logic, to be defined by child classes.
+   *
+   * This abstract method must be implemented by all child classes to provide
+   * their specific synchronization logic. By separating this from handle(),
+   * child classes can focus solely on business logic without needing to
+   * understand Laravel queue integration details.
    *
    * @throws Exception
    */
@@ -78,8 +99,10 @@ abstract class BaseSyncJob implements ShouldQueue, ShouldBeEncrypted
 
   /**
    * When all retries are exhausted.
+   *
+   * @param \Throwable $exception The exception that caused the job to fail
    */
-  public function failed(): void
+  public function failed(Throwable $exception): void
   {
     // Check API health once the job is truly marked as "failed"
     $this->checkApisHealth();
@@ -91,15 +114,6 @@ abstract class BaseSyncJob implements ShouldQueue, ShouldBeEncrypted
    */
   protected function checkApisHealth(): void
   {
-    Log::channel('sync')->debug('Starting API health check');
-
-    if (!NotificationSetting::isEnabled('api_down_warning_mail')) {
-      Log::channel('sync')->debug(
-        'API down warning notifications are disabled'
-      );
-      return;
-    }
-
     $apis = [
       'Odoo' => $this->odoo,
       'DeskTime' => $this->desktime,
@@ -107,62 +121,30 @@ abstract class BaseSyncJob implements ShouldQueue, ShouldBeEncrypted
     ];
 
     foreach ($apis as $serviceName => $service) {
-      Log::channel('sync')->debug("Checking {$serviceName} API health");
-
       if ($service instanceof Pingable) {
         try {
           $pingResult = $service->ping();
-          Log::channel('sync')->debug(
-            "{$serviceName} ping result",
-            $pingResult
-          );
-
           $isDown = !($pingResult['success'] ?? false);
 
           if ($isDown) {
             $errorMessage = $pingResult['message'] ?? 'API health check failed';
-            Log::channel('sync')->error("{$serviceName} API is down", [
-              'error' => $errorMessage,
-              'job' => static::class,
-            ]);
-
             $adminUsers = User::where('is_admin', true)
               ->where('muted_notifications', false)
               ->get();
-            Log::channel('sync')->debug(
-              "Found {$adminUsers->count()} admin users to notify"
-            );
 
             $adminUsers->each(function ($admin) use (
               $serviceName,
               $errorMessage
             ) {
-              Log::channel('sync')->debug(
-                "Sending notification to admin {$admin->email}"
-              );
               $admin->notify(new ApiDownWarning($serviceName, $errorMessage));
             });
           }
         } catch (Exception $e) {
-          Log::channel('sync')->error(
-            "{$serviceName} API health check failed",
-            [
-              'error' => $e->getMessage(),
-              'job' => static::class,
-            ]
-          );
-
           $adminUsers = User::where('is_admin', true)
             ->where('muted_notifications', false)
             ->get();
-          Log::channel('sync')->debug(
-            "Found {$adminUsers->count()} admin users to notify about exception"
-          );
 
           $adminUsers->each(function ($admin) use ($serviceName, $e) {
-            Log::channel('sync')->debug(
-              "Sending exception notification to admin {$admin->email}"
-            );
             $admin->notify(
               new ApiDownWarning(
                 $serviceName,
@@ -171,10 +153,6 @@ abstract class BaseSyncJob implements ShouldQueue, ShouldBeEncrypted
             );
           });
         }
-      } else {
-        Log::channel('sync')->debug(
-          "{$serviceName} service does not implement Pingable interface"
-        );
       }
     }
   }

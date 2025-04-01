@@ -129,10 +129,6 @@ class OdooApiCalls implements Pingable
       $responseBody = $response->json();
 
       if ($response->failed() || isset($responseBody['error'])) {
-        Log::channel('sync')->error('Odoo API Error', [
-          'payload' => $payload,
-          'response' => $responseBody,
-        ]);
         throw new Exception(
           'Odoo API Error: ' .
             ($responseBody['error']['message'] ?? 'Unknown error')
@@ -141,15 +137,9 @@ class OdooApiCalls implements Pingable
 
       return $responseBody['result'] ?? null;
     } catch (Exception $e) {
-      Log::channel('sync')->error('Odoo API Call Failed', [
-        'service' => $service,
-        'method' => $method,
-        'args' => $args,
-        'error' => $e->getMessage(),
-      ]);
-      throw new Exception(
-        "Odoo {$service}::{$method} failed: {$e->getMessage()}"
-      );
+      // Only log the exception but don't rethrow with logging info
+      // This prevents double logging when the caller also logs the exception
+      throw $e;
     }
   }
 

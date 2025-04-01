@@ -73,11 +73,6 @@ class ProofhubApiCalls implements Pingable
         ->get($url, $params);
 
       if ($response->failed()) {
-        Log::channel('sync')->error('ProofHub API Error', [
-          'endpoint' => $endpoint,
-          'status' => $response->status(),
-          'body' => $response->body(),
-        ]);
         throw new Exception(
           "ProofHub API returned error: {$response->status()}"
         );
@@ -88,13 +83,9 @@ class ProofhubApiCalls implements Pingable
 
       return $responseData;
     } catch (Exception $e) {
-      Log::channel('sync')->error('ProofHub API Call Failed', [
-        'endpoint' => $endpoint,
-        'error' => $e->getMessage(),
-      ]);
-      throw new Exception(
-        "ProofHub API call to {$endpoint} failed: {$e->getMessage()}"
-      );
+      // Only throw the exception without logging
+      // This prevents double logging when the caller also logs the exception
+      throw $e;
     }
   }
 

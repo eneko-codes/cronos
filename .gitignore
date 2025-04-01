@@ -62,3 +62,19 @@ Thumbs.db
 
 # Git Files
 .git/FETCH_HEAD
+
+# Livewire temp files
+/storage/framework/livewire-tmp
+
+# Laravel Horizon
+/public/vendor/horizon
+/storage/framework/horizon
+
+# Laravel Telescope (more comprehensive)
+/public/vendor/telescope
+
+# Laravel Pulse
+/public/vendor/pulse
+
+# Tests coverage
+/tests/coverage

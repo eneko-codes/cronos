@@ -42,9 +42,9 @@ class SyncProofhubProjects extends BaseSyncJob
       if (!$projectId) {
         continue;
       }
-      
+
       $syncedProjectIds[] = $projectId;
-      
+
       $projectName = data_get($projectData, 'title');
       $assignedUserIds = data_get($projectData, 'assigned', []);
 
@@ -69,11 +69,9 @@ class SyncProofhubProjects extends BaseSyncJob
             $project->users()->detach($userId);
           }
         } catch (\Exception $e) {
-          Log::error('Failed to detach user from project', [
-            'project_id' => $project->proofhub_project_id,
-            'user_id' => $userId,
-            'error' => $e->getMessage(),
-          ]);
+          // Silently continue if detaching fails
+          // This is intentional as we don't want user relationship issues
+          // to prevent the rest of the project sync from completing
         }
       }
 

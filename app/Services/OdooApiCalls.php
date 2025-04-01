@@ -3,11 +3,26 @@
 namespace App\Services;
 
 use App\Contracts\Pingable;
-use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
+
+/**
+ * Custom exception for Odoo API connection errors
+ */
+class OdooConnectionException extends Exception {}
+
+/**
+ * Custom exception for Odoo API request errors
+ */
+class OdooRequestException extends Exception {}
+
+/**
+ * Custom exception for Odoo API response errors
+ */
+class OdooResponseException extends Exception {}
 
 /**
  * Class OdooApiCalls
@@ -129,17 +144,21 @@ class OdooApiCalls implements Pingable
       $responseBody = $response->json();
 
       if ($response->failed() || isset($responseBody['error'])) {
-        throw new Exception(
+        throw new OdooResponseException(
           'Odoo API Error: ' .
             ($responseBody['error']['message'] ?? 'Unknown error')
         );
       }
 
       return $responseBody['result'] ?? null;
-    } catch (Exception $e) {
-      // Only log the exception but don't rethrow with logging info
-      // This prevents double logging when the caller also logs the exception
-      throw $e;
+    } catch (ConnectionException $e) {
+      throw new OdooConnectionException(
+        'Failed to connect to Odoo API: ' . $e->getMessage()
+      );
+    } catch (RequestException $e) {
+      throw new OdooRequestException(
+        'Odoo API request failed: ' . $e->getMessage()
+      );
     }
   }
 
@@ -343,10 +362,10 @@ class OdooApiCalls implements Pingable
         'message' => 'Odoo API is reachable.',
         'version' => $result['server_version'] ?? 'Unknown',
       ];
-    } catch (Exception $e) {
+    } catch (OdooConnectionException | OdooRequestException | OdooResponseException $e) {
       return [
         'success' => false,
-        'message' => 'Failed to connect to Odoo API: ' . $e->getMessage(),
+        'message' => $e->getMessage(),
       ];
     }
   }

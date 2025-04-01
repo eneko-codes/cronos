@@ -39,49 +39,26 @@ class SyncOdooCategories extends BaseSyncJob
   /**
    * Executes the synchronization process.
    *
-   * This method orchestrates the entire category synchronization workflow
-   * by calling more specific methods for each step in the process.
+   * This method performs the following operations:
+   * 1. Fetches categories from Odoo API and maps them to local structure
+   * 2. Creates or updates local categories based on Odoo data
+   * 3. Identifies categories that exist locally but not in Odoo
+   * 4. Logs missing categories for historical integrity
    *
    * @throws Exception If any part of the synchronization process fails
    */
   protected function execute(): void
   {
-    // Fetch and map categories from Odoo
-    $mappedCategories = $this->fetchAndMapCategories();
-
-    // Synchronize local categories with Odoo data
-    $this->syncLocalCategories($mappedCategories);
-
-    // Log categories that exist locally but not in Odoo
-    $this->logMissingCategories($mappedCategories);
-  }
-
-  /**
-   * Fetches categories from Odoo and maps them to our local structure.
-   *
-   * @return Collection Collection of mapped category data
-   * @throws Exception If API call fails
-   */
-  private function fetchAndMapCategories(): Collection
-  {
-    $odooCategories = $this->odoo->getCategories();
-
-    return $odooCategories->map(function ($cat) {
+    // Step 1: Fetch and map categories from Odoo
+    $mappedCategories = $this->odoo->getCategories()->map(function ($cat) {
       return [
-        'odoo_category_id' => $cat['id'],
-        'name' => $cat['name'],
-        'active' => $cat['active'] ?? true,
+        'odoo_category_id' => $cat->get('id'),
+        'name' => $cat->get('name'),
+        'active' => $cat->get('active', true),
       ];
     });
-  }
 
-  /**
-   * Creates or updates local categories based on Odoo data.
-   *
-   * @param Collection $mappedCategories Collection of mapped category data from Odoo
-   */
-  private function syncLocalCategories(Collection $mappedCategories): void
-  {
+    // Step 2: Create or update local categories based on Odoo data individually to trigger model events
     $mappedCategories->each(function ($cat) {
       Category::updateOrCreate(
         ['odoo_category_id' => $cat['odoo_category_id']],
@@ -91,21 +68,13 @@ class SyncOdooCategories extends BaseSyncJob
         ]
       );
     });
-  }
 
-  /**
-   * Identifies and logs categories that exist locally but not in Odoo.
-   * Categories are preserved for historical integrity rather than deleted.
-   *
-   * @param Collection $mappedCategories Collection of mapped category data from Odoo
-   */
-  private function logMissingCategories(Collection $mappedCategories): void
-  {
+    // Step 3: Identifies categories that exist locally but not in Odoo
     $odooCatIds = $mappedCategories->pluck('odoo_category_id');
     $localCatIds = Category::pluck('odoo_category_id');
+    $categoriesToLog = $localCatIds->diffKeys($odooCatIds);
 
-    $categoriesToLog = $localCatIds->diff($odooCatIds);
-
+    // Step 4: Log categories that exist locally but not in Odoo for historical integrity
     if ($categoriesToLog->isNotEmpty()) {
       Category::whereIn('odoo_category_id', $categoriesToLog)
         ->get()
@@ -115,6 +84,8 @@ class SyncOdooCategories extends BaseSyncJob
             [
               'odoo_category_id' => $category->odoo_category_id,
               'name' => $category->name,
+              'created_at' => $category->created_at->toDateTimeString(),
+              'updated_at' => $category->updated_at->toDateTimeString(),
               'detected_at' => now()->toDateTimeString(),
             ]
           );

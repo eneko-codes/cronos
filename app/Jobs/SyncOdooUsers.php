@@ -51,12 +51,12 @@ class SyncOdooUsers extends BaseSyncJob
    */
   protected function execute(): void
   {
-    // Retrieve Odoo users and filter out those without an email address
+    // Step 1: Fetch and filter users from Odoo
     $odooUsers = $this->odoo->getUsers()->filter(function ($odooUser) {
       return filled($odooUser['work_email']);
     });
 
-    // Create or update local users based on Odoo data
+    // Step 2: Create or update local users based on Odoo data
     $odooUsers->each(function ($odooUser) {
       User::updateOrCreate(
         ['odoo_id' => $odooUser['id']],
@@ -68,14 +68,12 @@ class SyncOdooUsers extends BaseSyncJob
       );
     });
 
-    // Find and remove users that exist locally but not in Odoo anymore
+    // Step 3: Identifies users that exist locally but not in Odoo
     $odooUserIds = $odooUsers->pluck('id');
     $localOdooIds = User::whereNotNull('odoo_id')->pluck('odoo_id');
-
-    // Find IDs that exist locally but not in Odoo
     $usersToDelete = $localOdooIds->diff($odooUserIds);
 
-    // Delete users individually to trigger model events
+    // Step 4: Deletes local users that no longer exist in Odoo individually to trigger model events
     User::whereIn('odoo_id', $usersToDelete)->get()->each->delete();
   }
 }

@@ -39,10 +39,11 @@ class SyncOdooUsers extends BaseSyncJob
   /**
    * Executes the synchronization process.
    *
-   * This method performs three main operations:
-   * 1. Fetches and filters users from Odoo API
+   * This method performs the following operations:
+   * 1. Fetches users from Odoo API and filters out those without email addresses
    * 2. Creates or updates local users based on Odoo data
-   * 3. Removes local users that no longer exist in Odoo
+   * 3. Identifies users that exist locally but not in Odoo
+   * 4. Deletes local users that no longer exist in Odoo
    *
    * @return void
    *

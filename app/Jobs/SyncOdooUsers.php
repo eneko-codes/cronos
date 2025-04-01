@@ -50,39 +50,31 @@ class SyncOdooUsers extends BaseSyncJob
    */
   protected function execute(): void
   {
-    // Retrieve Odoo users and filter out those without an email address (the email is required as primary key to sync users across all platforms)
+    // Retrieve Odoo users and filter out those without an email address
     $odooUsers = $this->odoo->getUsers()->filter(function ($odooUser) {
       return filled($odooUser['work_email']);
     });
 
     // Create or update local users based on Odoo data
-    foreach ($odooUsers as $odooUser) {
-      $userData = [
-        'name' => $odooUser['name'],
-        'email' => Str::lower($odooUser['work_email']),
-        'timezone' => $odooUser['tz'] ?? 'UTC',
-      ];
-
-      User::updateOrCreate(['odoo_id' => $odooUser['id']], $userData);
-    }
+    $odooUsers->each(function ($odooUser) {
+      User::updateOrCreate(
+        ['odoo_id' => $odooUser['id']],
+        [
+          'name' => $odooUser['name'],
+          'email' => Str::lower($odooUser['work_email']),
+          'timezone' => $odooUser['tz'] ?? 'UTC',
+        ]
+      );
+    });
 
     // Find and remove users that exist locally but not in Odoo anymore
-    // This ensures data consistency between systems
     $odooUserIds = $odooUsers->pluck('id');
     $localOdooIds = User::whereNotNull('odoo_id')->pluck('odoo_id');
 
     // Find IDs that exist locally but not in Odoo
     $usersToDelete = $localOdooIds->diff($odooUserIds);
 
-    if ($usersToDelete->isNotEmpty()) {
-      // Get the users we want to delete
-      $users = User::whereIn('odoo_id', $usersToDelete)->get();
-
-      // Delete each user individually to trigger model events
-      // This is preferred over bulk deletion which doesn't trigger events
-      foreach ($users as $user) {
-        $user->delete();
-      }
-    }
+    // Delete users individually to trigger model events
+    User::whereIn('odoo_id', $usersToDelete)->get()->each->delete();
   }
 }

@@ -6,7 +6,6 @@ use App\Models\Department;
 use App\Models\User;
 use App\Services\OdooApiCalls;
 use Exception;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 
@@ -40,52 +39,27 @@ class SyncOdooDepartments extends BaseSyncJob
   /**
    * Executes the synchronization process.
    *
-   * This method orchestrates the entire department synchronization workflow
-   * by calling more specific methods for each step in the process.
+   * This method performs the following operations:
+   * 1. Fetches departments from Odoo API and maps them to local structure
+   * 2. Creates or updates local departments based on Odoo data
+   * 3. Identifies departments that exist locally but not in Odoo
+   * 4. Logs missing departments for historical integrity
+   * 5. Updates user department assignments based on Odoo relations
    *
    * @throws Exception If any part of the synchronization process fails
    */
   protected function execute(): void
   {
-    // Fetch and map departments from Odoo
-    $mappedDepartments = $this->fetchAndMapDepartments();
-
-    // Synchronize local departments with Odoo data
-    $this->syncLocalDepartments($mappedDepartments);
-
-    // Log departments that exist locally but not in Odoo
-    $this->logMissingDepartments($mappedDepartments);
-
-    // Update user department assignments
-    $this->updateUserDepartments();
-  }
-
-  /**
-   * Fetches departments from Odoo and maps them to our local structure.
-   *
-   * @return Collection Collection of mapped department data
-   * @throws Exception If API call fails
-   */
-  private function fetchAndMapDepartments(): Collection
-  {
-    $odooDepartments = $this->odoo->getDepartments();
-
-    return $odooDepartments->map(function ($dept) {
+    // Step 1: Fetch and map departments from Odoo
+    $mappedDepartments = $this->odoo->getDepartments()->map(function ($dept) {
       return [
         'odoo_department_id' => $dept['id'],
         'name' => $dept['name'],
         'active' => $dept['active'] ?? true,
       ];
     });
-  }
 
-  /**
-   * Creates or updates local departments based on Odoo data.
-   *
-   * @param Collection $mappedDepartments Collection of mapped department data from Odoo
-   */
-  private function syncLocalDepartments(Collection $mappedDepartments): void
-  {
+    // Step 2: Create or update local departments based on Odoo data individually to trigger model events
     $mappedDepartments->each(function ($dept) {
       Department::updateOrCreate(
         ['odoo_department_id' => $dept['odoo_department_id']],
@@ -95,21 +69,13 @@ class SyncOdooDepartments extends BaseSyncJob
         ]
       );
     });
-  }
 
-  /**
-   * Identifies and logs departments that exist locally but not in Odoo.
-   * Departments are preserved for historical integrity rather than deleted.
-   *
-   * @param Collection $mappedDepartments Collection of mapped department data from Odoo
-   */
-  private function logMissingDepartments(Collection $mappedDepartments): void
-  {
+    // Step 3: Identifies departments that exist locally but not in Odoo
     $odooDeptIds = $mappedDepartments->pluck('odoo_department_id');
     $localDeptIds = Department::pluck('odoo_department_id');
-
     $departmentsToLog = $localDeptIds->diff($odooDeptIds);
 
+    // Step 4: Log departments that exist locally but not in Odoo for historical integrity
     if ($departmentsToLog->isNotEmpty()) {
       Department::whereIn('odoo_department_id', $departmentsToLog)
         ->get()
@@ -124,25 +90,16 @@ class SyncOdooDepartments extends BaseSyncJob
           );
         });
     }
-  }
 
-  /**
-   * Updates users' department assignments based on Odoo relations.
-   * Only updates users who are not marked as do_not_track.
-   *
-   * @throws Exception If API call fails
-   */
-  private function updateUserDepartments(): void
-  {
+    // Step 5: Update user department assignments
     $userRelations = $this->odoo->getUserRelations();
-
     collect($userRelations)->each(function ($relation) {
-      // Only update if department_id exists in the relation
+      // If the user has no department, skip
       if (!Arr::has($relation, 'department_id.0')) {
         return;
       }
 
-      // Find and update user if they're not marked as do_not_track
+      // Update the user's department if they're not marked as do_not_track
       User::where('odoo_id', $relation['id'])
         ->where('do_not_track', false)
         ->get()

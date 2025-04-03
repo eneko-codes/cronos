@@ -59,10 +59,14 @@ class SyncOdooUsers extends BaseSyncJob
     // Step 2: Log users without work email
     $allOdooUsers->each(function ($odooUser) {
       if (empty($odooUser['work_email'])) {
-        Log::channel('sync')->warning('Odoo user missing work email', [
-          'odoo_id' => $odooUser['id'],
-          'name' => $odooUser['name'],
-        ]);
+        Log::channel('sync')->warning(
+          class_basename($this) .
+            ": Odoo user '{$odooUser['name']}' missing work email",
+          [
+            'odoo_id' => $odooUser['id'],
+            'name' => $odooUser['name'],
+          ]
+        );
       }
     });
 

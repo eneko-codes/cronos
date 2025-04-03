@@ -126,7 +126,8 @@ class SyncOdooSchedules extends BaseSyncJob
 
         if ($duplicates->isNotEmpty()) {
           Log::channel('sync')->warning(
-            "SyncOdooSchedules: Schedule #{$odooScheduleId} ({$scheduleData['name']}) has duplicate details",
+            class_basename($this) .
+              ": Schedule #{$odooScheduleId} ({$scheduleData['name']}) has duplicate details",
             [
               'schedule_id' => $odooScheduleId,
               'duplicates' => $duplicates

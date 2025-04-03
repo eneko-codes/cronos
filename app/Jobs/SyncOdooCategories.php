@@ -79,7 +79,8 @@ class SyncOdooCategories extends BaseSyncJob
         ->get()
         ->each(function ($category) {
           Log::channel('sync')->info(
-            'Category no longer exists in Odoo but preserved for historical integrity',
+            class_basename($this) .
+              ": Category '{$category->name}' no longer exists in Odoo but preserved for historical integrity",
             [
               'odoo_category_id' => $category->odoo_category_id,
               'name' => $category->name,

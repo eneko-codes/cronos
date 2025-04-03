@@ -97,7 +97,8 @@ class SyncOdooLeaves extends BaseSyncJob
         ])
       ) {
         Log::channel('sync')->warning(
-          'Skipped Odoo leave due to missing required fields',
+          class_basename($this) .
+            ': Skipped Odoo leave due to missing required fields',
           ['leave_id' => $leave['id'] ?? 'unknown']
         );
         return;

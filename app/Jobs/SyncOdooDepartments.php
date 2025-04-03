@@ -81,7 +81,8 @@ class SyncOdooDepartments extends BaseSyncJob
         ->get()
         ->each(function ($department) {
           Log::channel('sync')->info(
-            'Department no longer exists in Odoo but preserved for historical integrity',
+            class_basename($this) .
+              ': Department no longer exists in Odoo but preserved for historical integrity',
             [
               'odoo_department_id' => $department->odoo_department_id,
               'name' => $department->name,
@@ -106,7 +107,11 @@ class SyncOdooDepartments extends BaseSyncJob
         ->each(function ($user) use ($relation) {
           $deptId = $relation['department_id'][0];
           $user->department_id = $deptId;
-          $user->save();
+
+          // Only save if the department_id actually changed
+          if ($user->isDirty('department_id')) {
+            $user->save();
+          }
         });
     });
   }

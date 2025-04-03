@@ -5,7 +5,6 @@ namespace App\Jobs;
 use App\Models\Category;
 use App\Services\OdooApiCalls;
 use Exception;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 /**

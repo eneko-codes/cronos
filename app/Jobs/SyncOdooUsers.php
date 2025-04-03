@@ -4,7 +4,6 @@ namespace App\Jobs;
 
 use App\Models\User;
 use App\Services\OdooApiCalls;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Exception;
 

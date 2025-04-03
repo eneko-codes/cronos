@@ -46,7 +46,6 @@ class WelcomeEmail extends Notification implements ShouldQueue
       ->line(
         "You can log in using your work email: {$this->user->email}. You'll receive a magic login link."
       )
-      ->action('Go to Login Page', $this->url)
-      ->line('Thanks for joining us!');
+      ->action('Go to Login Page', $this->url);
   }
 }

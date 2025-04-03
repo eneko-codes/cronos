@@ -52,9 +52,9 @@ class SyncOdooCategories extends BaseSyncJob
     // Step 1: Fetch and map categories from Odoo
     $mappedCategories = $this->odoo->getCategories()->map(function ($cat) {
       return [
-        'odoo_category_id' => $cat->get('id'),
-        'name' => $cat->get('name'),
-        'active' => $cat->get('active', true),
+        'odoo_category_id' => $cat['id'],
+        'name' => $cat['name'],
+        'active' => $cat['active'] ?? true,
       ];
     });
 
@@ -72,7 +72,7 @@ class SyncOdooCategories extends BaseSyncJob
     // Step 3: Identifies categories that exist locally but not in Odoo
     $odooCatIds = $mappedCategories->pluck('odoo_category_id');
     $localCatIds = Category::pluck('odoo_category_id');
-    $categoriesToLog = $localCatIds->diffKeys($odooCatIds);
+    $categoriesToLog = $localCatIds->diff($odooCatIds);
 
     // Step 4: Log categories that exist locally but not in Odoo for historical integrity
     if ($categoriesToLog->isNotEmpty()) {

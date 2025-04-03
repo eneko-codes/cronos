@@ -131,23 +131,18 @@ class SyncCommand extends Command
 
     try {
       $controller = new BatchController();
-      $this->output->progressStart(3);
-      $this->output->progressAdvance();
 
       $result = $controller->dispatchFullSyncBatch();
       $batchId = $result->getData()->batch_id;
 
-      $this->output->progressAdvance();
       $this->info('✓ Full sync batch dispatched successfully');
       $this->line("  <comment>Batch ID:</comment> {$batchId}");
-      $this->output->progressFinish();
       $this->line(
-        "\n<info>Batch jobs were dispatched to the queue and will run in the background.</info>"
+        '<info>Batch jobs were dispatched to the queue and will run in the background.</info>'
       );
 
       return 0;
     } catch (\Exception $e) {
-      $this->output->progressFinish();
       $this->error('Failed to dispatch batch: ' . $e->getMessage());
       return 1;
     }

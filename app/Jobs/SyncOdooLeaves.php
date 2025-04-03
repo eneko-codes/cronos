@@ -155,7 +155,7 @@ class SyncOdooLeaves extends BaseSyncJob
         case 'employee':
           if (Arr::has($leave, 'employee_id.0')) {
             $user = User::where('odoo_id', $leave['employee_id'][0])
-              ->where('do_not_track', false)
+              ->trackable()
               ->first();
             $data['user_id'] = $user?->id;
 

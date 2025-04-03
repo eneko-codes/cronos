@@ -228,6 +228,28 @@ class User extends Authenticatable
   }
 
   /**
+   * Scope a query to only include users who are trackable (do_not_track is false).
+   *
+   * @param  \Illuminate\Database\Eloquent\Builder  $query
+   * @return \Illuminate\Database\Eloquent\Builder
+   */
+  public function scopeTrackable($query)
+  {
+    return $query->where('do_not_track', false);
+  }
+
+  /**
+   * Scope a query to only include users who are not trackable (do_not_track is true).
+   *
+   * @param  \Illuminate\Database\Eloquent\Builder  $query
+   * @return \Illuminate\Database\Eloquent\Builder
+   */
+  public function scopeNotTrackable($query)
+  {
+    return $query->where('do_not_track', true);
+  }
+
+  /**
    * Get the sessions associated with the user.
    *
    * @return \Illuminate\Database\Eloquent\Relations\HasMany
@@ -365,53 +387,58 @@ class User extends Authenticatable
     // Ensure we're working with dates at day precision
     $startDateObject = $startDate->copy()->startOfDay();
     $endDateObject = $endDate->copy()->endOfDay();
-    
+
     // Get schedules with eager loading to avoid N+1 queries
     $schedules = $this->userSchedules()
-        ->with(['schedule.scheduleDetails'])
-        ->where('effective_from', '<=', $endDateObject)
-        ->where(function ($query) use ($startDateObject) {
-            $query
-                ->where('effective_until', '>=', $startDateObject)
-                ->orWhereNull('effective_until');
-        })
-        ->get();
+      ->with(['schedule.scheduleDetails'])
+      ->where('effective_from', '<=', $endDateObject)
+      ->where(function ($query) use ($startDateObject) {
+        $query
+          ->where('effective_until', '>=', $startDateObject)
+          ->orWhereNull('effective_until');
+      })
+      ->get();
 
     // Get leaves with eager loading
     $leaves = $this->userLeaves()
-        ->with(['leaveType', 'department', 'category'])
-        ->where(function ($query) use ($startDateObject, $endDateObject) {
-            $query->whereBetween('start_date', [$startDateObject, $endDateObject])
-                ->orWhereBetween('end_date', [$startDateObject, $endDateObject])
-                ->orWhere(function ($innerQuery) use ($startDateObject, $endDateObject) {
-                    $innerQuery->where('start_date', '<=', $startDateObject)
-                        ->where('end_date', '>=', $endDateObject);
-                });
-        })
-        ->get();
+      ->with(['leaveType', 'department', 'category'])
+      ->where(function ($query) use ($startDateObject, $endDateObject) {
+        $query
+          ->whereBetween('start_date', [$startDateObject, $endDateObject])
+          ->orWhereBetween('end_date', [$startDateObject, $endDateObject])
+          ->orWhere(function ($innerQuery) use (
+            $startDateObject,
+            $endDateObject
+          ) {
+            $innerQuery
+              ->where('start_date', '<=', $startDateObject)
+              ->where('end_date', '>=', $endDateObject);
+          });
+      })
+      ->get();
 
     // Get attendances with eager loading
     $attendances = $this->userAttendances()
-        ->whereBetween('date', [
-            $startDateObject->toDateString(), 
-            $endDateObject->toDateString()
-        ])
-        ->get();
+      ->whereBetween('date', [
+        $startDateObject->toDateString(),
+        $endDateObject->toDateString(),
+      ])
+      ->get();
 
     // Get time entries with eager loading
     $timeEntries = $this->timeEntries()
-        ->with(['project', 'task'])
-        ->whereBetween('date', [
-            $startDateObject->toDateString(), 
-            $endDateObject->toDateString()
-        ])
-        ->get();
-    
+      ->with(['project', 'task'])
+      ->whereBetween('date', [
+        $startDateObject->toDateString(),
+        $endDateObject->toDateString(),
+      ])
+      ->get();
+
     return [
-        'schedules' => $schedules,
-        'leaves' => $leaves,
-        'attendances' => $attendances,
-        'time_entries' => $timeEntries,
+      'schedules' => $schedules,
+      'leaves' => $leaves,
+      'attendances' => $attendances,
+      'time_entries' => $timeEntries,
     ];
   }
 

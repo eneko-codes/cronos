@@ -94,7 +94,7 @@ class SyncProofhubTimeEntries extends BaseSyncJob
       }
 
       $user = User::where('proofhub_id', $creatorProofhubId)
-        ->where('do_not_track', false)
+        ->trackable()
         ->first();
 
       if (!$user) {

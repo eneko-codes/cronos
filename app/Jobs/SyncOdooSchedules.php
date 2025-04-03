@@ -219,9 +219,7 @@ class SyncOdooSchedules extends BaseSyncJob
         $newOdooScheduleId = $emp['resource_calendar_id'][0] ?? null;
 
         // Skip users marked do_not_track
-        $user = User::where('odoo_id', $odooUserId)
-          ->where('do_not_track', false)
-          ->first();
+        $user = User::where('odoo_id', $odooUserId)->trackable()->first();
 
         if (!$user) {
           return;

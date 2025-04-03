@@ -82,12 +82,13 @@ class SyncDesktimeAttendances extends BaseSyncJob
    */
   private function processAttendanceForDate(string $date): void
   {
+    // Get users to sync
     $users = $this->userId
       ? User::where('id', $this->userId)
-        ->whereNotNull('desktime_id')
-        ->where('do_not_track', false)
+        ->where('desktime_id', '!=', null)
+        ->trackable()
         ->get()
-      : User::whereNotNull('desktime_id')->where('do_not_track', false)->get();
+      : User::whereNotNull('desktime_id')->trackable()->get();
 
     if ($this->userId) {
       // Single user mode
@@ -129,7 +130,7 @@ class SyncDesktimeAttendances extends BaseSyncJob
         ->whereDate('date', $date)
         ->where('is_remote', true)
         ->delete();
-      
+
       return;
     }
 
@@ -140,7 +141,7 @@ class SyncDesktimeAttendances extends BaseSyncJob
       [
         'user_id' => $user->id,
         'date' => $date,
-        'is_remote' => true
+        'is_remote' => true,
       ],
       [
         'presence_seconds' => $newPresenceSeconds,

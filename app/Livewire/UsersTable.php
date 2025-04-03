@@ -60,7 +60,7 @@ class UsersTable extends Component
       )
       ->when(
         $this->filter === 'not_tracked',
-        fn($query) => $query->where('do_not_track', true)
+        fn($query) => $query->notTrackable()
       )
       ->when(
         $this->filter === 'muted',
@@ -73,7 +73,7 @@ class UsersTable extends Component
       'all' => User::count(),
       'admins' => User::where('is_admin', true)->count(),
       'employees' => User::where('is_admin', false)->count(),
-      'not_tracked' => User::where('do_not_track', true)->count(),
+      'not_tracked' => User::notTrackable()->count(),
       'muted' => User::where('muted_notifications', true)->count(),
     ];
 

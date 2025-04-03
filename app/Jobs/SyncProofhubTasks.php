@@ -72,7 +72,7 @@ class SyncProofhubTasks extends BaseSyncJob
 
       // Find local users who match the assigned IDs
       $localUserIds = User::whereIn('proofhub_id', $assignedUserIds)
-        ->where('do_not_track', false)
+        ->trackable()
         ->pluck('id');
 
       // Manually detach any users not in $localUserIds
@@ -116,7 +116,7 @@ class SyncProofhubTasks extends BaseSyncJob
             'proofhub_id',
             $subtaskAssignedUserIds
           )
-            ->where('do_not_track', false)
+            ->trackable()
             ->pluck('id');
 
           // Detach users not in assigned list

@@ -56,7 +56,7 @@ class SyncProofhubProjects extends BaseSyncJob
 
       // Find local users for assigned ProofHub IDs
       $localUserIds = User::whereIn('proofhub_id', $assignedUserIds)
-        ->where('do_not_track', false)
+        ->trackable()
         ->pluck('id');
 
       // Manually detach any users not in $localUserIds

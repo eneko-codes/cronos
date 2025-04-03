@@ -101,7 +101,7 @@ class SyncOdooDepartments extends BaseSyncJob
 
       // Update the user's department if they're not marked as do_not_track
       User::where('odoo_id', $relation['id'])
-        ->where('do_not_track', false)
+        ->trackable()
         ->get()
         ->each(function ($user) use ($relation) {
           $deptId = $relation['department_id'][0];

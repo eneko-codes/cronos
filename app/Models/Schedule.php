@@ -7,13 +7,20 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 /**
- * Class Schedule
+ * Schedule Model
  *
- * Represents a work schedule synchronized from Odoo.
+ * Represents a work schedule synchronized from Odoo's resource.calendar model.
+ * A schedule defines when employees are expected to work (e.g., 9-5 weekdays).
+ * It consists of multiple schedule details (time slots) specifying working hours
+ * for each day of the week.
  *
- * @property int $odoo_schedule_id
- * @property string $description
- * @property float $average_hours_day
+ * @property int $odoo_schedule_id Primary key (from Odoo, not auto-incremented)
+ * @property string $description Human-readable name of the schedule (e.g., "Standard 40 hours/week")
+ * @property float $average_hours_day Average working hours per day
+ * @property \Carbon\Carbon|null $created_at When record was created
+ * @property \Carbon\Carbon|null $updated_at When record was last updated
+ * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\ScheduleDetail[] $scheduleDetails Daily time slots in this schedule
+ * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\UserSchedule[] $userSchedules User assignments to this schedule
  */
 class Schedule extends Model
 {
@@ -28,6 +35,9 @@ class Schedule extends Model
 
   /**
    * The primary key for the model.
+   *
+   * Using odoo_schedule_id as the primary key to maintain direct mapping with Odoo.
+   * This is not an auto-incrementing field, but defined by the external system.
    *
    * @var string
    */
@@ -77,7 +87,9 @@ class Schedule extends Model
   /**
    * The "booted" method of the model.
    *
-   * Defines model event listeners.
+   * Sets up cascading deletion of related records when a schedule is deleted.
+   * This ensures all schedule details and user assignments are properly removed,
+   * and their model events are emitted for proper tracking/auditing.
    *
    * @return void
    */
@@ -99,6 +111,10 @@ class Schedule extends Model
   /**
    * Get the schedule details (time slots) associated with this schedule.
    *
+   * Schedule details define the specific working hours for each day of the week.
+   * For example, Monday 9:00-12:00 and 13:00-17:00, Tuesday 9:00-12:00, etc.
+   * This relationship is the core of what defines a working schedule pattern.
+   *
    * @return HasMany
    */
   public function scheduleDetails(): HasMany
@@ -112,6 +128,10 @@ class Schedule extends Model
 
   /**
    * Get the user schedule assignments associated with this schedule.
+   *
+   * UserSchedule records track which employees are assigned to this schedule
+   * and during which time periods. This enables tracking changes in employee
+   * work schedules over time with effective dates.
    *
    * @return HasMany
    */

@@ -7,13 +7,18 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 /**
- * Class Department
+ * Department Model
  *
- * Represents departments synchronized from Odoo.
+ * Represents organizational departments synchronized from Odoo's hr.department records.
+ * Departments are used for grouping employees and can be targets for department-wide
+ * leaves and scheduling. They are a fundamental organizational unit for employee management.
  *
- * @property int $odoo_department_id
- * @property string $name
- * @property bool $active
+ * @property int $odoo_department_id Primary key (from Odoo, not auto-incremented)
+ * @property string $name Human-readable department name (e.g., "Engineering", "Marketing")
+ * @property bool $active Whether the department is currently active
+ * @property \Carbon\Carbon|null $created_at When record was created locally
+ * @property \Carbon\Carbon|null $updated_at When record was last updated locally
+ * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\User[] $users Employees in this department
  */
 class Department extends Model
 {
@@ -29,6 +34,9 @@ class Department extends Model
   /**
    * The primary key for the model.
    *
+   * Using odoo_department_id as the primary key to maintain direct mapping with Odoo.
+   * This ensures consistency between the local database and the external system.
+   *
    * @var string
    */
   protected $primaryKey = 'odoo_department_id';
@@ -36,12 +44,18 @@ class Department extends Model
   /**
    * Indicates if the IDs are auto-incrementing.
    *
+   * Set to false because department IDs come from Odoo and are not generated locally.
+   * This prevents Laravel from trying to auto-increment the IDs during creation.
+   *
    * @var bool
    */
   public $incrementing = false;
 
   /**
    * The data type of the primary key.
+   *
+   * Defined explicitly as integer to match Odoo's ID type for departments.
+   * This ensures proper type handling in database operations.
    *
    * @var string
    */
@@ -64,7 +78,11 @@ class Department extends Model
   /**
    * The "booted" method of the model.
    *
-   * Defines model event listeners.
+   * Sets up event listeners for model lifecycle events:
+   * - When a department is deleted, all associated users have their department_id
+   *   set to null, ensuring proper data integrity and audit trail.
+   * - This approach emits individual model events for each user update rather than
+   *   using a bulk update that would skip events.
    *
    * @return void
    */
@@ -81,6 +99,10 @@ class Department extends Model
 
   /**
    * Get the users associated with the department.
+   *
+   * Retrieves all employees that belong to this department.
+   * Note: Uses odoo_department_id as the foreign key to maintain
+   * direct mapping with Odoo identifiers.
    *
    * @return HasMany
    */

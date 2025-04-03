@@ -13,25 +13,31 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
- * Class User
+ * User Model
  *
- * Represents an employee in the system synchronized from Odoo.
+ * Represents an application user (employee) that can be tracked across multiple systems.
+ * Each user can have identifiers for various platforms (Odoo, Desktime, Proofhub, Systempin)
+ * which are used for data synchronization with external services.
  *
- * @property int $id
- * @property string $name
- * @property string $email
- * @property string $timezone
- * @property int $odoo_id
- * @property string|null $desktime_id
- * @property string|null $proofhub_id
- * @property string|null $systempin_id
- * @property int|null $department_id
- * @property bool $is_admin
- * @property bool $do_not_track
- * @property \Carbon\Carbon|null $email_verified_at
- * @property \Carbon\Carbon|null $created_at
- * @property \Carbon\Carbon|null $updated_at
- * @property bool $is_online
+ * Users with do_not_track=true will have their data automatically purged and will be
+ * excluded from synchronization operations to maintain privacy.
+ *
+ * @property int $id Primary key
+ * @property string $name Full name of the user
+ * @property string $email Email address
+ * @property string $timezone User's preferred timezone
+ * @property int|null $odoo_id ID of the user in Odoo
+ * @property int|null $desktime_id ID of the user in Desktime
+ * @property int|null $proofhub_id ID of the user in Proofhub
+ * @property int|null $systempin_id ID of the user in Systempin
+ * @property int|null $department_id Foreign key to departments table
+ * @property bool $is_admin Whether the user has admin privileges
+ * @property bool $muted_notifications Whether notifications are muted for this user
+ * @property bool $do_not_track Whether the user's data should be excluded from tracking operations
+ * @property \Carbon\Carbon|null $email_verified_at When email was verified
+ * @property \Carbon\Carbon|null $created_at When record was created
+ * @property \Carbon\Carbon|null $updated_at When record was last updated
+ * @property bool $is_online Virtual attribute that determines if the user is currently online
  */
 class User extends Authenticatable
 {
@@ -127,7 +133,10 @@ class User extends Authenticatable
   /**
    * The "booted" method of the model.
    *
-   * Defines model event listeners.
+   * Defines model event listeners for:
+   * - created: Sends welcome email when a new user is created (if conditions met)
+   * - deleting: Cascades deletion to all related records
+   * - updating: Purges tracking data when user is marked as do_not_track
    *
    * @return void
    */
@@ -221,6 +230,8 @@ class User extends Authenticatable
 
   /**
    * Check if notifications should be sent to this user.
+   *
+   * @return bool Returns false if notifications are muted, true otherwise
    */
   public function shouldReceiveNotifications(): bool
   {
@@ -229,6 +240,9 @@ class User extends Authenticatable
 
   /**
    * Scope a query to only include users who are trackable (do_not_track is false).
+   *
+   * Use this scope in sync operations to exclude users who have opted out of tracking.
+   * Example: User::trackable()->where(...)->get();
    *
    * @param  \Illuminate\Database\Eloquent\Builder  $query
    * @return \Illuminate\Database\Eloquent\Builder
@@ -241,6 +255,9 @@ class User extends Authenticatable
   /**
    * Scope a query to only include users who are not trackable (do_not_track is true).
    *
+   * Use this scope when you specifically need to find users who have opted out of tracking.
+   * Example: User::notTrackable()->get();
+   *
    * @param  \Illuminate\Database\Eloquent\Builder  $query
    * @return \Illuminate\Database\Eloquent\Builder
    */
@@ -252,6 +269,8 @@ class User extends Authenticatable
   /**
    * Get the sessions associated with the user.
    *
+   * Used to determine if a user is currently online through the is_online attribute.
+   *
    * @return \Illuminate\Database\Eloquent\Relations\HasMany
    */
   public function sessions()
@@ -261,6 +280,8 @@ class User extends Authenticatable
 
   /**
    * Get the login tokens associated with the user.
+   *
+   * These are used for authentication purposes.
    *
    * @return \Illuminate\Database\Eloquent\Relations\HasMany
    */
@@ -272,6 +293,8 @@ class User extends Authenticatable
   /**
    * Get the schedule assignments associated with the user.
    *
+   * Schedule assignments connect users to their work schedules imported from Odoo.
+   *
    * @return \Illuminate\Database\Eloquent\Relations\HasMany
    */
   public function userSchedules()
@@ -281,6 +304,8 @@ class User extends Authenticatable
 
   /**
    * Get the leave records associated with the user.
+   *
+   * Leave records represent time off (vacation, sick leave, etc.) imported from Odoo.
    *
    * @return \Illuminate\Database\Eloquent\Relations\HasMany
    */
@@ -292,6 +317,8 @@ class User extends Authenticatable
   /**
    * Get the attendance records associated with the user.
    *
+   * Attendance records track when a user is present at work, imported from multiple sources.
+   *
    * @return \Illuminate\Database\Eloquent\Relations\HasMany
    */
   public function userAttendances()
@@ -302,6 +329,8 @@ class User extends Authenticatable
   /**
    * Get all time entries associated with the user.
    *
+   * Time entries track work time spent on specific tasks/projects, imported from Proofhub.
+   *
    * @return \Illuminate\Database\Eloquent\Relations\HasMany
    */
   public function timeEntries()
@@ -311,6 +340,8 @@ class User extends Authenticatable
 
   /**
    * The projects that the user belongs to.
+   *
+   * Projects are imported from Proofhub and represent work assignments.
    *
    * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
    */
@@ -329,6 +360,8 @@ class User extends Authenticatable
   /**
    * Get the department that the user belongs to.
    *
+   * Departments are organizational units imported from Odoo.
+   *
    * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
    */
   public function department(): BelongsTo
@@ -338,6 +371,8 @@ class User extends Authenticatable
 
   /**
    * The categories that the user belongs to.
+   *
+   * Categories are groupings of employees imported from Odoo.
    *
    * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
    */
@@ -356,6 +391,8 @@ class User extends Authenticatable
   /**
    * The tasks that the user is assigned to.
    *
+   * Tasks represent work items imported from Proofhub.
+   *
    * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
    */
   public function tasks(): BelongsToMany
@@ -369,8 +406,11 @@ class User extends Authenticatable
       ->using(TaskUser::class)
       ->withTimestamps();
   }
+
   /**
    * Get the online status of the user.
+   *
+   * A user is considered online if they have any active sessions.
    *
    * @return bool
    */
@@ -381,6 +421,13 @@ class User extends Authenticatable
 
   /**
    * Returns data for the user within a specified date range.
+   *
+   * Collects and organizes all user data (schedules, leaves, attendances, time entries)
+   * within the provided date range for comprehensive reporting.
+   *
+   * @param Carbon $startDate Beginning of the date range
+   * @param Carbon $endDate End of the date range
+   * @return array Associative array of user data organized by date
    */
   public function getDataForDateRange(Carbon $startDate, Carbon $endDate): array
   {

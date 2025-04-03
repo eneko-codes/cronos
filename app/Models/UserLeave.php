@@ -8,21 +8,28 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 /**
- * Class UserLeave
+ * UserLeave Model
  *
- * Represents a leave record synchronized from Odoo.
+ * Represents an employee's time off/leave record synchronized from Odoo.
+ * Leave records can be associated with individual users, departments, or categories,
+ * and have specific types (vacation, sick leave, etc.). They can also be full-day
+ * or half-day (morning or afternoon).
  *
- * @property int $id
- * @property string $odoo_leave_id
- * @property string $type
- * @property \Carbon\Carbon $start_date
- * @property \Carbon\Carbon $end_date
- * @property string $status
- * @property float $duration_days
- * @property int|null $user_id
- * @property int|null $department_id
- * @property int|null $category_id
- * @property int|null $leave_type_id
+ * @property int $id Primary key
+ * @property string $odoo_leave_id Unique identifier from Odoo
+ * @property string $type Type of leave (employee, department, category)
+ * @property \Carbon\Carbon $start_date Beginning of leave period
+ * @property \Carbon\Carbon $end_date End of leave period
+ * @property string $status Status of the leave (validate, refuse, etc.)
+ * @property float $duration_days Length of leave in days (0.5 for half-day)
+ * @property int|null $user_id Foreign key to users table (if type=employee)
+ * @property int|null $department_id Foreign key to departments (if type=department)
+ * @property int|null $category_id Foreign key to categories (if type=category)
+ * @property int|null $leave_type_id Foreign key to leave_types table
+ * @property float|null $request_hour_from Starting hour for partial day leaves
+ * @property float|null $request_hour_to Ending hour for partial day leaves
+ * @property \Carbon\Carbon|null $created_at When record was created
+ * @property \Carbon\Carbon|null $updated_at When record was last updated
  */
 class UserLeave extends Model
 {
@@ -71,6 +78,9 @@ class UserLeave extends Model
   /**
    * Get the user that owns the leave.
    *
+   * Only applicable when this is an employee-specific leave (type=employee).
+   * Will be null for department or category leaves.
+   *
    * @return BelongsTo
    */
   public function user(): BelongsTo
@@ -80,6 +90,9 @@ class UserLeave extends Model
 
   /**
    * Get the department associated with the leave.
+   *
+   * Only applicable when this is a department-wide leave (type=department).
+   * Note: Uses odoo_department_id as the foreign key to match Odoo's identifiers.
    *
    * @return BelongsTo
    */
@@ -95,6 +108,9 @@ class UserLeave extends Model
   /**
    * Get the category associated with the leave.
    *
+   * Only applicable when this is a category-wide leave (type=category).
+   * Note: Uses odoo_category_id as the foreign key to match Odoo's identifiers.
+   *
    * @return BelongsTo
    */
   public function category(): BelongsTo
@@ -104,6 +120,9 @@ class UserLeave extends Model
 
   /**
    * Get the leave type associated with the leave.
+   *
+   * This defines the nature of the leave (vacation, sick leave, unpaid leave, etc.)
+   * Note: Uses odoo_leave_type_id as the foreign key to match Odoo's identifiers.
    *
    * @return BelongsTo
    */
@@ -119,9 +138,13 @@ class UserLeave extends Model
   /**
    * Scope a query to only include active leaves within a date range.
    *
+   * Active leaves are those with 'validate' status and overlapping with
+   * the specified date range. This is useful for checking availability
+   * or generating reports for a specific period.
+   *
    * @param \Illuminate\Database\Eloquent\Builder $query
-   * @param CarbonInterface $start
-   * @param CarbonInterface $end
+   * @param CarbonInterface $start Beginning of the date range to check
+   * @param CarbonInterface $end End of the date range to check
    * @return \Illuminate\Database\Eloquent\Builder
    */
   public function scopeActiveBetween(
@@ -137,8 +160,11 @@ class UserLeave extends Model
 
   /**
    * Determine if this is a half-day leave
-   * 
-   * @return bool
+   *
+   * Half-day leaves in Odoo have a duration_days value of exactly 0.5.
+   * This can be either morning or afternoon, determined by request_hour_from.
+   *
+   * @return bool True if this is a half-day leave, false otherwise
    */
   public function isHalfDay(): bool
   {
@@ -148,8 +174,11 @@ class UserLeave extends Model
 
   /**
    * Determine if this is a half-day morning leave
-   * 
-   * @return bool
+   *
+   * Morning leaves typically start at the beginning of the work day
+   * and end around noon. In Odoo, these have request_hour_from < 12.0.
+   *
+   * @return bool True if this is a morning half-day leave, false otherwise
    */
   public function isMorningLeave(): bool
   {
@@ -158,14 +187,17 @@ class UserLeave extends Model
     if (!$this->isHalfDay() || $this->request_hour_from === null) {
       return false;
     }
-    
+
     return $this->request_hour_from < 12.0;
   }
 
   /**
    * Determine if this is a half-day afternoon leave
-   * 
-   * @return bool
+   *
+   * Afternoon leaves typically start around noon and end at the
+   * end of the work day. In Odoo, these have request_hour_from >= 12.0.
+   *
+   * @return bool True if this is an afternoon half-day leave, false otherwise
    */
   public function isAfternoonLeave(): bool
   {
@@ -174,37 +206,49 @@ class UserLeave extends Model
     if (!$this->isHalfDay() || $this->request_hour_from === null) {
       return false;
     }
-    
+
     return $this->request_hour_from >= 12.0;
   }
 
   /**
    * Get formatted hours for half-day leave
-   * 
-   * @return string|null
+   *
+   * Converts the decimal hour values from Odoo (e.g., 9.5 for 9:30)
+   * to a human-readable time range string (e.g., "09:30 - 13:30").
+   *
+   * @return string|null Formatted time range or null if not applicable
    */
   public function getFormattedHalfDayHours(): ?string
   {
-    if (!$this->isHalfDay() || $this->request_hour_from === null || $this->request_hour_to === null) {
+    if (
+      !$this->isHalfDay() ||
+      $this->request_hour_from === null ||
+      $this->request_hour_to === null
+    ) {
       return null;
     }
-    
+
     // Convert decimal hours to hours and minutes format
     $fromHour = floor($this->request_hour_from);
     $fromMin = round(($this->request_hour_from - $fromHour) * 60);
     $toHour = floor($this->request_hour_to);
     $toMin = round(($this->request_hour_to - $toHour) * 60);
-    
+
     return sprintf(
-      "%02d:%02d - %02d:%02d",
-      $fromHour, $fromMin, $toHour, $toMin
+      '%02d:%02d - %02d:%02d',
+      $fromHour,
+      $fromMin,
+      $toHour,
+      $toMin
     );
   }
 
   /**
    * The "booted" method of the model.
    *
-   * Defines model event listeners.
+   * Sets up event listeners to ensure proper data integrity:
+   * - When a leave is deleted, it cascades to clean up related data
+   * - When a leave's status changes, it emits appropriate events
    *
    * @return void
    */

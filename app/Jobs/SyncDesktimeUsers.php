@@ -4,26 +4,30 @@ namespace App\Jobs;
 
 use App\Models\User;
 use App\Services\DesktimeApiCalls;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 /**
  * Class SyncDesktimeUsers
  *
  * Synchronizes DeskTime user info into the local database,
- * then flushes the entire cache store once complete.
+ * updating users with their DeskTime IDs and clearing
+ * DeskTime IDs for users no longer in DeskTime.
  */
 class SyncDesktimeUsers extends BaseSyncJob
 {
   /**
    * The priority of the job in the queue.
+   * Lower numbers indicate higher priority.
    *
    * @var int
    */
   public int $priority = 1;
 
   /**
-   * Remove explicit protected DesktimeApiCalls $desktime;
-   * using parent's property instead.
+   * SyncDesktimeUsers constructor.
+   *
+   * @param DesktimeApiCalls $desktime An instance of the DesktimeApiCalls service.
    */
   public function __construct(DesktimeApiCalls $desktime)
   {
@@ -32,11 +36,34 @@ class SyncDesktimeUsers extends BaseSyncJob
   }
 
   /**
-   * Main job logic: fetch, filter, update local user desksTime_id.
+   * Executes the synchronization process.
+   *
+   * This method performs the following operations:
+   * 1. Fetches employees from DeskTime API
+   * 2. Extracts valid users with their DeskTime IDs and emails
+   * 3. Updates local users with DeskTime IDs
+   * 4. Clears DeskTime IDs for users no longer in DeskTime
    *
    * @return void
    */
   protected function execute(): void
+  {
+    // Step 1: Fetch and process DeskTime users
+    $validUsers = $this->getValidDesktimeUsers();
+
+    // Step 2: Update users with DeskTime IDs
+    $this->updateUserDesktimeIds($validUsers);
+
+    // Step 3: Clear DeskTime IDs for users no longer in DeskTime
+    $this->clearObsoleteDesktimeIds($validUsers->pluck('email'));
+  }
+
+  /**
+   * Retrieves and processes valid users from DeskTime.
+   *
+   * @return Collection Collection of valid DeskTime users with emails and IDs
+   */
+  private function getValidDesktimeUsers(): Collection
   {
     $employeesData = $this->desktime->getAllEmployees(null, 'month');
 
@@ -47,8 +74,8 @@ class SyncDesktimeUsers extends BaseSyncJob
       }, collect())
       ->unique('id'); // Remove duplicates
 
-    // Filter & map
-    $validUsers = $desktimeUsers
+    // Filter & map valid users
+    return $desktimeUsers
       ->filter(fn($user) => !empty($user['email']) && !empty($user['id']))
       ->map(
         fn($user) => [
@@ -56,16 +83,33 @@ class SyncDesktimeUsers extends BaseSyncJob
           'desktime_id' => $user['id'],
         ]
       );
+  }
 
-    // Update existing users with Desktime IDs
-    foreach ($validUsers as $desktimeUser) {
-      User::where('email', $desktimeUser['email'])
-        ->update(['desktime_id' => $desktimeUser['desktime_id']]);
-    }
+  /**
+   * Updates local users with their DeskTime IDs.
+   *
+   * @param Collection $validUsers Collection of valid DeskTime users
+   * @return void
+   */
+  private function updateUserDesktimeIds(Collection $validUsers): void
+  {
+    $validUsers->each(function ($desktimeUser) {
+      User::where('email', $desktimeUser['email'])->update([
+        'desktime_id' => $desktimeUser['desktime_id'],
+      ]);
+    });
+  }
 
-    // Clear out any user who has a desktime_id but isn't in Desktime users
-    $desktimeUserEmails = $validUsers->pluck('email')->toArray();
-    User::whereNotIn('email', $desktimeUserEmails)
+  /**
+   * Clears DeskTime IDs for users no longer in DeskTime.
+   *
+   * @param Collection $currentDesktimeEmails Emails of current DeskTime users
+   * @return void
+   */
+  private function clearObsoleteDesktimeIds(
+    Collection $currentDesktimeEmails
+  ): void {
+    User::whereNotIn('email', $currentDesktimeEmails)
       ->whereNotNull('desktime_id')
       ->update(['desktime_id' => null]);
   }

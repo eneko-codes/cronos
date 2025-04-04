@@ -7,6 +7,7 @@ use App\Services\OdooApiCalls;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 use Exception;
+use Illuminate\Support\Collection;
 
 /**
  * Class SyncOdooUsers
@@ -20,6 +21,7 @@ class SyncOdooUsers extends BaseSyncJob
 {
   /**
    * The priority of the job in the queue.
+   * Lower numbers indicate higher priority.
    *
    * @var int
    */
@@ -40,12 +42,12 @@ class SyncOdooUsers extends BaseSyncJob
    * Executes the synchronization process.
    *
    * This method performs the following operations:
-   * 1. Fetches users from Odoo API
-   * 2. Logs users without work email addresses to the sync log channel
-   * 3. Filters out users without email addresses
-   * 4. Creates or updates local users based on Odoo data
-   * 5. Identifies users that exist locally but not in Odoo
-   * 6. Deletes local users that no longer exist in Odoo
+   * 1. Fetches employees from Odoo API
+   * 2. Identifies and logs employees without email addresses
+   * 3. Filters to keep only employees with valid emails
+   * 4. Creates or updates local user records
+   * 5. Identifies users in local DB that no longer exist in Odoo
+   * 6. Deletes obsolete user records
    *
    * @return void
    *
@@ -53,46 +55,87 @@ class SyncOdooUsers extends BaseSyncJob
    */
   protected function execute(): void
   {
-    // Step 1: Fetch all users from Odoo
-    $allOdooUsers = $this->odoo->getUsers();
+    // Step 1: Fetch all employees from Odoo API as a Collection
+    $odooEmployees = $this->odoo->getUsers();
 
-    // Step 2: Log users without work email
-    $allOdooUsers->each(function ($odooUser) {
-      if (empty($odooUser['work_email'])) {
-        Log::channel('sync')->warning(
-          class_basename($this) .
-            ": Odoo user '{$odooUser['name']}' missing work email",
-          [
-            'odoo_id' => $odooUser['id'],
-            'name' => $odooUser['name'],
-          ]
-        );
-      }
+    // Step 2: Process employees without email addresses
+    $this->logEmployeesWithoutEmail($odooEmployees);
+
+    // Step 3: Process valid employees (those with email addresses)
+    $validEmployees = $odooEmployees->filter(function ($employee) {
+      return filled($employee['work_email']);
     });
 
-    // Step 3: Filter users to only include those with work email
-    $odooUsers = $allOdooUsers->filter(function ($odooUser) {
-      return filled($odooUser['work_email']);
-    });
+    // Step 4: Create or update users in a single operation
+    $this->syncValidEmployees($validEmployees);
 
-    // Step 4: Create or update local users based on Odoo data
-    $odooUsers->each(function ($odooUser) {
+    // Step 5: Clean up obsolete users
+    $this->removeObsoleteUsers($validEmployees->pluck('id'));
+  }
+
+  /**
+   * Logs employees who are missing email addresses.
+   *
+   * @param Collection $employees Collection of employees from Odoo
+   * @return void
+   */
+  private function logEmployeesWithoutEmail(Collection $employees): void
+  {
+    $employees
+      ->filter(function ($employee) {
+        return empty($employee['work_email']);
+      })
+      ->whenNotEmpty(function ($employeesWithoutEmail) {
+        $employeesWithoutEmail->each(function ($employee) {
+          Log::channel('sync')->warning(
+            class_basename($this) .
+              ": Odoo employee '{$employee['name']}' missing work email",
+            [
+              'odoo_id' => $employee['id'],
+              'name' => $employee['name'],
+            ]
+          );
+        });
+      });
+  }
+
+  /**
+   * Creates or updates local user records from valid Odoo employees.
+   *
+   * @param Collection $validEmployees Collection of valid employees from Odoo
+   * @return void
+   */
+  private function syncValidEmployees(Collection $validEmployees): void
+  {
+    $validEmployees->each(function ($employee) {
       User::updateOrCreate(
-        ['odoo_id' => $odooUser['id']],
+        ['odoo_id' => $employee['id']],
         [
-          'name' => $odooUser['name'],
-          'email' => Str::lower($odooUser['work_email']),
-          'timezone' => $odooUser['tz'] ?? 'UTC',
+          'name' => $employee['name'],
+          'email' => Str::lower($employee['work_email']),
+          'timezone' => $employee['tz'] ?? 'UTC',
         ]
       );
     });
+  }
 
-    // Step 5: Identifies users that exist locally but not in Odoo
-    $odooUserIds = $odooUsers->pluck('id');
-    $localOdooIds = User::whereNotNull('odoo_id')->pluck('odoo_id');
-    $usersToDelete = $localOdooIds->diff($odooUserIds);
-
-    // Step 6: Deletes local users that no longer exist in Odoo individually to trigger model events
-    User::whereIn('odoo_id', $usersToDelete)->get()->each->delete();
+  /**
+   * Removes local user records that no longer exist in Odoo.
+   *
+   * @param Collection $currentOdooIds Collection of current Odoo employee IDs
+   * @return void
+   */
+  private function removeObsoleteUsers(Collection $currentOdooIds): void
+  {
+    // Identify users that exist in local DB but not in current Odoo data
+    User::whereNotNull('odoo_id')
+      ->pluck('odoo_id')
+      ->diff($currentOdooIds)
+      ->pipe(function ($obsoleteUserIds) {
+        // Delete obsolete users to properly trigger model events
+        if ($obsoleteUserIds->isNotEmpty()) {
+          User::whereIn('odoo_id', $obsoleteUserIds)->get()->each->delete();
+        }
+      });
   }
 }

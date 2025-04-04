@@ -132,23 +132,25 @@ class SyncOdooSchedules extends BaseSyncJob
               'schedule_id' => $odooScheduleId,
               'duplicates' => $duplicates
                 ->map(function ($group) {
-                  list($weekday, $dayPeriod) = explode(
-                    '-',
-                    $group->first()['dayofweek'] .
-                      '-' .
-                      (isset($group->first()['day_period'])
-                        ? Str::lower($group->first()['day_period'])
-                        : 'morning')
+                  $parts = collect(
+                    explode(
+                      '-',
+                      $group->first()['dayofweek'] .
+                        '-' .
+                        (isset($group->first()['day_period'])
+                          ? Str::lower($group->first()['day_period'])
+                          : 'morning')
+                    )
                   );
+
                   return [
-                    'weekday' => $weekday,
-                    'day_period' => $dayPeriod,
+                    'weekday' => $parts->get(0),
+                    'day_period' => $parts->get(1),
                     'count' => $group->count(),
-                    'details' => $group->pluck('id')->toArray(),
+                    'details' => $group->pluck('id'),
                   ];
                 })
-                ->values()
-                ->toArray(),
+                ->values(),
             ]
           );
         }
@@ -163,7 +165,12 @@ class SyncOdooSchedules extends BaseSyncJob
         $toDeleteIds = $existingDetailIds->diff($odooDetailIds);
 
         // Process new schedule details
-        foreach ($toInsertIds as $idToInsert) {
+        $toInsertIds->each(function ($idToInsert) use (
+          $odooDetailsById,
+          $schedule,
+          $odooScheduleId,
+          $timezone
+        ) {
           $detailData = $odooDetailsById[$idToInsert];
           $schedule->scheduleDetails()->create([
             'odoo_schedule_id' => $odooScheduleId,
@@ -178,10 +185,14 @@ class SyncOdooSchedules extends BaseSyncJob
             ),
             'end' => $this->formatOdooTime($detailData['hour_to'], $timezone),
           ]);
-        }
+        });
 
         // Update existing schedule details
-        foreach ($toUpdateIds as $idToUpdate) {
+        $toUpdateIds->each(function ($idToUpdate) use (
+          $odooDetailsById,
+          $existingDetails,
+          $timezone
+        ) {
           $detailData = $odooDetailsById[$idToUpdate];
           $existingDetail = $existingDetails[$idToUpdate];
 
@@ -200,7 +211,7 @@ class SyncOdooSchedules extends BaseSyncJob
           if ($this->needsUpdate($existingDetail, $updatedAttributes)) {
             $existingDetail->update($updatedAttributes);
           }
-        }
+        });
 
         // Delete schedule details that no longer exist in Odoo
         if ($toDeleteIds->isNotEmpty()) {
@@ -217,7 +228,7 @@ class SyncOdooSchedules extends BaseSyncJob
       $startOfDay = Carbon::now()->startOfDay();
       $odooEmployees->filter()->each(function ($emp) use ($startOfDay) {
         $odooUserId = $emp['id'];
-        $newOdooScheduleId = $emp['resource_calendar_id'][0] ?? null;
+        $newOdooScheduleId = collect($emp['resource_calendar_id'])->first();
 
         // Skip users marked do_not_track
         $user = User::where('odoo_id', $odooUserId)->trackable()->first();

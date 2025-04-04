@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Services\OdooApiCalls;
 use Exception;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Collection;
 
 /**
  * Class SyncOdooCategories
@@ -19,6 +20,7 @@ class SyncOdooCategories extends BaseSyncJob
 {
   /**
    * The priority of the job in the queue.
+   * Lower numbers indicate higher priority.
    *
    * @var int
    */
@@ -49,15 +51,39 @@ class SyncOdooCategories extends BaseSyncJob
   protected function execute(): void
   {
     // Step 1: Fetch and map categories from Odoo
-    $mappedCategories = $this->odoo->getCategories()->map(function ($cat) {
+    $mappedCategories = $this->mapOdooCategories();
+
+    // Step 2: Create or update local categories
+    $this->syncCategories($mappedCategories);
+
+    // Step 3: Log categories that exist locally but not in Odoo
+    $this->logMissingCategories($mappedCategories->pluck('odoo_category_id'));
+  }
+
+  /**
+   * Maps Odoo categories to our local structure.
+   *
+   * @return Collection
+   */
+  private function mapOdooCategories(): Collection
+  {
+    return $this->odoo->getCategories()->map(function ($cat) {
       return [
         'odoo_category_id' => $cat['id'],
         'name' => $cat['name'],
         'active' => $cat['active'] ?? true,
       ];
     });
+  }
 
-    // Step 2: Create or update local categories based on Odoo data individually to trigger model events
+  /**
+   * Creates or updates local categories based on Odoo data.
+   *
+   * @param Collection $mappedCategories
+   * @return void
+   */
+  private function syncCategories(Collection $mappedCategories): void
+  {
     $mappedCategories->each(function ($cat) {
       Category::updateOrCreate(
         ['odoo_category_id' => $cat['odoo_category_id']],
@@ -67,29 +93,39 @@ class SyncOdooCategories extends BaseSyncJob
         ]
       );
     });
+  }
 
-    // Step 3: Identifies categories that exist locally but not in Odoo
-    $odooCatIds = $mappedCategories->pluck('odoo_category_id');
-    $localCatIds = Category::pluck('odoo_category_id');
-    $categoriesToLog = $localCatIds->diff($odooCatIds);
+  /**
+   * Logs categories that exist locally but not in Odoo for historical integrity.
+   *
+   * @param Collection $currentOdooCategoryIds
+   * @return void
+   */
+  private function logMissingCategories(
+    Collection $currentOdooCategoryIds
+  ): void {
+    Category::pluck('odoo_category_id')
+      ->diff($currentOdooCategoryIds)
+      ->pipe(function ($categoriesToLog) {
+        if ($categoriesToLog->isEmpty()) {
+          return;
+        }
 
-    // Step 4: Log categories that exist locally but not in Odoo for historical integrity
-    if ($categoriesToLog->isNotEmpty()) {
-      Category::whereIn('odoo_category_id', $categoriesToLog)
-        ->get()
-        ->each(function ($category) {
-          Log::channel('sync')->info(
-            class_basename($this) .
-              ": Category '{$category->name}' no longer exists in Odoo but preserved for historical integrity",
-            [
-              'odoo_category_id' => $category->odoo_category_id,
-              'name' => $category->name,
-              'created_at' => $category->created_at->toDateTimeString(),
-              'updated_at' => $category->updated_at->toDateTimeString(),
-              'detected_at' => now()->toDateTimeString(),
-            ]
-          );
-        });
-    }
+        Category::whereIn('odoo_category_id', $categoriesToLog)
+          ->get()
+          ->each(function ($category) {
+            Log::channel('sync')->info(
+              class_basename($this) .
+                ": Category '{$category->name}' no longer exists in Odoo but preserved for historical integrity",
+              [
+                'odoo_category_id' => $category->odoo_category_id,
+                'name' => $category->name,
+                'created_at' => $category->created_at->toDateTimeString(),
+                'updated_at' => $category->updated_at->toDateTimeString(),
+                'detected_at' => now()->toDateTimeString(),
+              ]
+            );
+          });
+      });
   }
 }

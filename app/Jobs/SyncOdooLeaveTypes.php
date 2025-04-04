@@ -6,6 +6,7 @@ use App\Models\LeaveType;
 use App\Services\OdooApiCalls;
 use Exception;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Collection;
 
 /**
  * Class SyncOdooLeaveTypes
@@ -19,6 +20,7 @@ class SyncOdooLeaveTypes extends BaseSyncJob
 {
   /**
    * The priority of the job in the queue.
+   * Lower numbers indicate higher priority.
    *
    * @var int
    */
@@ -48,7 +50,23 @@ class SyncOdooLeaveTypes extends BaseSyncJob
   protected function execute(): void
   {
     // Step 1: Fetch and map leave types from Odoo
-    $mappedLeaveTypes = $this->odoo->getLeaveTypes()->map(function ($lt) {
+    $mappedLeaveTypes = $this->mapOdooLeaveTypes();
+
+    // Step 2: Create or update local leave types based on Odoo data
+    $this->syncLeaveTypes($mappedLeaveTypes);
+
+    // Step 3: Log leave types that exist locally but not in Odoo
+    $this->logMissingLeaveTypes($mappedLeaveTypes->pluck('odoo_leave_type_id'));
+  }
+
+  /**
+   * Maps Odoo leave types to our local structure.
+   *
+   * @return Collection
+   */
+  private function mapOdooLeaveTypes(): Collection
+  {
+    return $this->odoo->getLeaveTypes()->map(function ($lt) {
       return [
         'odoo_leave_type_id' => $lt['id'],
         'name' => $lt['name'],
@@ -57,8 +75,16 @@ class SyncOdooLeaveTypes extends BaseSyncJob
         'active' => $lt['active'] ?? true,
       ];
     });
+  }
 
-    // Step 2: Create or update local leave types based on Odoo data individually to trigger model events
+  /**
+   * Creates or updates local leave types based on Odoo data.
+   *
+   * @param Collection $mappedLeaveTypes
+   * @return void
+   */
+  private function syncLeaveTypes(Collection $mappedLeaveTypes): void
+  {
     $mappedLeaveTypes->each(function ($leaveType) {
       LeaveType::updateOrCreate(
         ['odoo_leave_type_id' => $leaveType['odoo_leave_type_id']],
@@ -70,27 +96,37 @@ class SyncOdooLeaveTypes extends BaseSyncJob
         ]
       );
     });
+  }
 
-    // Step 3: Identifies leave types that exist locally but not in Odoo
-    $odooIds = $mappedLeaveTypes->pluck('odoo_leave_type_id');
-    $localIds = LeaveType::pluck('odoo_leave_type_id');
-    $leaveTypesToLog = $localIds->diff($odooIds);
+  /**
+   * Logs leave types that exist locally but not in Odoo for historical integrity.
+   *
+   * @param Collection $currentOdooLeaveTypeIds
+   * @return void
+   */
+  private function logMissingLeaveTypes(
+    Collection $currentOdooLeaveTypeIds
+  ): void {
+    LeaveType::pluck('odoo_leave_type_id')
+      ->diff($currentOdooLeaveTypeIds)
+      ->pipe(function ($leaveTypesToLog) {
+        if ($leaveTypesToLog->isEmpty()) {
+          return;
+        }
 
-    // Step 4: Log leave types that exist locally but not in Odoo for historical integrity
-    if ($leaveTypesToLog->isNotEmpty()) {
-      LeaveType::whereIn('odoo_leave_type_id', $leaveTypesToLog)
-        ->get()
-        ->each(function ($leaveType) {
-          Log::channel('sync')->info(
-            class_basename($this) .
-              ': Leave type no longer exists in Odoo but preserved for historical integrity',
-            [
-              'odoo_leave_type_id' => $leaveType->odoo_leave_type_id,
-              'name' => $leaveType->name,
-              'detected_at' => now()->toDateTimeString(),
-            ]
-          );
-        });
-    }
+        LeaveType::whereIn('odoo_leave_type_id', $leaveTypesToLog)
+          ->get()
+          ->each(function ($leaveType) {
+            Log::channel('sync')->info(
+              class_basename($this) .
+                ': Leave type no longer exists in Odoo but preserved for historical integrity',
+              [
+                'odoo_leave_type_id' => $leaveType->odoo_leave_type_id,
+                'name' => $leaveType->name,
+                'detected_at' => now()->toDateTimeString(),
+              ]
+            );
+          });
+      });
   }
 }

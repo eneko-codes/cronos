@@ -270,7 +270,7 @@ class SyncOdooLeaves extends BaseSyncJob
 
       if (!$user && Arr::has($leave, 'employee_id.1')) {
         Log::channel('sync')->warning(
-          'Employee not found or marked do_not_track',
+          class_basename($this) . ': Employee not found or marked do_not_track',
           [
             'odoo_employee_id' => $leave['employee_id'][0],
             'odoo_employee_name' => $leave['employee_id'][1],

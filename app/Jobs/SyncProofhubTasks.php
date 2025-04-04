@@ -109,10 +109,13 @@ class SyncProofhubTasks extends BaseSyncJob
     $project = Project::where('proofhub_project_id', $projectId)->first();
 
     if (!$project) {
-      Log::channel('sync')->info('Skipping task - project not found', [
-        'task_id' => $taskId,
-        'project_id' => $projectId,
-      ]);
+      Log::channel('sync')->info(
+        class_basename($this) . ': Skipping task - project not found',
+        [
+          'task_id' => $taskId,
+          'project_id' => $projectId,
+        ]
+      );
       return false;
     }
 

@@ -195,9 +195,12 @@ class SyncProofhubTimeEntries extends BaseSyncJob
   {
     $creatorProofhubId = data_get($entry, 'creator.id');
     if (!$creatorProofhubId) {
-      Log::channel('sync')->info('Skipping time entry - creator ID missing', [
-        'time_entry_id' => data_get($entry, 'id'),
-      ]);
+      Log::channel('sync')->info(
+        class_basename($this) . ': Skipping time entry - creator ID missing',
+        [
+          'time_entry_id' => data_get($entry, 'id'),
+        ]
+      );
       return null;
     }
 
@@ -226,7 +229,8 @@ class SyncProofhubTimeEntries extends BaseSyncJob
     $userExists = User::where('proofhub_id', $creatorProofhubId)->exists();
     if ($userExists) {
       Log::channel('sync')->info(
-        'Skipping time entry - user has do_not_track enabled',
+        class_basename($this) .
+          ': Skipping time entry - user has do_not_track enabled',
         [
           'time_entry_id' => data_get($entry, 'id'),
           'creator_id' => $creatorProofhubId,
@@ -234,7 +238,8 @@ class SyncProofhubTimeEntries extends BaseSyncJob
       );
     } else {
       Log::channel('sync')->info(
-        'SyncProofHubTimeEntries: Skipping time entry - user not found in database',
+        class_basename($this) .
+          ': Skipping time entry - user not found in database',
         [
           'time_entry_id' => data_get($entry, 'id'),
           'creator_id' => $creatorProofhubId,
@@ -258,10 +263,13 @@ class SyncProofhubTimeEntries extends BaseSyncJob
     )->exists();
 
     if (!$projectExists) {
-      Log::channel('sync')->info('Skipping time entry - project not found', [
-        'time_entry_id' => data_get($entry, 'id'),
-        'project_id' => $projectId,
-      ]);
+      Log::channel('sync')->info(
+        class_basename($this) . ': Skipping time entry - project not found',
+        [
+          'time_entry_id' => data_get($entry, 'id'),
+          'project_id' => $projectId,
+        ]
+      );
       return false;
     }
 

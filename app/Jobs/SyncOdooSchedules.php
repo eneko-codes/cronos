@@ -81,7 +81,8 @@ class SyncOdooSchedules extends BaseSyncJob
           ->get()
           ->each(function ($schedule) {
             Log::channel('sync')->info(
-              'Schedule no longer exists in Odoo but preserved for historical integrity',
+              class_basename($this) .
+                ': Schedule no longer exists in Odoo but preserved for historical integrity',
               [
                 'odoo_schedule_id' => $schedule->odoo_schedule_id,
                 'description' => $schedule->description,

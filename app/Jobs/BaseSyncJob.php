@@ -17,6 +17,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Class BaseSyncJob
@@ -82,7 +84,33 @@ abstract class BaseSyncJob implements ShouldQueue, ShouldBeEncrypted
    */
   public function handle(): void
   {
-    $this->execute();
+    $jobName = class_basename($this);
+
+    Log::channel('sync')->info("{$jobName}: Starting database transaction.");
+
+    try {
+      // Wrap the execution logic in a database transaction
+      DB::transaction(function () {
+        $this->execute();
+      });
+
+      Log::channel('sync')->info(
+        "{$jobName}: Database transaction committed successfully."
+      );
+    } catch (Throwable $e) {
+      // Catch any throwable error/exception
+      Log::channel('sync')->error(
+        "{$jobName}: Database transaction rolled back due to error.",
+        [
+          'error' => $e->getMessage(),
+          'trace' => $e->getTraceAsString(),
+        ]
+      );
+
+      // Re-throw the exception to ensure Laravel's queue worker handles the failure
+      // (e.g., moving to failed_jobs table, respecting retries)
+      throw $e;
+    }
   }
 
   /**

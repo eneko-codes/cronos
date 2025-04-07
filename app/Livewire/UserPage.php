@@ -884,9 +884,15 @@ class UserPage extends Component
     try {
       // Calculate total minutes worked this day
       $totalMinutes = $filtered->sum(function ($entry) {
-        return isset($entry->duration_seconds)
+        // Use the duration_seconds column, which should now be accurate
+        // Fallback gracefully if it happens to be null or not set
+        return round(($entry->duration_seconds ?? 0) / 60);
+        /*
+        // Original logic based on API response keys (kept for reference)
+        return isset($entry->duration_seconds) && $entry->duration_seconds > 0 // Check if > 0 to prefer this if set correctly
           ? round($entry->duration_seconds / 60)
           : ($entry->logged_hours ?? 0) * 60 + ($entry->logged_mins ?? 0);
+        */
       });
 
       // Group entries by project and extract tasks
@@ -911,9 +917,14 @@ class UserPage extends Component
       // Create detailed entries for tooltip display
       $detailedEntries = $filtered
         ->map(function ($entry) {
+          // Calculate minutes from the reliable duration_seconds field
+          $minutes = round(($entry->duration_seconds ?? 0) / 60);
+          /*
+          // Original logic
           $minutes = isset($entry->duration_seconds)
             ? round($entry->duration_seconds / 60)
             : ($entry->logged_hours ?? 0) * 60 + ($entry->logged_mins ?? 0);
+          */
 
           return [
             'project' => data_get($entry, 'project.name', 'Unknown Project'),

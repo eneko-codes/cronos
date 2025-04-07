@@ -49,12 +49,6 @@ class CreateTimeEntriesTable extends Migration
         ->nullable()
         ->comment('Original creation time in ProofHub');
       $table->timestamps();
-
-      // Unique constraint to prevent duplicate time entries per user, project, task, and date
-      $table->unique(
-        ['user_id', 'proofhub_project_id', 'proofhub_task_id', 'date'],
-        'unique_time_entry'
-      );
     });
   }
 

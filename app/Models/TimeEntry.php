@@ -86,10 +86,6 @@ class TimeEntry extends Model
   protected $casts = [
     'date' => 'date',
     'duration_seconds' => 'integer',
-    'logged_hours' => 'integer',
-    'logged_mins' => 'integer',
-    'end_date' => 'date',
-    'start_date' => 'date',
     'proofhub_created_at' => 'datetime',
   ];
 

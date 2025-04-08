@@ -6,7 +6,7 @@ use App\Livewire\Login;
 use App\Livewire\Settings;
 use App\Livewire\UserPage;
 use App\Livewire\UsersTable;
-use App\Livewire\Admin\ProjectsTasksView;
+use App\Livewire\ProjectsTasksView;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -28,8 +28,8 @@ Route::middleware(['auth', 'throttle:api'])->group(function () {
       Route::get('/settings', Settings::class)->name('settings');
       Route::get('/users', UsersTable::class)->name('users.table');
       Route::get('/user/{id}', UserPage::class)->name('user.page');
-      Route::get('/admin/projects-tasks', ProjectsTasksView::class)->name(
-        'admin.projects-tasks'
+      Route::get('/projects-tasks', ProjectsTasksView::class)->name(
+        'projects-tasks'
       );
     }
   );

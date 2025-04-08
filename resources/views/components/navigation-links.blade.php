@@ -1,12 +1,12 @@
 @php
-  $baseClass = 'flex h-full items-center gap-2 transition md:px-2 md:py-1.5';
+  $baseClass = "flex h-full items-center gap-2 transition md:px-2 md:py-1.5";
   $desktopClass =
-    'md:border-b-2 md:hover:border-blue-500 dark:md:hover:border-blue-400';
+      "md:border-b-2 md:hover:border-blue-500 dark:md:hover:border-blue-400";
   $mobileClass =
-    'rounded-md px-3 py-2 hover:bg-gray-100 md:rounded-none md:px-0 md:py-0 md:hover:bg-transparent dark:hover:bg-gray-800 dark:md:hover:bg-transparent';
+      "rounded-md px-3 py-2 hover:bg-gray-100 md:rounded-none md:px-0 md:py-0 md:hover:bg-transparent dark:hover:bg-gray-800 dark:md:hover:bg-transparent";
   $activeClass =
-    'text-blue-600 md:border-b-2 md:border-blue-500 dark:text-blue-400 dark:md:border-blue-400';
-  $inactiveClass = 'border-transparent text-gray-600 dark:text-gray-300';
+      "text-blue-600 md:border-b-2 md:border-blue-500 dark:text-blue-400 dark:md:border-blue-400";
+  $inactiveClass = "border-transparent text-gray-600 dark:text-gray-300";
 @endphp
 
 <nav
@@ -14,8 +14,8 @@
 >
   <a
     wire:navigate
-    href="{{ route('dashboard') }}"
-    class="{{ request()->routeIs('dashboard') ? $activeClass : $inactiveClass }} {{ $baseClass }} {{ $desktopClass }} {{ $mobileClass }}"
+    href="{{ route("dashboard") }}"
+    class="{{ request()->routeIs("dashboard") ? $activeClass : $inactiveClass }} {{ $baseClass }} {{ $desktopClass }} {{ $mobileClass }}"
   >
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -37,8 +37,8 @@
   @if (Auth::user()->is_admin)
     <a
       wire:navigate
-      href="{{ route('users.table') }}"
-      class="{{ Str::contains(request()->path(), 'users') ? $activeClass : $inactiveClass }} {{ $baseClass }} {{ $desktopClass }} {{ $mobileClass }}"
+      href="{{ route("users.table") }}"
+      class="{{ Str::contains(request()->path(), "users") ? $activeClass : $inactiveClass }} {{ $baseClass }} {{ $desktopClass }} {{ $mobileClass }}"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -58,22 +58,29 @@
     </a>
 
     <a
-      wire:navigate
-      href="{{ route('admin.projects-tasks') }}"
-      class="{{ request()->routeIs('admin.projects-tasks') ? $activeClass : $inactiveClass }} {{ $baseClass }} {{ $desktopClass }} {{ $mobileClass }}"
+      @if (auth()->user()?->is_admin)
+          href="{{ route("projects-tasks") }}"
+          class="{{ request()->routeIs("projects-tasks") ? $activeClass : $inactiveClass }} {{ $baseClass }} {{ $desktopClass }} {{ $mobileClass }}"
+      @endif
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
+        width="16"
+        height="16"
+        fill="currentColor"
         class="size-4"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke-width="1.5"
-        stroke="currentColor"
+        viewBox="0 0 16 16"
       >
         <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.125 1.125 0 0 1 0 2.25H5.625a1.125 1.125 0 0 1 0-2.25Z"
+          fill-rule="evenodd"
+          d="M2 2.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5V3a.5.5 0 0 0-.5-.5zM3 3H2v1h1z"
+        />
+        <path
+          d="M5 3.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5M5.5 7a.5.5 0 0 0 0 1h9a.5.5 0 0 0 0-1zm0 4a.5.5 0 0 0 0 1h9a.5.5 0 0 0 0-1z"
+        />
+        <path
+          fill-rule="evenodd"
+          d="M1.5 7a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5H2a.5.5 0 0 1-.5-.5zM2 7h1v1H2zm0 3.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm1 .5H2v1h1z"
         />
       </svg>
       Projects & Tasks
@@ -81,8 +88,8 @@
 
     <a
       wire:navigate
-      href="{{ route('settings') }}"
-      class="{{ Str::contains(request()->path(), 'settings') ? $activeClass : $inactiveClass }} {{ $baseClass }} {{ $desktopClass }} {{ $mobileClass }}"
+      href="{{ route("settings") }}"
+      class="{{ Str::contains(request()->path(), "settings") ? $activeClass : $inactiveClass }} {{ $baseClass }} {{ $desktopClass }} {{ $mobileClass }}"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"

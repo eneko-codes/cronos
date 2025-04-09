@@ -47,7 +47,7 @@
         >
           <!-- Project Info -->
           <div class="flex flex-1 flex-col gap-1">
-            <p class="font-semibold text-gray-800 dark:text-gray-200">
+            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100">
               {{ $project->name }}
             </p>
             <span class="text-xs text-gray-500 dark:text-gray-400">
@@ -100,7 +100,7 @@
                     <!-- Task Info -->
                     <div class="flex flex-1 flex-col gap-0.5">
                       <span
-                        class="font-medium text-gray-700 dark:text-gray-300"
+                        class="text-sm font-medium text-gray-700 dark:text-gray-100"
                       >
                         {{ $task->name }}
                       </span>

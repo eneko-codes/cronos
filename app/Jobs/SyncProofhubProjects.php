@@ -36,145 +36,192 @@ class SyncProofhubProjects extends BaseSyncJob
   }
 
   /**
-   * Executes the synchronization process.
+   * Executes the synchronization process page by page.
    *
    * This method performs the following operations:
-   * 1. Fetches projects from ProofHub API
-   * 2. Processes and syncs each valid project
-   * 3. Removes local projects that no longer exist in ProofHub
+   * 1. Loops through pages fetched from ProofHub API using callPage
+   * 2. Processes projects from each page, updating local records and user assignments
+   * 3. Collects all valid ProofHub project IDs encountered
+   * 4. Removes local projects whose ProofHub IDs were not found in the sync
    *
    * @throws Exception If any part of the synchronization process fails
    */
   protected function execute(): void
   {
-    // Step 1: Fetch projects from ProofHub API
-    $projects = $this->proofhub->getProjects();
+    $endpoint = 'projects';
+    $allSyncedProofhubProjectIds = collect(); // Track all synced IDs
+    $currentPage = 1;
+    $totalPages = 1; // Initialize for fallback
+    $nextPageUrl = null;
 
-    // Step 2: Process and sync each valid project
-    $syncedProjectIds = $this->syncProjects($projects);
+    $baseUrl = config('services.proofhub.company_url'); // Needed for initial URL
+    if (!$baseUrl) {
+      throw new Exception('ProofHub company URL not configured.');
+    }
+    $initialUrl = "https://{$baseUrl}.proofhub.com/api/v3/{$endpoint}"; // Initial URL
+
+    Log::channel('sync')->info('Starting ProofHub project sync.');
+
+    do {
+      // Determine URL and params for the API call
+      $urlToCall = $nextPageUrl ?: $initialUrl;
+      $paramsToCall = [];
+      if ($nextPageUrl === null) {
+        // Only add page param if using fallback URL
+        $paramsToCall['page'] = $currentPage;
+        $urlToCall = "https://{$baseUrl}.proofhub.com/api/v3/{$endpoint}"; // Ensure base URL for fallback
+      }
+
+      // Call API for the current page
+      $pageResult = $this->proofhub->callPage(
+        $urlToCall,
+        $paramsToCall,
+        $endpoint
+      );
+      $projectsOnPage = $pageResult['data'];
+      $nextPageUrl = $pageResult['nextPageUrl'];
+      $totalPagesFromHeader = $pageResult['totalPages'];
+
+      // Check for empty page (after first page, using fallback)
+      if (
+        $projectsOnPage->isEmpty() &&
+        $currentPage > 1 &&
+        $nextPageUrl === null
+      ) {
+        Log::channel('sync')->info(
+          "No more projects found on page {$currentPage} using fallback, ending sync.",
+          [
+            'endpoint' => $endpoint,
+          ]
+        );
+        break;
+      }
+
+      // Process projects on the current page
+      $syncedIdsOnPage = $this->processProjectPage($projectsOnPage);
+      $allSyncedProofhubProjectIds = $allSyncedProofhubProjectIds->merge(
+        $syncedIdsOnPage
+      );
+
+      // --- Pagination Logic for Next Loop Iteration ---
+      if ($nextPageUrl) {
+        $currentPage = null;
+        $totalPages = null;
+      } elseif ($currentPage !== null) {
+        if ($currentPage === 1 && $totalPagesFromHeader !== null) {
+          $totalPages = $totalPagesFromHeader;
+        }
+        if ($currentPage < $totalPages) {
+          $currentPage++;
+        } else {
+          $currentPage = null;
+          Log::channel('sync')->debug(
+            "Reached last page ({$totalPages}) via fallback for {$endpoint}."
+          );
+        }
+      }
+    } while ($nextPageUrl !== null || $currentPage !== null);
 
     // Step 3: Remove projects that no longer exist in ProofHub
-    $this->removeObsoleteProjects($syncedProjectIds);
+    $this->removeObsoleteProjects($allSyncedProofhubProjectIds->unique());
+
+    Log::channel('sync')->info('Finished ProofHub project sync.', [
+      'total_projects_processed' => $allSyncedProofhubProjectIds->count(), // This might count duplicates if API returns them
+      'unique_projects_found' => $allSyncedProofhubProjectIds
+        ->unique()
+        ->count(),
+    ]);
   }
 
   /**
-   * Processes and syncs projects from ProofHub.
+   * Processes a single page of project data.
    *
-   * @param Collection $projects Projects from ProofHub API
-   * @return Collection Collection of synced project IDs
+   * @param Collection $projectsPage Projects from one API page
+   * @return Collection Collection of synced ProofHub project IDs from this page
    */
-  private function syncProjects(Collection $projects): Collection
+  private function processProjectPage(Collection $projectsPage): Collection
   {
-    return $projects
-      ->filter(fn($projectData) => data_get($projectData, 'id'))
+    return $projectsPage
+      ->filter(fn($projectData) => data_get($projectData, 'id')) // Ensure project has an ID
       ->map(function ($projectData) {
         $projectId = data_get($projectData, 'id');
         $projectName = data_get($projectData, 'title');
-        $assignedUserIds = data_get($projectData, 'assigned', []);
+        $assignedUserIds = data_get($projectData, 'assigned', []); // Default to empty array
 
-        // Upsert the project
+        // Upsert the project (create or update based on proofhub_project_id)
         $project = Project::updateOrCreate(
           ['proofhub_project_id' => $projectId],
           ['name' => $projectName]
         );
 
-        // Sync user assignments
+        // Sync user assignments for this project
         $this->syncProjectUsers($project, $assignedUserIds);
 
-        return $projectId;
+        return $projectId; // Return the ID of the processed project
       })
-      ->values();
+      ->values(); // Return a collection of the processed IDs
   }
 
   /**
-   * Syncs user assignments for a project.
+   * Syncs user assignments for a specific project.
    *
-   * @param Project $project The project to sync users for
-   * @param array $assignedUserIds ProofHub user IDs assigned to the project
+   * @param Project $project The project model
+   * @param array $assignedUserIds Array of ProofHub user IDs assigned to the project
    * @return void
    */
   private function syncProjectUsers(
     Project $project,
     array $assignedUserIds
   ): void {
-    // Find local users for assigned ProofHub IDs
+    // Find local user IDs corresponding to the trackable ProofHub users
     $localUserIds = User::whereIn('proofhub_id', $assignedUserIds)
-      ->trackable()
+      ->trackable() // Ensure we only link trackable users
       ->pluck('id');
 
-    // Get existing project user IDs
-    $existingUserIds = $project->users()->pluck('user_id');
+    // Efficiently sync the relationships
+    // This will attach missing users and detach users not in $localUserIds
+    $project->users()->sync($localUserIds);
 
-    // Detach users no longer assigned to the project
-    $this->detachRemovedUsers($project, $existingUserIds->diff($localUserIds));
-
-    // Attach newly assigned users
-    $this->attachNewUsers($project, $localUserIds->diff($existingUserIds));
-  }
-
-  /**
-   * Detaches users that are no longer assigned to a project.
-   *
-   * @param Project $project The project to detach users from
-   * @param Collection $userIdsToDetach User IDs to detach
-   * @return void
-   */
-  private function detachRemovedUsers(
-    Project $project,
-    Collection $userIdsToDetach
-  ): void {
-    $userIdsToDetach->each(function ($userId) use ($project) {
-      try {
-        // Check if relationship exists before detaching
-        if ($project->users()->where('user_id', $userId)->exists()) {
-          $project->users()->detach($userId);
-        }
-      } catch (\Exception $e) {
-        // Silently continue if detaching fails
-        // This is intentional as we don't want user relationship issues
-        // to prevent the rest of the project sync from completing
-      }
-    });
-  }
-
-  /**
-   * Attaches newly assigned users to a project.
-   *
-   * @param Project $project The project to attach users to
-   * @param Collection $userIdsToAttach User IDs to attach
-   * @return void
-   */
-  private function attachNewUsers(
-    Project $project,
-    Collection $userIdsToAttach
-  ): void {
-    $userIdsToAttach->each(function ($userId) use ($project) {
-      $project->users()->attach($userId);
-    });
+    // Optional: Log the sync action details if needed
+    // Log::channel('sync')->debug('Synced users for project.', ['project_id' => $project->id, 'assigned_user_ids' => $localUserIds->all()]);
   }
 
   /**
    * Removes local projects that no longer exist in ProofHub.
    *
-   * @param Collection $syncedProjectIds IDs of projects that exist in ProofHub
+   * @param Collection $syncedProjectIds All unique ProofHub project IDs found during the sync
    * @return void
    */
   private function removeObsoleteProjects(Collection $syncedProjectIds): void
   {
     if ($syncedProjectIds->isEmpty()) {
+      Log::channel('sync')->info(
+        'No ProofHub projects found during sync, skipping obsolete project cleanup.'
+      );
       return;
     }
 
-    Project::pluck('proofhub_project_id')
-      ->diff($syncedProjectIds)
-      ->pipe(function ($projectsToDelete) {
-        if ($projectsToDelete->isEmpty()) {
-          return;
-        }
+    // Find local project IDs that were not in the synced list
+    $obsoleteProjectIds = Project::whereNotIn(
+      'proofhub_project_id',
+      $syncedProjectIds
+    )->pluck('proofhub_project_id');
 
-        Project::whereIn('proofhub_project_id', $projectsToDelete)
-          ->get()
-          ->each(fn(Project $p) => $p->delete());
-      });
+    if ($obsoleteProjectIds->isEmpty()) {
+      Log::channel('sync')->info('No obsolete ProofHub projects to delete.');
+      return;
+    }
+
+    Log::channel('sync')->info(
+      "Deleting {$obsoleteProjectIds->count()} obsolete ProofHub projects.",
+      [
+        'ids_to_delete' => $obsoleteProjectIds->all(),
+      ]
+    );
+
+    // Delete the obsolete projects - uses individual delete to trigger model events
+    Project::whereIn('proofhub_project_id', $obsoleteProjectIds)
+      ->get()
+      ->each(fn(Project $p) => $p->delete());
   }
 }

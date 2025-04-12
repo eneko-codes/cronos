@@ -49,18 +49,18 @@ class SyncProofhubTimeEntries extends BaseSyncJob
   ) {
     $this->proofhub = $proofhub;
     // Ensure dates are stored internally for use in deletion logic
-    $this->startDate = $startDate ?: now()->subDays(30)->format('Y-m-d');
+    $this->startDate = $startDate ?: now()->format('Y-m-d');
     $this->endDate = $endDate ?: now()->format('Y-m-d');
   }
 
   /**
-   * Executes the synchronization process.
+   * Executes the synchronization process page by page.
    *
    * This method performs the following operations:
-   * 1. Builds parameters for the ProofHub API request
-   * 2. Fetches time entries from ProofHub
-   * 3. Processes and syncs each valid time entry, collecting their IDs
-   * 4. Removes local time entries within the sync period that are no longer present in ProofHub
+   * 1. Loops through pages of time entries fetched from ProofHub API using callPage.
+   * 2. Processes time entries from each page.
+   * 3. Collects all valid ProofHub time entry IDs encountered.
+   * 4. Removes local time entries within the sync period whose ProofHub IDs were not found.
    *
    * @return void
    *
@@ -68,21 +68,122 @@ class SyncProofhubTimeEntries extends BaseSyncJob
    */
   protected function execute(): void
   {
-    // Step 1: Build parameters for the API request
-    $params = $this->buildRequestParameters();
+    $endpoint = 'alltime';
+    $allSyncedProofhubEntryIds = collect(); // Track all synced entry IDs
+    $currentPage = 1;
+    $totalPages = 1; // Initialize for fallback
+    $nextPageUrl = null;
+    $syncTruncated = false; // Flag to track if sync stopped early due to API issue
 
-    // Step 2: Fetch time entries from ProofHub API
-    $rawEntries = collect($this->proofhub->getAllTime($params));
+    $baseUrl = config('services.proofhub.company_url');
+    if (!$baseUrl) {
+      throw new Exception('ProofHub company URL not configured.');
+    }
+    $initialUrl = "https://{$baseUrl}.proofhub.com/api/v3/{$endpoint}";
 
-    // Step 3: Process each valid time entry and collect synced IDs
-    $syncedEntryIds = $this->processTimeEntries($rawEntries);
+    // Initial parameters including date range
+    $initialParams = $this->buildRequestParameters();
+
+    Log::channel('sync')->info('Starting ProofHub time entry sync.', [
+      'start_date' => $this->startDate,
+      'end_date' => $this->endDate,
+    ]);
+
+    do {
+      // Determine URL and params for the API call
+      $urlToCall = $nextPageUrl ?: $initialUrl;
+      $paramsToCall = [];
+      if ($nextPageUrl === null && $currentPage === 1) {
+        // First request using fallback
+        $paramsToCall = $initialParams;
+        $paramsToCall['page'] = $currentPage;
+        $urlToCall = "https://{$baseUrl}.proofhub.com/api/v3/{$endpoint}"; // Ensure base URL
+      } elseif ($nextPageUrl === null) {
+        // Subsequent fallback requests - IMPORTANT: Re-include initial params
+        $paramsToCall = $initialParams; // Start with original filters
+        $paramsToCall['page'] = $currentPage; // Add the current page
+        $urlToCall = "https://{$baseUrl}.proofhub.com/api/v3/{$endpoint}"; // Ensure base URL
+      }
+
+      // Call API for the current page
+      $pageResult = $this->proofhub->callPage(
+        $urlToCall,
+        $paramsToCall,
+        $endpoint
+      );
+      $entriesOnPage = $pageResult['data'];
+      $nextPageUrl = $pageResult['nextPageUrl'];
+      $totalPagesFromHeader = $pageResult['totalPages'];
+
+      // Check for empty page (after first page, using fallback)
+      if (
+        $entriesOnPage->isEmpty() &&
+        $currentPage > 1 &&
+        $nextPageUrl === null
+      ) {
+        Log::channel('sync')->info(
+          "No more time entries found on page {$currentPage} using fallback, ending sync.",
+          [
+            'endpoint' => $endpoint,
+          ]
+        );
+        break;
+      }
+
+      // Process time entries on the current page
+      $syncedIdsOnPage = $this->processTimeEntryPage($entriesOnPage);
+      $allSyncedProofhubEntryIds = $allSyncedProofhubEntryIds->merge(
+        $syncedIdsOnPage
+      );
+
+      // --- Pagination Logic for Next Loop Iteration ---
+      if ($nextPageUrl) {
+        // Using Link header - reset fallback vars
+        $currentPage = null;
+        $totalPages = null;
+      } else {
+        // No Link header, using fallback
+        if ($currentPage === 1) {
+          // Set total pages ONLY on the first fallback request
+          // $totalPagesFromHeader will be null if callPage detected the alltime bug
+          $totalPages = $totalPagesFromHeader;
+          if ($totalPages === null) {
+            Log::channel('sync')->warning(
+              'Terminating /alltime sync after page 1 due to unreliable fallback pagination.'
+            );
+            $syncTruncated = true; // Mark sync as truncated
+          }
+        }
+
+        // Decide whether to continue
+        if (
+          $totalPages === null ||
+          $currentPage === null ||
+          $currentPage >= $totalPages
+        ) {
+          $currentPage = null; // Signal stop
+        } else {
+          $currentPage++; // Go to next page
+        }
+      }
+    } while ($nextPageUrl !== null || $currentPage !== null);
 
     // Step 4: Remove obsolete local time entries for the synced period
-    $this->removeObsoleteTimeEntries($syncedEntryIds);
+    $this->removeObsoleteTimeEntries(
+      $allSyncedProofhubEntryIds->unique(),
+      $syncTruncated
+    );
+
+    Log::channel('sync')->info('Finished ProofHub time entry sync.', [
+      'start_date' => $this->startDate,
+      'end_date' => $this->endDate,
+      'total_entries_processed' => $allSyncedProofhubEntryIds->count(),
+      'unique_entries_found' => $allSyncedProofhubEntryIds->unique()->count(),
+    ]);
   }
 
   /**
-   * Builds parameters for the ProofHub API request.
+   * Builds initial parameters for the ProofHub API request.
    *
    * @return array Parameters for the API request
    */
@@ -95,40 +196,43 @@ class SyncProofhubTimeEntries extends BaseSyncJob
   }
 
   /**
-   * Processes time entries from ProofHub and collects their IDs.
+   * Processes a single page of time entry data.
    *
-   * @param Collection $rawEntries Time entries from ProofHub API
-   * @return Collection Collection of synced ProofHub time entry IDs
+   * @param Collection $entriesPage Time entries from one API page
+   * @return Collection Collection of ProofHub IDs for successfully processed entries on this page
    */
-  private function processTimeEntries(Collection $rawEntries): Collection
+  private function processTimeEntryPage(Collection $entriesPage): Collection
   {
-    if ($rawEntries->isEmpty()) {
-      return collect();
-    }
+    $syncedIdsOnPage = collect();
 
-    $syncedIds = collect();
-
-    $rawEntries->each(function ($entry) use ($syncedIds) {
-      $processedEntryId = $this->processTimeEntry($entry);
-      if ($processedEntryId) {
-        $syncedIds->push($processedEntryId);
+    $entriesPage->each(function ($entry) use ($syncedIdsOnPage) {
+      // Reuse the existing single-entry processing logic
+      $processedEntryId = $this->processSingleTimeEntry($entry);
+      if ($processedEntryId !== null) {
+        $syncedIdsOnPage->push($processedEntryId);
       }
     });
 
-    return $syncedIds;
+    Log::channel('sync')->debug('Processed time entry page.', [
+      'entries_processed' => $entriesPage->count(),
+      'synced_ids_count' => $syncedIdsOnPage->count(),
+    ]);
+
+    return $syncedIdsOnPage;
   }
 
   /**
-   * Processes a single time entry.
+   * Processes a single time entry from the API data.
+   * Validates data, finds related models, and creates/updates the TimeEntry record.
    *
    * @param array $entry Time entry data from ProofHub
    * @return int|null The ProofHub ID of the synced entry, or null if skipped
    */
-  private function processTimeEntry(array $entry): ?int
+  private function processSingleTimeEntry(array $entry): ?int
   {
     $proofhubEntryId = data_get($entry, 'id');
     if (!$proofhubEntryId) {
-      Log::channel('sync')->info(
+      Log::channel('sync')->warning(
         class_basename($this) . ': Skipping time entry - ID missing',
         ['entry_data' => $entry]
       );
@@ -156,11 +260,11 @@ class SyncProofhubTimeEntries extends BaseSyncJob
       return null; // Skip if project invalid
     }
 
-    // Process task information
+    // Process task information (ensures task exists if ID provided)
     $taskInfo = $this->processTaskInfo($entry, $projectId);
 
     // Create or update the time entry
-    $this->createOrUpdateTimeEntry(
+    $this->createOrUpdateTimeEntryRecord(
       $entry,
       $user,
       $projectId,
@@ -180,8 +284,8 @@ class SyncProofhubTimeEntries extends BaseSyncJob
    */
   private function parseDateUtc(array $entry): ?Carbon
   {
-    $dateUtc = data_get($entry, 'date');
-    if (!$dateUtc) {
+    $dateString = data_get($entry, 'date');
+    if (!$dateString) {
       Log::channel('sync')->warning(
         class_basename($this) . ': Skipping time entry - Date missing',
         ['time_entry_id' => data_get($entry, 'id')]
@@ -190,13 +294,13 @@ class SyncProofhubTimeEntries extends BaseSyncJob
     }
 
     try {
-      return Carbon::parse($dateUtc)->utc();
+      return Carbon::parse($dateString)->utc();
     } catch (Exception $e) {
       Log::channel('sync')->error(
         class_basename($this) . ': Skipping time entry - Invalid date format',
         [
           'time_entry_id' => data_get($entry, 'id'),
-          'date_value' => $dateUtc,
+          'date_value' => $dateString,
           'error' => $e->getMessage(),
         ]
       );
@@ -208,20 +312,23 @@ class SyncProofhubTimeEntries extends BaseSyncJob
    * Parses the created_at date.
    *
    * @param array $entry Time entry data
-   * @return Carbon Parsed created_at date or current time
+   * @return Carbon Parsed created_at date or current time if invalid/missing
    */
   private function parseCreatedAtUtc(array $entry): Carbon
   {
-    $createdAt = data_get($entry, 'created_at');
+    $createdAtString = data_get($entry, 'created_at');
     try {
-      return $createdAt ? Carbon::parse($createdAt)->utc() : now()->utc();
+      // Return current UTC time if created_at is missing or cannot be parsed
+      return $createdAtString
+        ? Carbon::parse($createdAtString)->utc()
+        : now()->utc();
     } catch (Exception $e) {
       Log::channel('sync')->warning(
         class_basename($this) .
           ': Invalid created_at format, using current time',
         [
           'time_entry_id' => data_get($entry, 'id'),
-          'created_at_value' => $createdAt,
+          'created_at_value' => $createdAtString,
           'error' => $e->getMessage(),
         ]
       );
@@ -230,27 +337,29 @@ class SyncProofhubTimeEntries extends BaseSyncJob
   }
 
   /**
-   * Finds the user for a time entry.
+   * Finds the trackable local user corresponding to the time entry creator.
    *
    * @param array $entry Time entry data
-   * @return User|null The user or null if not found or not trackable
+   * @return User|null The User model or null if not found or not trackable
    */
   private function findUserForTimeEntry(array $entry): ?User
   {
     $creatorProofhubId = data_get($entry, 'creator.id');
     if (!$creatorProofhubId) {
-      Log::channel('sync')->info(
+      Log::channel('sync')->warning(
         class_basename($this) . ': Skipping time entry - creator ID missing',
         ['time_entry_id' => data_get($entry, 'id')]
       );
       return null;
     }
 
+    // Attempt to find the user and ensure they are trackable
     $user = User::where('proofhub_id', $creatorProofhubId)
-      ->trackable() // Apply scope here
+      ->trackable() // Apply scope to only get trackable users
       ->first();
 
     if (!$user) {
+      // Log why the user was skipped (either not found or not trackable)
       $this->logUserIssue($entry, $creatorProofhubId);
       return null;
     }
@@ -259,7 +368,7 @@ class SyncProofhubTimeEntries extends BaseSyncJob
   }
 
   /**
-   * Logs issues with finding a user for a time entry.
+   * Logs the reason why a user associated with a time entry was skipped.
    *
    * @param array $entry Time entry data
    * @param string|int $creatorProofhubId ProofHub user ID
@@ -281,7 +390,7 @@ class SyncProofhubTimeEntries extends BaseSyncJob
         ['time_entry_id' => data_get($entry, 'id')]
       );
     } else {
-      // If the user doesn't exist at all
+      // If the user doesn't exist at all in the database
       Log::channel('sync')->info(
         class_basename($this) .
           ': Skipping time entry - User ' .
@@ -297,10 +406,19 @@ class SyncProofhubTimeEntries extends BaseSyncJob
    *
    * @param string|int $projectId ProofHub project ID
    * @param array $entry Time entry data (for logging context)
-   * @return bool True if project exists, false otherwise
+   * @return bool True if project exists locally, false otherwise
    */
   private function validateProject($projectId, array $entry): bool
   {
+    if (!$projectId) {
+      // Should have been caught earlier, but double-check
+      Log::channel('sync')->warning(
+        class_basename($this) . ': Skipping time entry - Project ID missing',
+        ['time_entry_id' => data_get($entry, 'id')]
+      );
+      return false;
+    }
+
     $projectExists = Project::where(
       'proofhub_project_id',
       $projectId
@@ -308,10 +426,11 @@ class SyncProofhubTimeEntries extends BaseSyncJob
 
     if (!$projectExists) {
       Log::channel('sync')->info(
-        class_basename($this) . ': Skipping time entry - Project not found',
+        class_basename($this) .
+          ': Skipping time entry - Project not found locally',
         [
           'time_entry_id' => data_get($entry, 'id'),
-          'project_id' => $projectId,
+          'proofhub_project_id' => $projectId,
         ]
       );
       return false;
@@ -321,35 +440,37 @@ class SyncProofhubTimeEntries extends BaseSyncJob
 
   /**
    * Processes task information for a time entry.
+   * Ensures the task exists locally if an ID is provided.
    *
    * @param array $entry Time entry data
    * @param string|int $projectId ProofHub project ID
-   * @return array Contains 'taskId' (nullable) and 'taskName' (nullable)
+   * @return array Contains 'taskId' (nullable int/string) and 'taskName' (nullable string)
    */
   private function processTaskInfo(array $entry, $projectId): array
   {
     $taskId = data_get($entry, 'task.id');
     $taskName = data_get($entry, 'task.title');
 
-    // If task ID exists, ensure the task exists locally or create it
+    // If a task ID is present in the time entry data, ensure the task exists locally.
+    // This is crucial because time entries might reference tasks synced previously or in parallel.
     if ($taskId) {
       Task::firstOrCreate(
         ['proofhub_task_id' => $taskId],
         [
-          'proofhub_project_id' => $projectId,
+          'proofhub_project_id' => $projectId, // Associate with the correct project
           'name' => $taskName ?: 'Task name missing', // Provide default if name missing
         ]
       );
     }
 
     return [
-      'taskId' => $taskId,
-      'taskName' => $taskName,
+      'taskId' => $taskId, // Return the ID (or null)
+      'taskName' => $taskName, // Return the name (or null)
     ];
   }
 
   /**
-   * Creates or updates a time entry in the local database.
+   * Creates or updates a single TimeEntry record in the local database.
    *
    * @param array $entry Time entry data from ProofHub
    * @param User $user Local user model
@@ -359,7 +480,7 @@ class SyncProofhubTimeEntries extends BaseSyncJob
    * @param array $taskInfo Array containing 'taskId' and 'taskName'
    * @return void
    */
-  private function createOrUpdateTimeEntry(
+  private function createOrUpdateTimeEntryRecord(
     array $entry,
     User $user,
     $projectId,
@@ -367,9 +488,9 @@ class SyncProofhubTimeEntries extends BaseSyncJob
     Carbon $createdAtUtc,
     array $taskInfo
   ): void {
-    // Calculate total seconds from API response
-    $hours = data_get($entry, 'logged_hours', 0);
-    $minutes = data_get($entry, 'logged_mins', 0);
+    // Calculate total seconds from API response (handle potential nulls)
+    $hours = (int) data_get($entry, 'logged_hours', 0);
+    $minutes = (int) data_get($entry, 'logged_mins', 0);
     $totalSeconds = $hours * 3600 + $minutes * 60;
 
     TimeEntry::updateOrCreate(
@@ -377,12 +498,12 @@ class SyncProofhubTimeEntries extends BaseSyncJob
       [
         'user_id' => $user->id,
         'proofhub_project_id' => $projectId,
-        'proofhub_task_id' => $taskInfo['taskId'], // Nullable
-        'status' => data_get($entry, 'status', 'unknown'), // Default status
-        'description' => data_get($entry, 'description', ''), // Default description
-        'date' => $dateUtc->toDateString(),
-        'duration_seconds' => $totalSeconds, // Save calculated total seconds
-        'proofhub_created_at' => $createdAtUtc,
+        'proofhub_task_id' => $taskInfo['taskId'], // Can be null
+        'status' => data_get($entry, 'status', 'unknown'), // Provide a default status
+        'description' => data_get($entry, 'description', ''), // Default to empty string
+        'date' => $dateUtc->toDateString(), // Store date part only
+        'duration_seconds' => $totalSeconds,
+        'proofhub_created_at' => $createdAtUtc, // Store the creation timestamp from ProofHub
       ]
     );
   }
@@ -390,33 +511,55 @@ class SyncProofhubTimeEntries extends BaseSyncJob
   /**
    * Removes local time entries within the sync date range that no longer exist in ProofHub.
    *
-   * @param Collection $syncedEntryIds ProofHub IDs of entries synced in this run
+   * @param Collection $syncedEntryIds All unique ProofHub IDs of entries found during this sync run
+   * @param bool $syncTruncated Flag indicating if sync stopped early due to API issue
    * @return void
    */
-  private function removeObsoleteTimeEntries(Collection $syncedEntryIds): void
-  {
+  private function removeObsoleteTimeEntries(
+    Collection $syncedEntryIds,
+    bool $syncTruncated
+  ): void {
+    // *** SAFETY CHECK: Skip deletion if sync was truncated due to unreliable pagination ***
+    if ($syncTruncated) {
+      Log::channel('sync')->warning(
+        'Skipping obsolete time entry deletion because sync was truncated due to unreliable API pagination.'
+      );
+      return;
+    }
+
     // Define the date range Carbon objects for database query
     $startDate = Carbon::parse($this->startDate)->startOfDay();
     $endDate = Carbon::parse($this->endDate)->endOfDay();
 
-    // Get IDs of all local time entries within the sync date range
-    $localEntryIds = TimeEntry::whereBetween('date', [
+    Log::channel('sync')->debug('Checking for obsolete time entries.', [
+      'start_date' => $this->startDate,
+      'end_date' => $this->endDate,
+      'synced_ids_count' => $syncedEntryIds->count(),
+    ]);
+
+    // Find local entry IDs within the date range
+    $localEntryIdsQuery = TimeEntry::whereBetween('date', [
       $startDate,
       $endDate,
     ])->pluck('proofhub_time_entry_id');
 
-    // Determine which local IDs are not present in the synced IDs from ProofHub
-    $idsToDelete = $localEntryIds->diff($syncedEntryIds);
+    // Determine which local IDs were NOT present in the list of IDs synced from ProofHub
+    // Use whereNotIn for potentially better performance on large ID sets if $syncedEntryIds is large,
+    // although diff() is generally fine for moderate numbers.
+    $idsToDelete = $localEntryIdsQuery->diff($syncedEntryIds);
 
     if ($idsToDelete->isEmpty()) {
+      Log::channel('sync')->info(
+        'No obsolete time entries found within the date range.'
+      );
       return; // No obsolete entries found
     }
 
     Log::channel('sync')->info(
-      class_basename($this) . ': Deleting obsolete time entries',
+      class_basename($this) .
+        ": Deleting {$idsToDelete->count()} obsolete time entries within date range.",
       [
-        'count' => $idsToDelete->count(),
-        'ids' => $idsToDelete->all(),
+        'ids_to_delete' => $idsToDelete->all(),
         'date_range' => [$this->startDate, $this->endDate],
       ]
     );
@@ -435,6 +578,7 @@ class SyncProofhubTimeEntries extends BaseSyncJob
               'error' => $e->getMessage(),
             ]
           );
+          // Decide if we should continue or rethrow - for now, continue
         }
       });
   }

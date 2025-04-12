@@ -37,12 +37,13 @@ class SyncProofhubTasks extends BaseSyncJob
   }
 
   /**
-   * Executes the synchronization process.
+   * Executes the synchronization process page by page.
    *
    * This method performs the following operations:
-   * 1. Fetches tasks from ProofHub API
-   * 2. Processes tasks and their subtasks
-   * 3. Removes local tasks that no longer exist in ProofHub
+   * 1. Loops through pages of tasks fetched from ProofHub API using callPage.
+   * 2. Processes tasks and their subtasks from each page.
+   * 3. Collects all valid ProofHub task and subtask IDs encountered.
+   * 4. Removes local tasks whose ProofHub IDs were not found in the sync.
    *
    * @return void
    *
@@ -50,70 +51,156 @@ class SyncProofhubTasks extends BaseSyncJob
    */
   protected function execute(): void
   {
-    // Step 1: Fetch tasks from ProofHub API
-    $tasks = $this->proofhub->getTasks();
+    $endpoint = 'alltodo';
+    $allSyncedProofhubTaskIds = collect(); // Track all synced task/subtask IDs
+    $currentPage = 1;
+    $totalPages = 1; // Initialize for fallback
+    $nextPageUrl = null;
 
-    // Step 2: Process all tasks and collect valid task IDs
-    $syncedTaskIds = $this->processTasks($tasks);
+    $baseUrl = config('services.proofhub.company_url');
+    if (!$baseUrl) {
+      throw new Exception('ProofHub company URL not configured.');
+    }
+    $initialUrl = "https://{$baseUrl}.proofhub.com/api/v3/{$endpoint}";
+
+    Log::channel('sync')->info('Starting ProofHub task sync.');
+
+    do {
+      // Determine URL and params for the API call
+      $urlToCall = $nextPageUrl ?: $initialUrl;
+      $paramsToCall = [];
+      if ($nextPageUrl === null) {
+        // Only add page param if using fallback URL
+        $paramsToCall['page'] = $currentPage;
+        $urlToCall = "https://{$baseUrl}.proofhub.com/api/v3/{$endpoint}"; // Ensure base URL for fallback
+      }
+
+      // Call API for the current page
+      $pageResult = $this->proofhub->callPage(
+        $urlToCall,
+        $paramsToCall,
+        $endpoint
+      );
+      $tasksOnPage = $pageResult['data'];
+      $nextPageUrl = $pageResult['nextPageUrl'];
+      $totalPagesFromHeader = $pageResult['totalPages'];
+
+      // Check for empty page (after first page, using fallback)
+      if (
+        $tasksOnPage->isEmpty() &&
+        $currentPage > 1 &&
+        $nextPageUrl === null
+      ) {
+        Log::channel('sync')->info(
+          "No more tasks found on page {$currentPage} using fallback, ending sync.",
+          [
+            'endpoint' => $endpoint,
+          ]
+        );
+        break;
+      }
+
+      // Process tasks on the current page
+      $syncedIdsOnPage = $this->processTaskPage($tasksOnPage);
+      $allSyncedProofhubTaskIds = $allSyncedProofhubTaskIds->merge(
+        $syncedIdsOnPage
+      );
+
+      // --- Pagination Logic for Next Loop Iteration ---
+      if ($nextPageUrl) {
+        $currentPage = null;
+        $totalPages = null;
+      } elseif ($currentPage !== null) {
+        if ($currentPage === 1 && $totalPagesFromHeader !== null) {
+          $totalPages = $totalPagesFromHeader;
+        }
+        if ($currentPage < $totalPages) {
+          $currentPage++;
+        } else {
+          $currentPage = null;
+          Log::channel('sync')->debug(
+            "Reached last page ({$totalPages}) via fallback for {$endpoint}."
+          );
+        }
+      }
+    } while ($nextPageUrl !== null || $currentPage !== null);
 
     // Step 3: Remove local tasks that no longer exist in ProofHub
-    $this->removeObsoleteTasks($syncedTaskIds);
+    $this->removeObsoleteTasks($allSyncedProofhubTaskIds->unique());
+
+    Log::channel('sync')->info('Finished ProofHub task sync.', [
+      'total_tasks_subtasks_processed' => $allSyncedProofhubTaskIds->count(),
+      'unique_tasks_subtasks_found' => $allSyncedProofhubTaskIds
+        ->unique()
+        ->count(),
+    ]);
   }
 
   /**
-   * Processes tasks from ProofHub and returns their IDs.
+   * Processes a single page of task data.
    *
-   * @param Collection $tasks Tasks from ProofHub API
-   * @return Collection Collection of synchronized task IDs
+   * @param Collection $tasksPage Tasks from one API page
+   * @return Collection Collection of synchronized task and subtask IDs from this page
    */
-  private function processTasks(Collection $tasks): Collection
+  private function processTaskPage(Collection $tasksPage): Collection
   {
-    $syncedTaskIds = collect();
+    $syncedTaskIdsOnPage = collect();
 
-    $tasks
+    $tasksPage
       ->filter(fn($taskData) => data_get($taskData, 'id'))
-      ->each(function ($taskData) use ($syncedTaskIds) {
+      ->each(function ($taskData) use ($syncedTaskIdsOnPage) {
         $taskId = data_get($taskData, 'id');
-        $syncedTaskIds->push($taskId);
+        $syncedTaskIdsOnPage->push($taskId); // Add main task ID
 
         $projectId = data_get($taskData, 'project.id');
 
-        // Skip task if project doesn't exist
+        // Skip task if project doesn't exist locally
         if (!$this->validateProject($projectId, $taskId)) {
-          return;
+          return; // Continue to the next task in the each loop
         }
 
         // Process the main task
-        $task = $this->syncTask($taskData, $projectId);
+        $task = $this->syncTaskRecord($taskData, $projectId);
 
         // Process task user assignments
         $this->syncTaskUsers($task, data_get($taskData, 'assigned', []));
 
-        // Process subtasks if any
+        // Process subtasks if any - assumes subtasks are nested within the main task data
         $subtaskIds = $this->processSubtasks($taskData, $projectId);
-        $syncedTaskIds = $syncedTaskIds->merge($subtaskIds);
+        $syncedTaskIdsOnPage = $syncedTaskIdsOnPage->merge($subtaskIds); // Add subtask IDs
       });
 
-    return $syncedTaskIds;
+    return $syncedTaskIdsOnPage;
   }
 
   /**
-   * Validates that a project exists for the task.
+   * Validates that a project exists locally for the task.
    *
-   * @param string|int $projectId ProofHub project ID
-   * @param string|int $taskId ProofHub task ID
-   * @return bool Whether the project exists
+   * @param mixed $projectId ProofHub project ID (can be null)
+   * @param mixed $taskId ProofHub task ID (for logging)
+   * @return bool Whether the project exists locally
    */
   private function validateProject($projectId, $taskId): bool
   {
-    $project = Project::where('proofhub_project_id', $projectId)->first();
+    if (!$projectId) {
+      Log::channel('sync')->warning(
+        'Skipping task - Project ID missing in API data',
+        ['task_id' => $taskId]
+      );
+      return false;
+    }
 
-    if (!$project) {
+    $projectExists = Project::where(
+      'proofhub_project_id',
+      $projectId
+    )->exists();
+
+    if (!$projectExists) {
       Log::channel('sync')->info(
-        class_basename($this) . ': Skipping task - project not found',
+        class_basename($this) . ': Skipping task - Project not found locally',
         [
           'task_id' => $taskId,
-          'project_id' => $projectId,
+          'proofhub_project_id' => $projectId,
         ]
       );
       return false;
@@ -123,128 +210,109 @@ class SyncProofhubTasks extends BaseSyncJob
   }
 
   /**
-   * Creates or updates a task in the local database.
+   * Creates or updates a single task/subtask record in the local database.
    *
-   * @param array $taskData Task data from ProofHub
-   * @param string|int $projectId ProofHub project ID
-   * @return Task The updated or created task
+   * @param array $taskData Task or subtask data from ProofHub
+   * @param mixed $projectId ProofHub project ID
+   * @return Task The updated or created Task model
    */
-  private function syncTask(array $taskData, $projectId): Task
+  private function syncTaskRecord(array $taskData, $projectId): Task
   {
     $taskId = data_get($taskData, 'id');
     $taskName = data_get($taskData, 'title');
 
+    // Use updateOrCreate to sync the task based on its ProofHub ID
     return Task::updateOrCreate(
       ['proofhub_task_id' => $taskId],
       [
         'proofhub_project_id' => $projectId,
-        'name' => $taskName,
+        'name' => $taskName ?: 'Untitled Task', // Provide a default name if missing
       ]
     );
   }
 
   /**
-   * Syncs user assignments for a task.
+   * Syncs user assignments for a task using the efficient sync() method.
    *
-   * @param Task $task The task to sync users for
+   * @param Task $task The task model
    * @param array $assignedUserIds ProofHub user IDs assigned to the task
    * @return void
    */
   private function syncTaskUsers(Task $task, array $assignedUserIds): void
   {
-    // Find local users who match the assigned IDs
+    // Find local user IDs for trackable users matching the assigned ProofHub IDs
     $localUserIds = User::whereIn('proofhub_id', $assignedUserIds)
       ->trackable()
       ->pluck('id');
 
-    // Get existing task user IDs
-    $existingUserIds = $task->users()->pluck('user_id');
-
-    // Detach users no longer assigned to the task
-    $this->detachUsers($task, $existingUserIds->diff($localUserIds));
-
-    // Attach newly assigned users
-    $this->attachUsers($task, $localUserIds->diff($existingUserIds));
+    // Sync the relationship efficiently
+    $task->users()->sync($localUserIds);
   }
 
   /**
-   * Detaches users from a task.
+   * Processes subtasks nested within a main task's data.
    *
-   * @param Task $task The task to detach users from
-   * @param Collection $userIdsToDetach User IDs to detach
-   * @return void
-   */
-  private function detachUsers(Task $task, Collection $userIdsToDetach): void
-  {
-    $userIdsToDetach->each(function ($userId) use ($task) {
-      $task->users()->detach($userId);
-    });
-  }
-
-  /**
-   * Attaches users to a task.
-   *
-   * @param Task $task The task to attach users to
-   * @param Collection $userIdsToAttach User IDs to attach
-   * @return void
-   */
-  private function attachUsers(Task $task, Collection $userIdsToAttach): void
-  {
-    $userIdsToAttach->each(function ($userId) use ($task) {
-      $task->users()->attach($userId);
-    });
-  }
-
-  /**
-   * Processes subtasks of a main task.
-   *
-   * @param array $taskData Main task data containing subtasks
-   * @param string|int $projectId ProofHub project ID
-   * @return Collection Collection of subtask IDs
+   * @param array $taskData Main task data potentially containing a 'subtasks' array
+   * @param mixed $projectId ProofHub project ID of the main task
+   * @return Collection Collection of ProofHub IDs for the processed subtasks
    */
   private function processSubtasks(array $taskData, $projectId): Collection
   {
-    $subtaskIds = collect();
-    $subtasks = collect(data_get($taskData, 'subtasks', []));
+    $syncedSubtaskIds = collect();
+    $subtasks = collect(data_get($taskData, 'subtasks', [])); // Get subtasks or empty collection
 
     $subtasks
-      ->filter(fn($subtask) => data_get($subtask, 'id'))
-      ->each(function ($subtask) use ($subtaskIds, $projectId) {
+      ->filter(fn($subtask) => data_get($subtask, 'id')) // Ensure subtask has an ID
+      ->each(function ($subtask) use ($syncedSubtaskIds, $projectId) {
         $subtaskId = data_get($subtask, 'id');
-        $subtaskIds->push($subtaskId);
+        $syncedSubtaskIds->push($subtaskId);
 
-        // Create or update the subtask
-        $subtaskModel = $this->syncTask($subtask, $projectId);
+        // Create or update the subtask record
+        $subtaskModel = $this->syncTaskRecord($subtask, $projectId);
 
         // Process subtask user assignments
         $this->syncTaskUsers($subtaskModel, data_get($subtask, 'assigned', []));
       });
 
-    return $subtaskIds;
+    return $syncedSubtaskIds;
   }
 
   /**
    * Removes local tasks that no longer exist in ProofHub.
    *
-   * @param Collection $syncedTaskIds IDs of tasks that exist in ProofHub
+   * @param Collection $syncedTaskIds All unique ProofHub task/subtask IDs found during sync
    * @return void
    */
   private function removeObsoleteTasks(Collection $syncedTaskIds): void
   {
     if ($syncedTaskIds->isEmpty()) {
+      Log::channel('sync')->info(
+        'No ProofHub tasks/subtasks found during sync, skipping obsolete task cleanup.'
+      );
       return;
     }
 
-    Task::pluck('proofhub_task_id')
-      ->diff($syncedTaskIds)
-      ->pipe(function ($tasksToDelete) {
-        if ($tasksToDelete->isEmpty()) {
-          return;
-        }
+    // Find local task IDs that were not in the synced list
+    $obsoleteTaskIds = Task::whereNotIn(
+      'proofhub_task_id',
+      $syncedTaskIds
+    )->pluck('proofhub_task_id');
 
-        Task::whereIn('proofhub_task_id', $tasksToDelete)
-          ->get()
-          ->each(fn(Task $t) => $t->delete());
-      });
+    if ($obsoleteTaskIds->isEmpty()) {
+      Log::channel('sync')->info('No obsolete ProofHub tasks to delete.');
+      return;
+    }
+
+    Log::channel('sync')->info(
+      "Deleting {$obsoleteTaskIds->count()} obsolete ProofHub tasks/subtasks.",
+      [
+        'ids_to_delete' => $obsoleteTaskIds->all(),
+      ]
+    );
+
+    // Delete obsolete tasks individually to trigger model events
+    Task::whereIn('proofhub_task_id', $obsoleteTaskIds)
+      ->get()
+      ->each(fn(Task $t) => $t->delete());
   }
 }

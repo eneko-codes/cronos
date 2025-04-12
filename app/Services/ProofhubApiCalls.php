@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Contracts\Pingable;
 use Exception;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -54,114 +55,211 @@ class ProofhubApiCalls implements Pingable
   }
 
   /**
-   * Executes a JSON GET call to ProofHub, handling pagination.
+   * Executes a JSON GET call to a specific ProofHub page (or URL).
    *
-   * @param string $endpoint The API endpoint (relative to base URL).
-   * @param array  $params   Optional query parameters.
-   * @return Collection A collection containing results from all pages.
-   * @throws Exception On request failure.
+   * Returns the data collection and pagination details for that single page.
+   *
+   * @param string      $url          The full URL to call (can be base + endpoint or a 'next' URL from Link header).
+   * @param array       $params       Query parameters for the request (used if $url doesn't contain them).
+   * @param string|null $endpointName Optional: Name of the original endpoint for logging purposes.
+   *
+   * @return array{data: Collection, totalPages: int|null, nextPageUrl: string|null}
+   *               'data'        => Collection of items from the response.
+   *               'totalPages'  => Total pages from 'pages-count' header (null if header not found or Link header used).
+   *               'nextPageUrl' => URL for the next page from 'Link' header (null if not found).
+   * @throws Exception On request failure or unexpected response format.
    */
-  private function call(string $endpoint, array $params = []): Collection
-  {
-    $currentPage = 1;
-    $allResults = collect();
-    $totalPages = 1; // Assume 1 page initially
+  public function callPage(
+    string $url,
+    array $params = [],
+    ?string $endpointName = null
+  ): array {
+    try {
+      Log::channel('sync')->debug('ProofHub API Page Request:', [
+        'url' => $url,
+        'params' => $params,
+        'endpoint' => $endpointName, // Log original endpoint if provided
+      ]);
 
-    do {
-      // Add/update the page parameter for the current request
-      $params['page'] = $currentPage;
-      $url = "{$this->baseUrl}{$endpoint}";
+      $response = Http::withHeaders([
+        'X-API-KEY' => $this->apiKey,
+        'Accept' => 'application/json',
+      ])
+        ->timeout(60) // Consider making this configurable
+        ->get($url, $params);
 
-      try {
-        $response = Http::withHeaders([
-          'X-API-KEY' => $this->apiKey,
-          'Accept' => 'application/json',
-        ])
-          ->timeout(60) // Increased timeout for potentially longer calls
-          ->get($url, $params);
+      if ($response->failed()) {
+        throw new Exception(
+          "ProofHub API call to {$url} failed: {$response->status()}"
+        );
+      }
 
-        if ($response->failed()) {
-          throw new Exception(
-            "ProofHub API call to {$endpoint} (Page {$currentPage}) failed: {$response->status()}"
+      // Decode the JSON body
+      $responseData = $response->json();
+
+      // --- Pagination Details ---
+      $nextPageUrl = $this->parseNextLinkFromHeader($response->header('Link'));
+      $totalPages = null;
+
+      // Only read pages-count if Link header didn't provide a next URL
+      if ($nextPageUrl === null) {
+        $totalPagesHeader = strtolower($response->header('pages-count'));
+        if ($endpointName === 'alltime') {
+          $totalPages = null; // Signal to the job that fallback count is unreliable
+          Log::channel('sync')->warning(
+            'ProofHub API Warning: No Link header for /alltime. Fallback pagination is unreliable and will be skipped.',
+            [
+              'url' => $url,
+              'params' => $params,
+              'pages-count_header' => $totalPagesHeader ?? 'N/A',
+            ]
           );
-        }
-
-        // Get the total number of pages from the header on the first request
-        if ($currentPage === 1) {
-          // Header names can be case-insensitive, normalize to lower
-          $totalPagesHeader = strtolower($response->header('pages-count'));
+        } else {
+          // For other endpoints, trust pages-count as a fallback
           $totalPages = !empty($totalPagesHeader) ? (int) $totalPagesHeader : 1;
           Log::channel('sync')->debug(
-            "ProofHub API call to {$endpoint}: Found {$totalPages} total pages."
+            'ProofHub API Page Response: No Link header found, using fallback.',
+            [
+              'url' => $url,
+              'endpoint' => $endpointName,
+              'pages-count' => $totalPagesHeader ?? 'N/A',
+              'total_pages_detected' => $totalPages,
+            ]
           );
         }
-
-        // Decode the JSON body
-        $responseData = $response->json();
-
-        // Ensure response data is an array (or can be treated as one)
-        if (!is_array($responseData)) {
-          Log::channel('sync')->warning(
-            "ProofHub API call to {$endpoint} (Page {$currentPage}): Response was not an array.",
-            ['response_type' => gettype($responseData)]
-          );
-          // If it's not an array and not page 1, stop processing further pages for this endpoint
-          if ($currentPage > 1) {
-            break;
-          }
-          // If it's page 1 and not an array, maybe it's a single object response? Return it as a collection.
-          return collect([$responseData]);
-        }
-
-        // Add results from the current page to the collection
-        $allResults = $allResults->merge($responseData);
-
-        $currentPage++;
-      } catch (Exception $e) {
-        // Log the specific error and re-throw to let the job handle failure/retries
-        Log::channel('sync')->error(
-          'ProofHub API call error during pagination',
+      } else {
+        Log::channel('sync')->debug(
+          'ProofHub API Page Response: Found Link header.',
           [
-            'endpoint' => $endpoint,
-            'page' => $currentPage,
-            'error' => $e->getMessage(),
+            'url' => $url,
+            'endpoint' => $endpointName,
+            'next_page_url' => $nextPageUrl,
           ]
         );
-        throw $e;
       }
-    } while ($currentPage <= $totalPages);
 
-    return $allResults;
+      // --- Process Response Data ---
+      $dataCollection = collect();
+      if (is_array($responseData)) {
+        $dataCollection = collect($responseData);
+      } elseif ($responseData !== null) {
+        // Handle single non-null, non-array item
+        Log::channel('sync')->info(
+          'ProofHub API call to {$url}: Response was not an array, wrapping single item.',
+          ['response_type' => gettype($responseData)]
+        );
+        $dataCollection = collect([$responseData]);
+      } else {
+        // Response was null or empty, return empty collection
+        Log::channel('sync')->debug(
+          'ProofHub API call to {$url}: Response data was null or empty.',
+          ['response_type' => gettype($responseData)]
+        );
+      }
+
+      return [
+        'data' => $dataCollection,
+        'totalPages' => $totalPages,
+        'nextPageUrl' => $nextPageUrl,
+      ];
+    } catch (Exception $e) {
+      Log::channel('sync')->error('ProofHub API call error', [
+        'url' => $url,
+        'params' => $params,
+        'endpoint' => $endpointName,
+        'error' => $e->getMessage(),
+      ]);
+      throw $e; // Re-throw to allow job failure/retry logic
+    }
+  }
+
+  /**
+   * Parses the 'Link' HTTP header to find the URL for the 'next' relation.
+   *
+   * Example Link header:
+   * '<https://company.proofhub.com/api/v3/people?page=2>; rel="next", <https://company.proofhub.com/api/v3/people?page=10>; rel="last"'
+   *
+   * @param string|null $linkHeader The value of the Link header.
+   * @return string|null The URL for the next page, or null if not found.
+   */
+  private function parseNextLinkFromHeader(?string $linkHeader): ?string
+  {
+    if (empty($linkHeader)) {
+      return null;
+    }
+
+    // Split the header into individual link parts (separated by commas)
+    $links = explode(',', $linkHeader);
+
+    foreach ($links as $link) {
+      // Split each part into URL and parameters (separated by semicolon)
+      $segments = explode(';', trim($link));
+
+      // Check if there are at least 2 segments (URL and rel parameter)
+      if (count($segments) < 2) {
+        continue;
+      }
+
+      // Extract the URL (remove surrounding '<' and '>')
+      $url = trim($segments[0]);
+      if (str_starts_with($url, '<') && str_ends_with($url, '>')) {
+        $url = substr($url, 1, -1);
+      } else {
+        continue; // Malformed URL part
+      }
+
+      // Check the relation parameter
+      for ($i = 1; $i < count($segments); $i++) {
+        $param = trim($segments[$i]);
+        // Look for rel="next" (case-insensitive check for 'next')
+        if (preg_match('/rel\s*=\s*"?next"?/i', $param)) {
+          return $url; // Found the next link
+        }
+      }
+    }
+
+    return null; // No 'next' link found
   }
 
   /**
    * Retrieve all users from ProofHub.
+   * DEPRECATED: Jobs should now call callPage directly in a loop.
+   * This method remains temporarily for compatibility but will be removed.
    *
    * @return Collection A collection of users.
    * @throws Exception On API call failure.
    */
   public function getUsers(): Collection
   {
-    return $this->call('people');
+    Log::channel('sync')->warning(
+      'Deprecated method ProofhubApiCalls::getUsers() called.'
+    );
+    return $this->fetchAllPages('people');
   }
 
   /**
    * Retrieve all time entries from ProofHub with optional filtering.
+   * DEPRECATED: Jobs should now call callPage directly in a loop.
+   * This method remains temporarily for compatibility but will be removed.
    *
    * Endpoint: GET /alltime
    *
    * @param array $params Optional query parameters (e.g., ['from_date' => 'YYYY-MM-DD', 'to_date' => 'YYYY-MM-DD']).
-   *                      The 'page' parameter will be handled by the call() method.
    * @return Collection Collection of time entries.
    * @throws Exception On API call failure.
    */
   public function getAllTime(array $params = []): Collection
   {
-    return $this->call('alltime', $params);
+    Log::channel('sync')->warning(
+      'Deprecated method ProofhubApiCalls::getAllTime() called.'
+    );
+    return $this->fetchAllPages('alltime', $params);
   }
 
   /**
    * Retrieve all projects from ProofHub.
+   * DEPRECATED: Jobs should now call callPage directly in a loop.
+   * This method remains temporarily for compatibility but will be removed.
    *
    * Endpoint: GET /projects
    *
@@ -170,11 +268,16 @@ class ProofhubApiCalls implements Pingable
    */
   public function getProjects(): Collection
   {
-    return $this->call('projects');
+    Log::channel('sync')->warning(
+      'Deprecated method ProofhubApiCalls::getProjects() called.'
+    );
+    return $this->fetchAllPages('projects');
   }
 
   /**
    * Retrieve all tasks from ProofHub.
+   * DEPRECATED: Jobs should now call callPage directly in a loop.
+   * This method remains temporarily for compatibility but will be removed.
    *
    * Endpoint: GET /alltodo
    *
@@ -183,7 +286,69 @@ class ProofhubApiCalls implements Pingable
    */
   public function getTasks(): Collection
   {
-    return $this->call('alltodo');
+    Log::channel('sync')->warning(
+      'Deprecated method ProofhubApiCalls::getTasks() called.'
+    );
+    return $this->fetchAllPages('alltodo');
+  }
+
+  /**
+   * Internal helper to fetch all pages (temporary for deprecated methods).
+   *
+   * @param string $endpoint
+   * @param array $params
+   * @return Collection
+   * @throws Exception
+   */
+  private function fetchAllPages(
+    string $endpoint,
+    array $params = []
+  ): Collection {
+    $allResults = collect();
+    $currentPage = 1;
+    $totalPages = 1; // Assume 1 page initially for fallback
+    $nextPageUrl = null;
+
+    $currentUrl = "{$this->baseUrl}{$endpoint}"; // Initial URL
+
+    do {
+      $urlToCall = $nextPageUrl ?: $currentUrl;
+      $paramsToCall = [];
+      if ($nextPageUrl === null && $currentPage === 1) {
+        // First request using fallback
+        $paramsToCall = $params;
+        $paramsToCall['page'] = $currentPage;
+      } elseif ($nextPageUrl === null) {
+        // Subsequent fallback
+        $paramsToCall = ['page' => $currentPage];
+        $urlToCall = "{$this->baseUrl}{$endpoint}"; // Reset URL for fallback
+      }
+
+      $pageResult = $this->callPage($urlToCall, $paramsToCall, $endpoint);
+
+      $allResults = $allResults->merge($pageResult['data']);
+
+      $nextPageUrl = $pageResult['nextPageUrl'];
+
+      if ($nextPageUrl === null) {
+        // Using fallback
+        if ($currentPage === 1) {
+          // Get total pages only on first fallback request
+          $totalPages = $pageResult['totalPages'] ?? 1;
+        }
+        if ($currentPage < $totalPages) {
+          $currentPage++;
+        } else {
+          $currentPage = null; // Signal stop
+        }
+      } else {
+        // Using Link header, reset fallback vars
+        $currentPage = null;
+        $totalPages = null;
+      }
+    } while ($nextPageUrl !== null || $currentPage !== null);
+
+    return $allResults;
   }
 
   /**

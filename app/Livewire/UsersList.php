@@ -9,7 +9,7 @@ use Livewire\Component;
 use Livewire\WithPagination;
 
 #[Title('Users')]
-class UsersTable extends Component
+class UsersList extends Component
 {
   use WithPagination;
 
@@ -39,9 +39,9 @@ class UsersTable extends Component
     $this->resetPage();
   }
 
-  public function redirectToUserPage(int $userId)
+  public function redirectToUserDashboard(int $userId)
   {
-    return redirect()->route('user.page', ['id' => $userId]);
+    return redirect()->route('user.dashboard', ['id' => $userId]);
   }
 
   public function render()
@@ -77,7 +77,7 @@ class UsersTable extends Component
       'muted' => User::where('muted_notifications', true)->count(),
     ];
 
-    return view('livewire.users-table', [
+    return view('livewire.users-list', [
       'users' => $users,
       'counts' => $counts,
     ]);

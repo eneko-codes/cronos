@@ -37,7 +37,7 @@
   @if (Auth::user()->is_admin)
     <a
       wire:navigate
-      href="{{ route("users.table") }}"
+      href="{{ route("users.list") }}"
       class="{{ Str::contains(request()->path(), "users") ? $activeClass : $inactiveClass }} {{ $baseClass }} {{ $desktopClass }} {{ $mobileClass }}"
     >
       <svg

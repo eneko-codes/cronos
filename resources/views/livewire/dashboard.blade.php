@@ -1,4 +1,4 @@
 <!-- resources/views/livewire/dashboard.blade.php -->
 <div>
-  @livewire('user-page', ['id' => auth()->id()])
+  @livewire('user-dashboard', ['id' => auth()->id()])
 </div>

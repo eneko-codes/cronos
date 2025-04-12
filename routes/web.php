@@ -4,8 +4,8 @@ use App\Http\Controllers\LoginController;
 use App\Livewire\Dashboard;
 use App\Livewire\Login;
 use App\Livewire\Settings;
-use App\Livewire\UserPage;
-use App\Livewire\UsersTable;
+use App\Livewire\UserDashboard;
+use App\Livewire\UsersList;
 use App\Livewire\ProjectsTasksView;
 use Illuminate\Support\Facades\Route;
 
@@ -26,8 +26,8 @@ Route::middleware(['auth', 'throttle:api'])->group(function () {
   Route::middleware(['can:viewAny,App\Models\User', 'throttle:admin'])->group(
     function () {
       Route::get('/settings', Settings::class)->name('settings');
-      Route::get('/users', UsersTable::class)->name('users.table');
-      Route::get('/user/{id}', UserPage::class)->name('user.page');
+      Route::get('/users', UsersList::class)->name('users.list');
+      Route::get('/user/{id}', UserDashboard::class)->name('user.dashboard');
       Route::get('/projects-tasks', ProjectsTasksView::class)->name(
         'projects-tasks'
       );

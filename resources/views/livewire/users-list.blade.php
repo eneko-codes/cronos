@@ -36,7 +36,7 @@
       <x-tooltip
         text="Synchronize all users from Odoo and their Proofhub, Desktime, and SystemPin IDs"
       >
-        <livewire:sync-button :key="'users-table-sync'" sync-type="users" />
+        <livewire:sync-button :key="'users-list-sync'" sync-type="users" />
       </x-tooltip>
     </div>
   </div>
@@ -52,7 +52,7 @@
           >
             <!-- User Info Column -->
             <td
-              wire:click="redirectToUserPage({{ $user->id }})"
+              wire:click="redirectToUserDashboard({{ $user->id }})"
               class="flex w-full flex-1 flex-col gap-1 md:w-auto md:flex-row md:items-center"
             >
               <div class="flex items-center gap-2">

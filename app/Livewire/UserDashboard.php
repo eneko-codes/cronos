@@ -15,8 +15,8 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Reactive;
 use Illuminate\Support\Facades\Gate;
 
-#[Title('User Page')]
-class UserPage extends Component
+#[Title('User Dashboard')]
+class UserDashboard extends Component
 {
   /**
    * The user whose data is displayed.
@@ -367,7 +367,7 @@ class UserPage extends Component
    */
   public function render()
   {
-    return view('livewire.user-page');
+    return view('livewire.user-dashboard');
   }
 
   /**

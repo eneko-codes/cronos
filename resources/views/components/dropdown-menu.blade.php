@@ -2,7 +2,7 @@
   <button
     @click="open = !open"
     @click.outside="open = false"
-    class="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+    class="flex items-center gap-2 rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
   >
     <span class="flex items-center gap-2">{{ $trigger }}</span>
     <svg
@@ -28,7 +28,7 @@
     x-transition:leave="transition duration-75 ease-in"
     x-transition:leave-start="scale-100 opacity-100"
     x-transition:leave-end="scale-95 opacity-0"
-    class="absolute right-0 z-50 mt-1 min-w-[12rem] rounded-md border bg-white p-2 shadow-lg dark:border-gray-700 dark:bg-gray-800"
+    class="absolute right-0 z-50 mt-1 w-auto min-w-[12rem] max-w-sm rounded-md border bg-white p-2 shadow-lg dark:border-gray-700 dark:bg-gray-800"
   >
     {{ $slot }}
   </div>

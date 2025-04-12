@@ -1,6 +1,8 @@
 <div
   x-data="{
     updatePosition() {
+      if (! this.$refs.tooltip) return
+
       const tooltip = this.$refs.tooltip
       const trigger = this.$el
       const viewport = {
@@ -33,8 +35,10 @@
     },
   }"
   x-init="
-    window.addEventListener('resize', updatePosition)
-    document.addEventListener('scroll', updatePosition, true)
+    Alpine.nextTick(() => {
+      window.addEventListener('resize', updatePosition)
+      document.addEventListener('scroll', updatePosition, true)
+    })
   "
   @mouseover="updatePosition()"
   class="group relative w-fit"

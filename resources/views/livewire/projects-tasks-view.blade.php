@@ -136,6 +136,13 @@
     </div>
   </div>
 
+  <!-- Project Count -->
+  @if ($projects->total() > 0)
+    <div class="text-sm text-gray-600 dark:text-gray-400">
+      Showing {{ $projects->total() }} projects
+    </div>
+  @endif
+
   <!-- Accordion List Container -->
   <div class="flex flex-col gap-2 overflow-y-auto">
     @forelse ($projects as $project)

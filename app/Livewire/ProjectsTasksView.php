@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\Computed;
 
-#[Title('Projects, Tasks & Time-Entries')]
+#[Title('Projects')]
 class ProjectsTasksView extends Component
 {
   use WithPagination;

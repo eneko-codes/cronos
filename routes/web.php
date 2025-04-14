@@ -6,7 +6,8 @@ use App\Livewire\Login;
 use App\Livewire\Settings;
 use App\Livewire\UserDashboard;
 use App\Livewire\UsersList;
-use App\Livewire\ProjectsTasksView;
+use App\Livewire\ProjectsListView;
+use App\Livewire\ProjectDetailView;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -28,9 +29,11 @@ Route::middleware(['auth', 'throttle:api'])->group(function () {
       Route::get('/settings', Settings::class)->name('settings');
       Route::get('/users', UsersList::class)->name('users.list');
       Route::get('/user/{id}', UserDashboard::class)->name('user.dashboard');
-      Route::get('/projects-tasks', ProjectsTasksView::class)->name(
-        'projects-tasks'
-      );
+      Route::get('/projects', ProjectsListView::class)->name('projects.list');
+      Route::get(
+        '/projects/{project:proofhub_project_id}',
+        ProjectDetailView::class
+      )->name('projects.show');
     }
   );
 });

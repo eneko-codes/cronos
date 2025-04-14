@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\Computed;
 
 #[Title('Projects')]
-class ProjectsTasksView extends Component
+class ProjectsListView extends Component
 {
   use WithPagination;
 
@@ -31,9 +31,6 @@ class ProjectsTasksView extends Component
     'has_no_time_entries' => false,
     'has_direct_time_entries' => false,
   ];
-
-  public array $expandedProjects = [];
-  public array $expandedTasks = [];
 
   protected $queryString = [
     'search' => ['except' => ''],
@@ -53,8 +50,6 @@ class ProjectsTasksView extends Component
   public function updatedSearch(): void
   {
     $this->resetPage();
-    $this->expandedProjects = [];
-    $this->expandedTasks = [];
   }
 
   /**
@@ -71,90 +66,6 @@ class ProjectsTasksView extends Component
   public function updatedFilters(): void
   {
     $this->resetPage();
-  }
-
-  /**
-   * Toggle project expansion and load tasks if needed.
-   */
-  public function toggleProject(string $projectId): void
-  {
-    if (in_array($projectId, $this->expandedProjects)) {
-      $this->expandedProjects = array_diff($this->expandedProjects, [
-        $projectId,
-      ]);
-    } else {
-      $this->expandedProjects[] = $projectId;
-    }
-  }
-
-  /**
-   * Toggle task expansion and load time entries if needed.
-   */
-  public function toggleTask(string $taskId): void
-  {
-    if (in_array($taskId, $this->expandedTasks)) {
-      $this->expandedTasks = array_diff($this->expandedTasks, [$taskId]);
-    } else {
-      $this->expandedTasks[] = $taskId;
-    }
-  }
-
-  /**
-   * Computed property to get tasks for expanded projects.
-   * Groups tasks by project ID.
-   */
-  #[Computed]
-  public function tasks(): Collection
-  {
-    if (empty($this->expandedProjects)) {
-      return collect(); // Return empty collection if no projects are expanded
-    }
-
-    return Task::whereIn('proofhub_project_id', $this->expandedProjects)
-      ->withCount('timeEntries')
-      ->with('users')
-      ->orderBy('name')
-      ->get()
-      ->groupBy('proofhub_project_id'); // Group by project ID
-  }
-
-  /**
-   * Computed property to get project-level time entries for expanded projects.
-   * Groups entries by project ID.
-   */
-  #[Computed]
-  public function projectTimeEntries(): Collection
-  {
-    if (empty($this->expandedProjects)) {
-      return collect();
-    }
-
-    return TimeEntry::whereIn('proofhub_project_id', $this->expandedProjects)
-      ->whereNull('proofhub_task_id')
-      ->with('user')
-      ->orderBy('date', 'desc')
-      ->orderBy('created_at', 'desc')
-      ->get()
-      ->groupBy('proofhub_project_id'); // Group by project ID
-  }
-
-  /**
-   * Computed property to get time entries for expanded tasks.
-   * Groups entries by task ID.
-   */
-  #[Computed]
-  public function taskTimeEntries(): Collection
-  {
-    if (empty($this->expandedTasks)) {
-      return collect();
-    }
-
-    return TimeEntry::whereIn('proofhub_task_id', $this->expandedTasks)
-      ->with('user')
-      ->orderBy('date', 'desc')
-      ->orderBy('created_at', 'desc')
-      ->get()
-      ->groupBy('proofhub_task_id'); // Group by task ID
   }
 
   /**
@@ -190,9 +101,11 @@ class ProjectsTasksView extends Component
           $query->whereNull('proofhub_task_id');
         },
       ])
-      ->with('users')
+      // Eager load users for the list view badges if needed
+      ->with('users:id,name') // Only load necessary columns
       // Apply Sorting
-      ->when($this->sortBy, function (Builder $query) {
+      ->when($this->sortBy, function ($query) {
+        // Changed Builder import requirement
         match ($this->sortBy) {
           'name_asc' => $query->orderBy('name', 'asc'),
           'name_desc' => $query->orderBy('name', 'desc'),
@@ -213,9 +126,9 @@ class ProjectsTasksView extends Component
           default => $query->orderBy('name', 'asc'), // Fallback default
         };
       })
-      ->paginate($this->perPage); // Use $perPage property
+      ->paginate($this->perPage);
 
-    return view('livewire.projects-tasks-view', [
+    return view('livewire.projects-list-view', [
       'projects' => $projects,
     ]);
   }

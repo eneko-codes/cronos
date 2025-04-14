@@ -35,8 +35,10 @@
             >
               <option value="name_asc">Name (A-Z)</option>
               <option value="name_desc">Name (Z-A)</option>
-              <option value="created_at_desc">Newest</option>
-              <option value="created_at_asc">Oldest</option>
+              <option value="created_at_desc">Created (Newest)</option>
+              <option value="created_at_asc">Created (Oldest)</option>
+              <option value="updated_at_desc">Updated (Newest)</option>
+              <option value="updated_at_asc">Updated (Oldest)</option>
               <option value="tasks_count_desc">Tasks (Most)</option>
               <option value="tasks_count_asc">Tasks (Fewest)</option>
               <option value="project_time_entries_count_desc">
@@ -167,6 +169,20 @@
               Tasks: {{ $project->tasks_count }} | Project Entries:
               {{ $project->project_time_entries_count }}
             </span>
+            {{-- Updated Timestamps with Tooltip --}}
+            <div
+              class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400"
+            >
+              <span>Created:</span>
+              <x-tooltip text="{{ $project->created_at->format('Y-m-d H:i') }}">
+                <span>{{ $project->created_at->diffForHumans() }}</span>
+              </x-tooltip>
+              <span>|</span>
+              <span>Updated:</span>
+              <x-tooltip text="{{ $project->updated_at->format('Y-m-d H:i') }}">
+                <span>{{ $project->updated_at->diffForHumans() }}</span>
+              </x-tooltip>
+            </div>
             @if ($project->users->isNotEmpty())
               <div class="flex flex-wrap gap-1">
                 @foreach ($project->users as $user)

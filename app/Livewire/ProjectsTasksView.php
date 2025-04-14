@@ -198,6 +198,8 @@ class ProjectsTasksView extends Component
           'name_desc' => $query->orderBy('name', 'desc'),
           'created_at_desc' => $query->orderBy('created_at', 'desc'),
           'created_at_asc' => $query->orderBy('created_at', 'asc'),
+          'updated_at_desc' => $query->orderBy('updated_at', 'desc'),
+          'updated_at_asc' => $query->orderBy('updated_at', 'asc'),
           'tasks_count_desc' => $query->orderBy('tasks_count', 'desc'),
           'tasks_count_asc' => $query->orderBy('tasks_count', 'asc'),
           'project_time_entries_count_desc' => $query->orderBy(

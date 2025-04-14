@@ -85,15 +85,21 @@
 
         <div class="flex flex-wrap gap-1">
           @if (! $user->proofhub_id)
-            <x-badge variant="alert" size="sm">ProofHub</x-badge>
+            <x-tooltip text="ProofHub account ID is missing">
+              <x-badge variant="alert" size="sm">ProofHub</x-badge>
+            </x-tooltip>
           @endif
 
           @if (! $user->desktime_id)
-            <x-badge variant="alert" size="sm">DeskTime</x-badge>
+            <x-tooltip text="DeskTime account ID is missing">
+              <x-badge variant="alert" size="sm">DeskTime</x-badge>
+            </x-tooltip>
           @endif
 
           @if (! $user->systempin_id)
-            <x-badge variant="alert" size="sm">SystemPin</x-badge>
+            <x-tooltip text="SystemPin account ID is missing">
+              <x-badge variant="alert" size="sm">SystemPin</x-badge>
+            </x-tooltip>
           @endif
         </div>
       </div>

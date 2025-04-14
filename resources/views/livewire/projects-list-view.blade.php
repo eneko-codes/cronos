@@ -182,7 +182,7 @@
             @if ($project->users->isNotEmpty())
               <div class="mt-1 flex flex-wrap gap-1">
                 @foreach ($project->users as $user)
-                  <x-badge size="sm" variant="primary">
+                  <x-badge size="sm" variant="default">
                     {{ $user->name }}
                   </x-badge>
                 @endforeach

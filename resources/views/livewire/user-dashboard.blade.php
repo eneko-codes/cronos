@@ -49,6 +49,57 @@
     </div>
   </div>
 
+  {{-- Missing Account Notification --}}
+  @if (! $user->do_not_track && (! $user->proofhub_id || ! $user->desktime_id || ! $user->systempin_id))
+    <div
+      class="rounded-md border border-red-300 bg-red-50 p-2 text-sm text-red-800 dark:border-red-600/60 dark:bg-red-900/20 dark:text-red-200"
+    >
+      <div class="flex flex-col gap-1">
+        <div class="flex flex-row items-center gap-1">
+          <svg
+            class="h-5 w-5 flex-shrink-0 text-red-500 dark:text-red-600"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+            />
+          </svg>
+          <h3 class="text-md font-semibold">Missing Account Links</h3>
+        </div>
+
+        <p class="text-xs">
+          User IDs for external platforms are automatically added via sync,
+          using the email set on the Odoo user profile as the primary key.
+        </p>
+        <p class="text-xs">
+          To be able to pull the missing data make sure to use your company
+          email in the missing accounts:
+          <span class="font-medium">{{ $user->email }}</span>
+        </p>
+
+        <div class="flex flex-wrap gap-1">
+          @if (! $user->proofhub_id)
+            <x-badge variant="alert" size="sm">ProofHub</x-badge>
+          @endif
+
+          @if (! $user->desktime_id)
+            <x-badge variant="alert" size="sm">DeskTime</x-badge>
+          @endif
+
+          @if (! $user->systempin_id)
+            <x-badge variant="alert" size="sm">SystemPin</x-badge>
+          @endif
+        </div>
+      </div>
+    </div>
+  @endif
+
   @if ($user->do_not_track)
     <div class="rounded-lg bg-gray-50 p-8 text-center dark:bg-gray-800">
       <p class="text-md text-gray-600 dark:text-gray-300">

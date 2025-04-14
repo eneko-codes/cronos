@@ -8,7 +8,6 @@ use App\Models\TimeEntry;
 use Livewire\Component;
 use Livewire\Attributes\Title;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\Log; // Set appropriate title
 
 #[Title('Project Details')]
 class ProjectDetailView extends Component
@@ -22,13 +21,17 @@ class ProjectDetailView extends Component
 
   public array $expandedTasks = []; // For toggling task time entries
 
+  // State for main section visibility
+  public bool $showProjectTimeEntries = true;
+  public bool $showTasks = true;
+
   /**
    * Mount the component, accepting the Project model via route model binding.
    * Load initial data.
    */
   public function mount(Project $project)
   {
-    $this->project = $project->load('users:id,name'); // Eager load project users
+    $this->project = $project->load('users:id,name,is_admin');
 
     $this->loadTasks();
     $this->loadProjectTimeEntries();
@@ -43,7 +46,7 @@ class ProjectDetailView extends Component
   {
     $this->tasks = $this->project
       ->tasks()
-      ->with('users:id,name') // Eager load task users
+      ->with('users:id,name,is_admin')
       ->withCount('timeEntries')
       ->orderBy('name')
       ->get();
@@ -57,7 +60,7 @@ class ProjectDetailView extends Component
     $this->projectTimeEntries = $this->project
       ->timeEntries()
       ->whereNull('proofhub_task_id') // Only project-level entries
-      ->with('user:id,name') // Eager load user
+      ->with('user:id,name,is_admin')
       ->orderBy('date', 'desc')
       ->orderBy('created_at', 'desc')
       ->get();
@@ -73,7 +76,7 @@ class ProjectDetailView extends Component
     }
 
     $newEntries = TimeEntry::whereIn('proofhub_task_id', $taskIds)
-      ->with('user:id,name') // Eager load user
+      ->with('user:id,name,is_admin')
       ->orderBy('date', 'desc')
       ->orderBy('created_at', 'desc')
       ->get()
@@ -101,6 +104,22 @@ class ProjectDetailView extends Component
         $this->loadTaskTimeEntries([$taskId]);
       }
     }
+  }
+
+  /**
+   * Toggle visibility of the Project Time Entries section.
+   */
+  public function toggleProjectTimeEntries(): void
+  {
+    $this->showProjectTimeEntries = !$this->showProjectTimeEntries;
+  }
+
+  /**
+   * Toggle visibility of the Tasks section.
+   */
+  public function toggleTasks(): void
+  {
+    $this->showTasks = !$this->showTasks;
   }
 
   /**

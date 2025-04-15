@@ -275,7 +275,7 @@
             @endphp
 
             <tr
-              class="{{ $isFutureDate ? 'bg-gray-50 dark:bg-slate-800' : 'bg-gray-100 dark:bg-gray-800' }} border border-gray-200 dark:border-gray-700"
+              class="{{ $isFutureDate ? 'bg-gray-100 dark:bg-slate-800' : 'bg-gray-50 dark:bg-gray-800' }} border border-gray-200 dark:border-gray-700"
             >
               <!-- Date Column -->
               <td
@@ -322,7 +322,7 @@
                       </div>
                     </x-slot>
                     <span
-                      class="{{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : '' }} text-gray-700 dark:text-gray-300"
+                      class="{{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300' }}"
                     >
                       {{ $day['scheduled']['duration'] !== '0h 0m' ? $day['scheduled']['duration'] : '' }}
                     </span>
@@ -389,7 +389,7 @@
                           </div>
                         </x-slot>
                         <span
-                          class="{{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : '' }} text-gray-700 dark:text-gray-300"
+                          class="{{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300' }}"
                         >
                           {{ $day['leave']['duration_hours'] }}
 
@@ -461,7 +461,7 @@
                   </x-slot>
                   <div class="flex flex-row items-center gap-2">
                     <span
-                      class="{{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : '' }} text-gray-700 dark:text-gray-300"
+                      class="{{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300' }}"
                     >
                       {{ $day['attendance']['duration'] !== '0h 0m' ? $day['attendance']['duration'] : '' }}
                     </span>
@@ -545,7 +545,7 @@
                       </div>
                     </x-slot>
                     <span
-                      class="{{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : '' }} text-gray-700 dark:text-gray-300"
+                      class="{{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300' }}"
                     >
                       {{ $day['worked']['duration'] !== '0h 0m' ? $day['worked']['duration'] : '' }}
                     </span>
@@ -564,20 +564,20 @@
                   $attVsSchTextClass = '';
                   if ($attVsSchShouldDisplay) {
                     if ($attVsSchPercentage > 0) {
-                      $attVsSchBgClass = 'bg-green-100 dark:bg-green-900/30';
+                      $attVsSchBgClass = 'bg-green-50 dark:bg-green-900/30';
                       $attVsSchTextClass = 'text-green-600 dark:text-green-600';
                     } elseif ($attVsSchPercentage <= -50) {
-                      $attVsSchBgClass = 'bg-red-100 dark:bg-red-900/30';
+                      $attVsSchBgClass = 'bg-red-50 dark:bg-red-900/30';
                       $attVsSchTextClass = 'text-red-600 dark:text-red-600';
                     } elseif ($attVsSchPercentage < 0) {
-                      $attVsSchBgClass = 'bg-yellow-100 dark:bg-yellow-900/30';
+                      $attVsSchBgClass = 'bg-yellow-50 dark:bg-yellow-900/30';
                       $attVsSchTextClass = 'text-yellow-500 dark:text-yellow-500';
                     }
                   }
                 @endphp
 
                 <td
-                  class="{{ $attVsSchBgClass }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : '' }} whitespace-nowrap border p-2 dark:border-gray-700"
+                  class="{{ $attVsSchBgClass }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : (isset($attVsSchTextClass) && $attVsSchTextClass ? '' : 'text-transparent') }} whitespace-nowrap border p-2 dark:border-gray-700"
                 >
                   @if ($attVsSchShouldDisplay)
                     <x-tooltip :text="$attVsSchDetail['tooltip']">
@@ -597,20 +597,20 @@
                   $workVsSchTextClass = '';
                   if ($workVsSchShouldDisplay) {
                     if ($workVsSchPercentage > 0) {
-                      $workVsSchBgClass = 'bg-green-100 dark:bg-green-900/30';
+                      $workVsSchBgClass = 'bg-green-50 dark:bg-green-900/30';
                       $workVsSchTextClass = 'text-green-600 dark:text-green-600';
                     } elseif ($workVsSchPercentage <= -50) {
-                      $workVsSchBgClass = 'bg-red-100 dark:bg-red-900/30';
+                      $workVsSchBgClass = 'bg-red-50 dark:bg-red-900/30';
                       $workVsSchTextClass = 'text-red-600 dark:text-red-600';
                     } elseif ($workVsSchPercentage < 0) {
-                      $workVsSchBgClass = 'bg-yellow-100 dark:bg-yellow-900/30';
+                      $workVsSchBgClass = 'bg-yellow-50 dark:bg-yellow-900/30';
                       $workVsSchTextClass = 'text-yellow-500 dark:text-yellow-500';
                     }
                   }
                 @endphp
 
                 <td
-                  class="{{ $workVsSchBgClass }} whitespace-nowrap border p-2 dark:border-gray-700"
+                  class="{{ $workVsSchBgClass }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : (isset($workVsSchTextClass) && $workVsSchTextClass ? '' : 'text-transparent') }} whitespace-nowrap border p-2 dark:border-gray-700"
                 >
                   @if ($workVsSchShouldDisplay)
                     <x-tooltip :text="$workVsSchDetail['tooltip']">
@@ -630,20 +630,20 @@
                   $workVsAttTextClass = '';
                   if ($workVsAttShouldDisplay) {
                     if ($workVsAttPercentage > 0) {
-                      $workVsAttBgClass = 'bg-green-100 dark:bg-green-900/30';
+                      $workVsAttBgClass = 'bg-green-50 dark:bg-green-900/30';
                       $workVsAttTextClass = 'text-green-600 dark:text-green-600';
                     } elseif ($workVsAttPercentage <= -50) {
-                      $workVsAttBgClass = 'bg-red-100 dark:bg-red-900/30';
+                      $workVsAttBgClass = 'bg-red-50 dark:bg-red-900/30';
                       $workVsAttTextClass = 'text-red-600 dark:text-red-600';
                     } elseif ($workVsAttPercentage < 0) {
-                      $workVsAttBgClass = 'bg-yellow-100 dark:bg-yellow-900/30';
+                      $workVsAttBgClass = 'bg-yellow-50 dark:bg-yellow-900/30';
                       $workVsAttTextClass = 'text-yellow-500 dark:text-yellow-500';
                     }
                   }
                 @endphp
 
                 <td
-                  class="{{ $workVsAttBgClass }} whitespace-nowrap border p-2 dark:border-gray-700"
+                  class="{{ $workVsAttBgClass }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : (isset($workVsAttTextClass) && $workVsAttTextClass ? '' : 'text-transparent') }} whitespace-nowrap border p-2 dark:border-gray-700"
                 >
                   @if ($workVsAttShouldDisplay)
                     <x-tooltip :text="$workVsAttDetail['tooltip']">
@@ -706,13 +706,13 @@
                   $totalTextClass = '';
                   if ($percentage !== 0) {
                     if ($percentage > 0) {
-                      $totalBgClass = 'bg-green-100 dark:bg-green-900/30';
+                      $totalBgClass = 'bg-green-50 dark:bg-green-900/30';
                       $totalTextClass = 'text-green-600 dark:text-green-600';
                     } elseif ($percentage <= -50) {
-                      $totalBgClass = 'bg-red-100 dark:bg-red-900/30';
+                      $totalBgClass = 'bg-red-50 dark:bg-red-900/30';
                       $totalTextClass = 'text-red-600 dark:text-red-600';
                     } elseif ($percentage < 0) {
-                      $totalBgClass = 'bg-yellow-100 dark:bg-yellow-900/30';
+                      $totalBgClass = 'bg-yellow-50 dark:bg-yellow-900/30';
                       $totalTextClass = 'text-yellow-500 dark:text-yellow-500';
                     } else {
                       // percentage is 0 but we might need default styling?

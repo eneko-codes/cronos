@@ -494,14 +494,6 @@ class UserDashboard extends Component
     $targetHours = $activeSchedule->schedule->average_hours_day ?? 8.0; // Default to 8 hours if not specified
     $targetMinutes = $targetHours * 60;
 
-    Log::debug('Processing schedule data', [
-      'date' => $localDate->toDateString(),
-      'weekday' => $weekday,
-      'details_count' => $details->count(),
-      'all_details_count' => $activeSchedule->schedule->scheduleDetails->count(),
-      'target_hours' => $targetHours,
-    ]);
-
     // If we have duplicates, we need to find the best combination
     if ($details->count() > 0) {
       // Group details by day_period (morning/afternoon)
@@ -542,13 +534,6 @@ class UserDashboard extends Component
         $end = Carbon::parse($detail->end);
         return $start->diffInMinutes($end);
       });
-
-      // Log the selected combination
-      Log::debug('Selected schedule details', [
-        'selected_count' => $selectedDetails->count(),
-        'total_minutes' => $totalSelectedMinutes,
-        'target_minutes' => $targetMinutes,
-      ]);
     } else {
       // No duplicates, just use all details
       $selectedDetails = $details->sortBy('start');
@@ -564,27 +549,10 @@ class UserDashboard extends Component
       $minutesForSlot = $start->diffInMinutes($end);
       $totalMinutes += $minutesForSlot;
 
-      Log::debug('Slot details', [
-        'weekday' => $detail->weekday,
-        'day_period' => $detail->day_period,
-        'start' => $start->format('H:i'),
-        'end' => $end->format('H:i'),
-        'minutes' => $minutesForSlot,
-      ]);
-
       $slots[] =
         ucfirst($detail->day_period) .
         ": {$start->format('H:i')} - {$end->format('H:i')}";
     }
-
-    Log::debug('Final schedule data', [
-      'date' => $localDate->toDateString(),
-      'total_minutes' => $totalMinutes,
-      'duration' => $this->formatMinutesToHoursMinutes($totalMinutes),
-      'slots_count' => count($slots),
-      'original_details_count' => $details->count(),
-      'selected_details_count' => $selectedDetails->count(),
-    ]);
 
     return [
       'duration' => $this->formatMinutesToHoursMinutes($totalMinutes),
@@ -627,16 +595,6 @@ class UserDashboard extends Component
     $isMultiDayLeave = $leave->duration_days > 1;
     $isWeekend = $dateCarbon->isWeekend();
 
-    // Log leave processing information
-    Log::debug('Processing leave for date', [
-      'date' => $dateString,
-      'leave_id' => $leave->id,
-      'status' => $leave->status,
-      'duration_days' => $leave->duration_days,
-      'is_weekend' => $isWeekend,
-      'is_multi_day' => $isMultiDayLeave,
-    ]);
-
     // For full-day leaves, we need to look at the employee's schedule for that day
     if ($leave->duration_days > 0) {
       if ($leave->isHalfDay()) {
@@ -673,31 +631,11 @@ class UserDashboard extends Component
           if ($scheduledMinutes == 0) {
             if (!$isWeekend) {
               $scheduledMinutes = 8 * 60; // 8 hours = 480 minutes standard workday
-              Log::debug(
-                'No scheduled hours found for weekday, using standard workday',
-                [
-                  'date' => $dateString,
-                  'standard_minutes' => $scheduledMinutes,
-                ]
-              );
-            } else {
-              // For weekends, only count hours if explicitly scheduled
-              Log::debug(
-                'Weekend day with no scheduled hours, using 0 minutes',
-                [
-                  'date' => $dateString,
-                ]
-              );
             }
           }
 
           // For this specific day, we only want the hours for THIS day, not multiplied by multi-day count
           $durationMinutes = $scheduledMinutes;
-
-          Log::debug('Using scheduled duration for leave', [
-            'date' => $dateString,
-            'scheduled_minutes' => $durationMinutes,
-          ]);
         } else {
           // Fallback - standard work day (8 hours = 480 minutes) for weekdays only
           if (!$isWeekend) {
@@ -705,12 +643,6 @@ class UserDashboard extends Component
           } else {
             $durationMinutes = 0; // No hours for weekend unless scheduled
           }
-
-          Log::debug('Using standard duration for leave', [
-            'date' => $dateString,
-            'is_weekend' => $isWeekend,
-            'minutes' => $durationMinutes,
-          ]);
         }
       }
     }
@@ -719,24 +651,11 @@ class UserDashboard extends Component
     if ($leave->status === 'validate' && $durationMinutes == 0 && !$isWeekend) {
       // Use a full standard day as fallback (8 hours) for weekdays
       $durationMinutes = 8 * 60;
-      Log::debug(
-        'Setting minimum duration for approved weekday leave with 0 duration',
-        [
-          'date' => $dateString,
-          'leave_id' => $leave->id,
-          'minimum_minutes' => $durationMinutes,
-        ]
-      );
     }
 
     // For weekend validated leaves, ensure we have a standard duration if requested
     if ($leave->status === 'validate' && $isWeekend && $durationMinutes == 0) {
       $durationMinutes = 8 * 60; // Standard 8 hours for weekend leaves
-      Log::debug('Setting standard duration for approved weekend leave', [
-        'date' => $dateString,
-        'leave_id' => $leave->id,
-        'standard_minutes' => $durationMinutes,
-      ]);
     }
 
     $durationFormatted = $this->formatMinutesToHoursMinutes($durationMinutes);
@@ -789,13 +708,6 @@ class UserDashboard extends Component
     // Parse the target date
     $targetDate = Carbon::parse($dateString)->startOfDay();
     $isMonday = $targetDate->isMonday();
-
-    // Optional debug logging
-    if ($isMonday) {
-      Log::debug("Processing Monday data for {$dateString}", [
-        'total_attendances' => $attendances->count(),
-      ]);
-    }
 
     // Use Collection methods for filtering
     $attendance = $attendances
@@ -876,12 +788,6 @@ class UserDashboard extends Component
 
       return $entryDate->startOfDay()->equalTo($targetDate);
     });
-
-    // Log details for debugging if needed
-    Log::debug("Time entries for {$dateString}", [
-      'user_id' => $this->user->id,
-      'filtered_count' => $filtered->count(),
-    ]);
 
     // Early return with default structure if no entries
     if ($filtered->isEmpty()) {

@@ -155,8 +155,9 @@
               Data Synchronization Frequency
               <x-tooltip>
                 <x-slot name="text">
-                  Determines how often the system runs a complete data synchronization 
-                  process from all connected services to update local database
+                  Determines how often the system runs a complete data
+                  synchronization process from all connected services to update
+                  local database
                 </x-slot>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -176,7 +177,7 @@
             </label>
             <select
               wire:model="frequency"
-              class="block w-40 rounded-md border border-gray-300 bg-gray-200 text-sm dark:border-gray-700 dark:bg-gray-700"
+              class="block w-40 rounded-md border border-gray-300 bg-gray-200 px-2 text-sm dark:border-gray-700 dark:bg-gray-700"
             >
               @foreach ($options as $value => $label)
                 <option value="{{ $value }}">{{ $label }}</option>
@@ -184,7 +185,7 @@
             </select>
           </div>
         </div>
-        <div class="mt-4 flex justify-end ">
+        <div class="mt-4 flex justify-end">
           <x-button
             wire:target="updateFrequencies"
             type="submit"
@@ -331,7 +332,8 @@
             Activity Alerts
             <x-tooltip>
               <x-slot name="text">
-                Send alerts about missing time entries or unusual attendance patterns
+                Send alerts about missing time entries or unusual attendance
+                patterns
               </x-slot>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -351,11 +353,7 @@
             <x-badge variant="primary" size="sm" class="ml-2">Managers</x-badge>
           </label>
           <label class="relative inline-flex cursor-pointer items-center">
-            <input
-              type="checkbox"
-              class="peer sr-only"
-              disabled
-            />
+            <input type="checkbox" class="peer sr-only" disabled />
             <div
               class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700"
             ></div>
@@ -389,11 +387,7 @@
             </x-tooltip>
           </label>
           <label class="relative inline-flex cursor-pointer items-center">
-            <input
-              type="checkbox"
-              class="peer sr-only"
-              disabled
-            />
+            <input type="checkbox" class="peer sr-only" disabled />
             <div
               class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700"
             ></div>
@@ -408,7 +402,8 @@
             Time Entry Notifications
             <x-tooltip>
               <x-slot name="text">
-                Notify about time entry approvals, rejections, and entries requiring review
+                Notify about time entry approvals, rejections, and entries
+                requiring review
               </x-slot>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -427,11 +422,7 @@
             </x-tooltip>
           </label>
           <label class="relative inline-flex cursor-pointer items-center">
-            <input
-              type="checkbox"
-              class="peer sr-only"
-              disabled
-            />
+            <input type="checkbox" class="peer sr-only" disabled />
             <div
               class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700"
             ></div>
@@ -466,11 +457,7 @@
             <x-badge variant="primary" size="sm" class="ml-2">Admins</x-badge>
           </label>
           <label class="relative inline-flex cursor-pointer items-center">
-            <input
-              type="checkbox"
-              class="peer sr-only"
-              disabled
-            />
+            <input type="checkbox" class="peer sr-only" disabled />
             <div
               class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700"
             ></div>
@@ -485,7 +472,8 @@
             Report Notifications
             <x-tooltip>
               <x-slot name="text">
-                Notify when scheduled reports are generated and ready for viewing
+                Notify when scheduled reports are generated and ready for
+                viewing
               </x-slot>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -504,18 +492,14 @@
             </x-tooltip>
           </label>
           <label class="relative inline-flex cursor-pointer items-center">
-            <input
-              type="checkbox"
-              class="peer sr-only"
-              disabled
-            />
+            <input type="checkbox" class="peer sr-only" disabled />
             <div
               class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700"
             ></div>
           </label>
         </div>
 
-        <div class="mt-4 flex justify-end ">
+        <div class="mt-4 flex justify-end">
           <x-button
             wire:target="updateNotificationToggles"
             type="submit"
@@ -563,7 +547,9 @@
         <!-- Single data retention period selector -->
         <div class="mt-4">
           <div class="flex items-center justify-between">
-            <label class="flex flex-row items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300">
+            <label
+              class="flex flex-row items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300"
+            >
               Retain time-related data for
               <x-tooltip>
                 <x-slot name="text">
@@ -589,7 +575,7 @@
             </label>
             <select
               wire:model="globalRetentionPeriod"
-              class="block w-40 rounded-md border border-gray-300 bg-gray-200 text-sm dark:border-gray-700 dark:bg-gray-700"
+              class="block w-40 rounded-md border border-gray-300 bg-gray-200 px-2 text-sm dark:border-gray-700 dark:bg-gray-700"
             >
               <option value="0">NO - Keep all data</option>
               @foreach ($retentionOptions as $days => $label)

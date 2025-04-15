@@ -31,7 +31,7 @@
             <select
               wire:model.live="sortBy"
               {{-- Classes matching the select in Settings --}}
-              class="block h-8 w-40 rounded-md border border-gray-300 bg-gray-200 text-sm dark:border-gray-700 dark:bg-gray-700"
+              class="block h-8 w-40 rounded-md border border-gray-300 bg-gray-200 px-2 text-sm dark:border-gray-700 dark:bg-gray-700"
             >
               <option value="name_asc">Name (A-Z)</option>
               <option value="name_desc">Name (Z-A)</option>

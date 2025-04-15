@@ -78,7 +78,6 @@ class UserDashboard extends Component
    *   }
    * }>
    */
-  #[Reactive]
   protected array $periodData = [];
 
   /**
@@ -92,7 +91,6 @@ class UserDashboard extends Component
    *   leave: int
    * }
    */
-  #[Reactive]
   protected array $totals = [
     'scheduled' => 0, // in minutes
     'attendance' => 0, // in minutes
@@ -142,7 +140,7 @@ class UserDashboard extends Component
     $this->checkPermissions();
 
     // Load cache data for the current period
-    $this->loadPeriodDataFromCacheOrDb();
+    $this->loadPeriodDataAndTotals();
   }
 
   /**
@@ -151,18 +149,8 @@ class UserDashboard extends Component
   public function toggleDeviations(): void
   {
     $this->showDeviations = !$this->showDeviations;
-
-    // Force a re-computation of the data
-    $this->loadPeriodDataFromCacheOrDb();
-
-    // Dispatch an event to notify the frontend
-    $this->dispatch(
-      'deviations-toggled',
-      showDeviations: $this->showDeviations
-    );
-
-    // Force a re-render of the component
-    $this->dispatch('refresh');
+    // Reload data when the toggle changes to ensure deviation_details are populated/updated
+    $this->loadPeriodDataAndTotals();
   }
 
   /**
@@ -188,7 +176,7 @@ class UserDashboard extends Component
     );
 
     // Reload data for the new period
-    $this->loadPeriodDataFromCacheOrDb();
+    $this->loadPeriodDataAndTotals(); // Renamed for clarity
   }
 
   /**
@@ -212,7 +200,7 @@ class UserDashboard extends Component
       $this->setPeriodStart($startDate->subMonth());
     }
 
-    $this->loadPeriodDataFromCacheOrDb();
+    $this->loadPeriodDataAndTotals(); // Renamed for clarity
   }
 
   /**
@@ -228,112 +216,122 @@ class UserDashboard extends Component
       $this->setPeriodStart($startDate->addMonth());
     }
 
-    $this->loadPeriodDataFromCacheOrDb();
+    $this->loadPeriodDataAndTotals(); // Renamed for clarity
   }
 
   /**
    * Retrieves the data for the displayed period (day-by-day).
    */
   #[Computed]
-  public function getPeriodData(): array
+  public function periodData(): array
   {
+    // Directly return the protected property, assuming it's loaded by actions.
     return $this->periodData;
   }
 
   /**
    * Returns aggregated totals (Scheduled, Attendance, Worked) for the displayed period,
-   * in minutes. The final display format is "X hours Y minutes" in Blade.
+   * stored in minutes.
    */
   #[Computed]
-  public function getTotals(): array
+  public function totals(): array
   {
+    // Directly return the protected property.
     return $this->totals;
   }
 
   /**
-   * Calculate deviations between different data points
-   * Returns an array of deviation percentages
+   * Calculate total deviations for the whole period, including formatted text and classes.
    */
-  #[Computed]
-  public function getDeviationPercentages(array $day): array
+  #[Computed(persist: false)]
+  public function totalDeviations(): array
   {
-    $deviations = [
-      'attendance_vs_scheduled' => 0,
-      'worked_vs_scheduled' => 0,
-      'worked_vs_attendance' => 0,
+    $deviationDetails = [
+      'attendance_vs_scheduled' => [
+        'percentage' => 0,
+        'difference_minutes' => 0,
+        'tooltip' => '',
+        'class' => '',
+      ],
+      'worked_vs_scheduled' => [
+        'percentage' => 0,
+        'difference_minutes' => 0,
+        'tooltip' => '',
+        'class' => '',
+      ],
+      'worked_vs_attendance' => [
+        'percentage' => 0,
+        'difference_minutes' => 0,
+        'tooltip' => '',
+        'class' => '',
+      ],
     ];
 
-    // Convert durations to minutes for calculation
-    $scheduledMinutes = $this->durationToMinutes($day['scheduled']['duration']);
-    $attendanceMinutes = $this->durationToMinutes(
-      $day['attendance']['duration']
-    );
-    $workedMinutes = $this->durationToMinutes($day['worked']['duration']);
+    // Access totals via the computed property accessor
+    $totals = $this->totals(); // This will now just return the protected property
 
-    // Calculate attendance vs scheduled (if scheduled > 0)
-    if ($scheduledMinutes > 0) {
-      $deviations['attendance_vs_scheduled'] = round(
-        (($attendanceMinutes - $scheduledMinutes) / $scheduledMinutes) * 100
+    // Calculate differences and percentages
+    $diffAttVsSch = $totals['attendance'] - $totals['scheduled'];
+    $diffWorkVsSch = $totals['worked'] - $totals['scheduled'];
+    $diffWorkVsAtt = $totals['worked'] - $totals['attendance'];
+
+    $deviationDetails['attendance_vs_scheduled'][
+      'difference_minutes'
+    ] = $diffAttVsSch;
+    $deviationDetails['worked_vs_scheduled'][
+      'difference_minutes'
+    ] = $diffWorkVsSch;
+    $deviationDetails['worked_vs_attendance'][
+      'difference_minutes'
+    ] = $diffWorkVsAtt;
+
+    // Calculate percentages safely
+    if ($totals['scheduled'] > 0) {
+      $deviationDetails['attendance_vs_scheduled']['percentage'] = round(
+        ($diffAttVsSch / $totals['scheduled']) * 100
+      );
+      $deviationDetails['worked_vs_scheduled']['percentage'] = round(
+        ($diffWorkVsSch / $totals['scheduled']) * 100
       );
     }
-
-    // Calculate worked vs scheduled (if scheduled > 0)
-    if ($scheduledMinutes > 0) {
-      $deviations['worked_vs_scheduled'] = round(
-        (($workedMinutes - $scheduledMinutes) / $scheduledMinutes) * 100
+    if ($totals['attendance'] > 0) {
+      $deviationDetails['worked_vs_attendance']['percentage'] = round(
+        ($diffWorkVsAtt / $totals['attendance']) * 100
       );
+    } elseif ($diffWorkVsAtt > 0) {
+      // Handle worked > 0 and attendance = 0 case if needed (e.g., 100%)
+      $deviationDetails['worked_vs_attendance']['percentage'] = 100;
     }
 
-    // Calculate worked vs attendance (if attendance > 0)
-    if ($attendanceMinutes > 0) {
-      $deviations['worked_vs_attendance'] = round(
-        (($workedMinutes - $attendanceMinutes) / $attendanceMinutes) * 100
-      );
+    // Format tooltip and class
+    foreach ($deviationDetails as $deviation => $details) {
+      $diffMinutes = $details['difference_minutes'];
+      $percentage = $details['percentage'];
+      $formattedDiff = $this->formatMinutesToHoursMinutes(abs($diffMinutes));
+
+      // Determine comparison text based on deviation key
+      $comparisonText = match ($deviation) {
+        'attendance_vs_scheduled' => 'attendance than scheduled',
+        'worked_vs_scheduled' => 'worked than scheduled',
+        'worked_vs_attendance' => 'worked than attendance',
+        default => 'difference', // Fallback
+      };
+
+      $details['tooltip'] = 'No difference'; // Default tooltip
+      if ($diffMinutes !== 0) {
+        $direction = $diffMinutes > 0 ? 'more' : 'less';
+        $details['tooltip'] = sprintf(
+          '%s %s %s',
+          $formattedDiff,
+          $direction,
+          $comparisonText
+        );
+      }
+      // Update the array entry
+      $deviationDetails[$deviation] = $details;
     }
 
-    return $deviations;
-  }
-
-  /**
-   * Calculate total deviations for the whole period
-   */
-  #[Computed]
-  public function getTotalDeviations(): array
-  {
-    $deviations = [
-      'attendance_vs_scheduled' => 0,
-      'worked_vs_scheduled' => 0,
-      'worked_vs_attendance' => 0,
-    ];
-
-    // Get totals for calculation
-    $totals = $this->getTotals();
-    $scheduledMinutes = $totals['scheduled'];
-    $attendanceMinutes = $totals['attendance'];
-    $workedMinutes = $totals['worked'];
-
-    // Calculate attendance vs scheduled (if scheduled > 0)
-    if ($scheduledMinutes > 0) {
-      $deviations['attendance_vs_scheduled'] = round(
-        (($attendanceMinutes - $scheduledMinutes) / $scheduledMinutes) * 100
-      );
-    }
-
-    // Calculate worked vs scheduled (if scheduled > 0)
-    if ($scheduledMinutes > 0) {
-      $deviations['worked_vs_scheduled'] = round(
-        (($workedMinutes - $scheduledMinutes) / $scheduledMinutes) * 100
-      );
-    }
-
-    // Calculate worked vs attendance (if attendance > 0)
-    if ($attendanceMinutes > 0) {
-      $deviations['worked_vs_attendance'] = round(
-        (($workedMinutes - $attendanceMinutes) / $attendanceMinutes) * 100
-      );
-    }
-
-    return $deviations;
+    return $deviationDetails;
   }
 
   /**
@@ -384,7 +382,7 @@ class UserDashboard extends Component
   /**
    * Loads period data directly from the database.
    */
-  protected function loadPeriodDataFromCacheOrDb(): void
+  protected function loadPeriodDataAndTotals(): void
   {
     $startDate = $this->getPeriodStart();
 
@@ -440,6 +438,14 @@ class UserDashboard extends Component
         $dateString
       );
 
+      // Calculate daily deviations
+      $deviationDetails = $this->calculateDailyDeviations([
+        'scheduled' => $scheduleData,
+        'attendance' => $attendanceData,
+        'worked' => $workedData,
+        'leave' => $leaveData, // Pass leave data in case it affects calculations later
+      ]);
+
       // Structure the data for the current day.
       $dates->put($dateString, [
         'date' => $dateString, // Use UTC date string
@@ -447,6 +453,7 @@ class UserDashboard extends Component
         'leave' => $leaveData,
         'attendance' => $attendanceData,
         'worked' => $workedData,
+        'deviation_details' => $deviationDetails, // Add daily deviations
       ]);
 
       // Move to the next day.
@@ -573,14 +580,14 @@ class UserDashboard extends Component
     Log::debug('Final schedule data', [
       'date' => $localDate->toDateString(),
       'total_minutes' => $totalMinutes,
-      'duration' => $this->formatDuration($totalMinutes),
+      'duration' => $this->formatMinutesToHoursMinutes($totalMinutes),
       'slots_count' => count($slots),
       'original_details_count' => $details->count(),
       'selected_details_count' => $selectedDetails->count(),
     ]);
 
     return [
-      'duration' => $this->formatDuration($totalMinutes),
+      'duration' => $this->formatMinutesToHoursMinutes($totalMinutes),
       'slots' => $slots,
       'schedule_name' => $activeSchedule->schedule->description ?? null,
     ];
@@ -732,7 +739,7 @@ class UserDashboard extends Component
       ]);
     }
 
-    $durationFormatted = $this->formatDuration($durationMinutes);
+    $durationFormatted = $this->formatMinutesToHoursMinutes($durationMinutes);
 
     // Format the duration appropriately for full and half days
     $durationText = '';
@@ -835,7 +842,7 @@ class UserDashboard extends Component
     }
 
     return [
-      'duration' => $this->formatDuration((int) $durationMinutes),
+      'duration' => $this->formatMinutesToHoursMinutes((int) $durationMinutes),
       'is_remote' => $isRemote,
       'times' => $times,
     ];
@@ -930,7 +937,7 @@ class UserDashboard extends Component
             'project' => data_get($entry, 'project.name', 'Unknown Project'),
             'task' => data_get($entry, 'task.name'),
             'description' => $entry->description ?? '',
-            'duration' => $this->formatDuration($minutes),
+            'duration' => $this->formatMinutesToHoursMinutes($minutes),
             'status' => $entry->status ?? 'none',
           ];
         })
@@ -938,7 +945,7 @@ class UserDashboard extends Component
         ->all();
 
       return [
-        'duration' => $this->formatDuration($totalMinutes),
+        'duration' => $this->formatMinutesToHoursMinutes($totalMinutes),
         'projects' => $projects,
         'detailed_entries' => $detailedEntries,
       ];
@@ -1063,9 +1070,21 @@ class UserDashboard extends Component
   /**
    * Formats a duration in minutes into "Xh Ym".
    */
+  public function formatMinutesToHoursMinutes(int $minutes): string
+  {
+    if ($minutes < 0) {
+      // Handle negative minutes if necessary
+      $minutes = 0;
+    }
+    return CarbonInterval::minutes($minutes)->cascade()->format('%hh %im');
+  }
+
+  /**
+   * Helper method to format duration, used internally by data processing.
+   */
   protected function formatDuration(int $minutes): string
   {
-    return CarbonInterval::minutes($minutes)->cascade()->format('%hh %im');
+    return $this->formatMinutesToHoursMinutes($minutes);
   }
 
   /**
@@ -1105,16 +1124,121 @@ class UserDashboard extends Component
   }
 
   /**
-   * Setter for showDeviations property
+   * Calculates daily deviations based on processed data for a single day.
    */
-  public function setShowDeviationsAttribute(bool $value): void
+  protected function calculateDailyDeviations(array $dayData): array
   {
-    $this->showDeviations = $value;
-    $this->loadPeriodDataFromCacheOrDb();
-    $this->dispatch(
-      'deviations-toggled',
-      showDeviations: $this->showDeviations
+    $deviationDetails = [
+      'attendance_vs_scheduled' => [
+        'percentage' => 0,
+        'difference_minutes' => 0,
+        'tooltip' => '',
+        'class' => '',
+      ],
+      'worked_vs_scheduled' => [
+        'percentage' => 0,
+        'difference_minutes' => 0,
+        'tooltip' => '',
+        'class' => '',
+      ],
+      'worked_vs_attendance' => [
+        'percentage' => 0,
+        'difference_minutes' => 0,
+        'tooltip' => '',
+        'class' => '',
+      ],
+    ];
+
+    // Convert durations to minutes for calculation
+    $scheduledMinutes = $this->durationToMinutes(
+      $dayData['scheduled']['duration']
     );
-    $this->dispatch('refresh');
+    $attendanceMinutes = $this->durationToMinutes(
+      $dayData['attendance']['duration']
+    );
+    $workedMinutes = $this->durationToMinutes($dayData['worked']['duration']);
+    $leaveMinutes =
+      isset($dayData['leave']['actual_minutes']) &&
+      $dayData['leave']['status'] === 'validate'
+        ? $dayData['leave']['actual_minutes']
+        : 0;
+
+    // We consider the 'effective scheduled time' as scheduled minus leave
+    $effectiveScheduledMinutes = max(0, $scheduledMinutes - $leaveMinutes);
+
+    // Calculate actual differences in minutes
+    $diffAttVsSch = $attendanceMinutes - $effectiveScheduledMinutes;
+    $diffWorkVsSch = $workedMinutes - $effectiveScheduledMinutes;
+    $diffWorkVsAtt = $workedMinutes - $attendanceMinutes;
+
+    // Store differences
+    $deviationDetails['attendance_vs_scheduled'][
+      'difference_minutes'
+    ] = $diffAttVsSch;
+    $deviationDetails['worked_vs_scheduled'][
+      'difference_minutes'
+    ] = $diffWorkVsSch;
+    $deviationDetails['worked_vs_attendance'][
+      'difference_minutes'
+    ] = $diffWorkVsAtt;
+
+    // Calculate attendance vs scheduled (considering leave) - Percentage
+    if ($effectiveScheduledMinutes > 0) {
+      $deviationDetails['attendance_vs_scheduled']['percentage'] = round(
+        ($diffAttVsSch / $effectiveScheduledMinutes) * 100
+      );
+    } elseif ($scheduledMinutes > 0 && $leaveMinutes >= $scheduledMinutes) {
+      $deviationDetails['attendance_vs_scheduled']['percentage'] =
+        $attendanceMinutes > 0 ? 100 : 0;
+    }
+
+    // Calculate worked vs scheduled (considering leave) - Percentage
+    if ($effectiveScheduledMinutes > 0) {
+      $deviationDetails['worked_vs_scheduled']['percentage'] = round(
+        ($diffWorkVsSch / $effectiveScheduledMinutes) * 100
+      );
+    } elseif ($scheduledMinutes > 0 && $leaveMinutes >= $scheduledMinutes) {
+      $deviationDetails['worked_vs_scheduled']['percentage'] =
+        $workedMinutes > 0 ? 100 : 0;
+    }
+
+    // Calculate worked vs attendance - Percentage
+    if ($attendanceMinutes > 0) {
+      $deviationDetails['worked_vs_attendance']['percentage'] = round(
+        ($diffWorkVsAtt / $attendanceMinutes) * 100
+      );
+    } elseif ($workedMinutes > 0) {
+      $deviationDetails['worked_vs_attendance']['percentage'] = 100;
+    }
+
+    // Format tooltip and class
+    foreach ($deviationDetails as $deviation => $details) {
+      $diffMinutes = $details['difference_minutes'];
+      $percentage = $details['percentage'];
+      $formattedDiff = $this->formatMinutesToHoursMinutes(abs($diffMinutes));
+
+      // Determine comparison text based on deviation key
+      $comparisonText = match ($deviation) {
+        'attendance_vs_scheduled' => 'attendance than scheduled',
+        'worked_vs_scheduled' => 'worked than scheduled',
+        'worked_vs_attendance' => 'worked than attendance',
+        default => 'difference', // Fallback
+      };
+
+      $details['tooltip'] = 'No difference'; // Default tooltip
+      if ($diffMinutes !== 0) {
+        $direction = $diffMinutes > 0 ? 'more' : 'less';
+        $details['tooltip'] = sprintf(
+          '%s %s %s',
+          $formattedDiff,
+          $direction,
+          $comparisonText
+        );
+      }
+      // Update the array entry
+      $deviationDetails[$deviation] = $details;
+    }
+
+    return $deviationDetails;
   }
 }

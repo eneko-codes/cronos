@@ -36,12 +36,6 @@ class UserDashboard extends Component
   public string $viewMode = 'weekly';
 
   /**
-   * Display mode: 'table' or 'graph'
-   */
-  #[Url]
-  public string $displayMode = 'table';
-
-  /**
    * Whether to show deviation percentages
    */
   #[Url]
@@ -154,21 +148,17 @@ class UserDashboard extends Component
   }
 
   /**
-   * Set the view mode to weekly or monthly
-   *
-   * @param 'weekly'|'monthly' $mode
+   * Changes the view mode and reloads data.
    */
-  public function setViewMode(string $mode): void
+  public function changeViewMode(string $mode): void
   {
     if (!in_array($mode, ['weekly', 'monthly'])) {
-      throw new \InvalidArgumentException(
-        'View mode must be either "weekly" or "monthly"'
-      );
+      $this->viewMode = 'weekly'; // Reset to default
+      return;
     }
-
     $this->viewMode = $mode;
 
-    // Always reset to the current week or month when switching view modes
+    // Reset to the current week or month
     $this->setPeriodStart(
       $this->viewMode === 'weekly'
         ? now()->startOfWeek()
@@ -176,15 +166,7 @@ class UserDashboard extends Component
     );
 
     // Reload data for the new period
-    $this->loadPeriodDataAndTotals(); // Renamed for clarity
-  }
-
-  /**
-   * Setter for viewMode property
-   */
-  public function setViewModeAttribute(string $value): void
-  {
-    $this->setViewMode($value);
+    $this->loadPeriodDataAndTotals();
   }
 
   /**
@@ -220,28 +202,7 @@ class UserDashboard extends Component
   }
 
   /**
-   * Retrieves the data for the displayed period (day-by-day).
-   */
-  #[Computed]
-  public function periodData(): array
-  {
-    // Directly return the protected property, assuming it's loaded by actions.
-    return $this->periodData;
-  }
-
-  /**
-   * Returns aggregated totals (Scheduled, Attendance, Worked) for the displayed period,
-   * stored in minutes.
-   */
-  #[Computed]
-  public function totals(): array
-  {
-    // Directly return the protected property.
-    return $this->totals;
-  }
-
-  /**
-   * Calculate total deviations for the whole period, including formatted text and classes.
+   * Calculates total deviations for the whole period, including formatted text and classes.
    */
   #[Computed(persist: false)]
   public function totalDeviations(): array
@@ -267,8 +228,8 @@ class UserDashboard extends Component
       ],
     ];
 
-    // Access totals via the computed property accessor
-    $totals = $this->totals(); // This will now just return the protected property
+    // Access totals via the protected property
+    $totals = $this->totals; // Access as property
 
     // Calculate differences and percentages
     $diffAttVsSch = $totals['attendance'] - $totals['scheduled'];
@@ -332,15 +293,6 @@ class UserDashboard extends Component
     }
 
     return $deviationDetails;
-  }
-
-  /**
-   * A computed property to display the label "Week of <date>" or "Month of <date>".
-   */
-  public function getFormattedPeriodProperty(): string
-  {
-    $format = 'M d, Y';
-    return $this->getPeriodStart()->format($format);
   }
 
   /**
@@ -961,14 +913,16 @@ class UserDashboard extends Component
    */
   protected function durationToMinutes(string $duration): int
   {
-    if (!preg_match('/^(\d+)h(?:\s+(\d+)m)?$/', $duration, $matches)) {
-      throw new \InvalidArgumentException(
-        'Duration must be in format "Xh Ym" or "Xh"'
-      );
-    }
+    // Default values
+    $hours = 0;
+    $minutes = 0;
 
-    $hours = (int) $matches[1];
-    $minutes = isset($matches[2]) ? (int) $matches[2] : 0;
+    // Try to parse using sscanf
+    sscanf($duration, '%dh %dm', $hours, $minutes);
+
+    // Ensure values are integers, default to 0 if parsing failed or yielded null
+    $hours = (int) $hours;
+    $minutes = (int) $minutes;
 
     return $hours * 60 + $minutes;
   }

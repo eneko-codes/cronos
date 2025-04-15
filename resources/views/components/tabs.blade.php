@@ -15,8 +15,6 @@
       <button
         @if ($onFilterChange)
             wire:click="{{ $onFilterChange . "('" . $filter . "')" }}"
-        @elseif ($attributes->has("wire:model"))
-            wire:click="setViewMode('{{ $filter }}')"
         @endif
         class="{{ $active === $filter ? "bg-gray-50 text-gray-800 ring-1 ring-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:ring-gray-700" : "text-gray-600 hover:bg-gray-200/50 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-700/50 dark:hover:text-gray-200" }} relative rounded px-3 py-1"
       >

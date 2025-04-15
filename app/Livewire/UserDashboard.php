@@ -347,6 +347,17 @@ class UserDashboard extends Component
     // Get all user data for the date range
     $userData = $this->user->getDataForDateRange($startDate, $endDate);
 
+    // Ensure necessary relationships are loaded for the filtered data
+    if (
+      $userData['leaves'] instanceof \Illuminate\Database\Eloquent\Collection
+    ) {
+      $userData['leaves']->loadMissing('leaveType');
+    }
+    // TODO: Potentially load other relationships here if needed, e.g., for time entries
+    // if ($userData['time_entries'] instanceof \Illuminate\Database\Eloquent\Collection) {
+    //   $userData['time_entries']->loadMissing(['project', 'task']);
+    // }
+
     // Process the data for each day in the period
     $this->periodData = $this->processPeriodData(
       $userData,
@@ -407,6 +418,11 @@ class UserDashboard extends Component
         'worked' => $workedData,
         'deviation_details' => $deviationDetails, // Add daily deviations
       ]);
+
+      // Log leave data for debugging
+      // Log::debug("Processing day: {$dateString}", [
+      //   'leave_data' => $leaveData,
+      // ]);
 
       // Move to the next day.
       $cursor->addDay();
@@ -632,7 +648,7 @@ class UserDashboard extends Component
     return [
       'type' => $leave->type,
       'context' => $contextInfo,
-      'leave_type' => $leave->leaveType?->name ?? 'Unknown',
+      'leave_type' => $leave->leaveType?->name ?? '[No Type Set]',
       'duration' => $durationText,
       'duration_hours' => $durationFormatted,
       'status' => $leave->status ?? 'validate',
@@ -647,6 +663,7 @@ class UserDashboard extends Component
       'start_time' => $startTime,
       'end_time' => $endTime,
       'actual_minutes' => $durationMinutes, // Add the actual minutes for accurate totals calculation
+      'leave_type_description' => $leave->leaveType?->description, // Add the description
     ];
   }
 

@@ -336,105 +336,85 @@
                   <div
                     class="{{ $day['leave']['status'] !== 'validate' ? 'opacity-60' : '' }} flex items-center gap-2"
                   >
-                    <div>
-                      <x-tooltip>
-                        <x-slot name="text">
-                          <div class="flex max-w-xs flex-col gap-2">
-                            <div class="mb-1 flex flex-row items-center gap-1">
-                              <span
-                                class="text-xs font-medium text-gray-600 dark:text-gray-300"
-                              >
-                                {{ $day['leave']['duration'] }}
-                              </span>
-                            </div>
+                    <x-tooltip>
+                      <x-slot name="text">
+                        <div class="flex max-w-xs flex-col gap-2">
+                          <span
+                            class="text-xs font-medium text-gray-600 dark:text-gray-300"
+                          >
+                            {{ $day['leave']['duration'] }}
+                          </span>
 
-                            @if ($day['leave']['is_half_day'])
-                              <div>
-                                <span
-                                  class="text-xs text-gray-600 dark:text-gray-300"
-                                >
-                                  {{ Str::ucfirst($day['leave']['time_period']) }}
-                                  ({{ $day['leave']['half_day_time'] ?? '—' }})
-                                </span>
-                              </div>
-                            @else
-                              <div>
-                                <span
-                                  class="text-xs text-gray-600 dark:text-gray-300"
-                                >
-                                  Full day
-                                </span>
-                              </div>
-                            @endif
-
-                            <div>
-                              <span
-                                class="text-xs font-medium text-gray-600 dark:text-gray-300"
-                              >
-                                {{ $day['leave']['type'] ?? 'Leave' }}
-                              </span>
-                            </div>
-
-                            @if ($day['leave']['status'] !== 'validate')
-                              <div
-                                class="mt-1 border border-dashed border-gray-200 pt-1 dark:border-gray-700"
-                              >
-                                <span
-                                  class="text-xs italic text-gray-500 dark:text-gray-400"
-                                >
-                                  {{ $day['leave']['status'] === 'confirm' ? 'Waiting approval' : 'Cancelled' }}
-                                </span>
-                              </div>
-                            @endif
-                          </div>
-                        </x-slot>
-                        <span
-                          class="{{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300' }}"
-                        >
-                          {{ $day['leave']['duration_hours'] }}
-
-                          @if ($day['leave']['status'] === 'validate')
-                            <x-badge variant="success" size="sm">
-                              {{ $day['leave']['is_half_day'] ? 'Half' : 'Full' }}
-                            </x-badge>
-                          @elseif ($day['leave']['status'] === 'confirm')
-                            <x-tooltip text="Leave request is pending approval">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                class="size-4"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  stroke-linecap="round"
-                                  stroke-linejoin="round"
-                                  stroke-width="2"
-                                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                                />
-                              </svg>
-                            </x-tooltip>
-                          @elseif ($day['leave']['status'] === 'cancel')
-                            <x-tooltip text="Leave request was cancelled">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                class="size-4"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  stroke-linecap="round"
-                                  stroke-linejoin="round"
-                                  stroke-width="2"
-                                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                />
-                              </svg>
-                            </x-tooltip>
+                          @if ($day['leave']['is_half_day'])
+                            <span
+                              class="text-xs text-gray-600 dark:text-gray-300"
+                            >
+                              {{ Str::ucfirst($day['leave']['time_period']) }}
+                              ({{ $day['leave']['half_day_time'] ?? '—' }})
+                            </span>
+                          @else
+                            <span
+                              class="text-xs text-gray-600 dark:text-gray-300"
+                            >
+                              Full day
+                            </span>
                           @endif
-                        </span>
-                      </x-tooltip>
-                    </div>
+
+                          @if ($day['leave']['status'] !== 'validate')
+                            <span
+                              class="text-xs italic text-gray-500 dark:text-gray-400"
+                            >
+                              {{ $day['leave']['status'] === 'confirm' ? 'Waiting approval' : 'Cancelled' }}
+                            </span>
+                          @endif
+                        </div>
+                      </x-slot>
+                      <span
+                        class="{{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300' }}"
+                      >
+                        {{ $day['leave']['duration_hours'] }}
+
+                        @if ($day['leave']['status'] === 'validate')
+                          <x-badge variant="info" size="sm">
+                            {{ $day['leave']['leave_type'] ?? 'Leave' }}
+                          </x-badge>
+                        @elseif ($day['leave']['status'] === 'confirm')
+                          <x-tooltip text="Leave request is pending approval">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              class="size-4"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                              />
+                            </svg>
+                          </x-tooltip>
+                        @elseif ($day['leave']['status'] === 'cancel')
+                          <x-tooltip text="Leave request was cancelled">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              class="size-4"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                              />
+                            </svg>
+                          </x-tooltip>
+                        @endif
+                      </span>
+                    </x-tooltip>
                   </div>
                 @endif
               </td>

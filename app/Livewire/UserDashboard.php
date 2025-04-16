@@ -75,24 +75,6 @@ class UserDashboard extends Component
   protected array $periodData = [];
 
   /**
-   * Aggregated totals for the displayed period (excluding future dates).
-   * Values are stored in minutes.
-   *
-   * @var array{
-   *   scheduled: int,
-   *   attendance: int,
-   *   worked: int,
-   *   leave: int
-   * }
-   */
-  protected array $totals = [
-    'scheduled' => 0, // in minutes
-    'attendance' => 0, // in minutes
-    'worked' => 0, // in minutes
-    'leave' => 0, // in minutes
-  ];
-
-  /**
    * Flag indicating if the authenticated user has admin privileges.
    */
   public bool $isAdmin = false;
@@ -239,7 +221,8 @@ class UserDashboard extends Component
       ],
     ];
 
-    $totals = $this->totals;
+    // Get totals from the computed property
+    $totals = $this->getTotals;
 
     // Calculate effective scheduled time by subtracting actual leave (excluding remote work leave)
     $effectiveScheduledMinutes = max(
@@ -364,7 +347,21 @@ class UserDashboard extends Component
    */
   public function render()
   {
-    return view('livewire.user-dashboard');
+    // Prepare data for the view
+    $dashboardTotals = $this->getTotals; // Calculate totals via computed property
+    $totalDeviationsDetails = $this->showDeviations
+      ? $this->totalDeviations
+      : null;
+
+    // Pass data explicitly to the view
+    return view('livewire.user-dashboard', [
+      'dashboardTotals' => $dashboardTotals,
+      'totalDeviationsDetails' => $totalDeviationsDetails,
+      // Note: $periodData is implicitly available in the view
+      // because it's a protected property iterated on in the Blade file
+      // If issues persist, we could pass it explicitly too:
+      // 'periodDataForView' => $this->periodData
+    ]);
   }
 
   /**
@@ -411,9 +408,6 @@ class UserDashboard extends Component
       $startDate,
       $endDate
     );
-
-    // Calculate totals based on the processed daily data
-    $this->totals = $this->calculateTotals($this->periodData);
   }
 
   /**
@@ -471,9 +465,6 @@ class UserDashboard extends Component
         'worked' => $workedData,
         'deviation_details' => $deviationDetails,
       ]);
-
-      // Optional: Log daily processed data for debugging
-      // Log::debug("Processed day: {$dateString}", ['data' => $dates->get($dateString)]);
 
       // Move to the next day.
       $cursor->addDay();
@@ -957,12 +948,19 @@ class UserDashboard extends Component
    * Calculates aggregate totals (in minutes) for scheduled, attendance, worked,
    * and actual leave time across the entire period (excluding future dates).
    *
-   * @param array $periodData The processed daily data.
+   * This is a computed property, cached by Livewire per request.
+   *
    * @return array Aggregated totals keyed by type.
    */
-  protected function calculateTotals(array $periodData): array
+  #[Computed(persist: false)]
+  public function getTotals(): array
   {
-    return collect($periodData)->reduce(
+    // Ensure periodData is loaded if not already
+    if (empty($this->periodData)) {
+      $this->loadPeriodDataAndTotals();
+    }
+
+    return collect($this->periodData)->reduce(
       function ($totals, $day) {
         // Skip future dates (only include past days and today)
         $dayDate = Carbon::parse($day['date']);
@@ -1015,9 +1013,9 @@ class UserDashboard extends Component
           }
         }
 
-        return $totals;
+        return $totals; // Return the accumulator
       },
-      ['scheduled' => 0, 'attendance' => 0, 'worked' => 0, 'leave' => 0]
+      ['scheduled' => 0, 'attendance' => 0, 'worked' => 0, 'leave' => 0] // Initial value for accumulator
     );
   }
 
@@ -1055,7 +1053,13 @@ class UserDashboard extends Component
       // Handle negative minutes if necessary
       $minutes = 0;
     }
-    return CarbonInterval::minutes($minutes)->cascade()->format('%hh %im');
+
+    // Calculate total hours and remaining minutes manually
+    $totalHours = floor($minutes / 60);
+    $remainingMinutes = $minutes % 60;
+
+    // Format the string manually
+    return sprintf('%dh %dm', $totalHours, $remainingMinutes);
   }
 
   /**

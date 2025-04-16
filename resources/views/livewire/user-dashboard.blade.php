@@ -666,7 +666,6 @@
             </td>
 
             @php
-              $totals = $this->totals;
               $totalDeviationsDetails = $showDeviations ? $this->totalDeviations : null;
             @endphp
 
@@ -674,7 +673,13 @@
               <td
                 class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-800"
               >
-                {{ $totals[$type] > 0 ? $this->formatMinutesToHoursMinutes($totals[$type]) : '' }}
+                @if ($type === 'scheduled')
+                  {{-- Format the scheduled total --}}
+                  {{ $dashboardTotals[$type] > 0 ? $this->formatMinutesToHoursMinutes($dashboardTotals[$type]) : '' }}
+                @else
+                  {{-- Access totals passed explicitly from render method --}}
+                  {{ $dashboardTotals[$type] > 0 ? $this->formatMinutesToHoursMinutes($dashboardTotals[$type]) : '' }}
+                @endif
               </td>
             @endforeach
 

@@ -352,7 +352,7 @@
                               {{ Str::ucfirst($day['leave']['time_period']) }}
                               ({{ $day['leave']['half_day_time'] ?? '—' }})
                             </span>
-                          @else
+                          @elseif ($day['leave']['duration_days'] == 1)
                             <span
                               class="text-xs text-gray-600 dark:text-gray-300"
                             >
@@ -538,8 +538,8 @@
                 <!-- Attendance vs Scheduled -->
                 @php
                   $attVsSchDetail = $day['deviation_details']['attendance_vs_scheduled'] ?? null;
-                  $attVsSchPercentage = $attVsSchDetail ? $attVsSchDetail['percentage'] : 0;
-                  $attVsSchShouldDisplay = ! $isFutureDate && $showDeviations && $attVsSchDetail && $attVsSchPercentage !== 0;
+                  $attVsSchPercentage = $attVsSchDetail['percentage'] ?? 0;
+                  $attVsSchShouldDisplay = ! $isFutureDate && $showDeviations && ($attVsSchDetail['should_display'] ?? false);
                   $attVsSchBgClass = '';
                   $attVsSchTextClass = '';
                   if ($attVsSchShouldDisplay) {
@@ -557,7 +557,7 @@
                 @endphp
 
                 <td
-                  class="{{ $attVsSchBgClass }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : (isset($attVsSchTextClass) && $attVsSchTextClass ? '' : 'text-transparent') }} whitespace-nowrap border p-2 dark:border-gray-700"
+                  class="{{ $attVsSchBgClass }} {{ ! $attVsSchShouldDisplay ? 'text-transparent' : '' }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-400' : '' }} whitespace-nowrap border p-2 dark:border-gray-700"
                 >
                   @if ($attVsSchShouldDisplay)
                     <x-tooltip :text="$attVsSchDetail['tooltip']">
@@ -571,8 +571,8 @@
                 <!-- Worked vs Scheduled -->
                 @php
                   $workVsSchDetail = $day['deviation_details']['worked_vs_scheduled'] ?? null;
-                  $workVsSchPercentage = $workVsSchDetail ? $workVsSchDetail['percentage'] : 0;
-                  $workVsSchShouldDisplay = ! $isFutureDate && $showDeviations && $workVsSchDetail && $workVsSchPercentage !== 0;
+                  $workVsSchPercentage = $workVsSchDetail['percentage'] ?? 0;
+                  $workVsSchShouldDisplay = ! $isFutureDate && $showDeviations && ($workVsSchDetail['should_display'] ?? false);
                   $workVsSchBgClass = '';
                   $workVsSchTextClass = '';
                   if ($workVsSchShouldDisplay) {
@@ -590,7 +590,7 @@
                 @endphp
 
                 <td
-                  class="{{ $workVsSchBgClass }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : (isset($workVsSchTextClass) && $workVsSchTextClass ? '' : 'text-transparent') }} whitespace-nowrap border p-2 dark:border-gray-700"
+                  class="{{ $workVsSchBgClass }} {{ ! $workVsSchShouldDisplay ? 'text-transparent' : '' }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-400' : '' }} whitespace-nowrap border p-2 dark:border-gray-700"
                 >
                   @if ($workVsSchShouldDisplay)
                     <x-tooltip :text="$workVsSchDetail['tooltip']">
@@ -604,8 +604,8 @@
                 <!-- Worked vs Attendance -->
                 @php
                   $workVsAttDetail = $day['deviation_details']['worked_vs_attendance'] ?? null;
-                  $workVsAttPercentage = $workVsAttDetail ? $workVsAttDetail['percentage'] : 0;
-                  $workVsAttShouldDisplay = ! $isFutureDate && $showDeviations && $workVsAttDetail && $workVsAttPercentage !== 0;
+                  $workVsAttPercentage = $workVsAttDetail['percentage'] ?? 0;
+                  $workVsAttShouldDisplay = ! $isFutureDate && $showDeviations && ($workVsAttDetail['should_display'] ?? false);
                   $workVsAttBgClass = '';
                   $workVsAttTextClass = '';
                   if ($workVsAttShouldDisplay) {
@@ -623,7 +623,7 @@
                 @endphp
 
                 <td
-                  class="{{ $workVsAttBgClass }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : (isset($workVsAttTextClass) && $workVsAttTextClass ? '' : 'text-transparent') }} whitespace-nowrap border p-2 dark:border-gray-700"
+                  class="{{ $workVsAttBgClass }} {{ ! $workVsAttShouldDisplay ? 'text-transparent' : '' }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-400' : '' }} whitespace-nowrap border p-2 dark:border-gray-700"
                 >
                   @if ($workVsAttShouldDisplay)
                     <x-tooltip :text="$workVsAttDetail['tooltip']">
@@ -682,6 +682,7 @@
               @foreach ($totalDeviationsDetails as $deviationType => $details)
                 @php
                   $percentage = $details['percentage'];
+                  $totalShouldDisplay = $showDeviations && isset($details['tooltip']);
                   $totalBgClass = '';
                   $totalTextClass = '';
                   if ($percentage !== 0) {
@@ -695,8 +696,7 @@
                       $totalBgClass = 'bg-yellow-50 dark:bg-yellow-900/30';
                       $totalTextClass = 'text-yellow-500 dark:text-yellow-500';
                     } else {
-                      // percentage is 0 but we might need default styling?
-                      // $totalTextClass = 'text-gray-500 dark:text-gray-400';
+                      $totalTextClass = 'text-gray-700 dark:text-gray-300';
                     }
                   }
                 @endphp
@@ -704,7 +704,7 @@
                 <td
                   class="{{ $totalBgClass }} whitespace-nowrap border border-gray-300 p-2 dark:border-gray-800"
                 >
-                  @if ($percentage !== 0)
+                  @if ($totalShouldDisplay)
                     <x-tooltip :text="$details['tooltip']">
                       <span class="{{ $totalTextClass }}">
                         {{ $percentage > 0 ? '+' : '' }}{{ $percentage }}%

@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Reactive;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 
 #[Title('User Dashboard')]
 class UserDashboard extends Component
@@ -212,28 +213,37 @@ class UserDashboard extends Component
         'percentage' => 0,
         'difference_minutes' => 0,
         'tooltip' => '',
-        'class' => '',
+        'class' => '', // Class is handled in the Blade view
+        'should_display' => false, // Flag to control rendering
       ],
       'worked_vs_scheduled' => [
         'percentage' => 0,
         'difference_minutes' => 0,
         'tooltip' => '',
-        'class' => '',
+        'class' => '', // Class is handled in the Blade view
+        'should_display' => false, // Flag to control rendering
       ],
       'worked_vs_attendance' => [
         'percentage' => 0,
         'difference_minutes' => 0,
         'tooltip' => '',
-        'class' => '',
+        'class' => '', // Class is handled in the Blade view
+        'should_display' => false, // Flag to control rendering
       ],
     ];
 
     // Access totals via the protected property
     $totals = $this->totals; // Access as property
 
-    // Calculate differences and percentages
-    $diffAttVsSch = $totals['attendance'] - $totals['scheduled'];
-    $diffWorkVsSch = $totals['worked'] - $totals['scheduled'];
+    // Calculate effective scheduled time by subtracting leave
+    $effectiveScheduledMinutes = max(
+      0,
+      $totals['scheduled'] - $totals['leave']
+    );
+
+    // Calculate differences
+    $diffAttVsSch = $totals['attendance'] - $effectiveScheduledMinutes;
+    $diffWorkVsSch = $totals['worked'] - $effectiveScheduledMinutes;
     $diffWorkVsAtt = $totals['worked'] - $totals['attendance'];
 
     $deviationDetails['attendance_vs_scheduled'][
@@ -246,28 +256,58 @@ class UserDashboard extends Component
       'difference_minutes'
     ] = $diffWorkVsAtt;
 
-    // Calculate percentages safely
-    if ($totals['scheduled'] > 0) {
+    // --- Calculate Percentages ---
+
+    // Attendance vs Scheduled (considering leave)
+    if ($effectiveScheduledMinutes > 0) {
       $deviationDetails['attendance_vs_scheduled']['percentage'] = round(
-        ($diffAttVsSch / $totals['scheduled']) * 100
+        ($diffAttVsSch / $effectiveScheduledMinutes) * 100
       );
-      $deviationDetails['worked_vs_scheduled']['percentage'] = round(
-        ($diffWorkVsSch / $totals['scheduled']) * 100
-      );
+    } elseif ($totals['attendance'] > 0) {
+      // Scheduled (after leave) is 0, but attendance exists
+      $deviationDetails['attendance_vs_scheduled']['percentage'] = 100;
+    } else {
+      // Both are 0
+      $deviationDetails['attendance_vs_scheduled']['percentage'] = 0;
     }
+
+    // Worked vs Scheduled (considering leave)
+    if ($effectiveScheduledMinutes > 0) {
+      $deviationDetails['worked_vs_scheduled']['percentage'] = round(
+        ($diffWorkVsSch / $effectiveScheduledMinutes) * 100
+      );
+    } elseif ($totals['worked'] > 0) {
+      // Scheduled (after leave) is 0, but worked exists
+      $deviationDetails['worked_vs_scheduled']['percentage'] = 100;
+    } else {
+      // Both are 0
+      $deviationDetails['worked_vs_scheduled']['percentage'] = 0;
+    }
+
+    // Worked vs Attendance
     if ($totals['attendance'] > 0) {
       $deviationDetails['worked_vs_attendance']['percentage'] = round(
         ($diffWorkVsAtt / $totals['attendance']) * 100
       );
-    } elseif ($diffWorkVsAtt > 0) {
-      // Handle worked > 0 and attendance = 0 case if needed (e.g., 100%)
+    } elseif ($totals['worked'] > 0) {
+      // Attendance is 0, but worked exists
       $deviationDetails['worked_vs_attendance']['percentage'] = 100;
+    } else {
+      // Both are 0
+      $deviationDetails['worked_vs_attendance']['percentage'] = 0;
     }
 
-    // Format tooltip and class
+    // Determine if each deviation cell should be displayed based on data presence
+    $deviationDetails['attendance_vs_scheduled']['should_display'] =
+      $effectiveScheduledMinutes > 0 || $totals['attendance'] > 0;
+    $deviationDetails['worked_vs_scheduled']['should_display'] =
+      $effectiveScheduledMinutes > 0 || $totals['worked'] > 0;
+    $deviationDetails['worked_vs_attendance']['should_display'] =
+      $totals['attendance'] > 0 || $totals['worked'] > 0;
+
+    // Format tooltip
     foreach ($deviationDetails as $deviation => $details) {
       $diffMinutes = $details['difference_minutes'];
-      $percentage = $details['percentage'];
       $formattedDiff = $this->formatMinutesToHoursMinutes(abs($diffMinutes));
 
       // Determine comparison text based on deviation key
@@ -651,6 +691,7 @@ class UserDashboard extends Component
       'leave_type' => $leave->leaveType?->name ?? '[No Type Set]',
       'duration' => $durationText,
       'duration_hours' => $durationFormatted,
+      'duration_days' => $leave->duration_days,
       'status' => $leave->status ?? 'validate',
       'is_half_day' => $leave->isHalfDay(),
       'time_period' => $leave->isMorningLeave()
@@ -908,13 +949,29 @@ class UserDashboard extends Component
         ) {
           // Use actual_minutes when available, which accounts for schedule
           if (isset($day['leave']['actual_minutes'])) {
-            $totals['leave'] += $day['leave']['actual_minutes'];
+            // Only add to total leave if it's NOT the remote work type
+            if (
+              !Str::contains(
+                $day['leave']['leave_type'] ?? '',
+                'Horas Teletrabajo'
+              )
+            ) {
+              $totals['leave'] += $day['leave']['actual_minutes'];
+            }
           }
           // Fallback to duration_hours
           elseif (isset($day['leave']['duration_hours'])) {
-            $totals['leave'] += $this->durationToMinutes(
-              $day['leave']['duration_hours']
-            );
+            // Only add to total leave if it's NOT the remote work type
+            if (
+              !Str::contains(
+                $day['leave']['leave_type'] ?? '',
+                'Horas Teletrabajo'
+              )
+            ) {
+              $totals['leave'] += $this->durationToMinutes(
+                $day['leave']['duration_hours']
+              );
+            }
           }
         }
 
@@ -1010,19 +1067,22 @@ class UserDashboard extends Component
         'percentage' => 0,
         'difference_minutes' => 0,
         'tooltip' => '',
-        'class' => '',
+        'class' => '', // Class is handled in the Blade view
+        'should_display' => false, // Flag to control rendering
       ],
       'worked_vs_scheduled' => [
         'percentage' => 0,
         'difference_minutes' => 0,
         'tooltip' => '',
-        'class' => '',
+        'class' => '', // Class is handled in the Blade view
+        'should_display' => false, // Flag to control rendering
       ],
       'worked_vs_attendance' => [
         'percentage' => 0,
         'difference_minutes' => 0,
         'tooltip' => '',
-        'class' => '',
+        'class' => '', // Class is handled in the Blade view
+        'should_display' => false, // Flag to control rendering
       ],
     ];
 
@@ -1040,8 +1100,19 @@ class UserDashboard extends Component
         ? $dayData['leave']['actual_minutes']
         : 0;
 
+    // Determine leave minutes to subtract, ignoring the remote work leave type
+    $isRemoteWorkLeave = Str::contains(
+      $dayData['leave']['leave_type'] ?? '',
+      'Horas Teletrabajo'
+    );
+    $leaveMinutesToSubtract =
+      $leaveMinutes > 0 && !$isRemoteWorkLeave ? $leaveMinutes : 0;
+
     // We consider the 'effective scheduled time' as scheduled minus leave
-    $effectiveScheduledMinutes = max(0, $scheduledMinutes - $leaveMinutes);
+    $effectiveScheduledMinutes = max(
+      0,
+      $scheduledMinutes - $leaveMinutesToSubtract
+    );
 
     // Calculate actual differences in minutes
     $diffAttVsSch = $attendanceMinutes - $effectiveScheduledMinutes;
@@ -1059,39 +1130,58 @@ class UserDashboard extends Component
       'difference_minutes'
     ] = $diffWorkVsAtt;
 
-    // Calculate attendance vs scheduled (considering leave) - Percentage
+    // --- Calculate Percentages ---
+
+    // Attendance vs Scheduled (considering leave)
     if ($effectiveScheduledMinutes > 0) {
       $deviationDetails['attendance_vs_scheduled']['percentage'] = round(
         ($diffAttVsSch / $effectiveScheduledMinutes) * 100
       );
-    } elseif ($scheduledMinutes > 0 && $leaveMinutes >= $scheduledMinutes) {
-      $deviationDetails['attendance_vs_scheduled']['percentage'] =
-        $attendanceMinutes > 0 ? 100 : 0;
+    } elseif ($attendanceMinutes > 0) {
+      // Scheduled (after leave) is 0, but attendance exists
+      $deviationDetails['attendance_vs_scheduled']['percentage'] = 100;
+    } else {
+      // Both are 0
+      $deviationDetails['attendance_vs_scheduled']['percentage'] = 0;
     }
 
-    // Calculate worked vs scheduled (considering leave) - Percentage
+    // Worked vs Scheduled (considering leave)
     if ($effectiveScheduledMinutes > 0) {
       $deviationDetails['worked_vs_scheduled']['percentage'] = round(
         ($diffWorkVsSch / $effectiveScheduledMinutes) * 100
       );
-    } elseif ($scheduledMinutes > 0 && $leaveMinutes >= $scheduledMinutes) {
-      $deviationDetails['worked_vs_scheduled']['percentage'] =
-        $workedMinutes > 0 ? 100 : 0;
+    } elseif ($workedMinutes > 0) {
+      // Scheduled (after leave) is 0, but worked exists
+      $deviationDetails['worked_vs_scheduled']['percentage'] = 100;
+    } else {
+      // Both are 0
+      $deviationDetails['worked_vs_scheduled']['percentage'] = 0;
     }
 
-    // Calculate worked vs attendance - Percentage
+    // Worked vs Attendance
     if ($attendanceMinutes > 0) {
       $deviationDetails['worked_vs_attendance']['percentage'] = round(
         ($diffWorkVsAtt / $attendanceMinutes) * 100
       );
     } elseif ($workedMinutes > 0) {
+      // Attendance is 0, but worked exists
       $deviationDetails['worked_vs_attendance']['percentage'] = 100;
+    } else {
+      // Both are 0
+      $deviationDetails['worked_vs_attendance']['percentage'] = 0;
     }
 
-    // Format tooltip and class
+    // Determine if each deviation cell should be displayed based on data presence
+    $deviationDetails['attendance_vs_scheduled']['should_display'] =
+      $effectiveScheduledMinutes > 0 || $attendanceMinutes > 0;
+    $deviationDetails['worked_vs_scheduled']['should_display'] =
+      $effectiveScheduledMinutes > 0 || $workedMinutes > 0;
+    $deviationDetails['worked_vs_attendance']['should_display'] =
+      $attendanceMinutes > 0 || $workedMinutes > 0;
+
+    // Format tooltip
     foreach ($deviationDetails as $deviation => $details) {
       $diffMinutes = $details['difference_minutes'];
-      $percentage = $details['percentage'];
       $formattedDiff = $this->formatMinutesToHoursMinutes(abs($diffMinutes));
 
       // Determine comparison text based on deviation key

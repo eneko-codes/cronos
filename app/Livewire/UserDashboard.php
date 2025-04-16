@@ -20,31 +20,30 @@ use Illuminate\Support\Str;
 class UserDashboard extends Component
 {
   /**
-   * The user whose data is displayed.
+   * The user model instance.
    */
   public User $user;
 
   /**
-   * String date (YYYY-MM-DD) representing the start of the displayed period.
+   * The first date of the currently displayed period (YYYY-MM-DD string).
    */
   #[Url]
   public string $currentDate;
 
   /**
-   * View mode: 'weekly' or 'monthly'
+   * Current view mode: 'weekly' or 'monthly'.
    */
   #[Url]
   public string $viewMode = 'weekly';
 
   /**
-   * Whether to show deviation percentages
+   * Flag to toggle the display of deviation percentage columns.
    */
   #[Url]
   public bool $showDeviations = false;
 
   /**
-   * The final array of day-by-day data for the chosen period.
-   * This array is used directly by the Blade template.
+   * Holds the processed data for each day in the current period, structured for the Blade view.
    *
    * @var array<string, array{
    *   date: string,
@@ -76,8 +75,8 @@ class UserDashboard extends Component
   protected array $periodData = [];
 
   /**
-   * Aggregated totals (scheduled, attendance, worked) for the displayed period,
-   * stored in minutes so we can convert them into "X hours Y minutes" later.
+   * Aggregated totals for the displayed period (excluding future dates).
+   * Values are stored in minutes.
    *
    * @var array{
    *   scheduled: int,
@@ -94,12 +93,14 @@ class UserDashboard extends Component
   ];
 
   /**
-   * Whether the current user is an admin
+   * Flag indicating if the authenticated user has admin privileges.
    */
   public bool $isAdmin = false;
 
   /**
-   * Mount lifecycle hook.
+   * Initializes the component, loads the user, sets the initial period, and loads data.
+   *
+   * @param int|null $id The ID of the user to display, or null to display the authenticated user.
    */
   public function mount($id = null): void
   {
@@ -135,11 +136,12 @@ class UserDashboard extends Component
     $this->checkPermissions();
 
     // Load cache data for the current period
+    // TODO: Implement caching strategy if performance becomes an issue.
     $this->loadPeriodDataAndTotals();
   }
 
   /**
-   * Toggle showing deviation percentages
+   * Toggles the visibility of the deviation columns and reloads data.
    */
   public function toggleDeviations(): void
   {
@@ -149,7 +151,9 @@ class UserDashboard extends Component
   }
 
   /**
-   * Changes the view mode and reloads data.
+   * Switches the view between 'weekly' and 'monthly' modes and reloads data.
+   *
+   * @param string $mode The desired view mode ('weekly' or 'monthly').
    */
   public function changeViewMode(string $mode): void
   {
@@ -171,7 +175,7 @@ class UserDashboard extends Component
   }
 
   /**
-   * Navigate to previous period.
+   * Navigates the calendar view to the previous week or month.
    */
   public function previousPeriod(): void
   {
@@ -183,11 +187,11 @@ class UserDashboard extends Component
       $this->setPeriodStart($startDate->subMonth());
     }
 
-    $this->loadPeriodDataAndTotals(); // Renamed for clarity
+    $this->loadPeriodDataAndTotals();
   }
 
   /**
-   * Navigate to next period.
+   * Navigates the calendar view to the next week or month.
    */
   public function nextPeriod(): void
   {
@@ -199,11 +203,14 @@ class UserDashboard extends Component
       $this->setPeriodStart($startDate->addMonth());
     }
 
-    $this->loadPeriodDataAndTotals(); // Renamed for clarity
+    $this->loadPeriodDataAndTotals();
   }
 
   /**
-   * Calculates total deviations for the whole period, including formatted text and classes.
+   * Calculates total deviation details (percentage, difference, tooltip) for the entire period.
+   * Uses the aggregated totals calculated earlier.
+   *
+   * @return array<string, array{percentage: int, difference_minutes: int, tooltip: string, class: string, should_display: bool}> Deviation details.
    */
   #[Computed(persist: false)]
   public function totalDeviations(): array
@@ -232,10 +239,9 @@ class UserDashboard extends Component
       ],
     ];
 
-    // Access totals via the protected property
-    $totals = $this->totals; // Access as property
+    $totals = $this->totals;
 
-    // Calculate effective scheduled time by subtracting leave
+    // Calculate effective scheduled time by subtracting actual leave (excluding remote work leave)
     $effectiveScheduledMinutes = max(
       0,
       $totals['scheduled'] - $totals['leave']
@@ -297,7 +303,7 @@ class UserDashboard extends Component
       $deviationDetails['worked_vs_attendance']['percentage'] = 0;
     }
 
-    // Determine if each deviation cell should be displayed based on data presence
+    // Determine if the total deviation percentages should be displayed
     $deviationDetails['attendance_vs_scheduled']['should_display'] =
       $effectiveScheduledMinutes > 0 || $totals['attendance'] > 0;
     $deviationDetails['worked_vs_scheduled']['should_display'] =
@@ -305,7 +311,7 @@ class UserDashboard extends Component
     $deviationDetails['worked_vs_attendance']['should_display'] =
       $totals['attendance'] > 0 || $totals['worked'] > 0;
 
-    // Format tooltip
+    // Format tooltip text for each deviation type
     foreach ($deviationDetails as $deviation => $details) {
       $diffMinutes = $details['difference_minutes'];
       $formattedDiff = $this->formatMinutesToHoursMinutes(abs($diffMinutes));
@@ -336,7 +342,8 @@ class UserDashboard extends Component
   }
 
   /**
-   * Determines if the "next" button should be disabled in the UI.
+   * Computes whether the "next period" navigation button should be disabled.
+   * Prevents navigating into the future.
    */
   #[Computed]
   public function isNextPeriodDisabled(): bool
@@ -353,7 +360,7 @@ class UserDashboard extends Component
   }
 
   /**
-   * Main render method for this Livewire component.
+   * Renders the component's Blade view.
    */
   public function render()
   {
@@ -361,7 +368,7 @@ class UserDashboard extends Component
   }
 
   /**
-   * Gets the period start date as a Carbon instance.
+   * Gets the start date of the current period as a Carbon instance (UTC).
    */
   protected function getPeriodStart(): Carbon
   {
@@ -372,7 +379,7 @@ class UserDashboard extends Component
   }
 
   /**
-   * Loads period data directly from the database.
+   * Fetches user data for the current period and triggers processing.
    */
   protected function loadPeriodDataAndTotals(): void
   {
@@ -405,12 +412,18 @@ class UserDashboard extends Component
       $endDate
     );
 
-    // Calculate totals
+    // Calculate totals based on the processed daily data
     $this->totals = $this->calculateTotals($this->periodData);
   }
 
   /**
-   * Processes raw data from model queries into structured day-by-day data.
+   * Iterates through the date range, processing raw schedule, leave, attendance,
+   * and worked data for each day into a structured format for the view.
+   *
+   * @param array $data Raw data collections ('schedules', 'leaves', 'attendances', 'time_entries').
+   * @param Carbon $start Start date of the period (UTC).
+   * @param Carbon $end End date of the period (UTC).
+   * @return array Processed daily data keyed by date string.
    */
   protected function processPeriodData(
     array $data,
@@ -451,18 +464,16 @@ class UserDashboard extends Component
 
       // Structure the data for the current day.
       $dates->put($dateString, [
-        'date' => $dateString, // Use UTC date string
+        'date' => $dateString,
         'scheduled' => $scheduleData,
         'leave' => $leaveData,
         'attendance' => $attendanceData,
         'worked' => $workedData,
-        'deviation_details' => $deviationDetails, // Add daily deviations
+        'deviation_details' => $deviationDetails,
       ]);
 
-      // Log leave data for debugging
-      // Log::debug("Processing day: {$dateString}", [
-      //   'leave_data' => $leaveData,
-      // ]);
+      // Optional: Log daily processed data for debugging
+      // Log::debug("Processed day: {$dateString}", ['data' => $dates->get($dateString)]);
 
       // Move to the next day.
       $cursor->addDay();
@@ -472,7 +483,12 @@ class UserDashboard extends Component
   }
 
   /**
-   * Processes schedule data for a single day.
+   * Processes schedule data for a specific day, considering the active schedule
+   * and Odoo's weekday numbering. Handles potential duplicate schedule details.
+   *
+   * @param Collection $schedules All user schedule records.
+   * @param Carbon $localDate The date to process (UTC).
+   * @return array Processed schedule data ('duration', 'slots', 'schedule_name').
    */
   protected function processScheduleData(
     Collection $schedules,
@@ -570,7 +586,13 @@ class UserDashboard extends Component
   }
 
   /**
-   * Processes leave data for a single day.
+   * Processes leave data for a specific day, calculating duration based on type
+   * (full/half day) and the user's schedule for that day.
+   *
+   * @param Collection $leaves All user leave records for the period.
+   * @param string $dateString The date to process (YYYY-MM-DD string, UTC).
+   * @param Collection|null $schedules User schedule records (optional, used for duration calc).
+   * @return array|null Processed leave data or null if no leave on this day.
    */
   protected function processLeaveData(
     Collection $leaves,
@@ -709,7 +731,11 @@ class UserDashboard extends Component
   }
 
   /**
-   * Processes attendance data for a single day.
+   * Processes attendance data for a specific day from DeskTime/SystemPin records.
+   *
+   * @param Collection $attendances All user attendance records for the period.
+   * @param string $dateString The date to process (YYYY-MM-DD string, UTC).
+   * @return array Processed attendance data ('duration', 'is_remote', 'times').
    */
   protected function processAttendanceData(
     Collection $attendances,
@@ -727,7 +753,7 @@ class UserDashboard extends Component
           return false;
         }
 
-        // Convert to Carbon if needed and compare at day precision
+        // Ensure comparison is done at day precision in UTC
         $recordDate =
           $record->date instanceof Carbon
             ? $record->date
@@ -771,7 +797,11 @@ class UserDashboard extends Component
   }
 
   /**
-   * Processes worked data (time entries) for a single day.
+   * Processes worked data (ProofHub time entries) for a specific day.
+   *
+   * @param Collection $timeEntries All user time entries for the period.
+   * @param string $dateString The date to process (YYYY-MM-DD string, UTC).
+   * @return array Processed worked data ('duration', 'projects', 'detailed_entries').
    */
   protected function processWorkedData(
     Collection $timeEntries,
@@ -878,7 +908,11 @@ class UserDashboard extends Component
   }
 
   /**
-   * Finds the active schedule for a given date.
+   * Finds the user's active schedule record for a specific date.
+   *
+   * @param Collection $schedules User's schedule history.
+   * @param string $dateString Date to check (YYYY-MM-DD string, UTC).
+   * @return object|null The active UserSchedule model instance or null.
    */
   protected function findActiveSchedule(
     Collection $schedules,
@@ -901,7 +935,11 @@ class UserDashboard extends Component
   }
 
   /**
-   * Finds the active leave for a given date.
+   * Finds the user's active leave record for a specific date.
+   *
+   * @param Collection $leaves User's leave history for the period.
+   * @param string $dateString Date to check (YYYY-MM-DD string, UTC).
+   * @return object|null The active UserLeave model instance or null.
    */
   protected function findActiveLeave(
     Collection $leaves,
@@ -916,12 +954,14 @@ class UserDashboard extends Component
   }
 
   /**
-   * Calculates totals (scheduled, attendance, worked, leave) in minutes.
+   * Calculates aggregate totals (in minutes) for scheduled, attendance, worked,
+   * and actual leave time across the entire period (excluding future dates).
+   *
+   * @param array $periodData The processed daily data.
+   * @return array Aggregated totals keyed by type.
    */
   protected function calculateTotals(array $periodData): array
   {
-    // We'll accumulate everything in minutes.
-    // We'll parse the "Xh Ym" values back into minutes for summation.
     return collect($periodData)->reduce(
       function ($totals, $day) {
         // Skip future dates (only include past days and today)
@@ -982,8 +1022,10 @@ class UserDashboard extends Component
   }
 
   /**
-   * Converts an "Xh Ym" duration string to minutes.
-   * Example: "6h 30m" => 390.
+   * Utility function to convert a duration string ("Xh Ym") into total minutes.
+   *
+   * @param string $duration The duration string (e.g., "8h 15m", "30m", "2h").
+   * @return int Total minutes.
    */
   protected function durationToMinutes(string $duration): int
   {
@@ -1002,7 +1044,10 @@ class UserDashboard extends Component
   }
 
   /**
-   * Formats a duration in minutes into "Xh Ym".
+   * Utility function to format total minutes into a human-readable "Xh Ym" string.
+   *
+   * @param int $minutes Total minutes.
+   * @return string Formatted duration string.
    */
   public function formatMinutesToHoursMinutes(int $minutes): string
   {
@@ -1014,7 +1059,7 @@ class UserDashboard extends Component
   }
 
   /**
-   * Helper method to format duration, used internally by data processing.
+   * Alias for formatMinutesToHoursMinutes, potentially used internally.
    */
   protected function formatDuration(int $minutes): string
   {
@@ -1022,7 +1067,9 @@ class UserDashboard extends Component
   }
 
   /**
-   * Sets the period start date.
+   * Updates the component's current date property.
+   *
+   * @param Carbon $date The new start date.
    */
   protected function setPeriodStart(Carbon $date): void
   {
@@ -1030,7 +1077,8 @@ class UserDashboard extends Component
   }
 
   /**
-   * Checks user permissions.
+   * Verifies if the authenticated user is authorized to view the target user's data.
+   * Sets the isAdmin flag.
    */
   protected function checkPermissions(): void
   {
@@ -1046,7 +1094,11 @@ class UserDashboard extends Component
   }
 
   /**
-   * Gets the scheduled duration for a specified date in minutes.
+   * Helper to retrieve the total scheduled duration (in minutes) for a specific date.
+   *
+   * @param Collection $schedules User's schedule history.
+   * @param string $dateString Date to check (YYYY-MM-DD string, UTC).
+   * @return int Total scheduled minutes for the day.
    */
   protected function getScheduledDurationForDate(
     Collection $schedules,
@@ -1058,7 +1110,11 @@ class UserDashboard extends Component
   }
 
   /**
-   * Calculates daily deviations based on processed data for a single day.
+   * Calculates deviation details (percentage, difference, tooltip, display flag)
+   * for a single day based on its processed schedule, attendance, worked, and leave data.
+   *
+   * @param array $dayData Processed data for a single day.
+   * @return array Deviation details for the day.
    */
   protected function calculateDailyDeviations(array $dayData): array
   {
@@ -1171,7 +1227,7 @@ class UserDashboard extends Component
       $deviationDetails['worked_vs_attendance']['percentage'] = 0;
     }
 
-    // Determine if each deviation cell should be displayed based on data presence
+    // Determine if each deviation should be displayed based on data availability
     $deviationDetails['attendance_vs_scheduled']['should_display'] =
       $effectiveScheduledMinutes > 0 || $attendanceMinutes > 0;
     $deviationDetails['worked_vs_scheduled']['should_display'] =
@@ -1179,7 +1235,7 @@ class UserDashboard extends Component
     $deviationDetails['worked_vs_attendance']['should_display'] =
       $attendanceMinutes > 0 || $workedMinutes > 0;
 
-    // Format tooltip
+    // Format tooltip text for each deviation type
     foreach ($deviationDetails as $deviation => $details) {
       $diffMinutes = $details['difference_minutes'];
       $formattedDiff = $this->formatMinutesToHoursMinutes(abs($diffMinutes));

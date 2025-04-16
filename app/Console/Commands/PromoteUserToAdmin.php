@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\User; // Make sure to import your User model
+use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Validator;
 

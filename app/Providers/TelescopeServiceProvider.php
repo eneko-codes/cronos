@@ -21,7 +21,7 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
     $isLocal = $this->app->environment('local');
 
     Telescope::filter(function (IncomingEntry $entry) use ($isLocal) {
-      // Temporarily allow all entries for debugging
+      // Allow all entries for debugging even if not local (so Telescope is always available even in production servers)
       return true;
 
       // Original logic:

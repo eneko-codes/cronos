@@ -22,6 +22,10 @@ class Settings extends Component
   // New simplified data retention property
   public int $globalRetentionPeriod = 0;
 
+  // Telescope Pruning Settings
+  public string $telescopePruneFrequency = 'weekly';
+  public int $telescopePruneHours = 168; // Default to 1 week
+
   public function mount(): void
   {
     // Get frequency from DB
@@ -35,6 +39,23 @@ class Settings extends Component
     );
 
     // Load data retention settings
+    $this->loadDataRetentionSettings();
+
+    // Load Telescope prune settings
+    $this->telescopePruneFrequency = NotificationSetting::getValue(
+      'telescope_prune_frequency',
+      'weekly' // Default frequency
+    );
+    $this->telescopePruneHours = (int) NotificationSetting::getValue(
+      'telescope_prune_hours',
+      168 // Default hours (1 week)
+    );
+  }
+
+  // Extracted data retention loading logic
+  private function loadDataRetentionSettings(): void
+  {
+    $this->globalRetentionPeriod = 0; // Reset to default
     // Check if any data type has a retention setting
     foreach (DataRetentionSetting::dataTypes() as $dataType => $label) {
       $setting = DataRetentionSetting::forType($dataType);
@@ -218,6 +239,91 @@ class Settings extends Component
     }
   }
 
+  /**
+   * Update Telescope pruning settings.
+   */
+  public function updateTelescopePruneSettings(): void
+  {
+    // Basic validation (can be enhanced with Livewire validation rules)
+    if (
+      !array_key_exists(
+        $this->telescopePruneFrequency,
+        $this->getTelescopeFrequencyOptions()
+      )
+    ) {
+      $this->dispatch(
+        'add-toast',
+        message: 'Invalid frequency selected.',
+        variant: 'error'
+      );
+      return;
+    }
+    if (
+      !array_key_exists(
+        $this->telescopePruneHours,
+        $this->getTelescopeHoursOptions()
+      )
+    ) {
+      $this->dispatch(
+        'add-toast',
+        message: 'Invalid retention period selected.',
+        variant: 'error'
+      );
+      return;
+    }
+
+    try {
+      NotificationSetting::updateOrCreate(
+        ['key' => 'telescope_prune_frequency'],
+        ['value' => $this->telescopePruneFrequency]
+      );
+
+      NotificationSetting::updateOrCreate(
+        ['key' => 'telescope_prune_hours'],
+        ['value' => (string) $this->telescopePruneHours] // Store as string
+      );
+
+      $this->dispatch(
+        'add-toast',
+        message: 'Telescope prune settings updated.',
+        variant: 'success'
+      );
+    } catch (Exception $e) {
+      $this->dispatch(
+        'add-toast',
+        message: 'Failed to update Telescope prune settings: ' .
+          $e->getMessage(),
+        variant: 'error'
+      );
+    }
+  }
+
+  /**
+   * Get options for Telescope prune frequency select dropdown.
+   */
+  public function getTelescopeFrequencyOptions(): array
+  {
+    return [
+      'daily' => 'Daily',
+      'weekly' => 'Weekly',
+      'monthly' => 'Monthly',
+      'never' => 'Never', // Option to disable pruning
+    ];
+  }
+
+  /**
+   * Get options for Telescope prune hours select dropdown.
+   */
+  public function getTelescopeHoursOptions(): array
+  {
+    return [
+      24 => '24 Hours (1 Day)',
+      48 => '48 Hours (2 Days)',
+      168 => '168 Hours (1 Week)',
+      720 => '720 Hours (30 Days)',
+    ];
+  }
+
   public function render()
   {
     $totalUsers = User::count();
@@ -233,6 +339,9 @@ class Settings extends Component
       'activeAdmins' => $activeAdmins,
       'retentionOptions' => DataRetentionSetting::retentionOptions(),
       'dataTypes' => DataRetentionSetting::dataTypes(),
+      // Pass new options to the view
+      'telescopeFrequencyOptions' => $this->getTelescopeFrequencyOptions(),
+      'telescopeHoursOptions' => $this->getTelescopeHoursOptions(),
     ]);
   }
 }

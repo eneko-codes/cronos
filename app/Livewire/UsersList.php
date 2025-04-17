@@ -48,7 +48,9 @@ class UsersList extends Component
   {
     $users = User::query()
       ->when($this->search, function ($query) {
-        $query->where('name', 'like', '%' . $this->search . '%');
+        $query->whereRaw('LOWER(name) LIKE ?', [
+          '%' . strtolower($this->search) . '%',
+        ]);
       })
       ->when(
         $this->filter === 'admins',

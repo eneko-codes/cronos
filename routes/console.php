@@ -1,14 +1,45 @@
 <?php
 
 use App\Models\JobFrequency;
+use App\Models\NotificationSetting;
+use Illuminate\Console\Scheduling\Schedule as SchedulingSchedule;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Schedule the 'telescope:prune' command to run daily and clean records (they stack up fast!).
+ * Schedule Telescope pruning based on Notification Settings.
  */
-Schedule::command('telescope:prune --hours=168')->daily();
+try {
+  if (Schema::hasTable('notification_settings')) {
+    $frequency = NotificationSetting::getValue(
+      'telescope_prune_frequency',
+      'weekly'
+    );
+    $hours = (int) NotificationSetting::getValue('telescope_prune_hours', 168);
+
+    if ($frequency !== 'never' && $hours > 0) {
+      $schedule = Schedule::command("telescope:prune --hours={$hours}")
+        ->name('Telescope Prune')
+        ->withoutOverlapping();
+
+      // Apply frequency
+      match ($frequency) {
+        'daily' => $schedule->daily(),
+        'weekly' => $schedule->weekly(),
+        'monthly' => $schedule->monthly(),
+        default
+          => $schedule->weekly(), // Default to weekly if invalid frequency somehow stored
+      };
+    }
+  }
+} catch (\Exception $e) {
+  Log::error('Failed to schedule Telescope pruning: ' . $e->getMessage(), [
+    'exception' => $e,
+    'trace' => $e->getTraceAsString(),
+  ]);
+  // Optionally rethrow or handle error
+}
 
 /**
  * Schedule the 'queue:prune-batches' command to run daily and clean batched jobs.

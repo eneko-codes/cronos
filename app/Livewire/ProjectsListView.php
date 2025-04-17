@@ -75,7 +75,9 @@ class ProjectsListView extends Component
   {
     $projects = Project::query()
       ->when($this->search, function ($query) {
-        $query->where('name', 'like', '%' . $this->search . '%');
+        $query->whereRaw('LOWER(name) LIKE ?', [
+          '%' . strtolower($this->search) . '%',
+        ]);
       })
       // Apply Filters
       ->when($this->filters['has_tasks'], function ($query) {

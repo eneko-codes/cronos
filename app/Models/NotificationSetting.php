@@ -8,7 +8,7 @@ class NotificationSetting extends Model
 {
   protected $table = 'notification_settings';
 
-  protected $fillable = ['key', 'enabled'];
+  protected $fillable = ['key', 'enabled', 'value'];
 
   protected $casts = [
     'enabled' => 'boolean',
@@ -19,6 +19,18 @@ class NotificationSetting extends Model
    */
   public static function isEnabled(string $key): bool
   {
-    return static::where('key', $key)->value('enabled') === true;
+    $setting = static::where('key', $key)->first();
+
+    return $setting ? $setting->enabled === true : false;
+  }
+
+  /**
+   * Quick helper to get the value of a setting (by key), with a default fallback.
+   */
+  public static function getValue(string $key, mixed $default = null): mixed
+  {
+    $setting = static::where('key', $key)->first();
+
+    return $setting ? $setting->value : $default;
   }
 }

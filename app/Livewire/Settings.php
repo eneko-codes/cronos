@@ -10,6 +10,7 @@ use App\Services\DesktimeApiCalls;
 use App\Services\OdooApiCalls;
 use App\Services\ProofhubApiCalls;
 use Exception;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -266,6 +267,14 @@ class Settings extends Component
         variant: 'success'
       );
     } catch (Exception $e) {
+      // Log the exception so it appears in Telescope Logs
+      Log::error(
+        'Failed to update Telescope prune settings: ' . $e->getMessage(),
+        [
+          'exception' => $e,
+        ]
+      );
+
       $this->dispatch(
         'add-toast',
         message: 'Failed to update Telescope prune settings: ' .

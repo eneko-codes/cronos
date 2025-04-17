@@ -49,6 +49,7 @@
             <x-tooltip>
               <x-slot name="text">
                 How often should old Telescope entries be automatically deleted?
+                Select 'Never' to disable.
               </x-slot>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -71,43 +72,6 @@
             class="mt-1 block w-full rounded-md border border-gray-300 bg-gray-200 px-2 text-sm dark:border-gray-700 dark:bg-gray-700"
           >
             @foreach ($telescopeFrequencyOptions as $value => $label)
-              <option value="{{ $value }}">{{ $label }}</option>
-            @endforeach
-          </select>
-        </div>
-
-        <div>
-          <label
-            class="inline-flex flex-row items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300"
-          >
-            Keep Telescope Data For
-            <x-tooltip>
-              <x-slot name="text">
-                How long should Telescope entries be kept before being pruned?
-                (Only applies if frequency is not 'Never')
-              </x-slot>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="size-3"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-                />
-              </svg>
-            </x-tooltip>
-          </label>
-          <select
-            wire:model="telescopePruneHours"
-            class="mt-1 block w-full rounded-md border border-gray-300 bg-gray-200 px-2 text-sm dark:border-gray-700 dark:bg-gray-700"
-            @if($telescopePruneFrequency === 'never') disabled @endif
-          >
-            @foreach ($telescopeHoursOptions as $value => $label)
               <option value="{{ $value }}">{{ $label }}</option>
             @endforeach
           </select>

@@ -22,9 +22,8 @@ class Settings extends Component
   // New simplified data retention property
   public int $globalRetentionPeriod = 0;
 
-  // Telescope Pruning Settings
+  // Telescope Pruning Settings - Simplified
   public string $telescopePruneFrequency = 'weekly';
-  public int $telescopePruneHours = 168; // Default to 1 week
 
   public function mount(): void
   {
@@ -45,10 +44,6 @@ class Settings extends Component
     $this->telescopePruneFrequency = NotificationSetting::getValue(
       'telescope_prune_frequency',
       'weekly' // Default frequency
-    );
-    $this->telescopePruneHours = (int) NotificationSetting::getValue(
-      'telescope_prune_hours',
-      168 // Default hours (1 week)
     );
   }
 
@@ -244,7 +239,7 @@ class Settings extends Component
    */
   public function updateTelescopePruneSettings(): void
   {
-    // Basic validation (can be enhanced with Livewire validation rules)
+    // Basic validation
     if (
       !array_key_exists(
         $this->telescopePruneFrequency,
@@ -258,29 +253,11 @@ class Settings extends Component
       );
       return;
     }
-    if (
-      !array_key_exists(
-        $this->telescopePruneHours,
-        $this->getTelescopeHoursOptions()
-      )
-    ) {
-      $this->dispatch(
-        'add-toast',
-        message: 'Invalid retention period selected.',
-        variant: 'error'
-      );
-      return;
-    }
 
     try {
       NotificationSetting::updateOrCreate(
         ['key' => 'telescope_prune_frequency'],
         ['value' => $this->telescopePruneFrequency]
-      );
-
-      NotificationSetting::updateOrCreate(
-        ['key' => 'telescope_prune_hours'],
-        ['value' => (string) $this->telescopePruneHours] // Store as string
       );
 
       $this->dispatch(
@@ -303,24 +280,12 @@ class Settings extends Component
    */
   public function getTelescopeFrequencyOptions(): array
   {
+    // Added 'never' option for consistency, though the schedule handles it
     return [
       'daily' => 'Daily',
       'weekly' => 'Weekly',
       'monthly' => 'Monthly',
       'never' => 'Never', // Option to disable pruning
-    ];
-  }
-
-  /**
-   * Get options for Telescope prune hours select dropdown.
-   */
-  public function getTelescopeHoursOptions(): array
-  {
-    return [
-      24 => '24 Hours (1 Day)',
-      48 => '48 Hours (2 Days)',
-      168 => '168 Hours (1 Week)',
-      720 => '720 Hours (30 Days)',
     ];
   }
 
@@ -339,9 +304,8 @@ class Settings extends Component
       'activeAdmins' => $activeAdmins,
       'retentionOptions' => DataRetentionSetting::retentionOptions(),
       'dataTypes' => DataRetentionSetting::dataTypes(),
-      // Pass new options to the view
+      // Pass only frequency options to the view
       'telescopeFrequencyOptions' => $this->getTelescopeFrequencyOptions(),
-      'telescopeHoursOptions' => $this->getTelescopeHoursOptions(),
     ]);
   }
 }

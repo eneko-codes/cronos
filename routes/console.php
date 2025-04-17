@@ -16,20 +16,17 @@ try {
       'telescope_prune_frequency',
       'weekly'
     );
-    $hours = (int) NotificationSetting::getValue('telescope_prune_hours', 168);
 
-    if ($frequency !== 'never' && $hours > 0) {
-      $schedule = Schedule::command("telescope:prune --hours={$hours}")
+    if ($frequency !== 'never') {
+      $schedule = Schedule::command('telescope:prune')
         ->name('Telescope Prune')
         ->withoutOverlapping();
 
-      // Apply frequency
       match ($frequency) {
-        'daily' => $schedule->daily(),
-        'weekly' => $schedule->weekly(),
-        'monthly' => $schedule->monthly(),
-        default
-          => $schedule->weekly(), // Default to weekly if invalid frequency somehow stored
+        'daily' => $schedule->daily()->at('23:00'),
+        'weekly' => $schedule->weekly()->at('23:00'),
+        'monthly' => $schedule->monthly()->at('23:00'),
+        default => $schedule->weekly()->at('23:00'),
       };
     }
   }

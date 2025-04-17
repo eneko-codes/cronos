@@ -2,7 +2,6 @@
 
 use App\Models\JobFrequency;
 use App\Models\NotificationSetting;
-use Illuminate\Console\Scheduling\Schedule as SchedulingSchedule;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\Facades\Log;

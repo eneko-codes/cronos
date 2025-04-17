@@ -49,7 +49,6 @@
             <x-tooltip>
               <x-slot name="text">
                 How often should old Telescope entries be automatically deleted?
-                Select 'Never' to disable.
               </x-slot>
               <svg
                 xmlns="http://www.w3.org/2000/svg"

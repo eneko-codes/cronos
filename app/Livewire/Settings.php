@@ -280,12 +280,11 @@ class Settings extends Component
    */
   public function getTelescopeFrequencyOptions(): array
   {
-    // Added 'never' option for consistency, though the schedule handles it
+    // Removed 'never' option
     return [
       'daily' => 'Daily',
       'weekly' => 'Weekly',
       'monthly' => 'Monthly',
-      'never' => 'Never', // Option to disable pruning
     ];
   }
 

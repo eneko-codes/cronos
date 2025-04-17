@@ -62,7 +62,7 @@ class SyncProofhubUsers extends BaseSyncJob
     }
     $currentUrl = "https://{$baseUrl}.proofhub.com/api/v3/{$endpoint}"; // Initial URL
 
-    Log::channel('sync')->info('Starting ProofHub user sync.');
+    Log::info('Starting ProofHub user sync.');
 
     do {
       $urlToCall = $nextPageUrl ?: $currentUrl;
@@ -88,12 +88,9 @@ class SyncProofhubUsers extends BaseSyncJob
         $currentPage > 1 &&
         $nextPageUrl === null
       ) {
-        Log::channel('sync')->info(
-          'No more users found on subsequent page, ending sync.',
-          [
-            'page' => $currentPage,
-          ]
-        );
+        Log::info('No more users found on subsequent page, ending sync.', [
+          'page' => $currentPage,
+        ]);
         break; // Exit loop if a subsequent page is empty
       }
 
@@ -117,7 +114,7 @@ class SyncProofhubUsers extends BaseSyncJob
         } else {
           // Reached the last page according to fallback or only one page
           $currentPage = null; // Signal to stop the loop
-          Log::channel('sync')->debug(
+          Log::debug(
             "Reached last page ({$totalPages}) via fallback for {$endpoint}."
           );
         }
@@ -129,7 +126,7 @@ class SyncProofhubUsers extends BaseSyncJob
     // Step 3: Clear ProofHub IDs for users no longer present
     $this->clearObsoleteProofhubIds($allProofhubEmails->unique());
 
-    Log::channel('sync')->info('Finished ProofHub user sync.', [
+    Log::info('Finished ProofHub user sync.', [
       'total_emails_found' => $allProofhubEmails->count(),
       'unique_emails_found' => $allProofhubEmails->unique()->count(),
     ]);
@@ -156,7 +153,7 @@ class SyncProofhubUsers extends BaseSyncJob
         User::where('email', $email)->update(['proofhub_id' => $proofhubId]);
       });
 
-    Log::channel('sync')->debug('Processed user page.', [
+    Log::debug('Processed user page.', [
       'users_processed' => $usersPage->count(),
       'emails_found' => $emailsOnPage->count(),
     ]);
@@ -174,7 +171,7 @@ class SyncProofhubUsers extends BaseSyncJob
     Collection $currentProofhubEmails
   ): void {
     if ($currentProofhubEmails->isEmpty()) {
-      Log::channel('sync')->info(
+      Log::info(
         'No ProofHub emails found during sync, skipping obsolete ID cleanup.'
       );
       return;
@@ -187,12 +184,10 @@ class SyncProofhubUsers extends BaseSyncJob
     $count = $query->count();
 
     if ($count > 0) {
-      Log::channel('sync')->info(
-        "Clearing ProofHub ID for {$count} obsolete users."
-      );
+      Log::info("Clearing ProofHub ID for {$count} obsolete users.");
       $query->update(['proofhub_id' => null]);
     } else {
-      Log::channel('sync')->info('No obsolete ProofHub user IDs to clear.');
+      Log::info('No obsolete ProofHub user IDs to clear.');
     }
   }
 }

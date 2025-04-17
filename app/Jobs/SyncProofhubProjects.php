@@ -60,7 +60,7 @@ class SyncProofhubProjects extends BaseSyncJob
     }
     $initialUrl = "https://{$baseUrl}.proofhub.com/api/v3/{$endpoint}"; // Initial URL
 
-    Log::channel('sync')->info('Starting ProofHub project sync.');
+    Log::info('Starting ProofHub project sync.');
 
     do {
       // Determine URL and params for the API call
@@ -88,7 +88,7 @@ class SyncProofhubProjects extends BaseSyncJob
         $currentPage > 1 &&
         $nextPageUrl === null
       ) {
-        Log::channel('sync')->info(
+        Log::info(
           "No more projects found on page {$currentPage} using fallback, ending sync.",
           [
             'endpoint' => $endpoint,
@@ -115,7 +115,7 @@ class SyncProofhubProjects extends BaseSyncJob
           $currentPage++;
         } else {
           $currentPage = null;
-          Log::channel('sync')->debug(
+          Log::debug(
             "Reached last page ({$totalPages}) via fallback for {$endpoint}."
           );
         }
@@ -125,7 +125,7 @@ class SyncProofhubProjects extends BaseSyncJob
     // Step 3: Remove projects that no longer exist in ProofHub
     $this->removeObsoleteProjects($allSyncedProofhubProjectIds->unique());
 
-    Log::channel('sync')->info('Finished ProofHub project sync.', [
+    Log::info('Finished ProofHub project sync.', [
       'total_projects_processed' => $allSyncedProofhubProjectIds->count(), // This might count duplicates if API returns them
       'unique_projects_found' => $allSyncedProofhubProjectIds
         ->unique()
@@ -183,7 +183,7 @@ class SyncProofhubProjects extends BaseSyncJob
     $project->users()->sync($localUserIds);
 
     // Optional: Log the sync action details if needed
-    // Log::channel('sync')->debug('Synced users for project.', ['project_id' => $project->id, 'assigned_user_ids' => $localUserIds->all()]);
+    // Log::debug('Synced users for project.', ['project_id' => $project->id, 'assigned_user_ids' => $localUserIds->all()]);
   }
 
   /**
@@ -195,7 +195,7 @@ class SyncProofhubProjects extends BaseSyncJob
   private function removeObsoleteProjects(Collection $syncedProjectIds): void
   {
     if ($syncedProjectIds->isEmpty()) {
-      Log::channel('sync')->info(
+      Log::info(
         'No ProofHub projects found during sync, skipping obsolete project cleanup.'
       );
       return;
@@ -208,11 +208,11 @@ class SyncProofhubProjects extends BaseSyncJob
     )->pluck('proofhub_project_id');
 
     if ($obsoleteProjectIds->isEmpty()) {
-      Log::channel('sync')->info('No obsolete ProofHub projects to delete.');
+      Log::info('No obsolete ProofHub projects to delete.');
       return;
     }
 
-    Log::channel('sync')->info(
+    Log::info(
       "Deleting {$obsoleteProjectIds->count()} obsolete ProofHub projects.",
       [
         'ids_to_delete' => $obsoleteProjectIds->all(),

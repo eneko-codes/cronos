@@ -80,7 +80,7 @@ class SyncOdooSchedules extends BaseSyncJob
         Schedule::whereIn('odoo_schedule_id', $schedulesToLog)
           ->get()
           ->each(function ($schedule) {
-            Log::channel('sync')->info(
+            Log::info(
               class_basename($this) .
                 ': Schedule no longer exists in Odoo but preserved for historical integrity',
               [
@@ -126,7 +126,7 @@ class SyncOdooSchedules extends BaseSyncJob
           });
 
         if ($duplicates->isNotEmpty()) {
-          Log::channel('sync')->warning(
+          Log::warning(
             class_basename($this) .
               ": Schedule #{$odooScheduleId} ({$scheduleData['name']}) has duplicate details",
             [

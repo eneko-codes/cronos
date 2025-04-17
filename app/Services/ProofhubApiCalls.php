@@ -75,7 +75,7 @@ class ProofhubApiCalls implements Pingable
     ?string $endpointName = null
   ): array {
     try {
-      Log::channel('sync')->debug('ProofHub API Page Request:', [
+      Log::debug('ProofHub API Page Request:', [
         'url' => $url,
         'params' => $params,
         'endpoint' => $endpointName, // Log original endpoint if provided
@@ -106,7 +106,7 @@ class ProofhubApiCalls implements Pingable
         $totalPagesHeader = strtolower($response->header('pages-count'));
         if ($endpointName === 'alltime') {
           $totalPages = null; // Signal to the job that fallback count is unreliable
-          Log::channel('sync')->warning(
+          Log::warning(
             'ProofHub API Warning: No Link header for /alltime. Fallback pagination is unreliable and will be skipped.',
             [
               'url' => $url,
@@ -117,7 +117,7 @@ class ProofhubApiCalls implements Pingable
         } else {
           // For other endpoints, trust pages-count as a fallback
           $totalPages = !empty($totalPagesHeader) ? (int) $totalPagesHeader : 1;
-          Log::channel('sync')->debug(
+          Log::debug(
             'ProofHub API Page Response: No Link header found, using fallback.',
             [
               'url' => $url,
@@ -128,14 +128,11 @@ class ProofhubApiCalls implements Pingable
           );
         }
       } else {
-        Log::channel('sync')->debug(
-          'ProofHub API Page Response: Found Link header.',
-          [
-            'url' => $url,
-            'endpoint' => $endpointName,
-            'next_page_url' => $nextPageUrl,
-          ]
-        );
+        Log::debug('ProofHub API Page Response: Found Link header.', [
+          'url' => $url,
+          'endpoint' => $endpointName,
+          'next_page_url' => $nextPageUrl,
+        ]);
       }
 
       // --- Process Response Data ---
@@ -144,14 +141,14 @@ class ProofhubApiCalls implements Pingable
         $dataCollection = collect($responseData);
       } elseif ($responseData !== null) {
         // Handle single non-null, non-array item
-        Log::channel('sync')->info(
+        Log::info(
           'ProofHub API call to {$url}: Response was not an array, wrapping single item.',
           ['response_type' => gettype($responseData)]
         );
         $dataCollection = collect([$responseData]);
       } else {
         // Response was null or empty, return empty collection
-        Log::channel('sync')->debug(
+        Log::debug(
           'ProofHub API call to {$url}: Response data was null or empty.',
           ['response_type' => gettype($responseData)]
         );
@@ -163,7 +160,7 @@ class ProofhubApiCalls implements Pingable
         'nextPageUrl' => $nextPageUrl,
       ];
     } catch (Exception $e) {
-      Log::channel('sync')->error('ProofHub API call error', [
+      Log::error('ProofHub API call error', [
         'url' => $url,
         'params' => $params,
         'endpoint' => $endpointName,
@@ -231,9 +228,7 @@ class ProofhubApiCalls implements Pingable
    */
   public function getUsers(): Collection
   {
-    Log::channel('sync')->warning(
-      'Deprecated method ProofhubApiCalls::getUsers() called.'
-    );
+    Log::warning('Deprecated method ProofhubApiCalls::getUsers() called.');
     return $this->fetchAllPages('people');
   }
 
@@ -250,9 +245,7 @@ class ProofhubApiCalls implements Pingable
    */
   public function getAllTime(array $params = []): Collection
   {
-    Log::channel('sync')->warning(
-      'Deprecated method ProofhubApiCalls::getAllTime() called.'
-    );
+    Log::warning('Deprecated method ProofhubApiCalls::getAllTime() called.');
     return $this->fetchAllPages('alltime', $params);
   }
 
@@ -268,9 +261,7 @@ class ProofhubApiCalls implements Pingable
    */
   public function getProjects(): Collection
   {
-    Log::channel('sync')->warning(
-      'Deprecated method ProofhubApiCalls::getProjects() called.'
-    );
+    Log::warning('Deprecated method ProofhubApiCalls::getProjects() called.');
     return $this->fetchAllPages('projects');
   }
 
@@ -286,9 +277,7 @@ class ProofhubApiCalls implements Pingable
    */
   public function getTasks(): Collection
   {
-    Log::channel('sync')->warning(
-      'Deprecated method ProofhubApiCalls::getTasks() called.'
-    );
+    Log::warning('Deprecated method ProofhubApiCalls::getTasks() called.');
     return $this->fetchAllPages('alltodo');
   }
 

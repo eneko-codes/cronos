@@ -117,7 +117,7 @@ class SyncOdooLeaveTypes extends BaseSyncJob
         LeaveType::whereIn('odoo_leave_type_id', $leaveTypesToLog)
           ->get()
           ->each(function ($leaveType) {
-            Log::channel('sync')->info(
+            Log::info(
               class_basename($this) .
                 ': Leave type no longer exists in Odoo but preserved for historical integrity',
               [

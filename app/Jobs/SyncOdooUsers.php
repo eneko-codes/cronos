@@ -87,7 +87,7 @@ class SyncOdooUsers extends BaseSyncJob
       })
       ->whenNotEmpty(function ($employeesWithoutEmail) {
         $employeesWithoutEmail->each(function ($employee) {
-          Log::channel('sync')->warning(
+          Log::warning(
             class_basename($this) .
               ": Odoo employee '{$employee['name']}' missing work email",
             [

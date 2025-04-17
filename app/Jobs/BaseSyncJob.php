@@ -86,7 +86,7 @@ abstract class BaseSyncJob implements ShouldQueue, ShouldBeEncrypted
   {
     $jobName = class_basename($this);
 
-    Log::channel('sync')->info("{$jobName}: Starting database transaction.");
+    Log::info("{$jobName}: Starting database transaction.");
 
     try {
       // Wrap the execution logic in a database transaction
@@ -94,18 +94,13 @@ abstract class BaseSyncJob implements ShouldQueue, ShouldBeEncrypted
         $this->execute();
       });
 
-      Log::channel('sync')->info(
-        "{$jobName}: Database transaction committed successfully."
-      );
+      Log::info("{$jobName}: Database transaction committed successfully.");
     } catch (Throwable $e) {
       // Catch any throwable error/exception
-      Log::channel('sync')->error(
-        "{$jobName}: Database transaction rolled back due to error.",
-        [
-          'error' => $e->getMessage(),
-          'trace' => $e->getTraceAsString(),
-        ]
-      );
+      Log::error("{$jobName}: Database transaction rolled back due to error.", [
+        'error' => $e->getMessage(),
+        'trace' => $e->getTraceAsString(),
+      ]);
 
       // Re-throw the exception to ensure Laravel's queue worker handles the failure
       // (e.g., moving to failed_jobs table, respecting retries)

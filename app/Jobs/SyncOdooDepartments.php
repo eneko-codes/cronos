@@ -121,7 +121,7 @@ class SyncOdooDepartments extends BaseSyncJob
         Department::whereIn('odoo_department_id', $departmentsToLog)
           ->get()
           ->each(function ($department) {
-            Log::channel('sync')->info(
+            Log::info(
               class_basename($this) .
                 ': Department no longer exists in Odoo but preserved for historical integrity',
               [

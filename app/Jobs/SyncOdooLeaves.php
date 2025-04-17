@@ -156,7 +156,7 @@ class SyncOdooLeaves extends BaseSyncJob
     ];
 
     if (!Arr::has($leave, $requiredFields)) {
-      Log::channel('sync')->warning(
+      Log::warning(
         class_basename($this) .
           ': Skipped Odoo leave due to missing required fields',
         ['leave_id' => $leave['id'] ?? 'unknown']
@@ -176,13 +176,10 @@ class SyncOdooLeaves extends BaseSyncJob
    */
   private function logInvalidLeaveType(array $leave, int $leaveTypeId): void
   {
-    Log::channel('sync')->warning(
-      'Skipped Odoo leave due to invalid leave type',
-      [
-        'leave_id' => $leave['id'] ?? 'unknown',
-        'leave_type_id' => $leaveTypeId,
-      ]
-    );
+    Log::warning('Skipped Odoo leave due to invalid leave type', [
+      'leave_id' => $leave['id'] ?? 'unknown',
+      'leave_type_id' => $leaveTypeId,
+    ]);
   }
 
   /**
@@ -206,7 +203,7 @@ class SyncOdooLeaves extends BaseSyncJob
       isset($leave['state']) &&
       !collect($validStates)->contains($leave['state'])
     ) {
-      Log::channel('sync')->warning('Found unexpected leave state', [
+      Log::warning('Found unexpected leave state', [
         'leave_id' => $leave['id'],
         'state' => $leave['state'],
       ]);
@@ -269,7 +266,7 @@ class SyncOdooLeaves extends BaseSyncJob
       $data['user_id'] = $user?->id;
 
       if (!$user && Arr::has($leave, 'employee_id.1')) {
-        Log::channel('sync')->warning(
+        Log::warning(
           class_basename($this) . ': Employee not found or marked do_not_track',
           [
             'odoo_employee_id' => $leave['employee_id'][0],

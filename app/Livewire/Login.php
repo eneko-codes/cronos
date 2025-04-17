@@ -73,7 +73,7 @@ class Login extends Component
 
     // If user doesn't exist, log the invalid email attempt
     if (!$user) {
-      Log::channel('auth')->info(
+      Log::info(
         'Magic link requested for non-existent email: ' . $this->email,
         [
           'email' => $this->email,
@@ -90,16 +90,13 @@ class Login extends Component
     }
 
     // Log successful magic link request
-    Log::channel('auth')->info(
-      'Magic link requested for user: ' . $user->name,
-      [
-        'email' => $this->email,
-        'name' => $user->name,
-        'user_id' => $user->id,
-        'ip_address' => $ipAddress,
-        'user_agent' => $userAgent,
-      ]
-    );
+    Log::info('Magic link requested for user: ' . $user->name, [
+      'email' => $this->email,
+      'name' => $user->name,
+      'user_id' => $user->id,
+      'ip_address' => $ipAddress,
+      'user_agent' => $userAgent,
+    ]);
 
     // Generate a unique token
     $token = Str::random(60);

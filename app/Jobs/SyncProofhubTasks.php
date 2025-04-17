@@ -63,7 +63,7 @@ class SyncProofhubTasks extends BaseSyncJob
     }
     $initialUrl = "https://{$baseUrl}.proofhub.com/api/v3/{$endpoint}";
 
-    Log::channel('sync')->info('Starting ProofHub task sync.');
+    Log::info('Starting ProofHub task sync.');
 
     do {
       // Determine URL and params for the API call
@@ -91,7 +91,7 @@ class SyncProofhubTasks extends BaseSyncJob
         $currentPage > 1 &&
         $nextPageUrl === null
       ) {
-        Log::channel('sync')->info(
+        Log::info(
           "No more tasks found on page {$currentPage} using fallback, ending sync.",
           [
             'endpoint' => $endpoint,
@@ -118,7 +118,7 @@ class SyncProofhubTasks extends BaseSyncJob
           $currentPage++;
         } else {
           $currentPage = null;
-          Log::channel('sync')->debug(
+          Log::debug(
             "Reached last page ({$totalPages}) via fallback for {$endpoint}."
           );
         }
@@ -128,7 +128,7 @@ class SyncProofhubTasks extends BaseSyncJob
     // Step 3: Remove local tasks that no longer exist in ProofHub
     $this->removeObsoleteTasks($allSyncedProofhubTaskIds->unique());
 
-    Log::channel('sync')->info('Finished ProofHub task sync.', [
+    Log::info('Finished ProofHub task sync.', [
       'total_tasks_subtasks_processed' => $allSyncedProofhubTaskIds->count(),
       'unique_tasks_subtasks_found' => $allSyncedProofhubTaskIds
         ->unique()
@@ -183,10 +183,9 @@ class SyncProofhubTasks extends BaseSyncJob
   private function validateProject($projectId, $taskId): bool
   {
     if (!$projectId) {
-      Log::channel('sync')->warning(
-        'Skipping task - Project ID missing in API data',
-        ['task_id' => $taskId]
-      );
+      Log::warning('Skipping task - Project ID missing in API data', [
+        'task_id' => $taskId,
+      ]);
       return false;
     }
 
@@ -196,7 +195,7 @@ class SyncProofhubTasks extends BaseSyncJob
     )->exists();
 
     if (!$projectExists) {
-      Log::channel('sync')->info(
+      Log::info(
         class_basename($this) . ': Skipping task - Project not found locally',
         [
           'task_id' => $taskId,
@@ -286,7 +285,7 @@ class SyncProofhubTasks extends BaseSyncJob
   private function removeObsoleteTasks(Collection $syncedTaskIds): void
   {
     if ($syncedTaskIds->isEmpty()) {
-      Log::channel('sync')->info(
+      Log::info(
         'No ProofHub tasks/subtasks found during sync, skipping obsolete task cleanup.'
       );
       return;
@@ -299,11 +298,11 @@ class SyncProofhubTasks extends BaseSyncJob
     )->pluck('proofhub_task_id');
 
     if ($obsoleteTaskIds->isEmpty()) {
-      Log::channel('sync')->info('No obsolete ProofHub tasks to delete.');
+      Log::info('No obsolete ProofHub tasks to delete.');
       return;
     }
 
-    Log::channel('sync')->info(
+    Log::info(
       "Deleting {$obsoleteTaskIds->count()} obsolete ProofHub tasks/subtasks.",
       [
         'ids_to_delete' => $obsoleteTaskIds->all(),

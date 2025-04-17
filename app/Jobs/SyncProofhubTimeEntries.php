@@ -84,7 +84,7 @@ class SyncProofhubTimeEntries extends BaseSyncJob
     // Initial parameters including date range
     $initialParams = $this->buildRequestParameters();
 
-    Log::channel('sync')->info('Starting ProofHub time entry sync.', [
+    Log::info('Starting ProofHub time entry sync.', [
       'start_date' => $this->startDate,
       'end_date' => $this->endDate,
     ]);
@@ -121,7 +121,7 @@ class SyncProofhubTimeEntries extends BaseSyncJob
         $currentPage > 1 &&
         $nextPageUrl === null
       ) {
-        Log::channel('sync')->info(
+        Log::info(
           "No more time entries found on page {$currentPage} using fallback, ending sync.",
           [
             'endpoint' => $endpoint,
@@ -148,7 +148,7 @@ class SyncProofhubTimeEntries extends BaseSyncJob
           // $totalPagesFromHeader will be null if callPage detected the alltime bug
           $totalPages = $totalPagesFromHeader;
           if ($totalPages === null) {
-            Log::channel('sync')->warning(
+            Log::warning(
               'Terminating /alltime sync after page 1 due to unreliable fallback pagination.'
             );
             $syncTruncated = true; // Mark sync as truncated
@@ -174,7 +174,7 @@ class SyncProofhubTimeEntries extends BaseSyncJob
       $syncTruncated
     );
 
-    Log::channel('sync')->info('Finished ProofHub time entry sync.', [
+    Log::info('Finished ProofHub time entry sync.', [
       'start_date' => $this->startDate,
       'end_date' => $this->endDate,
       'total_entries_processed' => $allSyncedProofhubEntryIds->count(),
@@ -213,7 +213,7 @@ class SyncProofhubTimeEntries extends BaseSyncJob
       }
     });
 
-    Log::channel('sync')->debug('Processed time entry page.', [
+    Log::debug('Processed time entry page.', [
       'entries_processed' => $entriesPage->count(),
       'synced_ids_count' => $syncedIdsOnPage->count(),
     ]);
@@ -232,7 +232,7 @@ class SyncProofhubTimeEntries extends BaseSyncJob
   {
     $proofhubEntryId = data_get($entry, 'id');
     if (!$proofhubEntryId) {
-      Log::channel('sync')->warning(
+      Log::warning(
         class_basename($this) . ': Skipping time entry - ID missing',
         ['entry_data' => $entry]
       );
@@ -286,7 +286,7 @@ class SyncProofhubTimeEntries extends BaseSyncJob
   {
     $dateString = data_get($entry, 'date');
     if (!$dateString) {
-      Log::channel('sync')->warning(
+      Log::warning(
         class_basename($this) . ': Skipping time entry - Date missing',
         ['time_entry_id' => data_get($entry, 'id')]
       );
@@ -296,7 +296,7 @@ class SyncProofhubTimeEntries extends BaseSyncJob
     try {
       return Carbon::parse($dateString)->utc();
     } catch (Exception $e) {
-      Log::channel('sync')->error(
+      Log::error(
         class_basename($this) . ': Skipping time entry - Invalid date format',
         [
           'time_entry_id' => data_get($entry, 'id'),
@@ -323,7 +323,7 @@ class SyncProofhubTimeEntries extends BaseSyncJob
         ? Carbon::parse($createdAtString)->utc()
         : now()->utc();
     } catch (Exception $e) {
-      Log::channel('sync')->warning(
+      Log::warning(
         class_basename($this) .
           ': Invalid created_at format, using current time',
         [
@@ -346,7 +346,7 @@ class SyncProofhubTimeEntries extends BaseSyncJob
   {
     $creatorProofhubId = data_get($entry, 'creator.id');
     if (!$creatorProofhubId) {
-      Log::channel('sync')->warning(
+      Log::warning(
         class_basename($this) . ': Skipping time entry - creator ID missing',
         ['time_entry_id' => data_get($entry, 'id')]
       );
@@ -382,7 +382,7 @@ class SyncProofhubTimeEntries extends BaseSyncJob
       ->exists();
 
     if ($userExistsButNotTrackable) {
-      Log::channel('sync')->info(
+      Log::info(
         class_basename($this) .
           ': Skipping time entry - User ' .
           $creatorProofhubId .
@@ -391,7 +391,7 @@ class SyncProofhubTimeEntries extends BaseSyncJob
       );
     } else {
       // If the user doesn't exist at all in the database
-      Log::channel('sync')->info(
+      Log::info(
         class_basename($this) .
           ': Skipping time entry - User ' .
           $creatorProofhubId .
@@ -412,7 +412,7 @@ class SyncProofhubTimeEntries extends BaseSyncJob
   {
     if (!$projectId) {
       // Should have been caught earlier, but double-check
-      Log::channel('sync')->warning(
+      Log::warning(
         class_basename($this) . ': Skipping time entry - Project ID missing',
         ['time_entry_id' => data_get($entry, 'id')]
       );
@@ -425,7 +425,7 @@ class SyncProofhubTimeEntries extends BaseSyncJob
     )->exists();
 
     if (!$projectExists) {
-      Log::channel('sync')->info(
+      Log::info(
         class_basename($this) .
           ': Skipping time entry - Project not found locally',
         [
@@ -521,7 +521,7 @@ class SyncProofhubTimeEntries extends BaseSyncJob
   ): void {
     // *** SAFETY CHECK: Skip deletion if sync was truncated due to unreliable pagination ***
     if ($syncTruncated) {
-      Log::channel('sync')->warning(
+      Log::warning(
         'Skipping obsolete time entry deletion because sync was truncated due to unreliable API pagination.'
       );
       return;
@@ -531,7 +531,7 @@ class SyncProofhubTimeEntries extends BaseSyncJob
     $startDate = Carbon::parse($this->startDate)->startOfDay();
     $endDate = Carbon::parse($this->endDate)->endOfDay();
 
-    Log::channel('sync')->debug('Checking for obsolete time entries.', [
+    Log::debug('Checking for obsolete time entries.', [
       'start_date' => $this->startDate,
       'end_date' => $this->endDate,
       'synced_ids_count' => $syncedEntryIds->count(),
@@ -549,13 +549,11 @@ class SyncProofhubTimeEntries extends BaseSyncJob
     $idsToDelete = $localEntryIdsQuery->diff($syncedEntryIds);
 
     if ($idsToDelete->isEmpty()) {
-      Log::channel('sync')->info(
-        'No obsolete time entries found within the date range.'
-      );
+      Log::info('No obsolete time entries found within the date range.');
       return; // No obsolete entries found
     }
 
-    Log::channel('sync')->info(
+    Log::info(
       class_basename($this) .
         ": Deleting {$idsToDelete->count()} obsolete time entries within date range.",
       [
@@ -571,13 +569,10 @@ class SyncProofhubTimeEntries extends BaseSyncJob
         try {
           $entry->delete();
         } catch (Exception $e) {
-          Log::channel('sync')->error(
-            class_basename($this) . ': Failed to delete time entry',
-            [
-              'time_entry_id' => $entry->proofhub_time_entry_id,
-              'error' => $e->getMessage(),
-            ]
-          );
+          Log::error(class_basename($this) . ': Failed to delete time entry', [
+            'time_entry_id' => $entry->proofhub_time_entry_id,
+            'error' => $e->getMessage(),
+          ]);
           // Decide if we should continue or rethrow - for now, continue
         }
       });

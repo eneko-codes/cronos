@@ -26,7 +26,7 @@ class LoginController extends Controller
     $timestamp = Carbon::now()->toIso8601String();
 
     // Log the initial verification attempt
-    Log::channel('auth')->info('Login token verification attempt', [
+    Log::info('Login token verification attempt', [
       'ip_address' => $ipAddress,
       'user_agent' => $userAgent,
       'token_present' => $request->has('token'),
@@ -41,7 +41,7 @@ class LoginController extends Controller
 
     if ($validator->fails()) {
       // Log validation failure
-      Log::channel('auth')->info('Token validation failed - invalid format', [
+      Log::info('Token validation failed - invalid format', [
         'email' => $email,
         'ip_address' => $ipAddress,
         'user_agent' => $userAgent,
@@ -66,16 +66,13 @@ class LoginController extends Controller
 
     if (!$loginToken) {
       // Log token not found
-      Log::channel('auth')->info(
-        'Token verification failed - token not found',
-        [
-          'email' => $email,
-          'ip_address' => $ipAddress,
-          'user_agent' => $userAgent,
-          'token_prefix' => substr($token, 0, 8) . '...', // Only log prefix for security
-          'timestamp' => $timestamp,
-        ]
-      );
+      Log::info('Token verification failed - token not found', [
+        'email' => $email,
+        'ip_address' => $ipAddress,
+        'user_agent' => $userAgent,
+        'token_prefix' => substr($token, 0, 8) . '...', // Only log prefix for security
+        'timestamp' => $timestamp,
+      ]);
 
       return redirect()
         ->route('login')
@@ -85,7 +82,7 @@ class LoginController extends Controller
     // Check if the token has expired
     if (Carbon::now()->greaterThan($loginToken->expires_at)) {
       // Log expired token
-      Log::channel('auth')->info('Token verification failed - token expired', [
+      Log::info('Token verification failed - token expired', [
         'email' => $email,
         'name' => $loginToken->user->name,
         'ip_address' => $ipAddress,
@@ -113,19 +110,16 @@ class LoginController extends Controller
     });
 
     // Log the successful authentication
-    Log::channel('auth')->info(
-      'User authenticated successfully: ' . $loginToken->user->name,
-      [
-        'email' => $email,
-        'name' => $loginToken->user->name,
-        'user_id' => $loginToken->user_id,
-        'ip_address' => $ipAddress,
-        'user_agent' => $userAgent,
-        'session_id' => $request->session()->getId(),
-        'remember_me' => $remember,
-        'timestamp' => $timestamp,
-      ]
-    );
+    Log::info('User authenticated successfully: ' . $loginToken->user->name, [
+      'email' => $email,
+      'name' => $loginToken->user->name,
+      'user_id' => $loginToken->user_id,
+      'ip_address' => $ipAddress,
+      'user_agent' => $userAgent,
+      'session_id' => $request->session()->getId(),
+      'remember_me' => $remember,
+      'timestamp' => $timestamp,
+    ]);
 
     // Redirect to the dashboard with a success message
     return redirect()
@@ -153,7 +147,7 @@ class LoginController extends Controller
     Auth::logout();
 
     // Log the logout
-    Log::channel('auth')->info('User logged out: ' . $name, [
+    Log::info('User logged out: ' . $name, [
       'email' => $email,
       'name' => $name,
       'user_id' => $userId,

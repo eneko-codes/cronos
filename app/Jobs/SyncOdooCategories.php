@@ -114,7 +114,7 @@ class SyncOdooCategories extends BaseSyncJob
         Category::whereIn('odoo_category_id', $categoriesToLog)
           ->get()
           ->each(function ($category) {
-            Log::channel('sync')->info(
+            Log::info(
               class_basename($this) .
                 ": Category '{$category->name}' no longer exists in Odoo but preserved for historical integrity",
               [

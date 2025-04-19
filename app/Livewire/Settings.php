@@ -2,9 +2,7 @@
 
 namespace App\Livewire;
 
-use App\Models\DataRetentionSetting;
-use App\Models\JobFrequency;
-use App\Models\NotificationSetting;
+use App\Models\Setting;
 use App\Models\User;
 use App\Services\DesktimeApiCalls;
 use App\Services\OdooApiCalls;
@@ -14,71 +12,114 @@ use Illuminate\Support\Facades\Log;
 use Laravel\Telescope\Contracts\EntriesRepository;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Illuminate\Support\Facades\Artisan;
 
 #[Title('Settings')]
 class Settings extends Component
 {
-  public string $frequency;
-  public bool $apiDownWarning;
-  public bool $welcomeEmail;
-  // New simplified data retention property
-  public int $globalRetentionPeriod = 0;
-
-  // Telescope Pruning Settings - Simplified
+  // Settings properties - using keys from the new Setting model
+  public string $syncFrequency = 'everyThirtyMinutes';
+  public bool $apiDownWarningMailEnabled = false;
+  public bool $welcomeEmailEnabled = false;
+  public bool $dataRetentionEnabled = false;
+  public int $dataRetentionGlobalPeriod = 0; // Stores the global retention period in days
   public string $telescopePruneFrequency = 'weekly';
 
   public function mount(): void
   {
-    // Get frequency from DB
-    $this->frequency = JobFrequency::getConfig()->frequency;
-    // Get toggles from DB
-    $this->apiDownWarning = (bool) NotificationSetting::isEnabled(
-      'api_down_warning_mail'
+    // Load settings from the new Setting model
+    $this->syncFrequency = Setting::getValue(
+      'job_frequency.sync',
+      'everyThirtyMinutes'
     );
-    $this->welcomeEmail = (bool) NotificationSetting::isEnabled(
-      'welcome_email'
+    $this->apiDownWarningMailEnabled = (bool) Setting::getValue(
+      'notification.api_down_warning_mail.enabled',
+      false
+    );
+    $this->welcomeEmailEnabled = (bool) Setting::getValue(
+      'notification.welcome_email.enabled',
+      false
+    );
+    $this->dataRetentionEnabled = (bool) Setting::getValue(
+      'data_retention.enabled',
+      false
+    );
+    $this->dataRetentionGlobalPeriod = (int) Setting::getValue(
+      'data_retention.global_period', // New key for global period
+      0
+    );
+    $this->telescopePruneFrequency = Setting::getValue(
+      'notification.telescope_prune.value', // Key from data migration
+      'weekly'
     );
 
-    // Load data retention settings
-    $this->loadDataRetentionSettings();
-
-    // Load Telescope prune settings
-    $this->telescopePruneFrequency = NotificationSetting::getValue(
-      'telescope_prune_frequency',
-      'weekly' // Default frequency
-    );
+    // Ensure period is 0 if retention is disabled
+    if (!$this->dataRetentionEnabled) {
+      $this->dataRetentionGlobalPeriod = 0;
+    }
   }
 
-  // Extracted data retention loading logic
-  private function loadDataRetentionSettings(): void
+  // Method to get frequency options (moved from JobFrequency model)
+  public function getSyncFrequencyOptions(): array
   {
-    $this->globalRetentionPeriod = 0; // Reset to default
-    // Check if any data type has a retention setting
-    foreach (DataRetentionSetting::dataTypes() as $dataType => $label) {
-      $setting = DataRetentionSetting::forType($dataType);
-      if ($setting && $setting->retention_days > 0) {
-        // Use the first non-zero retention period found
-        $this->globalRetentionPeriod = $setting->retention_days;
-        break;
-      }
-    }
-
-    // If data retention is disabled in notification settings, set period to 0
-    if (!NotificationSetting::isEnabled('data_retention_enabled')) {
-      $this->globalRetentionPeriod = 0;
-    }
+    return [
+      'never' => 'Never',
+      'everyMinute' => 'Every Minute',
+      'everyFiveMinutes' => 'Every 5 Minutes',
+      'everyFifteenMinutes' => 'Every 15 Minutes',
+      'everyThirtyMinutes' => 'Every 30 Minutes',
+      'hourly' => 'Every Hour',
+      'everyTwoHours' => 'Every Two Hours',
+      'everyThreeHours' => 'Every Three Hours',
+      'everyFourHours' => 'Every Four Hours',
+      'everySixHours' => 'Every Six Hours',
+      'everyTwelveHours' => 'Every Twelve Hours',
+      'dailyAt_9' => 'Daily at 9:00',
+      'daily' => 'Daily at midnight',
+      'weekly' => 'Weekly on Sunday',
+      'twiceMonthly' => 'Twice Monthly (1st and 15th)',
+      'monthly' => 'Monthly',
+    ];
   }
 
-  public function updateFrequencies(): void
+  // Method to get retention options (moved from DataRetentionSetting model)
+  public function getDataRetentionOptions(): array
+  {
+    return [
+      0 => 'Disabled', // Added option for disabled
+      30 => '30 days',
+      90 => '3 months',
+      180 => '6 months',
+      365 => '1 year',
+      730 => '2 years',
+      1095 => '3 years',
+      1825 => '5 years',
+    ];
+  }
+
+  // Method to get Telescope prune options (moved from NotificationSetting implicitly)
+  public function getTelescopeFrequencyOptions(): array
+  {
+    return [
+      'daily' => 'Daily',
+      'weekly' => 'Weekly',
+      'monthly' => 'Monthly',
+    ];
+  }
+
+  public function updateSyncFrequency(): void
   {
     try {
-      JobFrequency::getConfig()->update(['frequency' => $this->frequency]);
+      Setting::setValue('job_frequency.sync', $this->syncFrequency);
       $this->dispatch(
         'add-toast',
         message: 'Synchronization frequency updated.',
         variant: 'success'
       );
     } catch (Exception $e) {
+      Log::error('Failed to update sync frequency setting', [
+        'error' => $e->getMessage(),
+      ]);
       $this->dispatch(
         'add-toast',
         message: 'Failed to update frequency: ' . $e->getMessage(),
@@ -87,20 +128,16 @@ class Settings extends Component
     }
   }
 
-  /**
-   * Update all toggles in notification_settings table.
-   */
   public function updateNotificationToggles(): void
   {
     try {
-      NotificationSetting::updateOrCreate(
-        ['key' => 'api_down_warning_mail'],
-        ['enabled' => $this->apiDownWarning]
+      Setting::setValue(
+        'notification.api_down_warning_mail.enabled',
+        $this->apiDownWarningMailEnabled ? '1' : '0' // Store bool as '1'/'0'
       );
-
-      NotificationSetting::updateOrCreate(
-        ['key' => 'welcome_email'],
-        ['enabled' => $this->welcomeEmail]
+      Setting::setValue(
+        'notification.welcome_email.enabled',
+        $this->welcomeEmailEnabled ? '1' : '0' // Store bool as '1'/'0'
       );
 
       $this->dispatch(
@@ -109,6 +146,9 @@ class Settings extends Component
         variant: 'success'
       );
     } catch (Exception $e) {
+      Log::error('Failed to update notification toggle settings', [
+        'error' => $e->getMessage(),
+      ]);
       $this->dispatch(
         'add-toast',
         message: 'Failed to update toggles: ' . $e->getMessage(),
@@ -117,28 +157,20 @@ class Settings extends Component
     }
   }
 
-  /**
-   * Update data retention settings.
-   */
   public function updateDataRetentionSettings(): void
   {
     try {
-      // Update the main toggle - if globalRetentionPeriod is 0, disable data retention
-      $isEnabled = $this->globalRetentionPeriod > 0;
-      NotificationSetting::updateOrCreate(
-        ['key' => 'data_retention_enabled'],
-        ['enabled' => $isEnabled]
+      // If period is 0, disable retention; otherwise, enable it.
+      $isEnabled = $this->dataRetentionGlobalPeriod > 0;
+
+      Setting::setValue('data_retention.enabled', $isEnabled ? '1' : '0');
+      Setting::setValue(
+        'data_retention.global_period',
+        (int) $this->dataRetentionGlobalPeriod
       );
 
-      // If enabled, update retention periods for all data types to the same value
-      if ($isEnabled) {
-        foreach (DataRetentionSetting::dataTypes() as $dataType => $label) {
-          DataRetentionSetting::updateOrCreate(
-            ['data_type' => $dataType],
-            ['retention_days' => (int) $this->globalRetentionPeriod]
-          );
-        }
-      }
+      // Update internal state
+      $this->dataRetentionEnabled = $isEnabled;
 
       $this->dispatch(
         'add-toast',
@@ -146,6 +178,9 @@ class Settings extends Component
         variant: 'success'
       );
     } catch (Exception $e) {
+      Log::error('Failed to update data retention settings', [
+        'error' => $e->getMessage(),
+      ]);
       $this->dispatch(
         'add-toast',
         message: 'Failed to update data retention settings: ' .
@@ -154,6 +189,53 @@ class Settings extends Component
       );
     }
   }
+
+  public function updateTelescopePruneSettings(): void
+  {
+    // Basic validation
+    if (
+      !array_key_exists(
+        $this->telescopePruneFrequency,
+        $this->getTelescopeFrequencyOptions()
+      )
+    ) {
+      $this->dispatch(
+        'add-toast',
+        message: 'Invalid Telescope prune frequency selected.',
+        variant: 'error'
+      );
+      // Optionally reset to a default or previous value
+      $this->telescopePruneFrequency = Setting::getValue(
+        'notification.telescope_prune.value',
+        'weekly'
+      );
+      return;
+    }
+
+    try {
+      Setting::setValue(
+        'notification.telescope_prune.value',
+        $this->telescopePruneFrequency
+      );
+      $this->dispatch(
+        'add-toast',
+        message: 'Telescope prune frequency updated.',
+        variant: 'success'
+      );
+    } catch (Exception $e) {
+      Log::error('Failed to update Telescope prune setting', [
+        'error' => $e->getMessage(),
+      ]);
+      $this->dispatch(
+        'add-toast',
+        message: 'Failed to update Telescope prune frequency: ' .
+          $e->getMessage(),
+        variant: 'error'
+      );
+    }
+  }
+
+  // --- Ping methods remain the same --- //
 
   public function pingOdoo(): void
   {
@@ -193,14 +275,16 @@ class Settings extends Component
     );
   }
 
-  /**
-   * Run the data retention purge command manually
-   */
+  // --- Manual purge methods remain similar, just check the new property --- //
+
   public function runDataRetention(): void
   {
     try {
-      // Only run if data retention is enabled
-      if ($this->globalRetentionPeriod <= 0) {
+      // Check the new enabled property
+      if (
+        !$this->dataRetentionEnabled ||
+        $this->dataRetentionGlobalPeriod <= 0
+      ) {
         $this->dispatch(
           'add-toast',
           message: 'Data retention is disabled. Please enable it first.',
@@ -209,10 +293,10 @@ class Settings extends Component
         return;
       }
 
-      // Execute the command
-      $exitCode = \Illuminate\Support\Facades\Artisan::call(
-        'app:purge-old-time-data'
-      );
+      // Execute the command (assuming it reads from settings or is updated separately)
+      // IMPORTANT: The Artisan command 'app:purge-old-time-data' might need updating
+      // to use the new Setting model as well.
+      $exitCode = Artisan::call('app:purge-old-time-data');
 
       if ($exitCode === 0) {
         $this->dispatch(
@@ -228,6 +312,9 @@ class Settings extends Component
         );
       }
     } catch (Exception $e) {
+      Log::error('Failed to run manual data retention', [
+        'error' => $e->getMessage(),
+      ]);
       $this->dispatch(
         'add-toast',
         message: 'Failed to run data retention: ' . $e->getMessage(),
@@ -236,66 +323,34 @@ class Settings extends Component
     }
   }
 
-  /**
-   * Update Telescope pruning settings.
-   */
-  public function updateTelescopePruneSettings(): void
+  public function runTelescopePrune(): void
   {
-    // Basic validation
-    if (
-      !array_key_exists(
-        $this->telescopePruneFrequency,
-        $this->getTelescopeFrequencyOptions()
-      )
-    ) {
-      $this->dispatch(
-        'add-toast',
-        message: 'Invalid frequency selected.',
-        variant: 'error'
-      );
-      return;
-    }
-
     try {
-      NotificationSetting::updateOrCreate(
-        ['key' => 'telescope_prune_frequency'],
-        ['value' => $this->telescopePruneFrequency]
-      );
+      $exitCode = Artisan::call('telescope:prune');
 
-      $this->dispatch(
-        'add-toast',
-        message: 'Telescope prune settings updated.',
-        variant: 'success'
-      );
+      if ($exitCode === 0) {
+        $this->dispatch(
+          'add-toast',
+          message: 'Telescope pruning completed successfully.',
+          variant: 'success'
+        );
+      } else {
+        $this->dispatch(
+          'add-toast',
+          message: 'Telescope pruning failed with exit code ' . $exitCode,
+          variant: 'error'
+        );
+      }
     } catch (Exception $e) {
-      // Log the exception so it appears in Telescope Logs
-      Log::error(
-        'Failed to update Telescope prune settings: ' . $e->getMessage(),
-        [
-          'exception' => $e,
-        ]
-      );
-
+      Log::error('Failed to run manual telescope prune', [
+        'error' => $e->getMessage(),
+      ]);
       $this->dispatch(
         'add-toast',
-        message: 'Failed to update Telescope prune settings: ' .
-          $e->getMessage(),
+        message: 'Failed to run Telescope pruning: ' . $e->getMessage(),
         variant: 'error'
       );
     }
-  }
-
-  /**
-   * Get options for Telescope prune frequency select dropdown.
-   */
-  public function getTelescopeFrequencyOptions(): array
-  {
-    // Removed 'never' option
-    return [
-      'daily' => 'Daily',
-      'weekly' => 'Weekly',
-      'monthly' => 'Monthly',
-    ];
   }
 
   public function render()
@@ -312,15 +367,12 @@ class Settings extends Component
       app()->bound(EntriesRepository::class) && config('telescope.enabled');
 
     return view('livewire.settings', [
-      'options' => JobFrequency::getFrequencyOptions(),
+      'syncFrequencyOptions' => $this->getSyncFrequencyOptions(),
+      'dataRetentionOptions' => $this->getDataRetentionOptions(),
+      'telescopeFrequencyOptions' => $this->getTelescopeFrequencyOptions(),
       'totalUsers' => $totalUsers,
       'activeUsers' => $activeUsers,
       'activeAdmins' => $activeAdmins,
-      'retentionOptions' => DataRetentionSetting::retentionOptions(),
-      'dataTypes' => DataRetentionSetting::dataTypes(),
-      // Pass only frequency options to the view
-      'telescopeFrequencyOptions' => $this->getTelescopeFrequencyOptions(),
-      // Pass Telescope status to the view
       'telescopeEnabled' => $telescopeEnabled,
     ]);
   }

@@ -2,6 +2,7 @@
 
 use App\Models\JobFrequency;
 use App\Models\NotificationSetting;
+use App\Models\Setting;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\Facades\Log;
@@ -10,23 +11,21 @@ use Illuminate\Support\Facades\Log;
  * Schedule Telescope pruning based on Notification Settings.
  */
 try {
-  if (Schema::hasTable('notification_settings')) {
-    $frequency = NotificationSetting::getValue(
-      'telescope_prune_frequency',
-      'weekly'
-    );
+  $frequency = Setting::getValue(
+    'notification.telescope_prune.value',
+    'weekly'
+  );
 
-    $schedule = Schedule::command('telescope:prune')
-      ->name('Telescope Prune')
-      ->withoutOverlapping();
+  $schedule = Schedule::command('telescope:prune')
+    ->name('Telescope Prune')
+    ->withoutOverlapping();
 
-    match ($frequency) {
-      'daily' => $schedule->daily()->at('23:00'),
-      'weekly' => $schedule->weekly()->at('23:00'),
-      'monthly' => $schedule->monthly()->at('23:00'),
-      default => $schedule->weekly()->at('23:00'),
-    };
-  }
+  match ($frequency) {
+    'daily' => $schedule->daily()->at('23:00'),
+    'weekly' => $schedule->weekly()->at('23:00'),
+    'monthly' => $schedule->monthly()->at('23:00'),
+    default => $schedule->weekly()->at('23:00'),
+  };
 } catch (\Exception $e) {
   Log::error('Failed to schedule Telescope pruning: ' . $e->getMessage(), [
     'exception' => $e,
@@ -57,51 +56,66 @@ Schedule::command('queue:restart')->hourly();
  * The sync command with the 'all' parameter dispatches jobs for all platforms in a single batch.
  *
  * This scheduler:
- * 1. Checks if the job_frequencies table exists
- * 2. Retrieves the sync configuration from the database
- * 3. Schedules the sync command based on the configured frequency
- * 4. Prevents overlapping executions
- * 5. Runs in the background to prevent blocking
- * 6. Includes success/failure logging
- * 7. Validates configuration before scheduling
- * 8. Skips scheduling in testing environment
+ * 1. Checks if the settings table exists implicitly via Setting model usage.
+ * 2. Retrieves the sync configuration from the new settings table.
+ * 3. Schedules the sync command based on the configured frequency.
+ * 4. Prevents overlapping executions.
+ * 5. Runs in the background to prevent blocking.
+ * 6. Includes success/failure logging.
+ * 7. Validates configuration before scheduling.
+ * 8. Skips scheduling in testing environment.
  *
  * @throws \Exception When scheduling fails
  * @return void
  */
-if (Schema::hasTable('job_frequencies')) {
-  try {
-    /**
-     * Get the job frequency configuration from the database.
-     * This determines how often the sync jobs will run (hourly, daily, etc.)
-     *
-     * @var JobFrequency $config */
-    $config = JobFrequency::getConfig();
+try {
+  /**
+   * Get the job frequency configuration from the database.
+   * This determines how often the sync jobs will run (hourly, daily, etc.)
+   *
+   * @var string $syncFrequency */
+  $syncFrequency = Setting::getValue(
+    'job_frequency.sync',
+    'everyThirtyMinutes'
+  );
 
-    // If the frequency is not set to 'never', schedule the sync jobs
-    if ($config->frequency !== 'never') {
-      $scheduleMethod = $config->getScheduleMethod();
+  // If the frequency is not set to 'never', schedule the sync jobs
+  if ($syncFrequency !== 'never') {
+    // Temporarily instantiate JobFrequency to reuse its getScheduleMethod logic
+    // This avoids duplicating the complex match statement here.
+    // Consider moving this logic to a helper or service later.
+    $tempJobFrequencyModel = new JobFrequency(['frequency' => $syncFrequency]);
+    $scheduleMethod = $tempJobFrequencyModel->getScheduleMethod();
 
-      // If a valid schedule method is found, schedule the sync jobs
-      if ($scheduleMethod) {
-        /**
-         * Schedule variable from the closure parameter.
-         * This is used to schedule the sync command with the configured frequency.
-         *
-         * @var \Illuminate\Console\Scheduling\Schedule $schedule */
-        $scheduleMethod(
-          Schedule::command('sync all')
-            ->name('Daily sync scheduler')
-            ->withoutOverlapping()
-            ->runInBackground()
-        );
-      }
+    // If a valid schedule method is found, schedule the sync jobs
+    if ($scheduleMethod) {
+      /**
+       * Schedule variable from the closure parameter.
+       * This is used to schedule the sync command with the configured frequency.
+       *
+       * @var \Illuminate\Console\Scheduling\Schedule $schedule */
+      $scheduleMethod(
+        Schedule::command('sync all')
+          ->name('Daily sync scheduler')
+          ->withoutOverlapping()
+          ->runInBackground()
+      );
     }
-  } catch (\Exception $e) {
-    Log::error('Failed to schedule sync jobs: ' . $e->getMessage(), [
+  }
+} catch (\InvalidArgumentException $e) {
+  // Handle invalid frequency value gracefully
+  Log::error(
+    'Invalid sync frequency configured in settings: ' . $e->getMessage(),
+    [
+      'frequency_value' => $syncFrequency ?? 'not fetched',
       'exception' => $e,
       'trace' => $e->getTraceAsString(),
-    ]);
-    throw $e;
-  }
+    ]
+  );
+} catch (\Exception $e) {
+  Log::error('Failed to schedule sync jobs: ' . $e->getMessage(), [
+    'exception' => $e,
+    'trace' => $e->getTraceAsString(),
+  ]);
+  // Avoid throwing here to not break other schedules
 }

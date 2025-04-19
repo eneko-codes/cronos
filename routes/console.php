@@ -78,74 +78,47 @@ try {
     'everyThirtyMinutes'
   );
 
-  // If the frequency is not set to 'never', schedule the sync jobs
   if ($syncFrequency !== 'never') {
-    // Replicate the logic from the old JobFrequency::getScheduleMethod()
-    $scheduleMethod = match ($syncFrequency) {
-      'everyMinute' => fn(
-        SchedulingSchedule $schedule
-      ) => $schedule->everyMinute(),
-      'everyFiveMinutes' => fn(
-        SchedulingSchedule $schedule
-      ) => $schedule->everyFiveMinutes(),
-      'everyFifteenMinutes' => fn(
-        SchedulingSchedule $schedule
-      ) => $schedule->everyFifteenMinutes(),
-      'everyThirtyMinutes' => fn(
-        SchedulingSchedule $schedule
-      ) => $schedule->everyThirtyMinutes(),
-      'hourly' => fn(SchedulingSchedule $schedule) => $schedule->hourly(),
-      'everyTwoHours' => fn(
-        SchedulingSchedule $schedule
-      ) => $schedule->everyTwoHours(),
-      'everyThreeHours' => fn(
-        SchedulingSchedule $schedule
-      ) => $schedule->everyThreeHours(),
-      'everyFourHours' => fn(
-        SchedulingSchedule $schedule
-      ) => $schedule->everyFourHours(),
-      'everySixHours' => fn(
-        SchedulingSchedule $schedule
-      ) => $schedule->everySixHours(),
-      'everyTwelveHours' => fn(
-        SchedulingSchedule $schedule
-      ) => $schedule->everyTwelveHours(),
-      'dailyAt_9' => fn(SchedulingSchedule $schedule) => $schedule->dailyAt(
-        '09:00'
-      ),
-      'daily' => fn(SchedulingSchedule $schedule) => $schedule->daily(),
-      'weekly' => fn(SchedulingSchedule $schedule) => $schedule->weeklyOn(
-        7
-      ), // Assuming Sunday is 7
-      'twiceMonthly' => fn(
-        SchedulingSchedule $schedule
-      ) => $schedule->twiceMonthly(1, 15),
-      'monthly' => fn(SchedulingSchedule $schedule) => $schedule->monthly(),
-      default => null, // Or throw an exception for invalid frequency
+    // Define the base event first
+    $event = Schedule::command('sync all')
+      ->name('Daily sync scheduler')
+      ->withoutOverlapping()
+      ->runInBackground();
+
+    // Apply the frequency method directly to the event
+    $isValidFrequency = true;
+    match ($syncFrequency) {
+      'everyMinute' => $event->everyMinute(),
+      'everyFiveMinutes' => $event->everyFiveMinutes(),
+      'everyFifteenMinutes' => $event->everyFifteenMinutes(),
+      'everyThirtyMinutes' => $event->everyThirtyMinutes(),
+      'hourly' => $event->hourly(),
+      'everyTwoHours' => $event->everyTwoHours(),
+      'everyThreeHours' => $event->everyThreeHours(),
+      'everyFourHours' => $event->everyFourHours(),
+      'everySixHours' => $event->everySixHours(),
+      'everyTwelveHours' => $event->everyTwelveHours(),
+      'dailyAt_9' => $event->dailyAt('09:00'),
+      'daily' => $event->daily(),
+      'weekly' => $event->weeklyOn(7), // Assuming Sunday is 7
+      'twiceMonthly' => $event->twiceMonthly(1, 15),
+      'monthly' => $event->monthly(),
+      default => ($isValidFrequency = false), // Mark frequency as invalid
     };
 
-    // If a valid schedule method is found, schedule the sync jobs
-    if ($scheduleMethod) {
-      /**
-       * Schedule variable from the closure parameter.
-       * This is used to schedule the sync command with the configured frequency.
-       *
-       * @var \Illuminate\Console\Scheduling\Schedule $schedule */
-      $scheduleMethod(
-        Schedule::command('sync all')
-          ->name('Daily sync scheduler')
-          ->withoutOverlapping()
-          ->runInBackground()
-      );
-    } elseif ($syncFrequency !== 'never') {
-      // Log a warning if the frequency is invalid but not 'never'
+    if (!$isValidFrequency) {
       Log::warning(
-        'Invalid sync frequency configured in settings: ' . $syncFrequency
+        'Invalid sync frequency configured in settings: ' .
+          $syncFrequency .
+          '. Sync job not scheduled with dynamic frequency.'
       );
+      // Optionally, you could set a default frequency here instead of just logging
+      // $event->everyThirtyMinutes(); // Example default
     }
   }
 } catch (\Exception $e) {
   Log::error('Failed to schedule sync jobs: ' . $e->getMessage(), [
+    'frequency' => $syncFrequency ?? 'not fetched',
     'exception' => $e,
     'trace' => $e->getTraceAsString(),
   ]);

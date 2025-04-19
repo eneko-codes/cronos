@@ -11,6 +11,7 @@ use App\Services\OdooApiCalls;
 use App\Services\ProofhubApiCalls;
 use Exception;
 use Illuminate\Support\Facades\Log;
+use Laravel\Telescope\Contracts\EntriesRepository;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -305,6 +306,11 @@ class Settings extends Component
       ->where('muted_notifications', false)
       ->count();
 
+    // Check if Telescope service is bound in the container (indicates installation)
+    // and if the Telescope recording feature is enabled.
+    $telescopeEnabled =
+      app()->bound(EntriesRepository::class) && config('telescope.enabled');
+
     return view('livewire.settings', [
       'options' => JobFrequency::getFrequencyOptions(),
       'totalUsers' => $totalUsers,
@@ -314,6 +320,8 @@ class Settings extends Component
       'dataTypes' => DataRetentionSetting::dataTypes(),
       // Pass only frequency options to the view
       'telescopeFrequencyOptions' => $this->getTelescopeFrequencyOptions(),
+      // Pass Telescope status to the view
+      'telescopeEnabled' => $telescopeEnabled,
     ]);
   }
 }

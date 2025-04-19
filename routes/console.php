@@ -16,18 +16,16 @@ try {
       'weekly'
     );
 
-    if ($frequency !== 'never') {
-      $schedule = Schedule::command('telescope:prune')
-        ->name('Telescope Prune')
-        ->withoutOverlapping();
+    $schedule = Schedule::command('telescope:prune')
+      ->name('Telescope Prune')
+      ->withoutOverlapping();
 
-      match ($frequency) {
-        'daily' => $schedule->daily()->at('23:00'),
-        'weekly' => $schedule->weekly()->at('23:00'),
-        'monthly' => $schedule->monthly()->at('23:00'),
-        default => $schedule->weekly()->at('23:00'),
-      };
-    }
+    match ($frequency) {
+      'daily' => $schedule->daily()->at('23:00'),
+      'weekly' => $schedule->weekly()->at('23:00'),
+      'monthly' => $schedule->monthly()->at('23:00'),
+      default => $schedule->weekly()->at('23:00'),
+    };
   }
 } catch (\Exception $e) {
   Log::error('Failed to schedule Telescope pruning: ' . $e->getMessage(), [

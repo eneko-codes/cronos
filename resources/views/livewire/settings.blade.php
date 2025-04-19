@@ -1,101 +1,104 @@
 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
   <!-- Telescope -->
-  <section class="relative lg:col-span-1">
-    <div
-      class="h-full rounded-xl border border-gray-200 bg-gray-100 p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
-    >
-      <div class="flex flex-col items-start gap-1 text-lg font-bold">
-        <div class="inline-flex flex-row items-center gap-2">
-          <!-- SVG Icon -->
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            class="size-5 text-gray-400 dark:text-gray-500"
-          >
-            <path
-              fill-rule="evenodd"
-              d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.466 7.89l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5ZM16.5 15a.75.75 0 0 1 .712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 0 1 0 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 0 1-1.422 0l-.395-1.183a1.5 1.5 0 0 0-.948-.948l-1.183-.395a.75.75 0 0 1 0-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0 1 16.5 15Z"
-              clip-rule="evenodd"
-            />
-          </svg>
-
-          <h2>Laravel Telescope</h2>
-        </div>
-        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
-          Access Laravel Telescope to monitor your application's requests, jobs,
-          logs and more.
-        </p>
-      </div>
-      <div class="mt-4">
-        <a href="/telescope" target="_blank" class="w-full">
-          <x-button type="button" size="md" variant="info" class="w-full">
-            <span>Telescope Dashboard</span>
-          </x-button>
-        </a>
-      </div>
-
-      <!-- New Telescope Pruning Settings Form -->
-      <form
-        wire:submit.prevent="updateTelescopePruneSettings"
-        class="mt-6 space-y-4 border-t border-gray-300 pt-4 dark:border-gray-600"
+  @if ($telescopeEnabled)
+    <section class="relative lg:col-span-1">
+      <div
+        class="h-full rounded-xl border border-gray-200 bg-gray-100 p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
       >
-        @csrf
-        <div>
-          <label
-            class="inline-flex flex-row items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300"
-          >
-            Prune Telescope Data Frequency
-            <x-tooltip>
-              <x-slot name="text">
-                How often should old Telescope entries be automatically deleted?
-              </x-slot>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="size-3"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-                />
-              </svg>
-            </x-tooltip>
-          </label>
-          <select
-            wire:model="telescopePruneFrequency"
-            class="mt-1 block w-full rounded-md border border-gray-300 bg-gray-200 px-2 text-sm dark:border-gray-700 dark:bg-gray-700"
-          >
-            @foreach ($telescopeFrequencyOptions as $value => $label)
-              <option value="{{ $value }}">{{ $label }}</option>
-            @endforeach
-          </select>
+        <div class="flex flex-col items-start gap-1 text-lg font-bold">
+          <div class="inline-flex flex-row items-center gap-2">
+            <!-- SVG Icon -->
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              class="size-5 text-gray-400 dark:text-gray-500"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.466 7.89l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5ZM16.5 15a.75.75 0 0 1 .712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 0 1 0 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 0 1-1.422 0l-.395-1.183a1.5 1.5 0 0 0-.948-.948l-1.183-.395a.75.75 0 0 1 0-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0 1 16.5 15Z"
+                clip-rule="evenodd"
+              />
+            </svg>
+
+            <h2>Laravel Telescope</h2>
+          </div>
+          <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
+            Access Laravel Telescope to monitor your application's requests,
+            jobs, logs and more.
+          </p>
+        </div>
+        <div class="mt-4">
+          <a href="/telescope" target="_blank" class="w-full">
+            <x-button type="button" size="md" variant="info" class="w-full">
+              <span>Telescope Dashboard</span>
+            </x-button>
+          </a>
         </div>
 
-        <div class="flex justify-end">
-          <x-button
-            wire:target="updateTelescopePruneSettings"
-            type="submit"
-            size="md"
-            variant="success"
-          >
-            <span wire:target="updateTelescopePruneSettings">
-              Save Prune Settings
-            </span>
-            <x-spinner
-              size="4"
-              wire:loading.delay
+        <!-- New Telescope Pruning Settings Form -->
+        <form
+          wire:submit.prevent="updateTelescopePruneSettings"
+          class="mt-6 space-y-4 border-t border-gray-300 pt-4 dark:border-gray-600"
+        >
+          @csrf
+          <div>
+            <label
+              class="inline-flex flex-row items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300"
+            >
+              Prune Telescope Data Frequency
+              <x-tooltip>
+                <x-slot name="text">
+                  How often should old Telescope entries be automatically
+                  deleted?
+                </x-slot>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                  class="size-3"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+                  />
+                </svg>
+              </x-tooltip>
+            </label>
+            <select
+              wire:model="telescopePruneFrequency"
+              class="mt-1 block w-full rounded-md border border-gray-300 bg-gray-200 px-2 text-sm dark:border-gray-700 dark:bg-gray-700"
+            >
+              @foreach ($telescopeFrequencyOptions as $value => $label)
+                <option value="{{ $value }}">{{ $label }}</option>
+              @endforeach
+            </select>
+          </div>
+
+          <div class="flex justify-end">
+            <x-button
               wire:target="updateTelescopePruneSettings"
-            />
-          </x-button>
-        </div>
-      </form>
-    </div>
-  </section>
+              type="submit"
+              size="md"
+              variant="success"
+            >
+              <span wire:target="updateTelescopePruneSettings">
+                Save Prune Settings
+              </span>
+              <x-spinner
+                size="4"
+                wire:loading.delay
+                wire:target="updateTelescopePruneSettings"
+              />
+            </x-button>
+          </div>
+        </form>
+      </div>
+    </section>
+  @endif
 
   <!-- API Health Check -->
   <section class="relative lg:col-span-1">

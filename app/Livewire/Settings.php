@@ -19,8 +19,8 @@ class Settings extends Component
 {
   // Settings properties - using keys from the new Setting model
   public string $syncFrequency = 'everyThirtyMinutes';
-  public bool $apiDownWarningMailEnabled = false;
-  public bool $welcomeEmailEnabled = false;
+  public bool $apiDownWarningMailEnabled = true;
+  public bool $welcomeEmailEnabled = true;
   public bool $dataRetentionEnabled = false;
   public int $dataRetentionGlobalPeriod = 0; // Stores the global retention period in days
   public string $telescopePruneFrequency = 'weekly';
@@ -34,11 +34,11 @@ class Settings extends Component
     );
     $this->apiDownWarningMailEnabled = (bool) Setting::getValue(
       'notification.api_down_warning_mail.enabled',
-      false
+      true
     );
     $this->welcomeEmailEnabled = (bool) Setting::getValue(
       'notification.welcome_email.enabled',
-      false
+      true
     );
     $this->dataRetentionEnabled = (bool) Setting::getValue(
       'data_retention.enabled',

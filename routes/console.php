@@ -1,8 +1,7 @@
 <?php
 
-use App\Models\JobFrequency;
-use App\Models\NotificationSetting;
 use App\Models\Setting;
+use Illuminate\Console\Scheduling\Schedule as SchedulingSchedule;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\Facades\Log;
@@ -81,11 +80,49 @@ try {
 
   // If the frequency is not set to 'never', schedule the sync jobs
   if ($syncFrequency !== 'never') {
-    // Temporarily instantiate JobFrequency to reuse its getScheduleMethod logic
-    // This avoids duplicating the complex match statement here.
-    // Consider moving this logic to a helper or service later.
-    $tempJobFrequencyModel = new JobFrequency(['frequency' => $syncFrequency]);
-    $scheduleMethod = $tempJobFrequencyModel->getScheduleMethod();
+    // Replicate the logic from the old JobFrequency::getScheduleMethod()
+    $scheduleMethod = match ($syncFrequency) {
+      'everyMinute' => fn(
+        SchedulingSchedule $schedule
+      ) => $schedule->everyMinute(),
+      'everyFiveMinutes' => fn(
+        SchedulingSchedule $schedule
+      ) => $schedule->everyFiveMinutes(),
+      'everyFifteenMinutes' => fn(
+        SchedulingSchedule $schedule
+      ) => $schedule->everyFifteenMinutes(),
+      'everyThirtyMinutes' => fn(
+        SchedulingSchedule $schedule
+      ) => $schedule->everyThirtyMinutes(),
+      'hourly' => fn(SchedulingSchedule $schedule) => $schedule->hourly(),
+      'everyTwoHours' => fn(
+        SchedulingSchedule $schedule
+      ) => $schedule->everyTwoHours(),
+      'everyThreeHours' => fn(
+        SchedulingSchedule $schedule
+      ) => $schedule->everyThreeHours(),
+      'everyFourHours' => fn(
+        SchedulingSchedule $schedule
+      ) => $schedule->everyFourHours(),
+      'everySixHours' => fn(
+        SchedulingSchedule $schedule
+      ) => $schedule->everySixHours(),
+      'everyTwelveHours' => fn(
+        SchedulingSchedule $schedule
+      ) => $schedule->everyTwelveHours(),
+      'dailyAt_9' => fn(SchedulingSchedule $schedule) => $schedule->dailyAt(
+        '09:00'
+      ),
+      'daily' => fn(SchedulingSchedule $schedule) => $schedule->daily(),
+      'weekly' => fn(SchedulingSchedule $schedule) => $schedule->weeklyOn(
+        7
+      ), // Assuming Sunday is 7
+      'twiceMonthly' => fn(
+        SchedulingSchedule $schedule
+      ) => $schedule->twiceMonthly(1, 15),
+      'monthly' => fn(SchedulingSchedule $schedule) => $schedule->monthly(),
+      default => null, // Or throw an exception for invalid frequency
+    };
 
     // If a valid schedule method is found, schedule the sync jobs
     if ($scheduleMethod) {
@@ -100,18 +137,13 @@ try {
           ->withoutOverlapping()
           ->runInBackground()
       );
+    } elseif ($syncFrequency !== 'never') {
+      // Log a warning if the frequency is invalid but not 'never'
+      Log::warning(
+        'Invalid sync frequency configured in settings: ' . $syncFrequency
+      );
     }
   }
-} catch (\InvalidArgumentException $e) {
-  // Handle invalid frequency value gracefully
-  Log::error(
-    'Invalid sync frequency configured in settings: ' . $e->getMessage(),
-    [
-      'frequency_value' => $syncFrequency ?? 'not fetched',
-      'exception' => $e,
-      'trace' => $e->getTraceAsString(),
-    ]
-  );
 } catch (\Exception $e) {
   Log::error('Failed to schedule sync jobs: ' . $e->getMessage(), [
     'exception' => $e,

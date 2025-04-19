@@ -2,8 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\DataRetentionSetting;
-use App\Models\NotificationSetting;
+use App\Models\Setting;
 use App\Models\TimeEntry;
 use App\Models\UserAttendance;
 use App\Models\UserLeave;
@@ -35,7 +34,9 @@ class PurgeOldTimeData extends Command
   public function handle()
   {
     $isDryRun = $this->option('dry-run');
-    $isEnabled = NotificationSetting::isEnabled('data_retention_enabled');
+
+    // Check if data retention is enabled using the new Setting model
+    $isEnabled = (bool) Setting::getValue('data_retention.enabled', false);
 
     if (!$isEnabled && !$isDryRun) {
       $this->info('Data retention policy is disabled. No data will be purged.');
@@ -45,11 +46,12 @@ class PurgeOldTimeData extends Command
       return 0;
     }
 
-    // Get the global retention period
-    $retentionDays = $this->getGlobalRetentionPeriod();
+    // Get the global retention period using the new Setting model
+    $retentionDays = (int) Setting::getValue('data_retention.global_period', 0);
+
     if ($retentionDays <= 0 && !$isDryRun) {
       $this->info(
-        'Data retention is set to keep all data. No data will be purged.'
+        'Data retention period is not set or is zero. No data will be purged.'
       );
       return 0;
     }
@@ -58,16 +60,49 @@ class PurgeOldTimeData extends Command
       $this->warn(
         'Running in DRY RUN mode - no data will actually be deleted.'
       );
+      if ($retentionDays <= 0) {
+        $this->warn(
+          'Current retention period is 0 days (or not set), so no data would be deleted even if enabled.'
+        );
+      } else {
+        $this->info(
+          "Effective retention period for dry run: {$retentionDays} days"
+        );
+      }
     } else {
       $this->info('Starting data purge based on retention settings...');
       $this->info("Global retention period: {$retentionDays} days");
     }
 
     // Process each data type
-    $this->purgeTimeEntries($isDryRun, $retentionDays);
-    $this->purgeUserAttendances($isDryRun, $retentionDays);
-    $this->purgeUserSchedules($isDryRun, $retentionDays);
-    $this->purgeUserLeaves($isDryRun, $retentionDays);
+    $this->purgeModelData(
+      TimeEntry::class,
+      $isDryRun,
+      $retentionDays,
+      'time entries',
+      'date'
+    );
+    $this->purgeModelData(
+      UserAttendance::class,
+      $isDryRun,
+      $retentionDays,
+      'attendance records',
+      'date'
+    );
+    $this->purgeModelData(
+      UserSchedule::class,
+      $isDryRun,
+      $retentionDays,
+      'schedule records',
+      'date'
+    );
+    $this->purgeModelData(
+      UserLeave::class,
+      $isDryRun,
+      $retentionDays,
+      'leave records',
+      'date'
+    ); // Assuming UserLeave also uses a 'date' column
 
     $this->info('Data purge process completed.');
 
@@ -75,182 +110,74 @@ class PurgeOldTimeData extends Command
   }
 
   /**
-   * Get the global retention period from settings
+   * Generic method to purge old data for a given model and date column.
+   *
+   * @param string $modelClass The Eloquent model class name.
+   * @param bool $isDryRun Whether to perform a dry run.
+   * @param int $retentionDays The retention period in days.
+   * @param string $dataTypeLabel A label for the data type being purged (for logging).
+   * @param string $dateColumn The name of the date column to check against.
    */
-  private function getGlobalRetentionPeriod(): int
-  {
-    // Get retention period from any data type (they should all be the same)
-    $setting = DataRetentionSetting::first();
-    return $setting ? $setting->retention_days : 0;
-  }
-
-  /**
-   * Purge time entries based on retention settings
-   */
-  private function purgeTimeEntries(bool $isDryRun, int $retentionDays): void
-  {
-    $this->info('Processing time entries...');
-
-    if ($retentionDays <= 0) {
-      $this->info('Time entries retention is set to keep all data.');
-      return;
-    }
-
-    $cutoffDate = Carbon::now()->subDays($retentionDays)->startOfDay();
-    $this->info(
-      "Cutoff date: data before {$cutoffDate->format('Y-m-d')} will be deleted"
-    );
-
-    $query = TimeEntry::where('date', '<', $cutoffDate);
-    $count = $query->count();
-
-    $this->info("Found {$count} time entries to delete");
-
-    if (!$isDryRun && $count > 0) {
-      // Use chunk delete for better performance with large datasets
-      $deleted = 0;
-      $query->chunkById(
-        1000,
-        function ($entries) use (&$deleted) {
-          foreach ($entries as $entry) {
-            $entry->delete(); // Using delete() to trigger model events
-            $deleted++;
-          }
-        },
-        'proofhub_time_entry_id'
-      );
-
-      $this->info("Deleted {$deleted} time entries.");
-      Log::info(
-        "Data retention: Deleted {$deleted} time entries older than {$cutoffDate->format(
-          'Y-m-d'
-        )}"
-      );
-    }
-  }
-
-  /**
-   * Purge user attendances based on retention settings
-   */
-  private function purgeUserAttendances(
+  private function purgeModelData(
+    string $modelClass,
     bool $isDryRun,
-    int $retentionDays
+    int $retentionDays,
+    string $dataTypeLabel,
+    string $dateColumn = 'date'
   ): void {
-    $this->info('Processing user attendances...');
+    $this->line("\nProcessing {$dataTypeLabel}..."); // Use line for better spacing
 
     if ($retentionDays <= 0) {
-      $this->info('User attendances retention is set to keep all data.');
+      $this->info("{$dataTypeLabel} retention is set to keep all data.");
       return;
     }
 
     $cutoffDate = Carbon::now()->subDays($retentionDays)->startOfDay();
     $this->info(
-      "Cutoff date: data before {$cutoffDate->format('Y-m-d')} will be deleted"
+      "Cutoff date: {$dataTypeLabel} before {$cutoffDate->format(
+        'Y-m-d'
+      )} will be deleted"
     );
 
-    $query = UserAttendance::where('date', '<', $cutoffDate);
-    $count = $query->count();
+    try {
+      /** @var \Illuminate\Database\Eloquent\Builder $query */
+      $query = $modelClass::where($dateColumn, '<', $cutoffDate);
+      $count = $query->count();
 
-    $this->info("Found {$count} attendance records to delete");
+      $this->info("Found {$count} {$dataTypeLabel} to delete");
 
-    if (!$isDryRun && $count > 0) {
-      // Use chunk delete for better performance with large datasets
-      $deleted = 0;
-      $query->chunkById(1000, function ($records) use (&$deleted) {
-        foreach ($records as $record) {
-          $record->delete(); // Using delete() to trigger model events
-          $deleted++;
-        }
-      });
+      if (!$isDryRun && $count > 0) {
+        // Use chunk delete for better performance with large datasets
+        $deleted = 0;
+        // Determine the primary key for chunking if not default 'id'
+        $primaryKey = (new $modelClass())->getKeyName();
 
-      $this->info("Deleted {$deleted} attendance records.");
-      Log::info(
-        "Data retention: Deleted {$deleted} attendance records older than {$cutoffDate->format(
-          'Y-m-d'
-        )}"
-      );
-    }
-  }
+        $query->chunkById(
+          1000,
+          function ($records) use (&$deleted) {
+            foreach ($records as $record) {
+              $record->delete(); // Using delete() to trigger model events
+              $deleted++;
+            }
+          },
+          $primaryKey
+        );
 
-  /**
-   * Purge user schedules based on retention settings
-   */
-  private function purgeUserSchedules(bool $isDryRun, int $retentionDays): void
-  {
-    $this->info('Processing user schedules...');
-
-    if ($retentionDays <= 0) {
-      $this->info('User schedules retention is set to keep all data.');
-      return;
-    }
-
-    $cutoffDate = Carbon::now()->subDays($retentionDays)->startOfDay();
-    $this->info(
-      "Cutoff date: data before {$cutoffDate->format('Y-m-d')} will be deleted"
-    );
-
-    $query = UserSchedule::where('date', '<', $cutoffDate);
-    $count = $query->count();
-
-    $this->info("Found {$count} schedule records to delete");
-
-    if (!$isDryRun && $count > 0) {
-      // Use chunk delete for better performance with large datasets
-      $deleted = 0;
-      $query->chunkById(1000, function ($records) use (&$deleted) {
-        foreach ($records as $record) {
-          $record->delete(); // Using delete() to trigger model events
-          $deleted++;
-        }
-      });
-
-      $this->info("Deleted {$deleted} schedule records.");
-      Log::info(
-        "Data retention: Deleted {$deleted} schedule records older than {$cutoffDate->format(
-          'Y-m-d'
-        )}"
-      );
-    }
-  }
-
-  /**
-   * Purge user leaves based on retention settings
-   */
-  private function purgeUserLeaves(bool $isDryRun, int $retentionDays): void
-  {
-    $this->info('Processing user leaves...');
-
-    if ($retentionDays <= 0) {
-      $this->info('User leaves retention is set to keep all data.');
-      return;
-    }
-
-    $cutoffDate = Carbon::now()->subDays($retentionDays)->startOfDay();
-    $this->info(
-      "Cutoff date: data before {$cutoffDate->format('Y-m-d')} will be deleted"
-    );
-
-    $query = UserLeave::where('date', '<', $cutoffDate);
-    $count = $query->count();
-
-    $this->info("Found {$count} leave records to delete");
-
-    if (!$isDryRun && $count > 0) {
-      // Use chunk delete for better performance with large datasets
-      $deleted = 0;
-      $query->chunkById(1000, function ($records) use (&$deleted) {
-        foreach ($records as $record) {
-          $record->delete(); // Using delete() to trigger model events
-          $deleted++;
-        }
-      });
-
-      $this->info("Deleted {$deleted} leave records.");
-      Log::info(
-        "Data retention: Deleted {$deleted} leave records older than {$cutoffDate->format(
-          'Y-m-d'
-        )}"
-      );
+        $this->info("Deleted {$deleted} {$dataTypeLabel}.");
+        Log::info(
+          "Data retention: Deleted {$deleted} {$dataTypeLabel} older than {$cutoffDate->format(
+            'Y-m-d'
+          )}"
+        );
+      } elseif ($isDryRun) {
+        $this->info("Dry run: No {$dataTypeLabel} were deleted.");
+      }
+    } catch (\Exception $e) {
+      $this->error("Error processing {$dataTypeLabel}: " . $e->getMessage());
+      Log::error("Data retention failed for {$dataTypeLabel}", [
+        'exception' => $e,
+        'trace' => $e->getTraceAsString(),
+      ]);
     }
   }
 }

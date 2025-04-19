@@ -59,7 +59,7 @@ class Settings extends Component
     }
   }
 
-  // Method to get frequency options (moved from JobFrequency model)
+  // Method to get frequency options for the sync job
   public function getSyncFrequencyOptions(): array
   {
     return [
@@ -82,7 +82,7 @@ class Settings extends Component
     ];
   }
 
-  // Method to get retention options (moved from DataRetentionSetting model)
+  // Method to get retention options
   public function getDataRetentionOptions(): array
   {
     return [
@@ -97,7 +97,7 @@ class Settings extends Component
     ];
   }
 
-  // Method to get Telescope prune options (moved from NotificationSetting implicitly)
+  // Method to get Telescope prune options
   public function getTelescopeFrequencyOptions(): array
   {
     return [

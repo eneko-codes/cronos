@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Collection;
+use App\Models\Setting;
 
 /**
  * User Model
@@ -146,7 +147,7 @@ class User extends Authenticatable
       // Only notify if an email is present, welcome_email is enabled, and notifications aren't muted
       if (
         $user->email &&
-        NotificationSetting::isEnabled('welcome_email') &&
+        (bool) Setting::getValue('notification.welcome_email.enabled', false) &&
         $user->shouldReceiveNotifications()
       ) {
         $user->notify(new WelcomeEmail($user));

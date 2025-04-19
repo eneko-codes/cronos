@@ -184,7 +184,7 @@
       class="h-full rounded-xl border border-gray-200 bg-gray-100 p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
     >
       <form
-        wire:submit.prevent="updateFrequencies"
+        wire:submit.prevent="updateSyncFrequency"
         class="flex h-full flex-col justify-between"
       >
         @csrf
@@ -239,10 +239,10 @@
               </x-tooltip>
             </label>
             <select
-              wire:model="frequency"
+              wire:model="syncFrequency"
               class="block w-40 rounded-md border border-gray-300 bg-gray-200 px-2 text-sm dark:border-gray-700 dark:bg-gray-700"
             >
-              @foreach ($options as $value => $label)
+              @foreach ($syncFrequencyOptions as $value => $label)
                 <option value="{{ $value }}">{{ $label }}</option>
               @endforeach
             </select>
@@ -250,16 +250,16 @@
         </div>
         <div class="mt-4 flex justify-end">
           <x-button
-            wire:target="updateFrequencies"
+            wire:target="updateSyncFrequency"
             type="submit"
             size="md"
             variant="success"
           >
-            <span wire:target="updateFrequencies">Save Changes</span>
+            <span wire:target="updateSyncFrequency">Save Changes</span>
             <x-spinner
               size="4"
               wire:loading.delay
-              wire:target="updateFrequencies"
+              wire:target="updateSyncFrequency"
             />
           </x-button>
         </div>
@@ -273,6 +273,7 @@
       class="h-full rounded-xl border border-gray-200 bg-gray-100 p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
     >
       <form wire:submit.prevent="updateNotificationToggles" class="space-y-4">
+        @csrf
         <div class="flex flex-col items-start gap-1 text-lg font-bold">
           <div class="inline-flex flex-row items-center gap-2">
             <svg
@@ -340,7 +341,7 @@
             <input
               type="checkbox"
               class="peer sr-only"
-              wire:model="welcomeEmail"
+              wire:model="welcomeEmailEnabled"
             />
             <div
               class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700"
@@ -379,7 +380,7 @@
             <input
               type="checkbox"
               class="peer sr-only"
-              wire:model="apiDownWarning"
+              wire:model="apiDownWarningMailEnabled"
             />
             <div
               class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700"
@@ -569,7 +570,7 @@
             size="md"
             variant="success"
           >
-            <span>Save Changes</span>
+            <span wire:target="updateNotificationToggles">Save Changes</span>
             <x-spinner
               size="4"
               wire:loading.delay
@@ -587,6 +588,7 @@
       class="h-full rounded-xl border border-gray-200 bg-gray-100 p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
     >
       <form wire:submit.prevent="updateDataRetentionSettings" class="space-y-4">
+        @csrf
         <div class="flex flex-col items-start gap-1 text-lg font-bold">
           <div class="inline-flex flex-row items-center gap-2">
             <svg
@@ -617,7 +619,7 @@
               <x-tooltip>
                 <x-slot name="text">
                   Select how long to keep time entries, user attendances,
-                  schedules, and leaves. Select "NO" to disable automatic
+                  schedules, and leaves. Select "Disabled" to disable automatic
                   deletion.
                 </x-slot>
                 <svg
@@ -637,28 +639,21 @@
               </x-tooltip>
             </label>
             <select
-              wire:model="globalRetentionPeriod"
+              wire:model="dataRetentionGlobalPeriod"
               class="block w-40 rounded-md border border-gray-300 bg-gray-200 px-2 text-sm dark:border-gray-700 dark:bg-gray-700"
             >
-              <option value="0">NO - Keep all data</option>
-              @foreach ($retentionOptions as $days => $label)
+              @foreach ($dataRetentionOptions as $days => $label)
                 <option value="{{ $days }}">{{ $label }}</option>
               @endforeach
             </select>
           </div>
 
-          <!-- Show affected data types -->
+          <!-- Show affected data types (Using a simplified message now) -->
           <div class="mt-4 rounded-md bg-gray-50 p-3 dark:bg-gray-700">
             <p class="text-xs font-medium text-gray-600 dark:text-gray-300">
-              This setting will affect all the following data types:
+              This setting affects Time Entries, Attendances, Schedules, and
+              Leaves.
             </p>
-            <ul
-              class="mt-2 list-inside list-disc space-y-1 text-xs text-gray-500 dark:text-gray-400"
-            >
-              @foreach ($dataTypes as $dataType => $label)
-                <li>{{ $label }}</li>
-              @endforeach
-            </ul>
           </div>
         </div>
         <div class="mt-4 flex justify-end">
@@ -668,7 +663,7 @@
             size="md"
             variant="success"
           >
-            <span>Save Changes</span>
+            <span wire:target="updateDataRetentionSettings">Save Changes</span>
             <x-spinner
               size="4"
               wire:loading.delay

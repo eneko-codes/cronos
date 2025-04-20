@@ -32,7 +32,6 @@ class Sidebar extends Component
   {
     return [
       'schedule_change' => 'Schedule Changes',
-      'admin_promotion' => 'Admin Promotion',
       'weekly_user_report' => 'Weekly Personal Report',
       'leave_reminder' => 'Leave Reminders',
       // Add new keys/labels here

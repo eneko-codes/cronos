@@ -21,7 +21,6 @@ return new class extends Migration {
         ->unique();
       $table->boolean('mute_all')->default(false);
       $table->boolean('schedule_change')->default(true);
-      $table->boolean('admin_promotion')->default(true);
       $table->boolean('weekly_user_report')->default(true);
       $table->boolean('leave_reminder')->default(true);
       $table->timestamps();

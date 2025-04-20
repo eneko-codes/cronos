@@ -319,3 +319,14 @@ grep "user@example.com" storage/logs/auth.log
 ```
 
 ---
+
+### Technical Details
+
+- **Models:** `App\Models\Setting`, `App\Models\UserNotificationPreference`
+- **Livewire Components:** `App\Livewire\Settings`, `App\Livewire\Sidebar`
+- **Views:** `resources/views/livewire/settings.blade.php`, `resources/views/livewire/sidebar.blade.php`
+- **Migration:** `database/migrations/2024_12_10_182573_create_user_notification_preferences_table.php` (Modified to remove `admin_promotion`)
+
+## 🗑️ Data Retention
+
+Cronos includes a feature to automatically delete old user time-related data to manage database size and comply with data retention policies.

@@ -410,6 +410,52 @@
               ></div>
             </label>
           </div>
+
+          <div
+            class="{{ ! $globalNotificationsEnabled ? "opacity-50" : "" }} flex items-center justify-between"
+          >
+            <label
+              class="{{ ! $globalNotificationsEnabled ? "text-gray-400 dark:text-gray-500" : "text-gray-600 dark:text-gray-300" }} inline-flex items-center gap-1 text-sm font-medium"
+            >
+              Admin Promotion Email
+              <x-tooltip>
+                <x-slot name="text">
+                  Notification sent to a user when they are promoted to an
+                  administrator role.
+                </x-slot>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                  class="size-3"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+                  />
+                </svg>
+              </x-tooltip>
+            </label>
+            <label
+              class="{{ ! $globalNotificationsEnabled ? "cursor-not-allowed" : "cursor-pointer" }} relative inline-flex items-center"
+            >
+              <input
+                type="checkbox"
+                class="peer sr-only"
+                wire:model.live="adminPromotionEmailEnabled"
+                @disabled(! $globalNotificationsEnabled)
+              />
+              <div
+                class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:opacity-50 dark:bg-gray-700 dark:after:bg-gray-500"
+                @if ($globalNotificationsEnabled)
+                    :class="{ 'peer-checked:bg-blue-600': {{ $adminPromotionEmailEnabled ? "true" : "false" }} }"
+                @endif
+              ></div>
+            </label>
+          </div>
         </div>
       </div>
     </div>

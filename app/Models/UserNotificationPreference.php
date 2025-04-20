@@ -19,7 +19,6 @@ class UserNotificationPreference extends Model
     'user_id',
     'mute_all',
     'schedule_change',
-    'admin_promotion',
     'weekly_user_report',
     'leave_reminder',
     // Add new preference keys here when needed
@@ -33,7 +32,6 @@ class UserNotificationPreference extends Model
   protected $casts = [
     'mute_all' => 'boolean',
     'schedule_change' => 'boolean',
-    'admin_promotion' => 'boolean',
     'weekly_user_report' => 'boolean',
     'leave_reminder' => 'boolean',
   ];

@@ -26,6 +26,7 @@ class Settings extends Component
   public int $dataRetentionGlobalPeriod = 0; // Stores the global retention period in days
   public string $telescopePruneFrequency = 'weekly';
   public bool $globalNotificationsEnabled = true; // Added
+  public bool $adminPromotionEmailEnabled = true; // Added for admin promotion email
 
   /**
    * Load existing settings from the database when the component mounts.
@@ -60,6 +61,10 @@ class Settings extends Component
     $this->telescopePruneFrequency = Setting::getValue(
       'notification.telescope_prune.value', // Key from data migration
       'weekly'
+    );
+    $this->adminPromotionEmailEnabled = (bool) Setting::getValue(
+      'notification.admin_promotion.enabled', // New key
+      true
     );
 
     // Ensure period is 0 if retention is disabled
@@ -261,6 +266,20 @@ class Settings extends Component
   }
 
   /**
+   * Save admin promotion email enabled state when the property is updated.
+   *
+   * @param bool $value The new value for adminPromotionEmailEnabled.
+   */
+  public function updatedAdminPromotionEmailEnabled($value): void
+  {
+    $this->saveSetting(
+      'notification.admin_promotion.enabled',
+      $value ? '1' : '0',
+      'Admin promotion email setting updated.'
+    );
+  }
+
+  /**
    * Helper method to save a single setting value and dispatch feedback.
    *
    * @param string $key The database setting key.
@@ -318,6 +337,7 @@ class Settings extends Component
       'notification.welcome_email.enabled' => 'welcomeEmailEnabled',
       'data_retention.global_period' => 'dataRetentionGlobalPeriod',
       'notification.telescope_prune.value' => 'telescopePruneFrequency',
+      'notification.admin_promotion.enabled' => 'adminPromotionEmailEnabled', // Added mapping
       // 'data_retention.enabled' is handled within updatedDataRetentionGlobalPeriod
     ];
     return $map[$key] ?? null;
@@ -335,6 +355,7 @@ class Settings extends Component
       'notification.welcome_email.enabled' => true,
       'data_retention.global_period' => 0,
       'notification.telescope_prune.value' => 'weekly',
+      'notification.admin_promotion.enabled' => true, // Added default
     ];
     // Need to handle boolean conversion for string '1'/'0'
     $value = $defaults[$key] ?? null;
@@ -343,6 +364,7 @@ class Settings extends Component
         'notifications.global_enabled',
         'notification.api_down_warning_mail.enabled',
         'notification.welcome_email.enabled',
+        'notification.admin_promotion.enabled', // Added key
       ])
     ) {
       return (bool) $value;

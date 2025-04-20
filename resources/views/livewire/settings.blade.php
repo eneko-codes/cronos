@@ -49,7 +49,7 @@
               <x-tooltip>
                 <x-slot name="text">
                   How often should old Telescope entries be automatically
-                  deleted? Changes saved automatically.
+                  deleted?
                 </x-slot>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -186,7 +186,7 @@
             </div>
             <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
               Configure how often the system synchronizes all data from
-              connected APIs. Changes saved automatically.
+              connected APIs.
             </p>
           </div>
           <div class="flex items-center justify-between">
@@ -257,8 +257,7 @@
             <h2>Notification Settings</h2>
           </div>
           <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
-            Control system-wide email notifications. Changes saved
-            automatically.
+            Control system-wide email notifications.
             <span class="mt-2 block space-y-1">
               <span
                 class="block font-medium text-green-600 dark:text-green-400"

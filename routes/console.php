@@ -1,13 +1,13 @@
 <?php
 
 use App\Models\Setting;
-use Illuminate\Console\Scheduling\Schedule as SchedulingSchedule;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Schedule Telescope pruning based on Notification Settings.
+ * Schedule the `telescope:prune` command based on the
+ * 'notification.telescope_prune.value' setting (default: weekly).
+ * Logs errors and throws an exception for invalid frequency settings.
  */
 try {
   $frequency = Setting::getValue(
@@ -15,112 +15,103 @@ try {
     'weekly'
   );
 
-  $schedule = Schedule::command('telescope:prune')
+  $scheduleTelescopePrune = Schedule::command('telescope:prune')
     ->name('Telescope Prune')
     ->withoutOverlapping();
 
   match ($frequency) {
-    'daily' => $schedule->daily()->at('23:00'),
-    'weekly' => $schedule->weekly()->at('23:00'),
-    'monthly' => $schedule->monthly()->at('23:00'),
-    default => $schedule->weekly()->at('23:00'),
+    'daily' => $scheduleTelescopePrune->daily()->at('23:00'),
+    'weekly' => $scheduleTelescopePrune->weekly()->at('23:00'),
+    'monthly' => $scheduleTelescopePrune->monthly()->at('23:00'),
+    default => throw new \InvalidArgumentException(
+      'Invalid Telescope prune frequency configured: ' . $frequency
+    ),
   };
+} catch (\InvalidArgumentException $e) {
+  Log::error(
+    'Invalid Telescope prune frequency configuration: ' . $e->getMessage(),
+    [
+      'frequency' => $frequency ?? 'not fetched',
+      'exception' => $e,
+      'trace' => $e->getTraceAsString(),
+    ]
+  );
+  throw $e; // Rethrow to make the configuration error visible.
 } catch (\Exception $e) {
+  // Log other scheduling errors but allow subsequent schedules to run.
   Log::error('Failed to schedule Telescope pruning: ' . $e->getMessage(), [
     'exception' => $e,
     'trace' => $e->getTraceAsString(),
   ]);
-  // Optionally rethrow or handle error
 }
 
 /**
- * Schedule the 'queue:prune-batches' command to run daily and clean batched jobs.
+ * Schedule daily pruning of old job batches.
  */
 Schedule::command('queue:prune-batches --hours=48')->daily();
 
 /**
- * Schedule the 'queue:prune-failed' command to run daily and clean failed jobs.
+ * Schedule daily pruning of old failed jobs.
  */
 Schedule::command('queue:prune-failed --hours=48')->daily();
 
 /**
- * Schedule regular queue worker restart to prevent memory leaks.
- * This is important to ensure long-running queue workers don't accumulate memory.
- * Supervisor will start a new worker automatically after the command is executed.
+ * Schedule hourly queue worker restarts to prevent memory leaks.
+ * Assumes a process manager like Supervisor is restarting workers.
  */
 Schedule::command('queue:restart')->hourly();
 
 /**
- * Schedule synchronization jobs using the configured frequency from the database.
- * The sync command with the 'all' parameter dispatches jobs for all platforms in a single batch.
- *
- * This scheduler:
- * 1. Checks if the settings table exists implicitly via Setting model usage.
- * 2. Retrieves the sync configuration from the new settings table.
- * 3. Schedules the sync command based on the configured frequency.
- * 4. Prevents overlapping executions.
- * 5. Runs in the background to prevent blocking.
- * 6. Includes success/failure logging.
- * 7. Validates configuration before scheduling.
- * 8. Skips scheduling in testing environment.
- *
- * @throws \Exception When scheduling fails
- * @return void
+ * Schedule the `sync all` command based on the 'job_frequency.sync' setting
+ * (default: everyThirtyMinutes).
+ * Skips scheduling if frequency is 'never'. Runs the command in the background,
+ * prevents overlaps, logs errors, and throws for invalid frequency.
  */
 try {
-  /**
-   * Get the job frequency configuration from the database.
-   * This determines how often the sync jobs will run (hourly, daily, etc.)
-   *
-   * @var string $syncFrequency */
   $syncFrequency = Setting::getValue(
     'job_frequency.sync',
     'everyThirtyMinutes'
   );
 
   if ($syncFrequency !== 'never') {
-    // Define the base event first
-    $event = Schedule::command('sync all')
-      ->name('Daily sync scheduler')
+    $scheduleSyncJobs = Schedule::command('sync all')
+      ->name('Data Synchronization Scheduler')
       ->withoutOverlapping()
       ->runInBackground();
 
-    // Apply the frequency method directly to the event
-    $isValidFrequency = true;
     match ($syncFrequency) {
-      'everyMinute' => $event->everyMinute(),
-      'everyFiveMinutes' => $event->everyFiveMinutes(),
-      'everyFifteenMinutes' => $event->everyFifteenMinutes(),
-      'everyThirtyMinutes' => $event->everyThirtyMinutes(),
-      'hourly' => $event->hourly(),
-      'everyTwoHours' => $event->everyTwoHours(),
-      'everyThreeHours' => $event->everyThreeHours(),
-      'everyFourHours' => $event->everyFourHours(),
-      'everySixHours' => $event->everySixHours(),
-      'everyTwelveHours' => $event->everyTwelveHours(),
-      'dailyAt_9' => $event->dailyAt('09:00'),
-      'daily' => $event->daily(),
-      'weekly' => $event->weeklyOn(7), // Assuming Sunday is 7
-      'twiceMonthly' => $event->twiceMonthly(1, 15),
-      'monthly' => $event->monthly(),
-      default => ($isValidFrequency = false), // Mark frequency as invalid
+      'everyMinute' => $scheduleSyncJobs->everyMinute(),
+      'everyFiveMinutes' => $scheduleSyncJobs->everyFiveMinutes(),
+      'everyFifteenMinutes' => $scheduleSyncJobs->everyFifteenMinutes(),
+      'everyThirtyMinutes' => $scheduleSyncJobs->everyThirtyMinutes(),
+      'hourly' => $scheduleSyncJobs->hourly(),
+      'everyTwoHours' => $scheduleSyncJobs->everyTwoHours(),
+      'everyThreeHours' => $scheduleSyncJobs->everyThreeHours(),
+      'everyFourHours' => $scheduleSyncJobs->everyFourHours(),
+      'everySixHours' => $scheduleSyncJobs->everySixHours(),
+      'everyTwelveHours' => $scheduleSyncJobs->everyTwelveHours(),
+      'dailyAt_9' => $scheduleSyncJobs->dailyAt('09:00'),
+      'daily' => $scheduleSyncJobs->daily(),
+      'weekly' => $scheduleSyncJobs->weeklyOn(7),
+      'twiceMonthly' => $scheduleSyncJobs->twiceMonthly(1, 15),
+      'monthly' => $scheduleSyncJobs->monthly(),
+      default => throw new \InvalidArgumentException(
+        'Invalid sync frequency configured in settings: ' . $syncFrequency
+      ),
     };
-
-    if (!$isValidFrequency) {
-      Log::warning(
-        'Invalid sync frequency configured in settings: ' .
-          $syncFrequency .
-          '. Sync job not scheduled with dynamic frequency.'
-      );
-      // Optionally, you could set a default frequency here instead of just logging
-      // $event->everyThirtyMinutes(); // Example default
-    }
   }
+} catch (\InvalidArgumentException $e) {
+  Log::error('Invalid sync frequency configuration: ' . $e->getMessage(), [
+    'frequency' => $syncFrequency ?? 'not fetched',
+    'exception' => $e,
+    'trace' => $e->getTraceAsString(),
+  ]);
+  throw $e; // Rethrow to make the configuration error visible.
 } catch (\Exception $e) {
+  // Log other scheduling errors but allow subsequent schedules to run.
   Log::error('Failed to schedule sync jobs: ' . $e->getMessage(), [
     'frequency' => $syncFrequency ?? 'not fetched',
     'exception' => $e,
     'trace' => $e->getTraceAsString(),
   ]);
-  // Avoid throwing here to not break other schedules
 }

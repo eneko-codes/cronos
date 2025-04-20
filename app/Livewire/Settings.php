@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\DesktimeApiCalls;
 use App\Services\OdooApiCalls;
 use App\Services\ProofhubApiCalls;
+use App\Services\SystemPinApiCalls;
 use Exception;
 use Illuminate\Support\Facades\Log;
 use Laravel\Telescope\Contracts\EntriesRepository;
@@ -24,7 +25,11 @@ class Settings extends Component
   public bool $dataRetentionEnabled = false;
   public int $dataRetentionGlobalPeriod = 0; // Stores the global retention period in days
   public string $telescopePruneFrequency = 'weekly';
+  public bool $globalNotificationsEnabled = true; // Added
 
+  /**
+   * Load existing settings from the database when the component mounts.
+   */
   public function mount(): void
   {
     // Load settings from the new Setting model
@@ -38,6 +43,10 @@ class Settings extends Component
     );
     $this->welcomeEmailEnabled = (bool) Setting::getValue(
       'notification.welcome_email.enabled',
+      true
+    );
+    $this->globalNotificationsEnabled = (bool) Setting::getValue(
+      'notifications.global_enabled',
       true
     );
     $this->dataRetentionEnabled = (bool) Setting::getValue(
@@ -59,7 +68,11 @@ class Settings extends Component
     }
   }
 
-  // Method to get frequency options for the sync job
+  /**
+   * Get the available frequency options for the data synchronization job.
+   *
+   * @return array<string, string> Key-value pairs of frequency slugs and labels.
+   */
   public function getSyncFrequencyOptions(): array
   {
     return [
@@ -82,7 +95,11 @@ class Settings extends Component
     ];
   }
 
-  // Method to get retention options
+  /**
+   * Get the available data retention period options.
+   *
+   * @return array<int, string> Key-value pairs of retention days and labels.
+   */
   public function getDataRetentionOptions(): array
   {
     return [
@@ -97,7 +114,11 @@ class Settings extends Component
     ];
   }
 
-  // Method to get Telescope prune options
+  /**
+   * Get the available frequency options for the Telescope prune job.
+   *
+   * @return array<string, string> Key-value pairs of frequency slugs and labels.
+   */
   public function getTelescopeFrequencyOptions(): array
   {
     return [
@@ -107,69 +128,81 @@ class Settings extends Component
     ];
   }
 
-  public function updateSyncFrequency(): void
+  // --- Updated Lifecycle Hooks for Immediate Saving --- //
+
+  /**
+   * Save sync frequency when the property is updated.
+   * Livewire hook: https://livewire.laravel.com/docs/lifecycle-hooks#updated
+   *
+   * @param string $value The new value for syncFrequency.
+   */
+  public function updatedSyncFrequency($value): void
   {
-    try {
-      Setting::setValue('job_frequency.sync', $this->syncFrequency);
-      $this->dispatch(
-        'add-toast',
-        message: 'Synchronization frequency updated.',
-        variant: 'success'
-      );
-    } catch (Exception $e) {
-      Log::error('Failed to update sync frequency setting', [
-        'error' => $e->getMessage(),
-      ]);
-      $this->dispatch(
-        'add-toast',
-        message: 'Failed to update frequency: ' . $e->getMessage(),
-        variant: 'error'
-      );
-    }
+    $this->saveSetting(
+      'job_frequency.sync',
+      $value,
+      'Synchronization frequency updated.'
+    );
   }
 
-  public function updateNotificationToggles(): void
+  /**
+   * Save global notification enabled state when the property is updated.
+   *
+   * @param bool $value The new value for globalNotificationsEnabled.
+   */
+  public function updatedGlobalNotificationsEnabled($value): void
   {
-    try {
-      Setting::setValue(
-        'notification.api_down_warning_mail.enabled',
-        $this->apiDownWarningMailEnabled ? '1' : '0' // Store bool as '1'/'0'
-      );
-      Setting::setValue(
-        'notification.welcome_email.enabled',
-        $this->welcomeEmailEnabled ? '1' : '0' // Store bool as '1'/'0'
-      );
-
-      $this->dispatch(
-        'add-toast',
-        message: 'Notification settings updated.',
-        variant: 'success'
-      );
-    } catch (Exception $e) {
-      Log::error('Failed to update notification toggle settings', [
-        'error' => $e->getMessage(),
-      ]);
-      $this->dispatch(
-        'add-toast',
-        message: 'Failed to update toggles: ' . $e->getMessage(),
-        variant: 'error'
-      );
-    }
+    $this->saveSetting(
+      'notifications.global_enabled',
+      $value ? '1' : '0',
+      'Global notification setting updated.'
+    );
   }
 
-  public function updateDataRetentionSettings(): void
+  /**
+   * Save API down warning email enabled state when the property is updated.
+   *
+   * @param bool $value The new value for apiDownWarningMailEnabled.
+   */
+  public function updatedApiDownWarningMailEnabled($value): void
   {
-    try {
-      // If period is 0, disable retention; otherwise, enable it.
-      $isEnabled = $this->dataRetentionGlobalPeriod > 0;
+    $this->saveSetting(
+      'notification.api_down_warning_mail.enabled',
+      $value ? '1' : '0',
+      'API down warning email setting updated.'
+    );
+  }
 
+  /**
+   * Save welcome email enabled state when the property is updated.
+   *
+   * @param bool $value The new value for welcomeEmailEnabled.
+   */
+  public function updatedWelcomeEmailEnabled($value): void
+  {
+    $this->saveSetting(
+      'notification.welcome_email.enabled',
+      $value ? '1' : '0',
+      'Welcome email setting updated.'
+    );
+  }
+
+  /**
+   * Save data retention period and enabled state when the property is updated.
+   *
+   * @param int $value The new value for dataRetentionGlobalPeriod (in days).
+   */
+  public function updatedDataRetentionGlobalPeriod($value): void
+  {
+    $period = (int) $value;
+    $isEnabled = $period > 0;
+
+    try {
+      // Save both the enabled state and the period value.
       Setting::setValue('data_retention.enabled', $isEnabled ? '1' : '0');
-      Setting::setValue(
-        'data_retention.global_period',
-        (int) $this->dataRetentionGlobalPeriod
-      );
+      Setting::setValue('data_retention.global_period', $period);
 
-      // Update internal state
+      // Update internal component state for the runDataRetention button.
       $this->dataRetentionEnabled = $isEnabled;
 
       $this->dispatch(
@@ -187,56 +220,144 @@ class Settings extends Component
           $e->getMessage(),
         variant: 'error'
       );
+      // Revert component state from database if save fails.
+      $this->dataRetentionGlobalPeriod = (int) Setting::getValue(
+        'data_retention.global_period',
+        0
+      );
+      $this->dataRetentionEnabled = (bool) Setting::getValue(
+        'data_retention.enabled',
+        false
+      );
     }
   }
 
-  public function updateTelescopePruneSettings(): void
+  /**
+   * Save Telescope prune frequency when the property is updated.
+   *
+   * @param string $value The new value for telescopePruneFrequency.
+   */
+  public function updatedTelescopePruneFrequency($value): void
   {
     // Basic validation
-    if (
-      !array_key_exists(
-        $this->telescopePruneFrequency,
-        $this->getTelescopeFrequencyOptions()
-      )
-    ) {
+    if (!array_key_exists($value, $this->getTelescopeFrequencyOptions())) {
       $this->dispatch(
         'add-toast',
         message: 'Invalid Telescope prune frequency selected.',
         variant: 'error'
       );
-      // Optionally reset to a default or previous value
+      // Revert component property to the old value from the database.
       $this->telescopePruneFrequency = Setting::getValue(
         'notification.telescope_prune.value',
         'weekly'
       );
       return;
     }
+    $this->saveSetting(
+      'notification.telescope_prune.value',
+      $value,
+      'Telescope prune frequency updated.'
+    );
+  }
 
+  /**
+   * Helper method to save a single setting value and dispatch feedback.
+   *
+   * @param string $key The database setting key.
+   * @param mixed $value The value to save.
+   * @param string $successMessage The message for the success toast.
+   */
+  private function saveSetting(
+    string $key,
+    $value,
+    string $successMessage
+  ): void {
     try {
-      Setting::setValue(
-        'notification.telescope_prune.value',
-        $this->telescopePruneFrequency
-      );
+      Setting::setValue($key, $value);
       $this->dispatch(
         'add-toast',
-        message: 'Telescope prune frequency updated.',
+        message: $successMessage,
         variant: 'success'
       );
     } catch (Exception $e) {
-      Log::error('Failed to update Telescope prune setting', [
+      Log::error('Failed to update setting', [
+        'key' => $key,
+        'value' => $value,
         'error' => $e->getMessage(),
       ]);
       $this->dispatch(
         'add-toast',
-        message: 'Failed to update Telescope prune frequency: ' .
-          $e->getMessage(),
+        message: 'Failed to update setting: ' . $e->getMessage(),
         variant: 'error'
       );
+      // Revert the associated component property by reloading from the database.
+      $propertyName = $this->getPropertyNameFromSettingKey($key);
+      if ($propertyName) {
+        $this->{$propertyName} = Setting::getValue(
+          $key,
+          $this->getDefaultValueForKey($key)
+        );
+      }
     }
   }
 
-  // --- Ping methods remain the same --- //
+  /**
+   * Helper to get the component property name mapped from a setting key.
+   * Used for reverting component state on save error.
+   *
+   * @param string $key The database setting key.
+   * @return string|null The corresponding public property name or null if not mapped.
+   */
+  private function getPropertyNameFromSettingKey(string $key): ?string
+  {
+    $map = [
+      'job_frequency.sync' => 'syncFrequency',
+      'notifications.global_enabled' => 'globalNotificationsEnabled',
+      'notification.api_down_warning_mail.enabled' =>
+        'apiDownWarningMailEnabled',
+      'notification.welcome_email.enabled' => 'welcomeEmailEnabled',
+      'data_retention.global_period' => 'dataRetentionGlobalPeriod',
+      'notification.telescope_prune.value' => 'telescopePruneFrequency',
+      // 'data_retention.enabled' is handled within updatedDataRetentionGlobalPeriod
+    ];
+    return $map[$key] ?? null;
+  }
 
+  /**
+   * Helper to get default values for reverting on error.
+   */
+  private function getDefaultValueForKey(string $key)
+  {
+    $defaults = [
+      'job_frequency.sync' => 'everyThirtyMinutes',
+      'notifications.global_enabled' => true,
+      'notification.api_down_warning_mail.enabled' => true,
+      'notification.welcome_email.enabled' => true,
+      'data_retention.global_period' => 0,
+      'notification.telescope_prune.value' => 'weekly',
+    ];
+    // Need to handle boolean conversion for string '1'/'0'
+    $value = $defaults[$key] ?? null;
+    if (
+      in_array($key, [
+        'notifications.global_enabled',
+        'notification.api_down_warning_mail.enabled',
+        'notification.welcome_email.enabled',
+      ])
+    ) {
+      return (bool) $value;
+    }
+    if ($key === 'data_retention.global_period') {
+      return (int) $value;
+    }
+    return $value;
+  }
+
+  // --- Ping methods --- //
+
+  /**
+   * Ping the Odoo API endpoint to check connectivity.
+   */
   public function pingOdoo(): void
   {
     $service = app(OdooApiCalls::class);
@@ -249,6 +370,9 @@ class Settings extends Component
     );
   }
 
+  /**
+   * Ping the Desktime API endpoint to check connectivity.
+   */
   public function pingDesktime(): void
   {
     $service = app(DesktimeApiCalls::class);
@@ -263,6 +387,9 @@ class Settings extends Component
     );
   }
 
+  /**
+   * Ping the Proofhub API endpoint to check connectivity.
+   */
   public function pingProofhub(): void
   {
     $service = app(ProofhubApiCalls::class);
@@ -275,12 +402,33 @@ class Settings extends Component
     );
   }
 
-  // --- Manual purge methods remain similar, just check the new property --- //
+  /**
+   * Ping the SystemPin API endpoint to check connectivity.
+   */
+  public function pingSystemPin(): void
+  {
+    $service = app(SystemPinApiCalls::class);
+    $success = $service->ping();
 
+    $this->dispatch(
+      'add-toast',
+      message: $success
+        ? 'SystemPin API connection successful'
+        : 'SystemPin API connection failed',
+      variant: $success ? 'success' : 'error'
+    );
+  }
+
+  // --- Manual Action Methods --- //
+
+  /**
+   * Manually trigger the data retention artisan command.
+   * Checks if data retention is enabled before running.
+   */
   public function runDataRetention(): void
   {
     try {
-      // Check the new enabled property
+      // Check the internal property which is updated by the hook
       if (
         !$this->dataRetentionEnabled ||
         $this->dataRetentionGlobalPeriod <= 0
@@ -293,9 +441,6 @@ class Settings extends Component
         return;
       }
 
-      // Execute the command (assuming it reads from settings or is updated separately)
-      // IMPORTANT: The Artisan command 'app:purge-old-time-data' might need updating
-      // to use the new Setting model as well.
       $exitCode = Artisan::call('app:purge-old-time-data');
 
       if ($exitCode === 0) {
@@ -323,42 +468,25 @@ class Settings extends Component
     }
   }
 
-  public function runTelescopePrune(): void
-  {
-    try {
-      $exitCode = Artisan::call('telescope:prune');
-
-      if ($exitCode === 0) {
-        $this->dispatch(
-          'add-toast',
-          message: 'Telescope pruning completed successfully.',
-          variant: 'success'
-        );
-      } else {
-        $this->dispatch(
-          'add-toast',
-          message: 'Telescope pruning failed with exit code ' . $exitCode,
-          variant: 'error'
-        );
-      }
-    } catch (Exception $e) {
-      Log::error('Failed to run manual telescope prune', [
-        'error' => $e->getMessage(),
-      ]);
-      $this->dispatch(
-        'add-toast',
-        message: 'Failed to run Telescope pruning: ' . $e->getMessage(),
-        variant: 'error'
-      );
-    }
-  }
-
+  /**
+   * Render the settings component view.
+   * Passes necessary data like options and counts to the view.
+   *
+   * @return \Illuminate\View\View
+   */
   public function render()
   {
     $totalUsers = User::count();
-    $activeUsers = User::where('muted_notifications', false)->count();
+    // Count users whose preferences are not muted
+    $activeUsers = User::whereHas('notificationPreferences', function ($query) {
+      $query->where('mute_all', false);
+    })->count();
+
+    // Count active admins whose preferences are not muted
     $activeAdmins = User::where('is_admin', true)
-      ->where('muted_notifications', false)
+      ->whereHas('notificationPreferences', function ($query) {
+        $query->where('mute_all', false);
+      })
       ->count();
 
     // Check if Telescope service is bound in the container (indicates installation)

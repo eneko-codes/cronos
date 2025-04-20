@@ -1,6 +1,6 @@
 <!-- Settings sidebar -->
 <div>
-  @if ($isOpen)
+  @if ($isOpen && $preferences)
     <!-- Backdrop -->
     <div
       wire:key="sidebar-backdrop"
@@ -77,8 +77,10 @@
               Email Notification Settings
             </h3>
 
-            <!-- Notification Toggle -->
-            <div class="flex items-center justify-between">
+            {{-- User Master Mute Toggle --}}
+            <div
+              class="flex items-center justify-between rounded-md bg-gray-50 p-3 dark:bg-gray-700"
+            >
               <div class="flex items-center gap-3">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -93,7 +95,7 @@
                     stroke-linejoin="round"
                     d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"
                   />
-                  @if ($this->isNotificationsMuted)
+                  @if ($preferences->mute_all)
                     <path
                       stroke-linecap="round"
                       stroke-linejoin="round"
@@ -103,10 +105,10 @@
                 </svg>
                 <div>
                   <p class="text-sm font-medium text-gray-900 dark:text-white">
-                    Email Notifications
+                    Mute All Personal Notifications
                   </p>
                   <p class="text-xs text-gray-500 dark:text-gray-400">
-                    {{ $this->isNotificationsMuted ? 'Currently muted' : 'Currently active' }}
+                    {{ $preferences->mute_all ? "Currently muted" : "Currently active" }}
                   </p>
                 </div>
               </div>
@@ -114,13 +116,47 @@
                 <input
                   type="checkbox"
                   class="peer sr-only"
-                  wire:click="toggleNotifications"
-                  {{ ! $this->isNotificationsMuted ? 'checked' : '' }}
+                  wire:click="toggleMuteAll"
+                  {{ $preferences->mute_all ? "checked" : "" }}
                 />
                 <div
                   class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700"
                 ></div>
               </label>
+            </div>
+
+            {{-- Individual Preference Toggles --}}
+            <div
+              class="space-y-3 border-t border-gray-200 pt-4 dark:border-gray-700"
+            >
+              @foreach ($this->preferenceKeys as $key => $label)
+                <div
+                  class="@if ($preferences->mute_all) opacity-50 @endif flex items-center justify-between"
+                >
+                  <label
+                    class="{{ $preferences->mute_all ? "text-gray-400 dark:text-gray-600" : "text-gray-900 dark:text-white" }} text-sm font-medium"
+                  >
+                    {{ $label }}
+                  </label>
+                  <label
+                    class="{{ $preferences->mute_all ? "cursor-not-allowed" : "cursor-pointer" }} relative inline-flex items-center"
+                  >
+                    <input
+                      type="checkbox"
+                      class="peer sr-only"
+                      wire:click="updatePreference('{{ $key }}')"
+                      {{ $preferences->$key ? "checked" : "" }}
+                      @disabled($preferences->mute_all)
+                    />
+                    <div
+                      class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:opacity-50 dark:bg-gray-700"
+                      @if (! $preferences->mute_all)
+                          :class="{ 'peer-checked:bg-blue-600': {{ $preferences->$key ? "true" : "false" }} }"
+                      @endif
+                    ></div>
+                  </label>
+                </div>
+              @endforeach
             </div>
           </div>
         </div>

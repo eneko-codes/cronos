@@ -75,10 +75,11 @@ class UserDetailsModal extends Component
       !$user->do_not_track && Gate::allows('disableTracking', $user);
     $this->canEnableTracking =
       $user->do_not_track && Gate::allows('enableTracking', $user);
-    $this->canMuteNotifications =
-      !$user->muted_notifications && Gate::allows('muteNotifications', $user);
-    $this->canUnmuteNotifications =
-      $user->muted_notifications && Gate::allows('unmuteNotifications', $user);
+
+    // Use the new preferences relationship and policies
+    $this->isMuted = $user->notificationPreferences?->mute_all ?? false;
+    $this->canMuteNotifications = Gate::allows('muteNotifications', $user);
+    $this->canUnmuteNotifications = Gate::allows('unmuteNotifications', $user);
   }
 
   protected function prepareDetails($user): void
@@ -97,7 +98,8 @@ class UserDetailsModal extends Component
       : '-';
     $this->isAdmin = $user->is_admin;
     $this->isDoNotTrack = $user->do_not_track;
-    $this->isMuted = $user->muted_notifications;
+    // Use the new preferences relationship
+    $this->isMuted = $user->notificationPreferences?->mute_all ?? false;
 
     $this->details = [
       'Email' => $this->email,
@@ -205,9 +207,10 @@ class UserDetailsModal extends Component
     $user = User::findOrFail($this->userId);
     $this->authorize('muteNotifications', $user);
 
-    if (!$user->muted_notifications) {
-      $user->muted_notifications = true;
-      $user->save();
+    // Update the preference record
+    $preferences = $user->notificationPreferences()->firstOrCreate(); // Ensure record exists
+    if (!$preferences->mute_all) {
+      $preferences->update(['mute_all' => true]);
 
       // Update local state and permissions
       $this->isMuted = true;
@@ -222,6 +225,8 @@ class UserDetailsModal extends Component
         message: 'Notifications muted for ' . $this->name . ' successfully.',
         variant: 'success'
       );
+      // Dispatch event to potentially refresh user list/dashboard view
+      $this->dispatch('user-preferences-updated', $user->id);
     }
   }
 
@@ -230,9 +235,10 @@ class UserDetailsModal extends Component
     $user = User::findOrFail($this->userId);
     $this->authorize('unmuteNotifications', $user);
 
-    if ($user->muted_notifications) {
-      $user->muted_notifications = false;
-      $user->save();
+    // Update the preference record
+    $preferences = $user->notificationPreferences()->firstOrCreate(); // Ensure record exists
+    if ($preferences->mute_all) {
+      $preferences->update(['mute_all' => false]);
 
       // Update local state and permissions
       $this->isMuted = false;
@@ -244,6 +250,8 @@ class UserDetailsModal extends Component
         message: 'Notifications enabled for ' . $this->name . ' successfully.',
         variant: 'success'
       );
+      // Dispatch event to potentially refresh user list/dashboard view
+      $this->dispatch('user-preferences-updated', $user->id);
     }
   }
 

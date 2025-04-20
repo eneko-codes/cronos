@@ -8,10 +8,12 @@ use App\Notifications\WelcomeEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Collection;
 use App\Models\Setting;
+use App\Models\UserNotificationPreference;
 
 /**
  * User Model
@@ -33,7 +35,6 @@ use App\Models\Setting;
  * @property int|null $systempin_id ID of the user in Systempin
  * @property int|null $department_id Foreign key to departments table
  * @property bool $is_admin Whether the user has admin privileges
- * @property bool $muted_notifications Whether notifications are muted for this user
  * @property bool $do_not_track Whether the user's data should be excluded from tracking operations
  * @property \Carbon\Carbon|null $email_verified_at When email was verified
  * @property \Carbon\Carbon|null $created_at When record was created
@@ -86,7 +87,6 @@ class User extends Authenticatable
     'proofhub_id',
     'systempin_id',
     'department_id',
-    'muted_notifications',
   ];
 
   /**
@@ -118,7 +118,6 @@ class User extends Authenticatable
   protected $casts = [
     'is_admin' => 'boolean',
     'do_not_track' => 'boolean',
-    'muted_notifications' => 'boolean',
     'email_verified_at' => 'datetime',
     'created_at' => 'datetime',
     'updated_at' => 'datetime',
@@ -144,11 +143,15 @@ class User extends Authenticatable
   protected static function booted()
   {
     static::created(function (User $user) {
-      // Only notify if an email is present, welcome_email is enabled, and notifications aren't muted
+      // Create default notification preferences for the new user
+      $user->notificationPreferences()->create();
+
+      // Only notify if an email is present, welcome_email is enabled, and notifications aren't globally muted
+      // Individual preference check will happen within the notification itself or channel
       if (
         $user->email &&
-        (bool) Setting::getValue('notification.welcome_email.enabled', true) &&
-        $user->shouldReceiveNotifications()
+        (bool) Setting::getValue('notification.welcome_email.enabled', true)
+        // Global check can be added here if needed, e.g., && (bool) Setting::getValue('notifications.global_enabled', true)
       ) {
         $user->notify(new WelcomeEmail($user));
       }
@@ -176,6 +179,9 @@ class User extends Authenticatable
         $timeEntry->delete();
       }
 
+      // Delete the related notification preferences record
+      $user->notificationPreferences()->delete();
+
       // Detach belongsToMany relations individually to emit model events
       foreach ($user->projects as $project) {
         $user->projects()->detach($project->id);
@@ -186,7 +192,7 @@ class User extends Authenticatable
       }
 
       foreach ($user->tasks as $task) {
-        $user->tasks()->detach($task->proofhub_task_id);
+        $task->tasks()->detach($task->proofhub_task_id);
       }
     });
 
@@ -223,7 +229,7 @@ class User extends Authenticatable
         }
 
         foreach ($user->tasks as $task) {
-          $user->tasks()->detach($task->id);
+          $task->tasks()->detach($task->proofhub_task_id);
         }
       }
     });
@@ -236,7 +242,7 @@ class User extends Authenticatable
    */
   public function shouldReceiveNotifications(): bool
   {
-    return !$this->muted_notifications;
+    return true; // Placeholder, actual check will involve global setting + user preference
   }
 
   /**
@@ -498,5 +504,13 @@ class User extends Authenticatable
   public function isAdmin(): bool
   {
     return (bool) $this->is_admin;
+  }
+
+  /**
+   * Get the user's notification preferences.
+   */
+  public function notificationPreferences(): HasOne
+  {
+    return $this->hasOne(UserNotificationPreference::class)->withDefault();
   }
 }

@@ -36,21 +36,20 @@
           </a>
         </div>
 
-        <!-- New Telescope Pruning Settings Form -->
-        <form
-          wire:submit.prevent="updateTelescopePruneSettings"
+        <!-- Telescope Pruning Settings (No Form or Save Button) -->
+        <div
           class="mt-6 space-y-4 border-t border-gray-300 pt-4 dark:border-gray-600"
         >
-          @csrf
           <div>
             <label
+              for="telescopePruneFrequencySelect"
               class="inline-flex flex-row items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300"
             >
               Prune Telescope Data Frequency
               <x-tooltip>
                 <x-slot name="text">
                   How often should old Telescope entries be automatically
-                  deleted?
+                  deleted? Changes saved automatically.
                 </x-slot>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -69,7 +68,8 @@
               </x-tooltip>
             </label>
             <select
-              wire:model="telescopePruneFrequency"
+              id="telescopePruneFrequencySelect"
+              wire:model.live="telescopePruneFrequency"
               class="mt-1 block w-full rounded-md border border-gray-300 bg-gray-200 px-2 text-sm dark:border-gray-700 dark:bg-gray-700"
             >
               @foreach ($telescopeFrequencyOptions as $value => $label)
@@ -77,25 +77,7 @@
               @endforeach
             </select>
           </div>
-
-          <div class="flex justify-end">
-            <x-button
-              wire:target="updateTelescopePruneSettings"
-              type="submit"
-              size="md"
-              variant="success"
-            >
-              <span wire:target="updateTelescopePruneSettings">
-                Save Prune Settings
-              </span>
-              <x-spinner
-                size="4"
-                wire:loading.delay
-                wire:target="updateTelescopePruneSettings"
-              />
-            </x-button>
-          </div>
-        </form>
+        </div>
       </div>
     </section>
   @endif
@@ -164,30 +146,26 @@
           <x-spinner size="4" wire:loading wire:target="pingProofhub" />
         </x-button>
         <x-button
-          wire:click=""
-          wire:target=""
+          wire:click="pingSystemPin"
+          wire:target="pingSystemPin"
           type="button"
           size="md"
           variant="info"
           class="w-full"
         >
-          <span wire:target="">Ping SystemPin</span>
-          <x-spinner size="4" wire:loading wire:target="" />
+          <span wire:target="pingSystemPin">Ping SystemPin</span>
+          <x-spinner size="4" wire:loading wire:target="pingSystemPin" />
         </x-button>
       </div>
     </div>
   </section>
 
-  <!-- Scheduled Job Frequencies Form -->
+  <!-- Data Synchronization Settings -->
   <section class="relative sm:col-span-2 lg:col-span-2">
     <div
       class="h-full rounded-xl border border-gray-200 bg-gray-100 p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
     >
-      <form
-        wire:submit.prevent="updateSyncFrequency"
-        class="flex h-full flex-col justify-between"
-      >
-        @csrf
+      <div class="flex h-full flex-col justify-between">
         <div class="space-y-4">
           <div class="flex flex-col items-start gap-1 text-lg font-bold">
             <div class="inline-flex flex-row items-center gap-2">
@@ -208,11 +186,12 @@
             </div>
             <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
               Configure how often the system synchronizes all data from
-              connected APIs.
+              connected APIs. Changes saved automatically.
             </p>
           </div>
           <div class="flex items-center justify-between">
             <label
+              for="syncFrequencySelect"
               class="inline-flex flex-row items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300"
             >
               Data Synchronization Frequency
@@ -220,7 +199,7 @@
                 <x-slot name="text">
                   Determines how often the system runs a complete data
                   synchronization process from all connected services to update
-                  local database
+                  local database.
                 </x-slot>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -239,7 +218,8 @@
               </x-tooltip>
             </label>
             <select
-              wire:model="syncFrequency"
+              id="syncFrequencySelect"
+              wire:model.live="syncFrequency"
               class="block w-40 rounded-md border border-gray-300 bg-gray-200 px-2 text-sm dark:border-gray-700 dark:bg-gray-700"
             >
               @foreach ($syncFrequencyOptions as $value => $label)
@@ -248,22 +228,7 @@
             </select>
           </div>
         </div>
-        <div class="mt-4 flex justify-end">
-          <x-button
-            wire:target="updateSyncFrequency"
-            type="submit"
-            size="md"
-            variant="success"
-          >
-            <span wire:target="updateSyncFrequency">Save Changes</span>
-            <x-spinner
-              size="4"
-              wire:loading.delay
-              wire:target="updateSyncFrequency"
-            />
-          </x-button>
-        </div>
-      </form>
+      </div>
     </div>
   </section>
 
@@ -272,8 +237,7 @@
     <div
       class="h-full rounded-xl border border-gray-200 bg-gray-100 p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
     >
-      <form wire:submit.prevent="updateNotificationToggles" class="space-y-4">
-        @csrf
+      <div class="space-y-4">
         <div class="flex flex-col items-start gap-1 text-lg font-bold">
           <div class="inline-flex flex-row items-center gap-2">
             <svg
@@ -290,36 +254,39 @@
                 d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0M3.124 7.5A8.969 8.969 0 0 1 5.292 3m13.416 0a8.969 8.969 0 0 1 2.168 4.5"
               />
             </svg>
-
             <h2>Notification Settings</h2>
           </div>
           <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
-            Control which email notifications are sent by the application.
+            Control system-wide email notifications. Changes saved
+            automatically.
             <span class="mt-2 block space-y-1">
               <span
                 class="block font-medium text-green-600 dark:text-green-400"
               >
-                {{ $activeUsers }} users with notifications enabled out of
-                {{ $totalUsers }}.
+                {{ $activeUsers }} users can receive notifications out of
+                {{ $totalUsers }}. (Individual preferences apply)
               </span>
               <span
                 class="block font-medium text-green-600 dark:text-green-400"
               >
-                {{ $activeAdmins }} admins will receive system alerts.
+                {{ $activeAdmins }} admins will receive system alerts if
+                enabled.
               </span>
             </span>
           </p>
         </div>
 
-        <!-- Toggle notification 'Welcome Email' -->
-        <div class="flex items-center justify-between">
+        <div
+          class="flex items-center justify-between rounded-md bg-gray-50 p-3 dark:bg-gray-700"
+        >
           <label
-            class="inline-flex items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300"
+            class="inline-flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-200"
           >
-            Welcome Email
+            Enable All Notifications Globally
             <x-tooltip>
               <x-slot name="text">
-                Email sent to new users when their account is created
+                Master switch for all non-login email notifications. Users can
+                further customize their preferences in the sidebar.
               </x-slot>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -341,244 +308,110 @@
             <input
               type="checkbox"
               class="peer sr-only"
-              wire:model="welcomeEmailEnabled"
+              wire:model.live="globalNotificationsEnabled"
             />
             <div
-              class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700"
+              class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-disabled:opacity-50 dark:bg-gray-700 dark:after:bg-gray-500"
             ></div>
           </label>
         </div>
 
-        <!-- Toggle notification 'API Down Warning' -->
-        <div class="flex items-center justify-between">
-          <label
-            class="inline-flex items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300"
+        <div
+          class="space-y-4 border-t border-gray-300 pt-4 dark:border-gray-600"
+        >
+          <div
+            class="@if (!$globalNotificationsEnabled) opacity-50 @endif flex items-center justify-between"
           >
-            API Down Email
-            <x-tooltip>
-              <x-slot name="text">
-                Notification sent to administrators when an API connection fails
-              </x-slot>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="size-3"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-                />
-              </svg>
-            </x-tooltip>
-            <x-badge variant="primary" size="sm" class="ml-2">Admins</x-badge>
-          </label>
-          <label class="relative inline-flex cursor-pointer items-center">
-            <input
-              type="checkbox"
-              class="peer sr-only"
-              wire:model="apiDownWarningMailEnabled"
-            />
-            <div
-              class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700"
-            ></div>
-          </label>
-        </div>
+            <label
+              class="{{ ! $globalNotificationsEnabled ? "text-gray-400 dark:text-gray-500" : "text-gray-600 dark:text-gray-300" }} inline-flex items-center gap-1 text-sm font-medium"
+            >
+              Welcome Email
+              <x-tooltip>
+                <x-slot name="text">
+                  Email sent to new users when their account is created
+                </x-slot>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                  class="size-3"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+                  />
+                </svg>
+              </x-tooltip>
+            </label>
+            <label
+              class="{{ ! $globalNotificationsEnabled ? "cursor-not-allowed" : "cursor-pointer" }} relative inline-flex items-center"
+            >
+              <input
+                type="checkbox"
+                class="peer sr-only"
+                wire:model.live="welcomeEmailEnabled"
+                @disabled(! $globalNotificationsEnabled)
+              />
+              <div
+                class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:opacity-50 dark:bg-gray-700 dark:after:bg-gray-500"
+                @if ($globalNotificationsEnabled)
+                    :class="{ 'peer-checked:bg-blue-600': {{ $welcomeEmailEnabled ? "true" : "false" }} }"
+                @endif
+              ></div>
+            </label>
+          </div>
 
-        <!-- Toggle notification 'User Activity Alerts' -->
-        <div class="flex items-center justify-between">
-          <label
-            class="inline-flex items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300"
+          <div
+            class="@if (!$globalNotificationsEnabled) opacity-50 @endif flex items-center justify-between"
           >
-            Activity Alerts
-            <x-tooltip>
-              <x-slot name="text">
-                Send alerts about missing time entries or unusual attendance
-                patterns
-              </x-slot>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="size-3"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-                />
-              </svg>
-            </x-tooltip>
-            <x-badge variant="primary" size="sm" class="ml-2">Managers</x-badge>
-          </label>
-          <label class="relative inline-flex cursor-pointer items-center">
-            <input type="checkbox" class="peer sr-only" disabled />
-            <div
-              class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700"
-            ></div>
-          </label>
+            <label
+              class="{{ ! $globalNotificationsEnabled ? "text-gray-400 dark:text-gray-500" : "text-gray-600 dark:text-gray-300" }} inline-flex items-center gap-1 text-sm font-medium"
+            >
+              API Down Email
+              <x-tooltip>
+                <x-slot name="text">
+                  Notification sent to administrators when an API connection
+                  fails
+                </x-slot>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                  class="size-3"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+                  />
+                </svg>
+              </x-tooltip>
+              <x-badge variant="primary" size="sm" class="ml-2">Admins</x-badge>
+            </label>
+            <label
+              class="{{ ! $globalNotificationsEnabled ? "cursor-not-allowed" : "cursor-pointer" }} relative inline-flex items-center"
+            >
+              <input
+                type="checkbox"
+                class="peer sr-only"
+                wire:model.live="apiDownWarningMailEnabled"
+                @disabled(! $globalNotificationsEnabled)
+              />
+              <div
+                class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:opacity-50 dark:bg-gray-700 dark:after:bg-gray-500"
+                @if ($globalNotificationsEnabled)
+                    :class="{ 'peer-checked:bg-blue-600': {{ $apiDownWarningMailEnabled ? "true" : "false" }} }"
+                @endif
+              ></div>
+            </label>
+          </div>
         </div>
-
-        <!-- Toggle notification 'Schedule Changes' -->
-        <div class="flex items-center justify-between">
-          <label
-            class="inline-flex items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300"
-          >
-            Schedule Notifications
-            <x-tooltip>
-              <x-slot name="text">
-                Notify users about schedule changes and schedule conflicts
-              </x-slot>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="size-3"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-                />
-              </svg>
-            </x-tooltip>
-          </label>
-          <label class="relative inline-flex cursor-pointer items-center">
-            <input type="checkbox" class="peer sr-only" disabled />
-            <div
-              class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700"
-            ></div>
-          </label>
-        </div>
-
-        <!-- Toggle notification 'Time Entry Approvals' -->
-        <div class="flex items-center justify-between">
-          <label
-            class="inline-flex items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300"
-          >
-            Time Entry Notifications
-            <x-tooltip>
-              <x-slot name="text">
-                Notify about time entry approvals, rejections, and entries
-                requiring review
-              </x-slot>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="size-3"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-                />
-              </svg>
-            </x-tooltip>
-          </label>
-          <label class="relative inline-flex cursor-pointer items-center">
-            <input type="checkbox" class="peer sr-only" disabled />
-            <div
-              class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700"
-            ></div>
-          </label>
-        </div>
-
-        <!-- Toggle notification 'System Maintenance' -->
-        <div class="flex items-center justify-between">
-          <label
-            class="inline-flex items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300"
-          >
-            Maintenance Alerts
-            <x-tooltip>
-              <x-slot name="text">
-                Notify users about scheduled maintenance and system updates
-              </x-slot>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="size-3"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-                />
-              </svg>
-            </x-tooltip>
-            <x-badge variant="primary" size="sm" class="ml-2">Admins</x-badge>
-          </label>
-          <label class="relative inline-flex cursor-pointer items-center">
-            <input type="checkbox" class="peer sr-only" disabled />
-            <div
-              class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700"
-            ></div>
-          </label>
-        </div>
-
-        <!-- Toggle notification 'Report Generation' -->
-        <div class="flex items-center justify-between">
-          <label
-            class="inline-flex items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300"
-          >
-            Report Notifications
-            <x-tooltip>
-              <x-slot name="text">
-                Notify when scheduled reports are generated and ready for
-                viewing
-              </x-slot>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="size-3"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-                />
-              </svg>
-            </x-tooltip>
-          </label>
-          <label class="relative inline-flex cursor-pointer items-center">
-            <input type="checkbox" class="peer sr-only" disabled />
-            <div
-              class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700"
-            ></div>
-          </label>
-        </div>
-
-        <div class="mt-4 flex justify-end">
-          <x-button
-            wire:target="updateNotificationToggles"
-            type="submit"
-            size="md"
-            variant="success"
-          >
-            <span wire:target="updateNotificationToggles">Save Changes</span>
-            <x-spinner
-              size="4"
-              wire:loading.delay
-              wire:target="updateNotificationToggles"
-            />
-          </x-button>
-        </div>
-      </form>
+      </div>
     </div>
   </section>
 
@@ -587,8 +420,7 @@
     <div
       class="h-full rounded-xl border border-gray-200 bg-gray-100 p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
     >
-      <form wire:submit.prevent="updateDataRetentionSettings" class="space-y-4">
-        @csrf
+      <div class="space-y-4">
         <div class="flex flex-col items-start gap-1 text-lg font-bold">
           <div class="inline-flex flex-row items-center gap-2">
             <svg
@@ -598,21 +430,22 @@
               viewBox="0 0 16 16"
             >
               <path
-                d="M4 .5a.5.5 0 0 0-1 0V1H2a2 2 0 0 0-2 2v1h16V3a2 2 0 0 0-2-2h-1V.5a.5.5 0 0 0-1 0V1H4zM16 14V5H0v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2M6.854 8.146 8 9.293l1.146-1.147a.5.5 0 1 1 .708.708L8.707 10l1.147 1.146a.5.5 0 0 1-.708.708L8 10.707l-1.146 1.147a.5.5 0 0 1-.708-.708L7.293 10 6.146 8.854a.5.5 0 1 1 .708-.708"
+                d="M4 .5a.5.5 0 0 0-1 0V1H2a2 2 0 0 0-2 2v1h16V3a2 2 0 0 0-2-2h-1V.5a.5.5 0 0 0-1 0V1H4zM16 14V5H0v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2M6.854 8.146 8 9.293l1.146-1.147a.5.5 0 1 1 .708.708L8.707 10l1.147 1.146a.5.5 0 0 1-.708.708L8 10.707l-1.146 1.147a.5.5 0 0 1-.708-.708"
               />
             </svg>
 
             <h2>Data Retention Settings</h2>
           </div>
           <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
-            Configure automatic deletion of old time-related user data.
+            Configure automatic deletion of old time-related user data. Changes
+            saved automatically.
           </p>
         </div>
 
-        <!-- Single data retention period selector -->
         <div class="mt-4">
           <div class="flex items-center justify-between">
             <label
+              for="dataRetentionSelect"
               class="flex flex-row items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300"
             >
               Retain time-related data for
@@ -639,7 +472,8 @@
               </x-tooltip>
             </label>
             <select
-              wire:model="dataRetentionGlobalPeriod"
+              id="dataRetentionSelect"
+              wire:model.live="dataRetentionGlobalPeriod"
               class="block w-40 rounded-md border border-gray-300 bg-gray-200 px-2 text-sm dark:border-gray-700 dark:bg-gray-700"
             >
               @foreach ($dataRetentionOptions as $days => $label)
@@ -648,30 +482,30 @@
             </select>
           </div>
 
-          <!-- Show affected data types (Using a simplified message now) -->
           <div class="mt-4 rounded-md bg-gray-50 p-3 dark:bg-gray-700">
             <p class="text-xs font-medium text-gray-600 dark:text-gray-300">
               This setting affects Time Entries, Attendances, Schedules, and
               Leaves.
             </p>
           </div>
+
+          <div class="mt-4">
+            <x-button
+              wire:click="runDataRetention"
+              wire:target="runDataRetention"
+              wire:confirm="Are you sure you want to run the data purge now? This cannot be undone."
+              type="button"
+              size="sm"
+              variant="danger"
+              :disabled="!$dataRetentionEnabled"
+              class="w-full disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <span wire:target="runDataRetention">Run Purge Now</span>
+              <x-spinner size="4" wire:loading wire:target="runDataRetention" />
+            </x-button>
+          </div>
         </div>
-        <div class="mt-4 flex justify-end">
-          <x-button
-            wire:target="updateDataRetentionSettings"
-            type="submit"
-            size="md"
-            variant="success"
-          >
-            <span wire:target="updateDataRetentionSettings">Save Changes</span>
-            <x-spinner
-              size="4"
-              wire:loading.delay
-              wire:target="updateDataRetentionSettings"
-            />
-          </x-button>
-        </div>
-      </form>
+      </div>
     </div>
   </section>
 </div>

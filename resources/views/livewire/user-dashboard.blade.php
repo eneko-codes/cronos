@@ -17,7 +17,7 @@
         </x-tooltip>
       @endif
 
-      @if ($user->muted_notifications)
+      @if ($user->notificationPreferences?->mute_all)
         <x-tooltip text="User notifications are currently muted">
           <x-badge size="sm" variant="alert">Muted</x-badge>
         </x-tooltip>

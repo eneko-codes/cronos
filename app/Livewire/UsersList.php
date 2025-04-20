@@ -66,7 +66,10 @@ class UsersList extends Component
       )
       ->when(
         $this->filter === 'muted',
-        fn($query) => $query->where('muted_notifications', true)
+        fn($query) => $query->whereHas(
+          'notificationPreferences',
+          fn($prefQuery) => $prefQuery->where('mute_all', true)
+        )
       )
       ->orderBy('name')
       ->paginate($this->itemsPerPage);
@@ -76,7 +79,10 @@ class UsersList extends Component
       'admins' => User::where('is_admin', true)->count(),
       'employees' => User::where('is_admin', false)->count(),
       'not_tracked' => User::notTrackable()->count(),
-      'muted' => User::where('muted_notifications', true)->count(),
+      'muted' => User::whereHas(
+        'notificationPreferences',
+        fn($query) => $query->where('mute_all', true)
+      )->count(),
     ];
 
     return view('livewire.users-list', [

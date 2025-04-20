@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Services\DesktimeApiCalls;
 use App\Services\OdooApiCalls;
 use App\Services\ProofhubApiCalls;
+use App\Services\SystemPinApiCalls;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -30,6 +31,11 @@ class AppServiceProvider extends ServiceProvider
     // Register DesktimeApiCalls as a singleton
     $this->app->singleton(DesktimeApiCalls::class, function () {
       return new DesktimeApiCalls();
+    });
+
+    // Register SystemPinApiCalls as a singleton
+    $this->app->singleton(SystemPinApiCalls::class, function () {
+      return new SystemPinApiCalls();
     });
   }
 

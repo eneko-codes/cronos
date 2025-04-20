@@ -19,6 +19,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Models\Setting;
 
 /**
  * Class BaseSyncJob
@@ -151,30 +152,49 @@ abstract class BaseSyncJob implements ShouldQueue, ShouldBeEncrypted
 
           if ($isDown) {
             $errorMessage = $pingResult['message'] ?? 'API health check failed';
-            $adminUsers = User::where('is_admin', true)
-              ->where('muted_notifications', false)
-              ->get();
+            // Admins should receive API down warnings unless globally disabled
+            $adminUsers = User::where('is_admin', true)->get();
 
-            $adminUsers->each(function ($admin) use (
-              $serviceName,
-              $errorMessage
+            // Check global setting before notifying
+            if (
+              (bool) Setting::getValue(
+                'notification.api_down_warning_mail.enabled',
+                true
+              ) &&
+              (bool) Setting::getValue('notifications.global_enabled', true)
             ) {
-              $admin->notify(new ApiDownWarning($serviceName, $errorMessage));
-            });
+              $adminUsers->each(function ($admin) use (
+                $serviceName,
+                $errorMessage
+              ) {
+                // Individual mute check isn't strictly necessary for critical alerts like API down,
+                // but could be added: if (!$admin->notificationPreferences->mute_all)
+                $admin->notify(new ApiDownWarning($serviceName, $errorMessage));
+              });
+            }
           }
         } catch (Exception $e) {
-          $adminUsers = User::where('is_admin', true)
-            ->where('muted_notifications', false)
-            ->get();
+          // Admins should receive API down warnings unless globally disabled
+          $adminUsers = User::where('is_admin', true)->get();
 
-          $adminUsers->each(function ($admin) use ($serviceName, $e) {
-            $admin->notify(
-              new ApiDownWarning(
-                $serviceName,
-                "Health check failed: {$e->getMessage()}"
-              )
-            );
-          });
+          // Check global setting before notifying
+          if (
+            (bool) Setting::getValue(
+              'notification.api_down_warning_mail.enabled',
+              true
+            ) &&
+            (bool) Setting::getValue('notifications.global_enabled', true)
+          ) {
+            $adminUsers->each(function ($admin) use ($serviceName, $e) {
+              // Individual mute check isn't strictly necessary here either.
+              $admin->notify(
+                new ApiDownWarning(
+                  $serviceName,
+                  "Health check failed: {$e->getMessage()}"
+                )
+              );
+            });
+          }
         }
       }
     }

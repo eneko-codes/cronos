@@ -337,7 +337,6 @@ class DatabaseSeeder extends Seeder
         'email' => 'john@example.com',
         'department_id' => $this->departments[0]->odoo_department_id, // Engineering
         'is_admin' => true, // Admin user
-        'muted_notifications' => false,
       ],
       [
         'name' => 'Jane Designer',

@@ -2,11 +2,14 @@
 
 namespace App\Livewire;
 
+use App\Models\User;
+use App\Models\UserNotificationPreference;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
-use App\Models\User;
+use Exception;
 
 class Sidebar extends Component
 {
@@ -19,6 +22,42 @@ class Sidebar extends Component
    * The currently active tab: 'settings'
    */
   public string $activeTab = 'settings';
+
+  // Holds the UserNotificationPreference model instance for the logged-in user
+  public ?UserNotificationPreference $preferences = null;
+
+  // Define the available user-specific notification keys and their labels
+  #[Computed]
+  public function preferenceKeys(): array
+  {
+    return [
+      'schedule_change' => 'Schedule Changes',
+      'admin_promotion' => 'Admin Promotion',
+      'weekly_user_report' => 'Weekly Personal Report',
+      'leave_reminder' => 'Leave Reminders',
+      // Add new keys/labels here
+    ];
+  }
+
+  public function mount(): void
+  {
+    $this->loadPreferences();
+  }
+
+  /**
+   * Load (or reload) the user's notification preferences.
+   */
+  public function loadPreferences(): void
+  {
+    /** @var User $user */
+    $user = Auth::user();
+    $this->preferences = $user->notificationPreferences; // Load the relationship
+
+    // Ensure preferences exist
+    if (!$this->preferences?->exists) {
+      $this->preferences = $user->notificationPreferences()->create();
+    }
+  }
 
   /**
    * Toggle the sidebar visibility
@@ -34,38 +73,77 @@ class Sidebar extends Component
   #[On('toggle-sidebar')]
   public function toggleSidebar()
   {
+    if (!$this->isOpen) {
+      $this->loadPreferences(); // Reload preferences when opening
+    }
     $this->isOpen = !$this->isOpen;
   }
 
   /**
-   * Compute property to check if notifications are muted for the current user.
-   *
-   * @return bool
+   * Toggle the user's overall mute state.
    */
-  #[Computed]
-  public function isNotificationsMuted(): bool
+  public function toggleMuteAll(): void
   {
-    return Auth::user()->muted_notifications;
+    if (!$this->preferences) {
+      return;
+    }
+
+    try {
+      $this->preferences->mute_all = !$this->preferences->mute_all;
+      $this->preferences->save();
+
+      $this->dispatch(
+        'add-toast',
+        message: $this->preferences->mute_all
+          ? 'All personal notifications muted.'
+          : 'Personal notifications enabled.',
+        variant: 'success'
+      );
+    } catch (Exception $e) {
+      Log::error('Failed to update mute_all preference', [
+        'user_id' => Auth::id(),
+        'error' => $e->getMessage(),
+      ]);
+      $this->dispatch(
+        'add-toast',
+        message: 'Failed to update preference.',
+        variant: 'error'
+      );
+      $this->loadPreferences(); // Reload to revert optimistic UI
+    }
   }
 
   /**
-   * Toggle the mute state of notifications for the current user.
+   * Update a specific notification preference.
+   *
+   * @param string $key The preference key (e.g., 'schedule_change')
    */
-  public function toggleNotifications(): void
+  public function updatePreference(string $key): void
   {
-    /** @var User $user */
-    $user = Auth::user();
-    $user->muted_notifications = !$user->muted_notifications;
-    $user->save();
+    if (!$this->preferences || !array_key_exists($key, $this->preferenceKeys)) {
+      return;
+    }
 
-    // Show a toast notification
-    $this->dispatch(
-      'add-toast',
-      message: $user->muted_notifications
-        ? 'Notifications muted successfully.'
-        : 'Notifications enabled successfully.',
-      variant: 'success'
-    );
+    try {
+      // Toggle the boolean value
+      $this->preferences->$key = !$this->preferences->$key;
+      $this->preferences->save();
+
+      // Optional: Add a toast for individual preference changes
+      // $this->dispatch('add-toast', message: 'Preference updated.', variant: 'success');
+    } catch (Exception $e) {
+      Log::error('Failed to update notification preference', [
+        'user_id' => Auth::id(),
+        'key' => $key,
+        'error' => $e->getMessage(),
+      ]);
+      $this->dispatch(
+        'add-toast',
+        message: 'Failed to update preference.',
+        variant: 'error'
+      );
+      $this->loadPreferences(); // Reload to revert optimistic UI
+    }
   }
 
   /**

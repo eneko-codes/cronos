@@ -3,6 +3,8 @@
 use App\Models\Setting;
 use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\Facades\Log;
+use InvalidArgumentException;
+use Exception;
 
 /**
  * Schedule the `telescope:prune` command based on the
@@ -27,7 +29,7 @@ try {
       'Invalid Telescope prune frequency configured: ' . $frequency
     ),
   };
-} catch (\InvalidArgumentException $e) {
+} catch (InvalidArgumentException $e) {
   Log::error(
     'Invalid Telescope prune frequency configuration: ' . $e->getMessage(),
     [
@@ -37,7 +39,7 @@ try {
     ]
   );
   throw $e; // Rethrow to make the configuration error visible.
-} catch (\Exception $e) {
+} catch (Exception $e) {
   // Log other scheduling errors but allow subsequent schedules to run.
   Log::error('Failed to schedule Telescope pruning: ' . $e->getMessage(), [
     'exception' => $e,
@@ -100,14 +102,14 @@ try {
       ),
     };
   }
-} catch (\InvalidArgumentException $e) {
+} catch (InvalidArgumentException $e) {
   Log::error('Invalid sync frequency configuration: ' . $e->getMessage(), [
     'frequency' => $syncFrequency ?? 'not fetched',
     'exception' => $e,
     'trace' => $e->getTraceAsString(),
   ]);
   throw $e; // Rethrow to make the configuration error visible.
-} catch (\Exception $e) {
+} catch (Exception $e) {
   // Log other scheduling errors but allow subsequent schedules to run.
   Log::error('Failed to schedule sync jobs: ' . $e->getMessage(), [
     'frequency' => $syncFrequency ?? 'not fetched',

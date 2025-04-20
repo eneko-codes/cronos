@@ -3,8 +3,6 @@
 use App\Models\Setting;
 use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\Facades\Log;
-use InvalidArgumentException;
-use Exception;
 
 /**
  * Schedule the `telescope:prune` command based on the

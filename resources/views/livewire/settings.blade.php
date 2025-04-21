@@ -303,10 +303,17 @@
               </svg>
             </x-tooltip>
           </label>
-          <x-toggle-button
-            id="globalNotificationsToggle"
-            wire:model.change="globalNotificationsEnabled"
-          />
+          <label class="relative inline-flex cursor-pointer items-center">
+            <input
+              id="globalNotificationsToggle"
+              type="checkbox"
+              class="peer sr-only"
+              wire:model.change="globalNotificationsEnabled"
+            />
+            <div
+              class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-disabled:opacity-50 dark:bg-gray-700 dark:after:bg-gray-500"
+            ></div>
+          </label>
         </div>
 
         <div
@@ -316,7 +323,7 @@
             class="@if (!$globalNotificationsEnabled) opacity-50 @endif flex items-center justify-between"
           >
             <label
-              class="{{ ! $globalNotificationsEnabled ? 'text-gray-400 dark:text-gray-500' : 'text-gray-600 dark:text-gray-300' }} inline-flex items-center gap-1 text-sm font-medium"
+              class="{{ ! $globalNotificationsEnabled ? "text-gray-400 dark:text-gray-500" : "text-gray-600 dark:text-gray-300" }} inline-flex items-center gap-1 text-sm font-medium"
             >
               Welcome Email
               <x-tooltip>
@@ -339,17 +346,30 @@
                 </svg>
               </x-tooltip>
             </label>
-            <x-toggle-button
-              id="welcomeEmailToggle"
-              wire:model.change="welcomeEmailEnabled"
-            />
+            <label
+              class="{{ ! $globalNotificationsEnabled ? "cursor-not-allowed" : "cursor-pointer" }} relative inline-flex items-center"
+            >
+              <input
+                id="welcomeEmailToggle"
+                type="checkbox"
+                class="peer sr-only"
+                wire:model.change="welcomeEmailEnabled"
+                @disabled(! $globalNotificationsEnabled)
+              />
+              <div
+                class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:opacity-50 dark:bg-gray-700 dark:after:bg-gray-500"
+                @if ($globalNotificationsEnabled)
+                    :class="{ 'peer-checked:bg-blue-600': {{ $welcomeEmailEnabled ? "true" : "false" }} }"
+                @endif
+              ></div>
+            </label>
           </div>
 
           <div
             class="@if (!$globalNotificationsEnabled) opacity-50 @endif flex items-center justify-between"
           >
             <label
-              class="{{ ! $globalNotificationsEnabled ? 'text-gray-400 dark:text-gray-500' : 'text-gray-600 dark:text-gray-300' }} inline-flex items-center gap-1 text-sm font-medium"
+              class="{{ ! $globalNotificationsEnabled ? "text-gray-400 dark:text-gray-500" : "text-gray-600 dark:text-gray-300" }} inline-flex items-center gap-1 text-sm font-medium"
             >
               API Down Email
               <x-tooltip>
@@ -374,17 +394,30 @@
               </x-tooltip>
               <x-badge variant="primary" size="sm" class="ml-2">Admins</x-badge>
             </label>
-            <x-toggle-button
-              id="apiDownWarningEmailToggle"
-              wire:model.change="apiDownWarningMailEnabled"
-            />
+            <label
+              class="{{ ! $globalNotificationsEnabled ? "cursor-not-allowed" : "cursor-pointer" }} relative inline-flex items-center"
+            >
+              <input
+                id="apiDownWarningEmailToggle"
+                type="checkbox"
+                class="peer sr-only"
+                wire:model.change="apiDownWarningMailEnabled"
+                @disabled(! $globalNotificationsEnabled)
+              />
+              <div
+                class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:opacity-50 dark:bg-gray-700 dark:after:bg-gray-500"
+                @if ($globalNotificationsEnabled)
+                    :class="{ 'peer-checked:bg-blue-600': {{ $apiDownWarningMailEnabled ? "true" : "false" }} }"
+                @endif
+              ></div>
+            </label>
           </div>
 
           <div
-            class="{{ ! $globalNotificationsEnabled ? 'opacity-50' : '' }} flex items-center justify-between"
+            class="{{ ! $globalNotificationsEnabled ? "opacity-50" : "" }} flex items-center justify-between"
           >
             <label
-              class="{{ ! $globalNotificationsEnabled ? 'text-gray-400 dark:text-gray-500' : 'text-gray-600 dark:text-gray-300' }} inline-flex items-center gap-1 text-sm font-medium"
+              class="{{ ! $globalNotificationsEnabled ? "text-gray-400 dark:text-gray-500" : "text-gray-600 dark:text-gray-300" }} inline-flex items-center gap-1 text-sm font-medium"
             >
               Admin Promotion Email
               <x-tooltip>
@@ -408,10 +441,23 @@
                 </svg>
               </x-tooltip>
             </label>
-            <x-toggle-button
-              id="adminPromotionEmailToggle"
-              wire:model.change="adminPromotionEmailEnabled"
-            />
+            <label
+              class="{{ ! $globalNotificationsEnabled ? "cursor-not-allowed" : "cursor-pointer" }} relative inline-flex items-center"
+            >
+              <input
+                id="adminPromotionEmailToggle"
+                type="checkbox"
+                class="peer sr-only"
+                wire:model.change="adminPromotionEmailEnabled"
+                @disabled(! $globalNotificationsEnabled)
+              />
+              <div
+                class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:opacity-50 dark:bg-gray-700 dark:after:bg-gray-500"
+                @if ($globalNotificationsEnabled)
+                    :class="{ 'peer-checked:bg-blue-600': {{ $adminPromotionEmailEnabled ? "true" : "false" }} }"
+                @endif
+              ></div>
+            </label>
           </div>
         </div>
       </div>

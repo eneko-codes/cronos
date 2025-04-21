@@ -5,7 +5,6 @@ namespace App\Livewire;
 use App\Models\User;
 use App\Models\UserNotificationPreference;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -23,19 +22,37 @@ class Sidebar extends Component
    */
   public string $activeTab = 'settings';
 
-  // Holds the UserNotificationPreference model instance for the logged-in user
-  public ?UserNotificationPreference $preferences = null;
+  /**
+   * Bound property for the 'Mute All' toggle.
+   */
+  public bool $muteAll = false;
+
+  /**
+   * Bound property for individual notification toggles.
+   * Key: preference key (e.g., 'schedule_change'), Value: boolean state.
+   */
+  public array $individualPreferences = [];
 
   // Define the available user-specific notification keys and their labels
   #[Computed]
   public function preferenceKeys(): array
   {
-    return [
+    // Base preferences
+    $keys = [
       'schedule_change' => 'Schedule Changes',
       'weekly_user_report' => 'Weekly Personal Report',
       'leave_reminder' => 'Leave Reminders',
       // Add new keys/labels here
     ];
+
+    // Initialize individualPreferences array with default false values
+    // if it hasn't been populated yet by loadPreferences
+    foreach (array_keys($keys) as $key) {
+      if (!isset($this->individualPreferences[$key])) {
+        $this->individualPreferences[$key] = false;
+      }
+    }
+    return $keys;
   }
 
   public function mount(): void
@@ -44,17 +61,55 @@ class Sidebar extends Component
   }
 
   /**
-   * Load (or reload) the user's notification preferences.
+   * Load the user's notification preferences from the database
+   * and populate the component's public properties.
+   * This does NOT store the model instance in a property.
    */
   public function loadPreferences(): void
   {
-    /** @var User $user */
+    /** @var User|null $user */
     $user = Auth::user();
-    $this->preferences = $user->notificationPreferences; // Load the relationship
+    if (!$user) {
+      $this->muteAll = true; // Default to muted on error
+      $this->individualPreferences = [];
+      return;
+    }
 
-    // Ensure preferences exist
-    if (!$this->preferences?->exists) {
-      $this->preferences = $user->notificationPreferences()->create();
+    $preferencesModel = $user->notificationPreferences;
+
+    // Ensure preferences exist in the DB, create if not
+    if (!$preferencesModel) {
+      try {
+        $preferencesModel = $user->notificationPreferences()->create();
+        // Reload the model fresh from the DB after creation
+        $preferencesModel = $preferencesModel->fresh();
+      } catch (Exception $e) {
+        $preferencesModel = null; // Ensure it's null if creation failed
+      }
+
+      if (!$preferencesModel) {
+        $this->dispatch(
+          'add-toast',
+          message: 'Error loading notification preferences.',
+          variant: 'error'
+        );
+        $this->muteAll = true; // Default to muted state on error
+        $this->individualPreferences = [];
+        return;
+      }
+    }
+
+    // Populate public properties from the fetched model
+    $this->muteAll = (bool) $preferencesModel->mute_all;
+    $this->individualPreferences = []; // Reset before loading
+    foreach (array_keys($this->preferenceKeys) as $key) {
+      // Ensure the key exists on the model before accessing
+      $this->individualPreferences[$key] = property_exists(
+        $preferencesModel,
+        $key
+      )
+        ? (bool) $preferencesModel->$key
+        : false; // Default to false if key somehow doesn't exist on model
     }
   }
 
@@ -79,19 +134,45 @@ class Sidebar extends Component
   }
 
   /**
-   * Lifecycle hook that runs when the 'preferences.mute_all' property is updated.
+   * Lifecycle hook that runs when the 'muteAll' public property is updated.
    *
    * @param bool $value The new value of the property.
    */
-  public function updatedPreferencesMuteAll(bool $value): void
+  public function updatedMuteAll(bool $value): void
   {
-    if (!$this->preferences) {
+    /** @var User|null $user */
+    $user = Auth::user();
+    if (!$user) {
+      $this->dispatch(
+        'add-toast',
+        message: 'Error saving preference (not authenticated).',
+        variant: 'error'
+      );
+      return;
+    }
+
+    // Fetch the model *within* the update method
+    $preferencesModel = $user->notificationPreferences;
+
+    if (!$preferencesModel) {
+      // This case should ideally not happen if loadPreferences worked,
+      // but handle it defensively.
+      $this->dispatch(
+        'add-toast',
+        message: 'Error saving preference (model not found).',
+        variant: 'error'
+      );
+      // Revert public property by reloading
+      $this->loadPreferences();
       return;
     }
 
     try {
-      // The property is already updated by wire:model, just save it.
-      $this->preferences->save();
+      // Update the model attribute
+      $preferencesModel->mute_all = $value;
+      $preferencesModel->save();
+
+      // Public property $this->muteAll is already updated by Livewire binding
 
       $this->dispatch(
         'add-toast',
@@ -101,10 +182,6 @@ class Sidebar extends Component
         variant: 'success'
       );
     } catch (Exception $e) {
-      Log::error('Failed to update mute_all preference', [
-        'user_id' => Auth::id(),
-        'error' => $e->getMessage(),
-      ]);
       $this->dispatch(
         'add-toast',
         message: 'Failed to update preference.',
@@ -116,42 +193,67 @@ class Sidebar extends Component
   }
 
   /**
-   * Lifecycle hook that runs when any property within 'preferences' object is updated.
+   * Lifecycle hook that runs when a value in the 'individualPreferences' array is updated.
    *
-   * @param mixed $value The new value of the property.
-   * @param string $key The specific key within 'preferences' that was updated.
+   * @param bool $value The new value of the specific preference.
+   * @param string $key The specific key within 'individualPreferences' that was updated (e.g., 'schedule_change').
    */
-  public function updatedPreferences(mixed $value, string $key): void
+  public function updatedIndividualPreferences(bool $value, string $key): void
   {
-    // Ignore updates to 'mute_all' as it's handled by its specific hook
-    if ($key === 'mute_all' || !$this->preferences) {
+    /** @var User|null $user */
+    $user = Auth::user();
+    if (!$user) {
+      $this->dispatch(
+        'add-toast',
+        message: 'Error saving preference (not authenticated).',
+        variant: 'error'
+      );
       return;
     }
 
-    // Check if the updated key is a valid preference key
+    // Fetch the model *within* the update method
+    $preferencesModel = $user->notificationPreferences;
+
+    if (!$preferencesModel) {
+      $this->dispatch(
+        'add-toast',
+        message: 'Error saving preference (model not found).',
+        variant: 'error'
+      );
+      $this->loadPreferences(); // Revert public property
+      return;
+    }
+
+    // Check if the updated key is valid according to our computed property
     if (!array_key_exists($key, $this->preferenceKeys)) {
-      Log::warning('Attempted to update invalid preference key.', [
-        'user_id' => Auth::id(),
-        'key' => $key,
-      ]);
-      return; // Or handle as an error
+      $this->dispatch(
+        'add-toast',
+        message: 'Invalid preference key.',
+        variant: 'warning'
+      );
+      // Revert the specific key in the public property by reloading all preferences
+      $this->loadPreferences();
+      return;
     }
 
     try {
-      // The property is already updated by wire:model, just save it.
-      $this->preferences->save();
+      // Update the corresponding model attribute
+      $preferencesModel->{$key} = $value;
+      $preferencesModel->save();
 
-      // Optional: Add a toast for individual preference changes
-      // $this->dispatch('add-toast', message: 'Preference updated.', variant: 'success');
-    } catch (Exception $e) {
-      Log::error('Failed to update notification preference', [
-        'user_id' => Auth::id(),
-        'key' => $key,
-        'error' => $e->getMessage(),
-      ]);
+      // Public property $this->individualPreferences[$key] is already updated by Livewire binding
+
       $this->dispatch(
         'add-toast',
-        message: 'Failed to update preference.',
+        message: $this->preferenceKeys[$key] . ' preference updated.',
+        variant: 'success'
+      );
+    } catch (Exception $e) {
+      $this->dispatch(
+        'add-toast',
+        message: 'Failed to update ' .
+          ($this->preferenceKeys[$key] ?? $key) .
+          '.',
         variant: 'error'
       );
       // Reload to revert UI if save fails
@@ -166,6 +268,10 @@ class Sidebar extends Component
    */
   public function render()
   {
-    return view('livewire.sidebar');
+    // Pass the preference keys for the view loop,
+    // the view will use the public $muteAll and $individualPreferences properties
+    return view('livewire.sidebar', [
+      'preferenceKeys' => $this->preferenceKeys,
+    ]);
   }
 }

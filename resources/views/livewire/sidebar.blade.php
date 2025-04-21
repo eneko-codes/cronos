@@ -1,6 +1,6 @@
 <!-- Settings sidebar -->
 <div>
-  @if ($isOpen && $preferences)
+  @if ($isOpen)
     <!-- Backdrop -->
     <div
       wire:key="sidebar-backdrop"
@@ -95,7 +95,7 @@
                     stroke-linejoin="round"
                     d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"
                   />
-                  @if ($preferences->mute_all)
+                  @if ($muteAll)
                     <path
                       stroke-linecap="round"
                       stroke-linejoin="round"
@@ -108,7 +108,7 @@
                     Mute All Personal Notifications
                   </p>
                   <p class="text-xs text-gray-500 dark:text-gray-400">
-                    {{ $preferences->mute_all ? "Currently muted" : "Currently active" }}
+                    {{ $muteAll ? 'Currently muted' : 'Currently active' }}
                   </p>
                 </div>
               </div>
@@ -116,7 +116,7 @@
                 <input
                   type="checkbox"
                   class="peer sr-only"
-                  wire:model.change="preferences.mute_all"
+                  wire:model.change="muteAll"
                 />
                 <div
                   class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700"
@@ -131,27 +131,24 @@
               @foreach ($this->preferenceKeys as $key => $label)
                 <div
                   wire:key="preference-toggle-{{ $key }}"
-                  class="@if ($preferences->mute_all) opacity-50 @endif flex items-center justify-between"
+                  class="@if ($muteAll) opacity-50 @endif flex items-center justify-between"
                 >
                   <label
-                    class="{{ $preferences->mute_all ? "text-gray-400 dark:text-gray-600" : "text-gray-900 dark:text-white" }} text-sm font-medium"
+                    class="{{ $muteAll ? 'text-gray-400 dark:text-gray-600' : 'text-gray-900 dark:text-white' }} text-sm font-medium"
                   >
                     {{ $label }}
                   </label>
                   <label
-                    class="{{ $preferences->mute_all ? "cursor-not-allowed" : "cursor-pointer" }} relative inline-flex items-center"
+                    class="{{ $muteAll ? 'cursor-not-allowed' : 'cursor-pointer' }} relative inline-flex items-center"
                   >
                     <input
                       type="checkbox"
                       class="peer sr-only"
-                      wire:model.change="preferences.{{ $key }}"
-                      @disabled($preferences->mute_all)
+                      wire:model.change="individualPreferences.{{ $key }}"
+                      @disabled($muteAll)
                     />
                     <div
-                      class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:opacity-50 dark:bg-gray-700"
-                      @if (! $preferences->mute_all)
-                          :class="{ 'peer-checked:bg-blue-600': {{ $preferences->$key ? "true" : "false" }} }"
-                      @endif
+                      class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:opacity-50 dark:bg-gray-700 dark:peer-checked:bg-blue-600"
                     ></div>
                   </label>
                 </div>

@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Models\Setting;
 use App\Models\User;
 use App\Models\UserNotificationPreference;
 use Illuminate\Support\Facades\Auth;
@@ -32,6 +33,11 @@ class Sidebar extends Component
    * Key: preference key (e.g., 'schedule_change'), Value: boolean state.
    */
   public array $individualPreferences = [];
+
+  /**
+   * Indicates if notifications are enabled globally.
+   */
+  public bool $isGloballyEnabled = true;
 
   // Define the available user-specific notification keys and their labels
   #[Computed]
@@ -67,6 +73,12 @@ class Sidebar extends Component
    */
   public function loadPreferences(): void
   {
+    // Fetch global setting FIRST
+    $this->isGloballyEnabled = (bool) Setting::getValue(
+      'notifications.global_enabled',
+      true
+    ); // Fetch global setting
+
     /** @var User|null $user */
     $user = Auth::user();
     if (!$user) {
@@ -140,6 +152,17 @@ class Sidebar extends Component
    */
   public function updatedMuteAll(bool $value): void
   {
+    // Check if globally disabled
+    if (!$this->isGloballyEnabled) {
+      $this->dispatch(
+        'add-toast',
+        message: 'Notifications are globally disabled by an administrator.',
+        variant: 'warning'
+      );
+      $this->loadPreferences(); // Revert UI
+      return; // Prevent saving
+    }
+
     /** @var User|null $user */
     $user = Auth::user();
     if (!$user) {
@@ -200,6 +223,17 @@ class Sidebar extends Component
    */
   public function updatedIndividualPreferences(bool $value, string $key): void
   {
+    // Check if globally disabled
+    if (!$this->isGloballyEnabled) {
+      $this->dispatch(
+        'add-toast',
+        message: 'Notifications are globally disabled by an administrator.',
+        variant: 'warning'
+      );
+      $this->loadPreferences(); // Revert UI
+      return; // Prevent saving
+    }
+
     /** @var User|null $user */
     $user = Auth::user();
     if (!$user) {
@@ -269,7 +303,7 @@ class Sidebar extends Component
   public function render()
   {
     // Pass the preference keys for the view loop,
-    // the view will use the public $muteAll and $individualPreferences properties
+    // the view will use the public $muteAll, $individualPreferences, and $isGloballyEnabled properties
     return view('livewire.sidebar', [
       'preferenceKeys' => $this->preferenceKeys,
     ]);

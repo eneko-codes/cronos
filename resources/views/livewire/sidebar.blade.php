@@ -77,9 +77,24 @@
               Email Notification Settings
             </h3>
 
+            {{-- Global Notification Status Indicator --}}
+            @unless ($isGloballyEnabled)
+              <div
+                wire:key="global-disabled-msg"
+                class="mb-4 rounded-md border border-yellow-300 bg-yellow-50 p-3 text-xs text-yellow-700 dark:border-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-300"
+              >
+                <p class="font-medium">Notifications Globally Disabled</p>
+                <p>
+                  All personal email notifications are currently turned off by
+                  an administrator. Your preferences below will not take effect
+                  until global notifications are re-enabled.
+                </p>
+              </div>
+            @endunless
+
             {{-- User Master Mute Toggle --}}
             <div
-              class="flex items-center justify-between rounded-md bg-gray-50 p-3 dark:bg-gray-700"
+              class="{{ ! $isGloballyEnabled ? 'opacity-50' : '' }} flex items-center justify-between rounded-md bg-gray-50 p-3 dark:bg-gray-700"
             >
               <div class="flex items-center gap-3">
                 <svg
@@ -88,7 +103,7 @@
                   viewBox="0 0 24 24"
                   stroke-width="1.5"
                   stroke="currentColor"
-                  class="size-5 text-gray-600 dark:text-gray-400"
+                  class="{{ ! $isGloballyEnabled ? 'text-gray-400 dark:text-gray-600' : 'text-gray-600 dark:text-gray-400' }} size-5"
                 >
                   <path
                     stroke-linecap="round"
@@ -104,51 +119,58 @@
                   @endif
                 </svg>
                 <div>
-                  <p class="text-sm font-medium text-gray-900 dark:text-white">
+                  <p
+                    class="{{ ! $isGloballyEnabled ? 'text-gray-400 dark:text-gray-600' : 'text-sm font-medium text-gray-900 dark:text-white' }}"
+                  >
                     Mute All Personal Notifications
                   </p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400">
+                  <p
+                    class="{{ ! $isGloballyEnabled ? 'text-gray-400 dark:text-gray-600' : 'text-gray-500 dark:text-gray-400' }} text-xs"
+                  >
                     {{ $muteAll ? 'Currently muted' : 'Currently active' }}
                   </p>
                 </div>
               </div>
-              <label class="relative inline-flex cursor-pointer items-center">
+              <label
+                class="{{ ! $isGloballyEnabled ? 'cursor-not-allowed' : 'cursor-pointer' }} relative inline-flex items-center"
+              >
                 <input
                   type="checkbox"
                   class="peer sr-only"
                   wire:model.change="muteAll"
+                  @disabled(! $isGloballyEnabled)
                 />
                 <div
-                  class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700"
+                  class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:opacity-50 dark:bg-gray-700"
                 ></div>
               </label>
             </div>
 
             {{-- Individual Preference Toggles --}}
             <div
-              class="space-y-3 border-t border-gray-200 pt-4 dark:border-gray-700"
+              class="{{ ! $isGloballyEnabled ? 'opacity-50' : '' }} space-y-3 border-t border-gray-200 pt-4 dark:border-gray-700"
             >
               @foreach ($this->preferenceKeys as $key => $label)
                 <div
                   wire:key="preference-toggle-{{ $key }}"
-                  class="@if ($muteAll) opacity-50 @endif flex items-center justify-between"
+                  class="@if (!$isGloballyEnabled || $muteAll) opacity-50 @endif flex items-center justify-between"
                 >
                   <label
-                    class="{{ $muteAll ? 'text-gray-400 dark:text-gray-600' : 'text-gray-900 dark:text-white' }} text-sm font-medium"
+                    class="{{ ! $isGloballyEnabled || $muteAll ? 'text-gray-400 dark:text-gray-600' : 'text-gray-900 dark:text-white' }} text-sm font-medium"
                   >
                     {{ $label }}
                   </label>
                   <label
-                    class="{{ $muteAll ? 'cursor-not-allowed' : 'cursor-pointer' }} relative inline-flex items-center"
+                    class="{{ ! $isGloballyEnabled || $muteAll ? 'cursor-not-allowed' : 'cursor-pointer' }} relative inline-flex items-center"
                   >
                     <input
                       type="checkbox"
                       class="peer sr-only"
                       wire:model.change="individualPreferences.{{ $key }}"
-                      @disabled($muteAll)
+                      @disabled(! $isGloballyEnabled || $muteAll)
                     />
                     <div
-                      class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:opacity-50 dark:bg-gray-700 dark:peer-checked:bg-blue-600"
+                      class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:opacity-50 dark:bg-gray-700"
                     ></div>
                   </label>
                 </div>

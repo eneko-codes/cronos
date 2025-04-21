@@ -108,7 +108,7 @@
                     Mute All Personal Notifications
                   </p>
                   <p class="text-xs text-gray-500 dark:text-gray-400">
-                    {{ $preferences->mute_all ? 'Currently muted' : 'Currently active' }}
+                    {{ $preferences->mute_all ? "Currently muted" : "Currently active" }}
                   </p>
                 </div>
               </div>
@@ -133,12 +133,12 @@
                   class="@if ($preferences->mute_all) opacity-50 @endif flex items-center justify-between"
                 >
                   <label
-                    class="{{ $preferences->mute_all ? 'text-gray-400 dark:text-gray-600' : 'text-gray-900 dark:text-white' }} text-sm font-medium"
+                    class="{{ $preferences->mute_all ? "text-gray-400 dark:text-gray-600" : "text-gray-900 dark:text-white" }} text-sm font-medium"
                   >
                     {{ $label }}
                   </label>
                   <label
-                    class="{{ $preferences->mute_all ? 'cursor-not-allowed' : 'cursor-pointer' }} relative inline-flex items-center"
+                    class="{{ $preferences->mute_all ? "cursor-not-allowed" : "cursor-pointer" }} relative inline-flex items-center"
                   >
                     <input
                       type="checkbox"
@@ -147,7 +147,10 @@
                       @disabled($preferences->mute_all)
                     />
                     <div
-                      class="{{-- Only apply blue background if master mute is OFF --}} @if (!$preferences->mute_all) peer-checked:bg-blue-600 @endif peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:opacity-50 dark:bg-gray-700"
+                      class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:opacity-50 dark:bg-gray-700"
+                      @if (! $preferences->mute_all)
+                          :class="{ 'peer-checked:bg-blue-600': {{ $preferences->$key ? "true" : "false" }} }"
+                      @endif
                     ></div>
                   </label>
                 </div>

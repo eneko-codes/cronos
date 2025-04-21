@@ -116,8 +116,7 @@
                 <input
                   type="checkbox"
                   class="peer sr-only"
-                  wire:click="toggleMuteAll"
-                  {{ $preferences->mute_all ? "checked" : "" }}
+                  wire:model.change="preferences.mute_all"
                 />
                 <div
                   class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700"
@@ -144,8 +143,7 @@
                     <input
                       type="checkbox"
                       class="peer sr-only"
-                      wire:click="updatePreference('{{ $key }}')"
-                      {{ $preferences->$key ? "checked" : "" }}
+                      wire:model.change="preferences.{{ $key }}"
                       @disabled($preferences->mute_all)
                     />
                     <div

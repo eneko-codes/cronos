@@ -79,21 +79,23 @@ class Sidebar extends Component
   }
 
   /**
-   * Toggle the user's overall mute state.
+   * Lifecycle hook that runs when the 'preferences.mute_all' property is updated.
+   *
+   * @param bool $value The new value of the property.
    */
-  public function toggleMuteAll(): void
+  public function updatedPreferencesMuteAll(bool $value): void
   {
     if (!$this->preferences) {
       return;
     }
 
     try {
-      $this->preferences->mute_all = !$this->preferences->mute_all;
+      // The property is already updated by wire:model, just save it.
       $this->preferences->save();
 
       $this->dispatch(
         'add-toast',
-        message: $this->preferences->mute_all
+        message: $value
           ? 'All personal notifications muted.'
           : 'Personal notifications enabled.',
         variant: 'success'
@@ -108,24 +110,35 @@ class Sidebar extends Component
         message: 'Failed to update preference.',
         variant: 'error'
       );
-      $this->loadPreferences(); // Reload to revert optimistic UI
+      // Reload to revert UI if save fails
+      $this->loadPreferences();
     }
   }
 
   /**
-   * Update a specific notification preference.
+   * Lifecycle hook that runs when any property within 'preferences' object is updated.
    *
-   * @param string $key The preference key (e.g., 'schedule_change')
+   * @param mixed $value The new value of the property.
+   * @param string $key The specific key within 'preferences' that was updated.
    */
-  public function updatePreference(string $key): void
+  public function updatedPreferences(mixed $value, string $key): void
   {
-    if (!$this->preferences || !array_key_exists($key, $this->preferenceKeys)) {
+    // Ignore updates to 'mute_all' as it's handled by its specific hook
+    if ($key === 'mute_all' || !$this->preferences) {
       return;
     }
 
+    // Check if the updated key is a valid preference key
+    if (!array_key_exists($key, $this->preferenceKeys)) {
+      Log::warning('Attempted to update invalid preference key.', [
+        'user_id' => Auth::id(),
+        'key' => $key,
+      ]);
+      return; // Or handle as an error
+    }
+
     try {
-      // Toggle the boolean value
-      $this->preferences->$key = !$this->preferences->$key;
+      // The property is already updated by wire:model, just save it.
       $this->preferences->save();
 
       // Optional: Add a toast for individual preference changes
@@ -141,7 +154,8 @@ class Sidebar extends Component
         message: 'Failed to update preference.',
         variant: 'error'
       );
-      $this->loadPreferences(); // Reload to revert optimistic UI
+      // Reload to revert UI if save fails
+      $this->loadPreferences();
     }
   }
 

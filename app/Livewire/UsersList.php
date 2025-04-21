@@ -64,10 +64,6 @@ class UsersList extends Component
         fn($query) => $query->where('is_admin', true)
       )
       ->when(
-        $this->filter === 'employees',
-        fn($query) => $query->where('is_admin', false)
-      )
-      ->when(
         $this->filter === 'not_tracked',
         fn($query) => $query->notTrackable()
       )
@@ -84,7 +80,6 @@ class UsersList extends Component
     $counts = [
       'all' => User::count(),
       'admins' => User::where('is_admin', true)->count(),
-      'employees' => User::where('is_admin', false)->count(),
       'not_tracked' => User::notTrackable()->count(),
       'muted' => User::whereHas(
         'notificationPreferences',

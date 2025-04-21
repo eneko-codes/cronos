@@ -20,7 +20,6 @@
           :counts="$counts"
           :filters="[
             'all' => 'All Users',
-            'employees' => 'Employees',
             'admins' => 'Admins',
             'not_tracked' => 'Not Tracked',
             'muted' => 'Muted'

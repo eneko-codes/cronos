@@ -69,7 +69,7 @@
             </label>
             <select
               id="telescopePruneFrequencySelect"
-              wire:model.live="telescopePruneFrequency"
+              wire:model.change="telescopePruneFrequency"
               class="mt-1 block w-full rounded-md border border-gray-300 bg-gray-200 px-2 text-sm dark:border-gray-700 dark:bg-gray-700"
             >
               @foreach ($telescopeFrequencyOptions as $value => $label)
@@ -219,8 +219,8 @@
             </label>
             <select
               id="syncFrequencySelect"
-              wire:model.live="syncFrequency"
-              class="block w-40 rounded-md border border-gray-300 bg-gray-200 px-2 text-sm dark:border-gray-700 dark:bg-gray-700"
+              wire:model.change="syncFrequency"
+              class="mt-1 block w-full rounded-md border border-gray-300 bg-gray-200 px-2 text-sm dark:border-gray-700 dark:bg-gray-700"
             >
               @foreach ($syncFrequencyOptions as $value => $label)
                 <option value="{{ $value }}">{{ $label }}</option>
@@ -303,16 +303,10 @@
               </svg>
             </x-tooltip>
           </label>
-          <label class="relative inline-flex cursor-pointer items-center">
-            <input
-              type="checkbox"
-              class="peer sr-only"
-              wire:model.live="globalNotificationsEnabled"
-            />
-            <div
-              class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-disabled:opacity-50 dark:bg-gray-700 dark:after:bg-gray-500"
-            ></div>
-          </label>
+          <x-toggle
+            id="globalNotificationsToggle"
+            wire:model.change="globalNotificationsEnabled"
+          />
         </div>
 
         <div
@@ -322,7 +316,7 @@
             class="@if (!$globalNotificationsEnabled) opacity-50 @endif flex items-center justify-between"
           >
             <label
-              class="{{ ! $globalNotificationsEnabled ? "text-gray-400 dark:text-gray-500" : "text-gray-600 dark:text-gray-300" }} inline-flex items-center gap-1 text-sm font-medium"
+              class="{{ ! $globalNotificationsEnabled ? 'text-gray-400 dark:text-gray-500' : 'text-gray-600 dark:text-gray-300' }} inline-flex items-center gap-1 text-sm font-medium"
             >
               Welcome Email
               <x-tooltip>
@@ -345,29 +339,17 @@
                 </svg>
               </x-tooltip>
             </label>
-            <label
-              class="{{ ! $globalNotificationsEnabled ? "cursor-not-allowed" : "cursor-pointer" }} relative inline-flex items-center"
-            >
-              <input
-                type="checkbox"
-                class="peer sr-only"
-                wire:model.live="welcomeEmailEnabled"
-                @disabled(! $globalNotificationsEnabled)
-              />
-              <div
-                class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:opacity-50 dark:bg-gray-700 dark:after:bg-gray-500"
-                @if ($globalNotificationsEnabled)
-                    :class="{ 'peer-checked:bg-blue-600': {{ $welcomeEmailEnabled ? "true" : "false" }} }"
-                @endif
-              ></div>
-            </label>
+            <x-toggle
+              id="welcomeEmailToggle"
+              wire:model.change="welcomeEmailEnabled"
+            />
           </div>
 
           <div
             class="@if (!$globalNotificationsEnabled) opacity-50 @endif flex items-center justify-between"
           >
             <label
-              class="{{ ! $globalNotificationsEnabled ? "text-gray-400 dark:text-gray-500" : "text-gray-600 dark:text-gray-300" }} inline-flex items-center gap-1 text-sm font-medium"
+              class="{{ ! $globalNotificationsEnabled ? 'text-gray-400 dark:text-gray-500' : 'text-gray-600 dark:text-gray-300' }} inline-flex items-center gap-1 text-sm font-medium"
             >
               API Down Email
               <x-tooltip>
@@ -392,29 +374,17 @@
               </x-tooltip>
               <x-badge variant="primary" size="sm" class="ml-2">Admins</x-badge>
             </label>
-            <label
-              class="{{ ! $globalNotificationsEnabled ? "cursor-not-allowed" : "cursor-pointer" }} relative inline-flex items-center"
-            >
-              <input
-                type="checkbox"
-                class="peer sr-only"
-                wire:model.live="apiDownWarningMailEnabled"
-                @disabled(! $globalNotificationsEnabled)
-              />
-              <div
-                class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:opacity-50 dark:bg-gray-700 dark:after:bg-gray-500"
-                @if ($globalNotificationsEnabled)
-                    :class="{ 'peer-checked:bg-blue-600': {{ $apiDownWarningMailEnabled ? "true" : "false" }} }"
-                @endif
-              ></div>
-            </label>
+            <x-toggle
+              id="apiDownWarningEmailToggle"
+              wire:model.change="apiDownWarningMailEnabled"
+            />
           </div>
 
           <div
-            class="{{ ! $globalNotificationsEnabled ? "opacity-50" : "" }} flex items-center justify-between"
+            class="{{ ! $globalNotificationsEnabled ? 'opacity-50' : '' }} flex items-center justify-between"
           >
             <label
-              class="{{ ! $globalNotificationsEnabled ? "text-gray-400 dark:text-gray-500" : "text-gray-600 dark:text-gray-300" }} inline-flex items-center gap-1 text-sm font-medium"
+              class="{{ ! $globalNotificationsEnabled ? 'text-gray-400 dark:text-gray-500' : 'text-gray-600 dark:text-gray-300' }} inline-flex items-center gap-1 text-sm font-medium"
             >
               Admin Promotion Email
               <x-tooltip>
@@ -438,22 +408,10 @@
                 </svg>
               </x-tooltip>
             </label>
-            <label
-              class="{{ ! $globalNotificationsEnabled ? "cursor-not-allowed" : "cursor-pointer" }} relative inline-flex items-center"
-            >
-              <input
-                type="checkbox"
-                class="peer sr-only"
-                wire:model.live="adminPromotionEmailEnabled"
-                @disabled(! $globalNotificationsEnabled)
-              />
-              <div
-                class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:opacity-50 dark:bg-gray-700 dark:after:bg-gray-500"
-                @if ($globalNotificationsEnabled)
-                    :class="{ 'peer-checked:bg-blue-600': {{ $adminPromotionEmailEnabled ? "true" : "false" }} }"
-                @endif
-              ></div>
-            </label>
+            <x-toggle
+              id="adminPromotionEmailToggle"
+              wire:model.change="adminPromotionEmailEnabled"
+            />
           </div>
         </div>
       </div>
@@ -518,7 +476,7 @@
             </label>
             <select
               id="dataRetentionSelect"
-              wire:model.live="dataRetentionGlobalPeriod"
+              wire:model.change="dataRetentionGlobalPeriod"
               class="block w-40 rounded-md border border-gray-300 bg-gray-200 px-2 text-sm dark:border-gray-700 dark:bg-gray-700"
             >
               @foreach ($dataRetentionOptions as $days => $label)

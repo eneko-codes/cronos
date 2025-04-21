@@ -29,7 +29,7 @@
             </span>
             {{-- Native HTML select element --}}
             <select
-              wire:model.live="sortBy"
+              wire:model.change="sortBy"
               {{-- Classes matching the select in Settings --}}
               class="block h-8 w-40 rounded-md border border-gray-300 bg-gray-200 px-2 text-sm dark:border-gray-700 dark:bg-gray-700"
             >
@@ -78,7 +78,7 @@
                   <input
                     {{-- Native HTML checkbox --}}
                     type="checkbox"
-                    wire:model.live="filters.has_tasks"
+                    wire:model.change="filters.has_tasks"
                     class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-indigo-600"
                   />
                   <span class="text-xs text-gray-700 dark:text-gray-300">
@@ -89,7 +89,7 @@
                   <input
                     {{-- Native HTML checkbox --}}
                     type="checkbox"
-                    wire:model.live="filters.has_time_entries"
+                    wire:model.change="filters.has_time_entries"
                     class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-indigo-600"
                   />
                   <span class="text-xs text-gray-700 dark:text-gray-300">
@@ -101,7 +101,7 @@
                   <input
                     {{-- Native HTML checkbox --}}
                     type="checkbox"
-                    wire:model.live="filters.has_no_tasks"
+                    wire:model.change="filters.has_no_tasks"
                     class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-indigo-600"
                   />
                   <span class="text-xs text-gray-700 dark:text-gray-300">
@@ -112,7 +112,7 @@
                   <input
                     {{-- Native HTML checkbox --}}
                     type="checkbox"
-                    wire:model.live="filters.has_no_time_entries"
+                    wire:model.change="filters.has_no_time_entries"
                     class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-indigo-600"
                   />
                   <span class="text-xs text-gray-700 dark:text-gray-300">
@@ -123,7 +123,7 @@
                   <input
                     {{-- Native HTML checkbox --}}
                     type="checkbox"
-                    wire:model.live="filters.has_direct_time_entries"
+                    wire:model.change="filters.has_direct_time_entries"
                     class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-indigo-600"
                   />
                   <span class="text-xs text-gray-700 dark:text-gray-300">

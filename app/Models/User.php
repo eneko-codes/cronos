@@ -192,7 +192,8 @@ class User extends Authenticatable
       }
 
       foreach ($user->tasks as $task) {
-        $task->tasks()->detach($task->proofhub_task_id);
+        // Detach this specific user from this specific task
+        $task->users()->detach($user->id);
       }
     });
 
@@ -229,7 +230,8 @@ class User extends Authenticatable
         }
 
         foreach ($user->tasks as $task) {
-          $task->tasks()->detach($task->proofhub_task_id);
+          // Detach this specific user from this specific task
+          $task->users()->detach($user->id);
         }
       }
     });

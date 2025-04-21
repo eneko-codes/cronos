@@ -121,10 +121,8 @@ class UserDetailsModal extends Component
       $user->is_admin = true;
       $user->save();
 
-      // Update local state and permissions
-      $this->isAdmin = true;
-      $this->canPromoteToAdmin = false;
-      $this->canDemoteAdmin = Gate::allows('demoteAdmin', $user);
+      // Update local state and permissions by reloading all details
+      $this->loadUserDetails();
 
       $this->dispatch(
         'add-toast',
@@ -143,10 +141,8 @@ class UserDetailsModal extends Component
       $user->is_admin = false;
       $user->save();
 
-      // Update local state and permissions
-      $this->isAdmin = false;
-      $this->canDemoteAdmin = false;
-      $this->canPromoteToAdmin = Gate::allows('promoteToAdmin', $user);
+      // Update local state and permissions by reloading all details
+      $this->loadUserDetails();
 
       $this->dispatch(
         'add-toast',
@@ -165,10 +161,8 @@ class UserDetailsModal extends Component
       $user->do_not_track = true;
       $user->save();
 
-      // Update local state and permissions
-      $this->isDoNotTrack = true;
-      $this->canNotTrack = false;
-      $this->canEnableTracking = Gate::allows('enableTracking', $user);
+      // Update local state and permissions by reloading all details
+      $this->loadUserDetails();
 
       $this->dispatch(
         'add-toast',
@@ -189,10 +183,8 @@ class UserDetailsModal extends Component
       $user->do_not_track = false;
       $user->save();
 
-      // Update local state and permissions
-      $this->isDoNotTrack = false;
-      $this->canEnableTracking = false;
-      $this->canNotTrack = Gate::allows('disableTracking', $user);
+      // Update local state and permissions by reloading all details
+      $this->loadUserDetails();
 
       $this->dispatch(
         'add-toast',
@@ -212,13 +204,8 @@ class UserDetailsModal extends Component
     if (!$preferences->mute_all) {
       $preferences->update(['mute_all' => true]);
 
-      // Update local state and permissions
-      $this->isMuted = true;
-      $this->canMuteNotifications = false;
-      $this->canUnmuteNotifications = Gate::allows(
-        'unmuteNotifications',
-        $user
-      );
+      // Reload details and permissions to reflect the change immediately
+      $this->loadUserDetails();
 
       $this->dispatch(
         'add-toast',
@@ -240,10 +227,8 @@ class UserDetailsModal extends Component
     if ($preferences->mute_all) {
       $preferences->update(['mute_all' => false]);
 
-      // Update local state and permissions
-      $this->isMuted = false;
-      $this->canUnmuteNotifications = false;
-      $this->canMuteNotifications = Gate::allows('muteNotifications', $user);
+      // Reload details and permissions to reflect the change immediately
+      $this->loadUserDetails();
 
       $this->dispatch(
         'add-toast',

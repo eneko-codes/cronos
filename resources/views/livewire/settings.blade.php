@@ -303,7 +303,7 @@
               </svg>
             </x-tooltip>
           </label>
-          <x-toggle
+          <x-toggle-button
             id="globalNotificationsToggle"
             wire:model.change="globalNotificationsEnabled"
           />
@@ -339,7 +339,7 @@
                 </svg>
               </x-tooltip>
             </label>
-            <x-toggle
+            <x-toggle-button
               id="welcomeEmailToggle"
               wire:model.change="welcomeEmailEnabled"
             />
@@ -374,7 +374,7 @@
               </x-tooltip>
               <x-badge variant="primary" size="sm" class="ml-2">Admins</x-badge>
             </label>
-            <x-toggle
+            <x-toggle-button
               id="apiDownWarningEmailToggle"
               wire:model.change="apiDownWarningMailEnabled"
             />
@@ -408,7 +408,7 @@
                 </svg>
               </x-tooltip>
             </label>
-            <x-toggle
+            <x-toggle-button
               id="adminPromotionEmailToggle"
               wire:model.change="adminPromotionEmailEnabled"
             />

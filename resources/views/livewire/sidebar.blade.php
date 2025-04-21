@@ -67,115 +67,110 @@
       <!-- Content -->
       <div class="flex-1 overflow-y-auto p-4">
         <!-- Settings Content -->
-        <div class="space-y-6">
-          <div
-            class="rounded-lg border border-gray-100 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-800"
-          >
-            <h3
-              class="mb-4 text-sm font-semibold text-gray-900 dark:text-white"
-            >
-              Email Notification Settings
-            </h3>
+        <div
+          class="flex flex-col space-y-4 rounded-lg border border-gray-100 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-800"
+        >
+          <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
+            Email Notification Settings
+          </h3>
 
-            {{-- Global Notification Status Indicator --}}
-            @unless ($isGloballyEnabled)
-              <div
-                wire:key="global-disabled-msg"
-                class="mb-4 rounded-md border border-yellow-300 bg-yellow-50 p-3 text-xs text-yellow-700 dark:border-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-300"
-              >
-                <p class="font-medium">Notifications Globally Disabled</p>
-                <p>
-                  All personal email notifications are currently turned off by
-                  an administrator. Your preferences below will not take effect
-                  until global notifications are re-enabled.
-                </p>
-              </div>
-            @endunless
-
-            {{-- User Master Mute Toggle --}}
+          {{-- Global Notification Status Indicator --}}
+          @unless ($isGloballyEnabled)
             <div
-              class="{{ ! $isGloballyEnabled ? 'opacity-50' : '' }} flex items-center justify-between rounded-md bg-gray-50 p-3 dark:bg-gray-700"
+              wire:key="global-disabled-msg"
+              class="rounded-md border border-orange-300 bg-orange-50 p-3 text-xs text-orange-800 dark:border-orange-600 dark:bg-orange-900/30 dark:text-orange-200"
             >
-              <div class="flex items-center gap-3">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                  stroke="currentColor"
-                  class="{{ ! $isGloballyEnabled ? 'text-gray-400 dark:text-gray-600' : 'text-gray-600 dark:text-gray-400' }} size-5"
-                >
+              <p class="font-medium">Notifications Globally Disabled</p>
+              <p>
+                All user email notifications are currently turned off by an
+                administrator.
+              </p>
+            </div>
+          @endunless
+
+          {{-- User Master Mute Toggle --}}
+          <div
+            class="{{ ! $isGloballyEnabled ? 'opacity-50' : '' }} flex items-center justify-between rounded-md bg-gray-50 p-3 dark:bg-gray-700"
+          >
+            <div class="flex items-center gap-3">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="{{ ! $isGloballyEnabled ? 'text-gray-400 dark:text-gray-600' : 'text-gray-600 dark:text-gray-400' }} size-5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"
+                />
+                @if ($muteAll)
                   <path
                     stroke-linecap="round"
                     stroke-linejoin="round"
-                    d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"
+                    d="M 4 4 L 20 20"
                   />
-                  @if ($muteAll)
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      d="M 4 4 L 20 20"
-                    />
-                  @endif
-                </svg>
-                <div>
-                  <p
-                    class="{{ ! $isGloballyEnabled ? 'text-gray-400 dark:text-gray-600' : 'text-sm font-medium text-gray-900 dark:text-white' }}"
-                  >
-                    Mute All Personal Notifications
-                  </p>
-                  <p
-                    class="{{ ! $isGloballyEnabled ? 'text-gray-400 dark:text-gray-600' : 'text-gray-500 dark:text-gray-400' }} text-xs"
-                  >
-                    {{ $muteAll ? 'Currently muted' : 'Currently active' }}
-                  </p>
-                </div>
-              </div>
-              <label
-                class="{{ ! $isGloballyEnabled ? 'cursor-not-allowed' : 'cursor-pointer' }} relative inline-flex items-center"
-              >
-                <input
-                  type="checkbox"
-                  class="peer sr-only"
-                  wire:model.change="muteAll"
-                  @disabled(! $isGloballyEnabled)
-                />
-                <div
-                  class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:opacity-50 dark:bg-gray-700"
-                ></div>
-              </label>
-            </div>
-
-            {{-- Individual Preference Toggles --}}
-            <div
-              class="{{ ! $isGloballyEnabled ? 'opacity-50' : '' }} space-y-3 border-t border-gray-200 pt-4 dark:border-gray-700"
-            >
-              @foreach ($this->preferenceKeys as $key => $label)
-                <div
-                  wire:key="preference-toggle-{{ $key }}"
-                  class="@if (!$isGloballyEnabled || $muteAll) opacity-50 @endif flex items-center justify-between"
+                @endif
+              </svg>
+              <div>
+                <p
+                  class="{{ ! $isGloballyEnabled ? 'text-gray-400 dark:text-gray-600' : 'text-sm font-medium text-gray-900 dark:text-white' }}"
                 >
-                  <label
-                    class="{{ ! $isGloballyEnabled || $muteAll ? 'text-gray-400 dark:text-gray-600' : 'text-gray-900 dark:text-white' }} text-sm font-medium"
-                  >
-                    {{ $label }}
-                  </label>
-                  <label
-                    class="{{ ! $isGloballyEnabled || $muteAll ? 'cursor-not-allowed' : 'cursor-pointer' }} relative inline-flex items-center"
-                  >
-                    <input
-                      type="checkbox"
-                      class="peer sr-only"
-                      wire:model.change="individualPreferences.{{ $key }}"
-                      @disabled(! $isGloballyEnabled || $muteAll)
-                    />
-                    <div
-                      class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:opacity-50 dark:bg-gray-700"
-                    ></div>
-                  </label>
-                </div>
-              @endforeach
+                  Mute All Personal Notifications
+                </p>
+                <p
+                  class="{{ ! $isGloballyEnabled ? 'text-gray-400 dark:text-gray-600' : 'text-gray-500 dark:text-gray-400' }} text-xs"
+                >
+                  {{ $muteAll ? 'Currently muted' : 'Currently active' }}
+                </p>
+              </div>
             </div>
+            <label
+              class="{{ ! $isGloballyEnabled ? 'cursor-not-allowed' : 'cursor-pointer' }} relative inline-flex items-center"
+            >
+              <input
+                type="checkbox"
+                class="peer sr-only"
+                wire:model.change="muteAll"
+                @disabled(! $isGloballyEnabled)
+              />
+              <div
+                class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:opacity-50 dark:bg-gray-700"
+              ></div>
+            </label>
+          </div>
+
+          {{-- Individual Preference Toggles --}}
+          <div
+            class="{{ ! $isGloballyEnabled ? 'opacity-50' : '' }} ml-2 space-y-3"
+          >
+            @foreach ($this->preferenceKeys as $key => $label)
+              <div
+                wire:key="preference-toggle-{{ $key }}"
+                class="@if (!$isGloballyEnabled || $muteAll) opacity-50 @endif flex items-center justify-between"
+              >
+                <label
+                  class="{{ ! $isGloballyEnabled || $muteAll ? 'text-gray-400 dark:text-gray-600' : 'text-gray-900 dark:text-white' }} text-sm font-medium"
+                >
+                  {{ $label }}
+                </label>
+                <label
+                  class="{{ ! $isGloballyEnabled || $muteAll ? 'cursor-not-allowed' : 'cursor-pointer' }} relative inline-flex items-center"
+                >
+                  <input
+                    type="checkbox"
+                    class="peer sr-only"
+                    wire:model.change="individualPreferences.{{ $key }}"
+                    @disabled(! $isGloballyEnabled || $muteAll)
+                  />
+                  <div
+                    class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:opacity-50 dark:bg-gray-700"
+                  ></div>
+                </label>
+              </div>
+            @endforeach
           </div>
         </div>
       </div>

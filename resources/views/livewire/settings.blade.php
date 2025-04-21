@@ -3,7 +3,7 @@
   @if ($telescopeEnabled)
     <section class="relative lg:col-span-1">
       <div
-        class="h-full rounded-xl border border-gray-200 bg-gray-100 p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
+        class="flex h-full flex-col gap-4 rounded-xl border border-gray-200 bg-gray-100 p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
       >
         <div class="flex flex-col items-start gap-1 text-lg font-bold">
           <div class="inline-flex flex-row items-center gap-2">
@@ -28,7 +28,7 @@
             jobs, logs and more.
           </p>
         </div>
-        <div class="mt-4">
+        <div>
           <a href="/telescope" target="_blank" class="w-full">
             <x-button type="button" size="md" variant="info" class="w-full">
               <span>Telescope Dashboard</span>
@@ -38,7 +38,7 @@
 
         <!-- Telescope Pruning Settings (No Form or Save Button) -->
         <div
-          class="mt-6 space-y-4 border-t border-gray-300 pt-4 dark:border-gray-600"
+          class="space-y-4 border-t border-gray-300 pt-4 dark:border-gray-600"
         >
           <div>
             <label
@@ -85,7 +85,7 @@
   <!-- API Health Check -->
   <section class="relative lg:col-span-1">
     <div
-      class="h-full rounded-xl border border-gray-200 bg-gray-100 p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
+      class="flex h-full flex-col gap-4 rounded-xl border border-gray-200 bg-gray-100 p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
     >
       <div class="flex flex-col items-start gap-1 text-lg font-bold">
         <div class="inline-flex flex-row items-center gap-2">
@@ -109,7 +109,7 @@
           Test the connection to the different APIs used by the application.
         </p>
       </div>
-      <div class="mt-4 flex w-full flex-col gap-2">
+      <div class="flex w-full flex-col gap-2">
         <x-button
           wire:click="pingOdoo"
           wire:target="pingOdoo"
@@ -163,7 +163,7 @@
   <!-- Data Synchronization Settings -->
   <section class="relative sm:col-span-2 lg:col-span-2">
     <div
-      class="h-full rounded-xl border border-gray-200 bg-gray-100 p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
+      class="flex h-full flex-col gap-4 rounded-xl border border-gray-200 bg-gray-100 p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
     >
       <div class="flex h-full flex-col justify-between">
         <div class="space-y-4">
@@ -220,7 +220,7 @@
             <select
               id="syncFrequencySelect"
               wire:model.change="syncFrequency"
-              class="mt-1 block w-full rounded-md border border-gray-300 bg-gray-200 px-2 text-sm dark:border-gray-700 dark:bg-gray-700"
+              class="block w-full rounded-md border border-gray-300 bg-gray-200 px-2 text-sm dark:border-gray-700 dark:bg-gray-700"
             >
               @foreach ($syncFrequencyOptions as $value => $label)
                 <option value="{{ $value }}">{{ $label }}</option>
@@ -235,7 +235,7 @@
   <!-- Notification Settings Section -->
   <section class="relative sm:col-span-2 lg:col-span-2">
     <div
-      class="h-full rounded-xl border border-gray-200 bg-gray-100 p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
+      class="flex h-full flex-col gap-4 rounded-xl border border-gray-200 bg-gray-100 p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
     >
       <div class="space-y-4">
         <div class="flex flex-col items-start gap-1 text-lg font-bold">
@@ -316,9 +316,7 @@
           </label>
         </div>
 
-        <div
-          class="space-y-4 border-t border-gray-300 pt-4 dark:border-gray-600"
-        >
+        <div class="ml-2 space-y-4">
           <div
             class="@if (!$globalNotificationsEnabled) opacity-50 @endif flex items-center justify-between"
           >
@@ -467,7 +465,7 @@
   <!-- Data Retention Settings Section -->
   <section class="relative sm:col-span-2 lg:col-span-2">
     <div
-      class="h-full rounded-xl border border-gray-200 bg-gray-100 p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
+      class="flex h-full flex-col gap-4 rounded-xl border border-gray-200 bg-gray-100 p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
     >
       <div class="space-y-4">
         <div class="flex flex-col items-start gap-1 text-lg font-bold">
@@ -491,7 +489,7 @@
           </p>
         </div>
 
-        <div class="mt-4">
+        <div class="space-y-4">
           <div class="flex items-center justify-between">
             <label
               for="dataRetentionSelect"
@@ -531,7 +529,7 @@
             </select>
           </div>
 
-          <div class="mt-4 rounded-md bg-gray-50 p-3 dark:bg-gray-700">
+          <div class="rounded-md bg-gray-50 p-3 dark:bg-gray-700">
             <p class="text-xs font-medium text-gray-600 dark:text-gray-300">
               This setting affects Time Entries, Attendances, Schedules, and
               Leaves.

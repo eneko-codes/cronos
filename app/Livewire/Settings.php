@@ -156,11 +156,27 @@ class Settings extends Component
    */
   public function updatedGlobalNotificationsEnabled($value): void
   {
-    $this->saveSetting(
-      'notifications.global_enabled',
-      $value ? '1' : '0',
-      'Global notification setting updated.'
-    );
+    try {
+      Setting::setValue('notifications.global_enabled', $value ? '1' : '0');
+      $this->dispatch(
+        'add-toast',
+        message: 'Global notification setting updated.',
+        variant: 'success'
+      );
+      // Dispatch global event after successful save
+      $this->dispatch('global-notifications-updated', enabled: (bool) $value);
+    } catch (Exception $e) {
+      $this->dispatch(
+        'add-toast',
+        message: 'Failed to update setting: ' . $e->getMessage(),
+        variant: 'error'
+      );
+      // Revert the component property by reloading from the database.
+      $this->globalNotificationsEnabled = (bool) Setting::getValue(
+        'notifications.global_enabled',
+        true // Default value for revert
+      );
+    }
   }
 
   /**
@@ -294,6 +310,11 @@ class Settings extends Component
         message: $successMessage,
         variant: 'success'
       );
+
+      // Dispatch event specifically for global notification setting change
+      if ($key === 'notifications.global_enabled') {
+        $this->dispatch('global-notifications-updated', enabled: (bool) $value);
+      }
     } catch (Exception $e) {
       $this->dispatch(
         'add-toast',

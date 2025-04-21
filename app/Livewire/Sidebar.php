@@ -296,6 +296,20 @@ class Sidebar extends Component
   }
 
   /**
+   * Listen for global notification updates from Settings component.
+   */
+  #[On('global-notifications-updated')]
+  public function handleGlobalNotificationUpdate(bool $enabled): void
+  {
+    if ($this->isGloballyEnabled !== $enabled) {
+      $this->isGloballyEnabled = $enabled;
+      // Reload preferences to ensure UI consistency,
+      // especially if a user interacted while globally disabled.
+      $this->loadPreferences();
+    }
+  }
+
+  /**
    * Render the component.
    *
    * @return \Illuminate\View\View

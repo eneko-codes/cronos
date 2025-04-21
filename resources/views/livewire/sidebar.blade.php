@@ -130,6 +130,7 @@
             >
               @foreach ($this->preferenceKeys as $key => $label)
                 <div
+                  wire:key="preference-toggle-{{ $key }}"
                   class="@if ($preferences->mute_all) opacity-50 @endif flex items-center justify-between"
                 >
                   <label

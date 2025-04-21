@@ -258,20 +258,6 @@
           </div>
           <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
             Control system-wide email notifications.
-            <span class="mt-2 block space-y-1">
-              <span
-                class="block font-medium text-green-600 dark:text-green-400"
-              >
-                {{ $activeUsers }} users can receive notifications out of
-                {{ $totalUsers }}. (Individual preferences apply)
-              </span>
-              <span
-                class="block font-medium text-green-600 dark:text-green-400"
-              >
-                {{ $activeAdmins }} admins will receive system alerts if
-                enabled.
-              </span>
-            </span>
           </p>
         </div>
 

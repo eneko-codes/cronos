@@ -9,7 +9,6 @@ use App\Services\OdooApiCalls;
 use App\Services\ProofhubApiCalls;
 use App\Services\SystemPinApiCalls;
 use Exception;
-use Illuminate\Support\Facades\Log;
 use Laravel\Telescope\Contracts\EntriesRepository;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -216,9 +215,6 @@ class Settings extends Component
         variant: 'success'
       );
     } catch (Exception $e) {
-      Log::error('Failed to update data retention settings', [
-        'error' => $e->getMessage(),
-      ]);
       $this->dispatch(
         'add-toast',
         message: 'Failed to update data retention settings: ' .
@@ -299,11 +295,6 @@ class Settings extends Component
         variant: 'success'
       );
     } catch (Exception $e) {
-      Log::error('Failed to update setting', [
-        'key' => $key,
-        'value' => $value,
-        'error' => $e->getMessage(),
-      ]);
       $this->dispatch(
         'add-toast',
         message: 'Failed to update setting: ' . $e->getMessage(),
@@ -479,9 +470,6 @@ class Settings extends Component
         );
       }
     } catch (Exception $e) {
-      Log::error('Failed to run manual data retention', [
-        'error' => $e->getMessage(),
-      ]);
       $this->dispatch(
         'add-toast',
         message: 'Failed to run data retention: ' . $e->getMessage(),

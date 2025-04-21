@@ -69,21 +69,23 @@
                 </p>
 
                 {{-- Muted icon --}}
-                @if ($user->notificationPreferences?->mute_all)
-                  <span title="Notifications muted">
+                @if (! $globalNotificationsEnabled || $user->notificationPreferences?->mute_all)
+                  <x-tooltip
+                    text="{{ !$globalNotificationsEnabled ? 'Global notifications disabled' : 'User notifications muted' }}"
+                  >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 20 20"
+                      width="16"
+                      height="16"
                       fill="currentColor"
-                      class="size-4"
+                      class="bi bi-bell-slash-fill text-red-500 dark:text-red-600"
+                      viewBox="0 0 16 16"
                     >
                       <path
-                        fill-rule="evenodd"
-                        d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.253a.25.25 0 0 1 .244.304l-.459 2.066A1.75 1.75 0 0 0 10.747 15H11a.75.75 0 0 0 0-1.5h-.253a.25.25 0 0 1-.244-.304l.459-2.066A1.75 1.75 0 0 0 9.253 9H9Z"
-                        clip-rule="evenodd"
+                        d="M5.164 14H15c-1.5-1-2-5.902-2-7q0-.396-.06-.776zm6.288-10.617A5 5 0 0 0 8.995 2.1a1 1 0 1 0-1.99 0A5 5 0 0 0 3 7c0 .898-.335 4.342-1.278 6.113zM10 15a2 2 0 1 1-4 0zm-9.375.625a.53.53 0 0 0 .75.75l14.75-14.75a.53.53 0 0 0-.75-.75z"
                       />
                     </svg>
-                  </span>
+                  </x-tooltip>
                 @endif
               </div>
 

@@ -37,26 +37,7 @@
             wire:loading.class="opacity-50"
           >
             <!-- Header Section -->
-            <div class="flex flex-1 items-center gap-2">
-              <h2 class="text-xl font-bold">{{ $name }}</h2>
-              @if ($isAdmin)
-                <x-tooltip text="User can see all employee data">
-                  <x-badge size="sm" variant="primary">Admin</x-badge>
-                </x-tooltip>
-              @endif
-
-              @if ($isDoNotTrack)
-                <x-tooltip text="The data of this user will not be fetched">
-                  <x-badge size="sm" variant="alert">Not tracking</x-badge>
-                </x-tooltip>
-              @endif
-
-              @if ($isMuted)
-                <x-tooltip text="User notifications are currently muted">
-                  <x-badge size="sm" variant="alert">Muted</x-badge>
-                </x-tooltip>
-              @endif
-            </div>
+            <h2 class="text-xl font-bold">{{ $name }}</h2>
 
             <!-- User Details List -->
             <ul>

@@ -17,12 +17,6 @@
         </x-tooltip>
       @endif
 
-      @if ($user->notificationPreferences?->mute_all)
-        <x-tooltip text="User notifications are currently muted">
-          <x-badge size="sm" variant="alert">Muted</x-badge>
-        </x-tooltip>
-      @endif
-
       @if ($user->odoo_id)
         <x-tooltip text="User has an Odoo account linked">
           <x-badge size="sm" variant="info">Odoo</x-badge>

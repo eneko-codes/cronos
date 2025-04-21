@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\User;
+use App\Models\Setting;
 use Carbon\Carbon;
 use Carbon\CarbonInterval;
 use Illuminate\Support\Collection;
@@ -80,6 +81,11 @@ class UserDashboard extends Component
   public bool $isAdmin = false;
 
   /**
+   * Indicates if notifications are enabled globally.
+   */
+  public bool $isGloballyEnabled = true;
+
+  /**
    * Initializes the component, loads the user, sets the initial period, and loads data.
    *
    * @param int|null $id The ID of the user to display, or null to display the authenticated user.
@@ -120,6 +126,9 @@ class UserDashboard extends Component
     // Load cache data for the current period
     // TODO: Implement caching strategy if performance becomes an issue.
     $this->loadPeriodDataAndTotals();
+
+    // Load global notification setting
+    $this->loadGlobalNotificationSetting();
   }
 
   /**
@@ -361,6 +370,7 @@ class UserDashboard extends Component
       // because it's a protected property iterated on in the Blade file
       // If issues persist, we could pass it explicitly too:
       // 'periodDataForView' => $this->periodData
+      'isGloballyEnabled' => $this->isGloballyEnabled, // Pass global status
     ]);
   }
 
@@ -1267,5 +1277,16 @@ class UserDashboard extends Component
     }
 
     return $deviationDetails;
+  }
+
+  /**
+   * Load global notification setting.
+   */
+  protected function loadGlobalNotificationSetting(): void
+  {
+    $this->isGloballyEnabled = (bool) Setting::getValue(
+      'notifications.global_enabled',
+      true
+    );
   }
 }

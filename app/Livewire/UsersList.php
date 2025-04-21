@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\User;
+use App\Models\Setting;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -46,7 +47,13 @@ class UsersList extends Component
 
   public function render()
   {
+    $globalNotificationsEnabled = (bool) Setting::getValue(
+      'notifications.global_enabled',
+      true
+    );
+
     $users = User::query()
+      ->with('notificationPreferences')
       ->when($this->search, function ($query) {
         $query->whereRaw('LOWER(name) LIKE ?', [
           '%' . strtolower($this->search) . '%',
@@ -88,6 +95,7 @@ class UsersList extends Component
     return view('livewire.users-list', [
       'users' => $users,
       'counts' => $counts,
+      'globalNotificationsEnabled' => $globalNotificationsEnabled,
     ]);
   }
 }

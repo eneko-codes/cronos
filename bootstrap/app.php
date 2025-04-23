@@ -1,7 +1,7 @@
 <?php
 
-use App\Jobs\SendUserWeeklyReport;
 use App\Jobs\SendUserLeaveReminder;
+use App\Jobs\SendUserWeeklyReport;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;

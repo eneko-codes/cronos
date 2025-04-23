@@ -14,59 +14,59 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  */
 class ProjectUser extends Pivot
 {
-  /**
-   * The table associated with the pivot model.
-   *
-   * @var string
-   */
-  protected $table = 'project_user';
+    /**
+     * The table associated with the pivot model.
+     *
+     * @var string
+     */
+    protected $table = 'project_user';
 
-  /**
-   * Indicates if the primary key is auto-incrementing.
-   *
-   * @var bool
-   */
-  public $incrementing = false;
+    /**
+     * Indicates if the primary key is auto-incrementing.
+     *
+     * @var bool
+     */
+    public $incrementing = false;
 
-  /**
-   * Indicates if the model should manage timestamps.
-   *
-   * @var bool
-   */
-  public $timestamps = true;
+    /**
+     * Indicates if the model should manage timestamps.
+     *
+     * @var bool
+     */
+    public $timestamps = true;
 
-  /**
-   * The attributes that are mass assignable.
-   *
-   * @var array
-   */
-  protected $fillable = ['user_id', 'proofhub_project_id'];
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array
+     */
+    protected $fillable = ['user_id', 'proofhub_project_id'];
 
-  /**
-   * Get the value of the model's primary key.
-   *
-   * @return string
-   */
-  public function getKey()
-  {
-    return $this->user_id . '-' . $this->proofhub_project_id;
-  }
+    /**
+     * Get the value of the model's primary key.
+     *
+     * @return string
+     */
+    public function getKey()
+    {
+        return $this->user_id.'-'.$this->proofhub_project_id;
+    }
 
-  /**
-   * The "booted" method of the model.
-   *
-   * Defines model event listeners.
-   *
-   * @return void
-   */
-  protected static function booted()
-  {
-    static::creating(function ($pivot) {
-      // Additional logic if needed
-    });
+    /**
+     * The "booted" method of the model.
+     *
+     * Defines model event listeners.
+     *
+     * @return void
+     */
+    protected static function booted()
+    {
+        static::creating(function ($pivot) {
+            // Additional logic if needed
+        });
 
-    static::deleting(function ($pivot) {
-      // Additional logic if needed
-    });
-  }
+        static::deleting(function ($pivot) {
+            // Additional logic if needed
+        });
+    }
 }

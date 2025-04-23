@@ -25,7 +25,7 @@ class ScheduleFactory extends Factory
             'average_hours_day' => fake()->randomElement([8, 4]),
         ];
     }
-    
+
     /**
      * Full-time 40-hour week schedule
      *
@@ -38,7 +38,7 @@ class ScheduleFactory extends Factory
             'average_hours_day' => 8,
         ]);
     }
-    
+
     /**
      * Part-time 20-hour week schedule
      *
@@ -51,4 +51,4 @@ class ScheduleFactory extends Factory
             'average_hours_day' => 4,
         ]);
     }
-} 
+}

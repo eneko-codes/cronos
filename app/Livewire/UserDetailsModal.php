@@ -10,238 +10,238 @@ use Livewire\Component;
 
 class UserDetailsModal extends Component
 {
-  public $isOpen = false; // Modal open state
+    public $isOpen = false; // Modal open state
 
-  #[Locked]
-  public $userId = ''; // User ID
+    #[Locked]
+    public $userId = ''; // User ID
 
-  public $name = ''; // User name
+    public $name = ''; // User name
 
-  public $email = ''; // User email
+    public $email = ''; // User email
 
-  public $odooId = ''; // User Odoo ID
+    public $odooId = ''; // User Odoo ID
 
-  public $proofhubId = ''; // User Proofhub ID
+    public $proofhubId = ''; // User Proofhub ID
 
-  public $desktimeId = ''; // User Desktime ID
+    public $desktimeId = ''; // User Desktime ID
 
-  public $systempinId = ''; // User SystemPin ID
+    public $systempinId = ''; // User SystemPin ID
 
-  public $createdAt = ''; // User creation date
+    public $createdAt = ''; // User creation date
 
-  public $updatedAt = ''; // User update date
+    public $updatedAt = ''; // User update date
 
-  public $isAdmin = false; // User admin status
+    public $isAdmin = false; // User admin status
 
-  public $isDoNotTrack = false; // User do not track status
+    public $isDoNotTrack = false; // User do not track status
 
-  public $details = []; // User details array
+    public $details = []; // User details array
 
-  public $canPromoteToAdmin = false; // Permission to promote user to admin
+    public $canPromoteToAdmin = false; // Permission to promote user to admin
 
-  public $canNotTrack = false; // Permission to set user as do not track
+    public $canNotTrack = false; // Permission to set user as do not track
 
-  public $canDemoteAdmin = false; // Permission to demote user from admin
+    public $canDemoteAdmin = false; // Permission to demote user from admin
 
-  public $canEnableTracking = false; // Permission to enable tracking for user
+    public $canEnableTracking = false; // Permission to enable tracking for user
 
-  public $isMuted = false; // User muted notifications status
+    public $isMuted = false; // User muted notifications status
 
-  public $canMuteNotifications = false; // Permission to mute user notifications
+    public $canMuteNotifications = false; // Permission to mute user notifications
 
-  public $canUnmuteNotifications = false; // Permission to unmute user notifications
+    public $canUnmuteNotifications = false; // Permission to unmute user notifications
 
-  #[On('openUserDetailsModal')]
-  public function openUserDetailsModal($userId): void
-  {
-    $this->userId = $userId; // Set user ID
-    $this->isOpen = true; // Open modal
-    $this->loadUserDetails(); // Fetch user details
-  }
-
-  public function loadUserDetails(): void
-  {
-    // Fetch user details
-    $user = User::findOrFail($this->userId);
-
-    // Prepare user details for display
-    $this->prepareDetails($user);
-
-    // Check permissions for actions
-    $this->canPromoteToAdmin = Gate::allows('promoteToAdmin', $user);
-    $this->canDemoteAdmin =
-      $user->is_admin && Gate::allows('demoteAdmin', $user);
-    $this->canNotTrack =
-      !$user->do_not_track && Gate::allows('disableTracking', $user);
-    $this->canEnableTracking =
-      $user->do_not_track && Gate::allows('enableTracking', $user);
-
-    // Use the new preferences relationship and policies
-    $this->isMuted = $user->notificationPreferences?->mute_all ?? false;
-    $this->canMuteNotifications = Gate::allows('muteNotifications', $user);
-    $this->canUnmuteNotifications = Gate::allows('unmuteNotifications', $user);
-  }
-
-  protected function prepareDetails($user): void
-  {
-    $this->name = $user->name ?? '-';
-    $this->email = $user->email ?? '-';
-    $this->odooId = $user->odoo_id ?? '-';
-    $this->proofhubId = $user->proofhub_id ?? '-';
-    $this->desktimeId = $user->desktime_id ?? '-';
-    $this->systempinId = $user->systempin_id ?? '-';
-    $this->createdAt = $user->created_at
-      ? $user->created_at->diffForHumans()
-      : '-';
-    $this->updatedAt = $user->updated_at
-      ? $user->updated_at->diffForHumans()
-      : '-';
-    $this->isAdmin = $user->is_admin;
-    $this->isDoNotTrack = $user->do_not_track;
-    // Use the new preferences relationship
-    $this->isMuted = $user->notificationPreferences?->mute_all ?? false;
-
-    $this->details = [
-      'Email' => $this->email,
-      'Odoo ID' => $this->odooId,
-      'Proofhub ID' => $this->proofhubId,
-      'Desktime ID' => $this->desktimeId,
-      'SystemPin ID' => $this->systempinId,
-      'Created at' => $this->createdAt,
-      'Updated at' => $this->updatedAt,
-    ];
-  }
-
-  public function promoteToAdmin(): void
-  {
-    $user = User::findOrFail($this->userId);
-    $this->authorize('promoteToAdmin', $user);
-
-    if (!$user->is_admin) {
-      $user->is_admin = true;
-      $user->save();
-
-      // Update local state and permissions by reloading all details
-      $this->loadUserDetails();
-
-      $this->dispatch(
-        'add-toast',
-        message: 'User ' . $this->name . ' promoted to admin successfully.',
-        variant: 'success'
-      );
+    #[On('openUserDetailsModal')]
+    public function openUserDetailsModal($userId): void
+    {
+        $this->userId = $userId; // Set user ID
+        $this->isOpen = true; // Open modal
+        $this->loadUserDetails(); // Fetch user details
     }
-  }
 
-  public function demoteFromAdmin(): void
-  {
-    $user = User::findOrFail($this->userId);
-    $this->authorize('demoteAdmin', $user);
+    public function loadUserDetails(): void
+    {
+        // Fetch user details
+        $user = User::findOrFail($this->userId);
 
-    if ($user->is_admin) {
-      $user->is_admin = false;
-      $user->save();
+        // Prepare user details for display
+        $this->prepareDetails($user);
 
-      // Update local state and permissions by reloading all details
-      $this->loadUserDetails();
+        // Check permissions for actions
+        $this->canPromoteToAdmin = Gate::allows('promoteToAdmin', $user);
+        $this->canDemoteAdmin =
+          $user->is_admin && Gate::allows('demoteAdmin', $user);
+        $this->canNotTrack =
+          ! $user->do_not_track && Gate::allows('disableTracking', $user);
+        $this->canEnableTracking =
+          $user->do_not_track && Gate::allows('enableTracking', $user);
 
-      $this->dispatch(
-        'add-toast',
-        message: 'Admin rights removed from ' . $this->name . ' successfully.',
-        variant: 'success'
-      );
+        // Use the new preferences relationship and policies
+        $this->isMuted = $user->notificationPreferences?->mute_all ?? false;
+        $this->canMuteNotifications = Gate::allows('muteNotifications', $user);
+        $this->canUnmuteNotifications = Gate::allows('unmuteNotifications', $user);
     }
-  }
 
-  public function doNotTrackUser(): void
-  {
-    $user = User::findOrFail($this->userId);
-    $this->authorize('disableTracking', $user);
+    protected function prepareDetails($user): void
+    {
+        $this->name = $user->name ?? '-';
+        $this->email = $user->email ?? '-';
+        $this->odooId = $user->odoo_id ?? '-';
+        $this->proofhubId = $user->proofhub_id ?? '-';
+        $this->desktimeId = $user->desktime_id ?? '-';
+        $this->systempinId = $user->systempin_id ?? '-';
+        $this->createdAt = $user->created_at
+          ? $user->created_at->diffForHumans()
+          : '-';
+        $this->updatedAt = $user->updated_at
+          ? $user->updated_at->diffForHumans()
+          : '-';
+        $this->isAdmin = $user->is_admin;
+        $this->isDoNotTrack = $user->do_not_track;
+        // Use the new preferences relationship
+        $this->isMuted = $user->notificationPreferences?->mute_all ?? false;
 
-    if (!$user->do_not_track) {
-      $user->do_not_track = true;
-      $user->save();
-
-      // Update local state and permissions by reloading all details
-      $this->loadUserDetails();
-
-      $this->dispatch(
-        'add-toast',
-        message: 'User ' .
-          $this->name .
-          ' added to the do not track list successfully.',
-        variant: 'success'
-      );
+        $this->details = [
+            'Email' => $this->email,
+            'Odoo ID' => $this->odooId,
+            'Proofhub ID' => $this->proofhubId,
+            'Desktime ID' => $this->desktimeId,
+            'SystemPin ID' => $this->systempinId,
+            'Created at' => $this->createdAt,
+            'Updated at' => $this->updatedAt,
+        ];
     }
-  }
 
-  public function enableTracking(): void
-  {
-    $user = User::findOrFail($this->userId);
-    $this->authorize('enableTracking', $user);
+    public function promoteToAdmin(): void
+    {
+        $user = User::findOrFail($this->userId);
+        $this->authorize('promoteToAdmin', $user);
 
-    if ($user->do_not_track) {
-      $user->do_not_track = false;
-      $user->save();
+        if (! $user->is_admin) {
+            $user->is_admin = true;
+            $user->save();
 
-      // Update local state and permissions by reloading all details
-      $this->loadUserDetails();
+            // Update local state and permissions by reloading all details
+            $this->loadUserDetails();
 
-      $this->dispatch(
-        'add-toast',
-        message: 'Tracking enabled for ' . $this->name . ' successfully.',
-        variant: 'success'
-      );
+            $this->dispatch(
+                'add-toast',
+                message: 'User '.$this->name.' promoted to admin successfully.',
+                variant: 'success'
+            );
+        }
     }
-  }
 
-  public function muteNotifications(): void
-  {
-    $user = User::findOrFail($this->userId);
-    $this->authorize('muteNotifications', $user);
+    public function demoteFromAdmin(): void
+    {
+        $user = User::findOrFail($this->userId);
+        $this->authorize('demoteAdmin', $user);
 
-    // Update the preference record
-    $preferences = $user->notificationPreferences()->firstOrCreate(); // Ensure record exists
-    if (!$preferences->mute_all) {
-      $preferences->update(['mute_all' => true]);
+        if ($user->is_admin) {
+            $user->is_admin = false;
+            $user->save();
 
-      // Reload details and permissions to reflect the change immediately
-      $this->loadUserDetails();
+            // Update local state and permissions by reloading all details
+            $this->loadUserDetails();
 
-      $this->dispatch(
-        'add-toast',
-        message: 'Notifications muted for ' . $this->name . ' successfully.',
-        variant: 'success'
-      );
-      // Dispatch event to potentially refresh user list/dashboard view
-      $this->dispatch('user-preferences-updated', $user->id);
+            $this->dispatch(
+                'add-toast',
+                message: 'Admin rights removed from '.$this->name.' successfully.',
+                variant: 'success'
+            );
+        }
     }
-  }
 
-  public function unmuteNotifications(): void
-  {
-    $user = User::findOrFail($this->userId);
-    $this->authorize('unmuteNotifications', $user);
+    public function doNotTrackUser(): void
+    {
+        $user = User::findOrFail($this->userId);
+        $this->authorize('disableTracking', $user);
 
-    // Update the preference record
-    $preferences = $user->notificationPreferences()->firstOrCreate(); // Ensure record exists
-    if ($preferences->mute_all) {
-      $preferences->update(['mute_all' => false]);
+        if (! $user->do_not_track) {
+            $user->do_not_track = true;
+            $user->save();
 
-      // Reload details and permissions to reflect the change immediately
-      $this->loadUserDetails();
+            // Update local state and permissions by reloading all details
+            $this->loadUserDetails();
 
-      $this->dispatch(
-        'add-toast',
-        message: 'Notifications enabled for ' . $this->name . ' successfully.',
-        variant: 'success'
-      );
-      // Dispatch event to potentially refresh user list/dashboard view
-      $this->dispatch('user-preferences-updated', $user->id);
+            $this->dispatch(
+                'add-toast',
+                message: 'User '.
+                  $this->name.
+                  ' added to the do not track list successfully.',
+                variant: 'success'
+            );
+        }
     }
-  }
 
-  public function render(): \Illuminate\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\View\View
-  {
-    return view('livewire.user-details-modal');
-  }
+    public function enableTracking(): void
+    {
+        $user = User::findOrFail($this->userId);
+        $this->authorize('enableTracking', $user);
+
+        if ($user->do_not_track) {
+            $user->do_not_track = false;
+            $user->save();
+
+            // Update local state and permissions by reloading all details
+            $this->loadUserDetails();
+
+            $this->dispatch(
+                'add-toast',
+                message: 'Tracking enabled for '.$this->name.' successfully.',
+                variant: 'success'
+            );
+        }
+    }
+
+    public function muteNotifications(): void
+    {
+        $user = User::findOrFail($this->userId);
+        $this->authorize('muteNotifications', $user);
+
+        // Update the preference record
+        $preferences = $user->notificationPreferences()->firstOrCreate(); // Ensure record exists
+        if (! $preferences->mute_all) {
+            $preferences->update(['mute_all' => true]);
+
+            // Reload details and permissions to reflect the change immediately
+            $this->loadUserDetails();
+
+            $this->dispatch(
+                'add-toast',
+                message: 'Notifications muted for '.$this->name.' successfully.',
+                variant: 'success'
+            );
+            // Dispatch event to potentially refresh user list/dashboard view
+            $this->dispatch('user-preferences-updated', $user->id);
+        }
+    }
+
+    public function unmuteNotifications(): void
+    {
+        $user = User::findOrFail($this->userId);
+        $this->authorize('unmuteNotifications', $user);
+
+        // Update the preference record
+        $preferences = $user->notificationPreferences()->firstOrCreate(); // Ensure record exists
+        if ($preferences->mute_all) {
+            $preferences->update(['mute_all' => false]);
+
+            // Reload details and permissions to reflect the change immediately
+            $this->loadUserDetails();
+
+            $this->dispatch(
+                'add-toast',
+                message: 'Notifications enabled for '.$this->name.' successfully.',
+                variant: 'success'
+            );
+            // Dispatch event to potentially refresh user list/dashboard view
+            $this->dispatch('user-preferences-updated', $user->id);
+        }
+    }
+
+    public function render(): \Illuminate\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\View\View
+    {
+        return view('livewire.user-details-modal');
+    }
 }

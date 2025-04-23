@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 /**
  * Schedule Model
@@ -24,123 +24,119 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
  */
 class Schedule extends Model
 {
-  use HasFactory;
+    use HasFactory;
 
-  /**
-   * The table associated with the model.
-   *
-   * @var string
-   */
-  protected $table = 'schedules';
+    /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'schedules';
 
-  /**
-   * The primary key for the model.
-   *
-   * Using odoo_schedule_id as the primary key to maintain direct mapping with Odoo.
-   * This is not an auto-incrementing field, but defined by the external system.
-   *
-   * @var string
-   */
-  protected $primaryKey = 'odoo_schedule_id';
+    /**
+     * The primary key for the model.
+     *
+     * Using odoo_schedule_id as the primary key to maintain direct mapping with Odoo.
+     * This is not an auto-incrementing field, but defined by the external system.
+     *
+     * @var string
+     */
+    protected $primaryKey = 'odoo_schedule_id';
 
-  /**
-   * Indicates if the IDs are auto-incrementing.
-   *
-   * @var bool
-   */
-  public $incrementing = false;
+    /**
+     * Indicates if the IDs are auto-incrementing.
+     *
+     * @var bool
+     */
+    public $incrementing = false;
 
-  /**
-   * The data type of the primary key.
-   *
-   * @var string
-   */
-  protected $keyType = 'int';
+    /**
+     * The data type of the primary key.
+     *
+     * @var string
+     */
+    protected $keyType = 'int';
 
-  /**
-   * The attributes that are mass assignable.
-   *
-   * @var array
-   */
-  protected $fillable = [
-    'odoo_schedule_id',
-    'description',
-    'average_hours_day',
-  ];
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array
+     */
+    protected $fillable = [
+        'odoo_schedule_id',
+        'description',
+        'average_hours_day',
+    ];
 
-  /**
-   * The attributes that should be cast to native types.
-   *
-   * @var array
-   */
-  protected $casts = [
-    'average_hours_day' => 'float',
-  ];
+    /**
+     * The attributes that should be cast to native types.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'average_hours_day' => 'float',
+    ];
 
-  /**
-   * The relationships that should always be loaded.
-   *
-   * @var array
-   */
-  protected $with = ['scheduleDetails', 'userSchedules'];
+    /**
+     * The relationships that should always be loaded.
+     *
+     * @var array
+     */
+    protected $with = ['scheduleDetails', 'userSchedules'];
 
-  /**
-   * The "booted" method of the model.
-   *
-   * Sets up cascading deletion of related records when a schedule is deleted.
-   * This ensures all schedule details and user assignments are properly removed,
-   * and their model events are emitted for proper tracking/auditing.
-   *
-   * @return void
-   */
-  protected static function booted()
-  {
-    static::deleting(function ($schedule) {
-      // Delete associated schedule details to emit model events
-      foreach ($schedule->scheduleDetails as $detail) {
-        $detail->delete();
-      }
+    /**
+     * The "booted" method of the model.
+     *
+     * Sets up cascading deletion of related records when a schedule is deleted.
+     * This ensures all schedule details and user assignments are properly removed,
+     * and their model events are emitted for proper tracking/auditing.
+     *
+     * @return void
+     */
+    protected static function booted()
+    {
+        static::deleting(function ($schedule) {
+            // Delete associated schedule details to emit model events
+            foreach ($schedule->scheduleDetails as $detail) {
+                $detail->delete();
+            }
 
-      // Delete associated user schedule assignments to emit model events
-      foreach ($schedule->userSchedules as $userSchedule) {
-        $userSchedule->delete();
-      }
-    });
-  }
+            // Delete associated user schedule assignments to emit model events
+            foreach ($schedule->userSchedules as $userSchedule) {
+                $userSchedule->delete();
+            }
+        });
+    }
 
-  /**
-   * Get the schedule details (time slots) associated with this schedule.
-   *
-   * Schedule details define the specific working hours for each day of the week.
-   * For example, Monday 9:00-12:00 and 13:00-17:00, Tuesday 9:00-12:00, etc.
-   * This relationship is the core of what defines a working schedule pattern.
-   *
-   * @return HasMany
-   */
-  public function scheduleDetails(): HasMany
-  {
-    return $this->hasMany(
-      ScheduleDetail::class,
-      'odoo_schedule_id',
-      'odoo_schedule_id'
-    );
-  }
+    /**
+     * Get the schedule details (time slots) associated with this schedule.
+     *
+     * Schedule details define the specific working hours for each day of the week.
+     * For example, Monday 9:00-12:00 and 13:00-17:00, Tuesday 9:00-12:00, etc.
+     * This relationship is the core of what defines a working schedule pattern.
+     */
+    public function scheduleDetails(): HasMany
+    {
+        return $this->hasMany(
+            ScheduleDetail::class,
+            'odoo_schedule_id',
+            'odoo_schedule_id'
+        );
+    }
 
-  /**
-   * Get the user schedule assignments associated with this schedule.
-   *
-   * UserSchedule records track which employees are assigned to this schedule
-   * and during which time periods. This enables tracking changes in employee
-   * work schedules over time with effective dates.
-   *
-   * @return HasMany
-   */
-  public function userSchedules(): HasMany
-  {
-    return $this->hasMany(
-      UserSchedule::class,
-      'odoo_schedule_id',
-      'odoo_schedule_id'
-    );
-  }
+    /**
+     * Get the user schedule assignments associated with this schedule.
+     *
+     * UserSchedule records track which employees are assigned to this schedule
+     * and during which time periods. This enables tracking changes in employee
+     * work schedules over time with effective dates.
+     */
+    public function userSchedules(): HasMany
+    {
+        return $this->hasMany(
+            UserSchedule::class,
+            'odoo_schedule_id',
+            'odoo_schedule_id'
+        );
+    }
 }

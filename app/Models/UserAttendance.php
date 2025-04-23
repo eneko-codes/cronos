@@ -3,10 +3,10 @@
 namespace App\Models;
 
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 
 /**
  * UserAttendance Model
@@ -29,97 +29,93 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
  */
 class UserAttendance extends Model
 {
-  use HasFactory;
+    use HasFactory;
 
-  /**
-   * The table associated with the model.
-   *
-   * @var string
-   */
-  protected $table = 'user_attendances';
+    /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'user_attendances';
 
-  /**
-   * The attributes that are mass assignable.
-   *
-   * All core attendance data can be mass-assigned during synchronization,
-   * including user ID, date, duration, remote status, and timestamps.
-   *
-   * @var array
-   */
-  protected $fillable = [
-    'user_id',
-    'date',
-    'presence_seconds',
-    'is_remote',
-    'start',
-    'end',
-  ];
+    /**
+     * The attributes that are mass assignable.
+     *
+     * All core attendance data can be mass-assigned during synchronization,
+     * including user ID, date, duration, remote status, and timestamps.
+     *
+     * @var array
+     */
+    protected $fillable = [
+        'user_id',
+        'date',
+        'presence_seconds',
+        'is_remote',
+        'start',
+        'end',
+    ];
 
-  /**
-   * The attributes that should be cast to native types.
-   *
-   * Date fields are stored in UTC format for consistency across
-   * different time zones and data sources (Desktime and Systempin).
-   *
-   * @var array
-   */
-  protected $casts = [
-    'is_remote' => 'boolean',
-    'presence_seconds' => 'integer',
-    'date' => 'date',
-    'start' => 'datetime',
-    'end' => 'datetime',
-  ];
+    /**
+     * The attributes that should be cast to native types.
+     *
+     * Date fields are stored in UTC format for consistency across
+     * different time zones and data sources (Desktime and Systempin).
+     *
+     * @var array
+     */
+    protected $casts = [
+        'is_remote' => 'boolean',
+        'presence_seconds' => 'integer',
+        'date' => 'date',
+        'start' => 'datetime',
+        'end' => 'datetime',
+    ];
 
-  /**
-   * Get the user that owns the attendance record.
-   *
-   * Links back to the employee whose attendance is being tracked.
-   * This relationship is essential for reporting and analytics.
-   *
-   * @return BelongsTo
-   */
-  public function user(): BelongsTo
-  {
-    return $this->belongsTo(User::class);
-  }
+    /**
+     * Get the user that owns the attendance record.
+     *
+     * Links back to the employee whose attendance is being tracked.
+     * This relationship is essential for reporting and analytics.
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 
-  /**
-   * Set and get the date attribute with proper UTC timezone handling.
-   *
-   * Ensures date values are always normalized to UTC when stored
-   * and properly formatted when retrieved. This maintains consistency
-   * across different user timezones and data sources.
-   *
-   * @return \Illuminate\Database\Eloquent\Casts\Attribute
-   */
-  protected function date(): Attribute
-  {
-    return Attribute::make(
-      get: fn($value) => Carbon::parse($value)->setTimezone('UTC'),
-      set: fn($value) => $value instanceof Carbon
-        ? $value->setTimezone('UTC')->toDateString()
-        : Carbon::parse($value)->setTimezone('UTC')->toDateString()
-    );
-  }
+    /**
+     * Set and get the date attribute with proper UTC timezone handling.
+     *
+     * Ensures date values are always normalized to UTC when stored
+     * and properly formatted when retrieved. This maintains consistency
+     * across different user timezones and data sources.
+     */
+    protected function date(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => Carbon::parse($value)->setTimezone('UTC'),
+            set: fn ($value) => $value instanceof Carbon
+              ? $value->setTimezone('UTC')->toDateString()
+              : Carbon::parse($value)->setTimezone('UTC')->toDateString()
+        );
+    }
 
-  /**
-   * The "booted" method of the model.
-   *
-   * Sets up event listeners for the model lifecycle events.
-   * Currently prepared with placeholders for additional business logic
-   * that might be needed in the future (like notifications or stats updates).
-   *
-   * @return void
-   */
-  protected static function booted()
-  {
-    static::deleting(function ($userAttendance) {
-      // Additional logic if needed
-    });
+    /**
+     * The "booted" method of the model.
+     *
+     * Sets up event listeners for the model lifecycle events.
+     * Currently prepared with placeholders for additional business logic
+     * that might be needed in the future (like notifications or stats updates).
+     *
+     * @return void
+     */
+    protected static function booted()
+    {
+        static::deleting(function ($userAttendance) {
+            // Additional logic if needed
+        });
 
-    static::created(function ($userAttendance) {
-      // Additional logic if needed
-    });
-  }
+        static::created(function ($userAttendance) {
+            // Additional logic if needed
+        });
+    }
 }

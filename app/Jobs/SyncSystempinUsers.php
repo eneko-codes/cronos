@@ -2,7 +2,6 @@
 
 namespace App\Jobs;
 
-use App\Jobs\BaseSyncJob;
 use Exception;
 
 /**
@@ -12,32 +11,29 @@ use Exception;
  */
 class SyncSystempinUsers extends BaseSyncJob
 {
-  /**
-   * The priority of the job in the queue.
-   *
-   * @var int
-   */
-  public int $priority = 1;
+    /**
+     * The priority of the job in the queue.
+     */
+    public int $priority = 1;
 
-  /**
-   * SyncSystempinUsers constructor.
-   *
-   * @return void
-   */
-  public function __construct()
-  {
-    // Initialize any required properties or dependencies
-  }
+    /**
+     * SyncSystempinUsers constructor.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        // Initialize any required properties or dependencies
+    }
 
-  /**
-   * Executes the synchronization process.
-   *
-   * @return void
-   *
-   * @throws Exception
-   */
-  protected function execute(): void
-  {
-    // Implement the synchronization logic here.
-  }
+    /**
+     * Executes the synchronization process.
+     *
+     *
+     * @throws Exception
+     */
+    protected function execute(): void
+    {
+        // Implement the synchronization logic here.
+    }
 }

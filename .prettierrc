@@ -3,9 +3,5 @@
   "trailingComma": "es5",
   "tabWidth": 2,
   "semi": true,
-  "plugins": [
-    "prettier-plugin-tailwindcss",
-    "prettier-plugin-blade",
-    "@prettier/plugin-php"
-  ]
+  "plugins": ["prettier-plugin-tailwindcss", "prettier-plugin-blade"]
 }

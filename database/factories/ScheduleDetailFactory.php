@@ -27,7 +27,7 @@ class ScheduleDetailFactory extends Factory
             'end' => Carbon::createFromTime(13, 0, 0),
         ];
     }
-    
+
     /**
      * Morning shift from 9:00 to 13:00
      *
@@ -41,7 +41,7 @@ class ScheduleDetailFactory extends Factory
             'end' => Carbon::createFromTime(13, 0, 0),
         ]);
     }
-    
+
     /**
      * Afternoon shift from 14:00 to 18:00
      *
@@ -55,11 +55,11 @@ class ScheduleDetailFactory extends Factory
             'end' => Carbon::createFromTime(18, 0, 0),
         ]);
     }
-    
+
     /**
      * Set a specific weekday
      *
-     * @param int $day 0=Monday, 6=Sunday
+     * @param  int  $day  0=Monday, 6=Sunday
      * @return static
      */
     public function weekday(int $day)
@@ -68,4 +68,4 @@ class ScheduleDetailFactory extends Factory
             'weekday' => $day,
         ]);
     }
-} 
+}

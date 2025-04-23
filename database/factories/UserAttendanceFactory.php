@@ -18,7 +18,7 @@ class UserAttendanceFactory extends Factory
     public function definition(): array
     {
         $isRemote = fake()->boolean(70); // 70% chance of remote work
-        
+
         return [
             'user_id' => null, // To be set when creating records
             'date' => now(), // This will be overridden in the seeder
@@ -29,7 +29,7 @@ class UserAttendanceFactory extends Factory
             'end' => $isRemote ? null : Carbon::createFromTime(17, 0, 0),
         ];
     }
-    
+
     /**
      * Create a remote work attendance record
      *
@@ -43,7 +43,7 @@ class UserAttendanceFactory extends Factory
             'end' => null,
         ]);
     }
-    
+
     /**
      * Create an in-office attendance record
      *
@@ -57,11 +57,10 @@ class UserAttendanceFactory extends Factory
             'end' => Carbon::createFromTime(17, 0, 0),
         ]);
     }
-    
+
     /**
      * Create an attendance record for a specific date
      *
-     * @param Carbon $date
      * @return static
      */
     public function forDate(Carbon $date)
@@ -70,4 +69,4 @@ class UserAttendanceFactory extends Factory
             'date' => $date,
         ]);
     }
-} 
+}

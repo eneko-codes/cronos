@@ -29,11 +29,10 @@ class TimeEntryFactory extends Factory
             'proofhub_created_at' => now(), // Will be properly set in the seeder
         ];
     }
-    
+
     /**
      * Create a time entry for a specific date
      *
-     * @param Carbon $date
      * @return static
      */
     public function forDate(Carbon $date)
@@ -42,11 +41,10 @@ class TimeEntryFactory extends Factory
             'date' => $date,
         ]);
     }
-    
+
     /**
      * Create a time entry for a specific task
      *
-     * @param string $taskId
      * @return static
      */
     public function forTask(string $taskId)
@@ -55,11 +53,10 @@ class TimeEntryFactory extends Factory
             'proofhub_task_id' => $taskId,
         ]);
     }
-    
+
     /**
      * Create a time entry with a specific duration
      *
-     * @param int $minutes
      * @return static
      */
     public function withDuration(int $minutes)
@@ -68,4 +65,4 @@ class TimeEntryFactory extends Factory
             'duration_seconds' => $minutes * 60,
         ]);
     }
-} 
+}

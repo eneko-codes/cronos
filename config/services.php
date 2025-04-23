@@ -1,7 +1,7 @@
 <?php
 
 return [
-  /*
+    /*
       |--------------------------------------------------------------------------
       | Third Party Services
       |--------------------------------------------------------------------------
@@ -13,41 +13,41 @@ return [
       |
       */
 
-  'postmark' => [
-    'token' => env('POSTMARK_TOKEN'),
-  ],
-
-  'ses' => [
-    'key' => env('AWS_ACCESS_KEY_ID'),
-    'secret' => env('AWS_SECRET_ACCESS_KEY'),
-    'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
-  ],
-
-  'resend' => [
-    'key' => env('RESEND_KEY'),
-  ],
-
-  'slack' => [
-    'notifications' => [
-      'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
-      'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
+    'postmark' => [
+        'token' => env('POSTMARK_TOKEN'),
     ],
-  ],
 
-  'odoo' => [
-    'base_url' => env('ODOO_BASE_URL'),
-    'database' => env('ODOO_DATABASE'),
-    'username' => env('ODOO_USERNAME'),
-    'password' => env('ODOO_PASSWORD'),
-  ],
+    'ses' => [
+        'key' => env('AWS_ACCESS_KEY_ID'),
+        'secret' => env('AWS_SECRET_ACCESS_KEY'),
+        'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
+    ],
 
-  'proofhub' => [
-    'api_key' => env('PROOFHUB_API_KEY'),
-    'company_url' => env('PROOFHUB_COMPANY_URL'),
-  ],
+    'resend' => [
+        'key' => env('RESEND_KEY'),
+    ],
 
-  'desktime' => [
-    'base_url' => env('DESKTIME_BASE_URL'),
-    'api_key' => env('DESKTIME_API_KEY'),
-  ],
+    'slack' => [
+        'notifications' => [
+            'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
+            'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
+        ],
+    ],
+
+    'odoo' => [
+        'base_url' => env('ODOO_BASE_URL'),
+        'database' => env('ODOO_DATABASE'),
+        'username' => env('ODOO_USERNAME'),
+        'password' => env('ODOO_PASSWORD'),
+    ],
+
+    'proofhub' => [
+        'api_key' => env('PROOFHUB_API_KEY'),
+        'company_url' => env('PROOFHUB_COMPANY_URL'),
+    ],
+
+    'desktime' => [
+        'base_url' => env('DESKTIME_BASE_URL'),
+        'api_key' => env('DESKTIME_API_KEY'),
+    ],
 ];

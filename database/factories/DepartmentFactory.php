@@ -19,16 +19,16 @@ class DepartmentFactory extends Factory
         return [
             'odoo_department_id' => fake()->unique()->numberBetween(1, 100),
             'name' => fake()->unique()->randomElement([
-                'Engineering', 
-                'Marketing', 
-                'Sales', 
-                'Finance', 
-                'Human Resources', 
-                'Product', 
-                'Design', 
-                'Customer Success'
+                'Engineering',
+                'Marketing',
+                'Sales',
+                'Finance',
+                'Human Resources',
+                'Product',
+                'Design',
+                'Customer Success',
             ]),
             'active' => true,
         ];
     }
-} 
+}

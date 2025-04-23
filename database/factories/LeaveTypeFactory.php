@@ -28,9 +28,9 @@ class LeaveTypeFactory extends Factory
                 'Training',
                 'Bereavement Leave',
                 'Public Holiday',
-                'Unpaid Leave'
+                'Unpaid Leave',
             ]),
             'active' => true,
         ];
     }
-} 
+}

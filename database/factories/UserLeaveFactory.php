@@ -20,7 +20,7 @@ class UserLeaveFactory extends Factory
         $startDate = now();
         $durationDays = fake()->numberBetween(1, 5);
         $endDate = $startDate->copy()->addDays($durationDays - 1);
-        
+
         return [
             'odoo_leave_id' => fake()->unique()->numberBetween(1000, 9999),
             'type' => fake()->randomElement(['employee', 'department', 'category']),
@@ -36,7 +36,7 @@ class UserLeaveFactory extends Factory
             'request_hour_to' => null, // Will be set for half-day leaves
         ];
     }
-    
+
     /**
      * Create a leave with approved status
      *
@@ -48,7 +48,7 @@ class UserLeaveFactory extends Factory
             'status' => 'validate',
         ]);
     }
-    
+
     /**
      * Create a leave with pending approval status
      *
@@ -60,7 +60,7 @@ class UserLeaveFactory extends Factory
             'status' => 'confirm',
         ]);
     }
-    
+
     /**
      * Create a leave with refused status
      *
@@ -72,7 +72,7 @@ class UserLeaveFactory extends Factory
             'status' => 'refuse',
         ]);
     }
-    
+
     /**
      * Create a regular user leave
      *
@@ -86,11 +86,10 @@ class UserLeaveFactory extends Factory
             'category_id' => null,
         ]);
     }
-    
+
     /**
      * Create a department leave
      *
-     * @param int $departmentId
      * @return static
      */
     public function forDepartment(int $departmentId)
@@ -101,11 +100,10 @@ class UserLeaveFactory extends Factory
             'category_id' => null,
         ]);
     }
-    
+
     /**
      * Create a category leave
      *
-     * @param int $categoryId
      * @return static
      */
     public function forCategory(int $categoryId)
@@ -116,17 +114,16 @@ class UserLeaveFactory extends Factory
             'category_id' => $categoryId,
         ]);
     }
-    
+
     /**
      * Create a leave for a specific date range
      *
-     * @param Carbon $start
-     * @param Carbon $end
      * @return static
      */
     public function forDateRange(Carbon $start, Carbon $end)
     {
         $durationDays = $start->diffInDays($end) + 1;
+
         return $this->state(fn (array $attributes) => [
             'start_date' => $start->startOfDay(),
             'end_date' => $end->endOfDay(),
@@ -167,7 +164,7 @@ class UserLeaveFactory extends Factory
             'end_date' => isset($attributes['start_date']) ? Carbon::parse($attributes['start_date'])->endOfDay() : now()->endOfDay(),
         ]);
     }
-    
+
     /**
      * Create a full-day leave
      *
@@ -194,7 +191,7 @@ class UserLeaveFactory extends Factory
             'status' => 'validate1',
         ]);
     }
-    
+
     /**
      * Create a leave with draft status
      *
@@ -206,7 +203,7 @@ class UserLeaveFactory extends Factory
             'status' => 'draft',
         ]);
     }
-    
+
     /**
      * Create a leave with cancelled status
      *
@@ -218,4 +215,4 @@ class UserLeaveFactory extends Factory
             'status' => 'cancel',
         ]);
     }
-} 
+}

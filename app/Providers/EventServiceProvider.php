@@ -2,7 +2,6 @@
 
 namespace App\Providers;
 
-use App\Listeners\SendWelcomeEmail;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 
 /**
@@ -14,20 +13,18 @@ use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvi
  */
 class EventServiceProvider extends ServiceProvider
 {
-  /**
-   * The event listener mappings for the application.
-   *
-   * @var array
-   */
-  protected $listen = [];
+    /**
+     * The event listener mappings for the application.
+     *
+     * @var array
+     */
+    protected $listen = [];
 
-  /**
-   * Register any events for your application.
-   *
-   * @return void
-   */
-  public function boot(): void
-  {
-    parent::boot();
-  }
+    /**
+     * Register any events for your application.
+     */
+    public function boot(): void
+    {
+        parent::boot();
+    }
 }

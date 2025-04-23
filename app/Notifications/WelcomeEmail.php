@@ -10,42 +10,43 @@ use Illuminate\Notifications\Notification;
 
 class WelcomeEmail extends Notification implements ShouldQueue
 {
-  use Queueable;
+    use Queueable;
 
-  public User $user;
-  public string $url;
+    public User $user;
 
-  public function __construct(User $user)
-  {
-    $this->user = $user;
-    $this->url = route('login');
-  }
+    public string $url;
 
-  /**
-   * The channels this notification will be delivered on.
-   */
-  public function via($notifiable): array
-  {
-    // Don't send if notifications are muted
-    if (!$notifiable->shouldReceiveNotifications()) {
-      return [];
+    public function __construct(User $user)
+    {
+        $this->user = $user;
+        $this->url = route('login');
     }
-    return ['mail'];
-  }
 
-  /**
-   * Build the mail version of the notification.
-   */
-  public function toMail($notifiable): MailMessage
-  {
-    return (new MailMessage())
-      ->from(config('mail.from.address'), config('mail.from.name'))
-      ->subject('Welcome to ' . config('app.name'))
-      ->greeting("Hello {$this->user->name},")
-      ->line('Welcome to ' . config('app.name') . '!')
-      ->line(
-        "You can log in using your work email: {$this->user->email}. You'll receive a magic login link."
-      )
-      ->action('Go to Login Page', $this->url);
-  }
+    /**
+     * The channels this notification will be delivered on.
+     *
+     * Note: Eligibility checks (global settings, user preferences) are now handled
+     * centrally in User::canReceiveNotification() before dispatch.
+     */
+    public function via($notifiable): array
+    {
+        // This notification only uses the mail channel.
+        return ['mail'];
+    }
+
+    /**
+     * Build the mail version of the notification.
+     */
+    public function toMail($notifiable): MailMessage
+    {
+        return (new MailMessage)
+            ->from(config('mail.from.address'), config('mail.from.name'))
+            ->subject('Welcome to '.config('app.name'))
+            ->greeting("Hello {$this->user->name},")
+            ->line('Welcome to '.config('app.name').'!')
+            ->line(
+                "You can log in using your work email: {$this->user->email}. You'll receive a magic login link."
+            )
+            ->action('Go to Login Page', $this->url);
+    }
 }

@@ -10,8 +10,6 @@ class Spinner extends Component
 {
     /**
      * The size of the spinner.
-     *
-     * @var string
      */
     public string $size;
 

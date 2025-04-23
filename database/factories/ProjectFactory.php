@@ -29,8 +29,8 @@ class ProjectFactory extends Factory
                 'Content Strategy',
                 'Internal Tool Development',
                 'API Integration',
-                'Analytics Dashboard'
+                'Analytics Dashboard',
             ]),
         ];
     }
-} 
+}

@@ -35,8 +35,8 @@ class TaskFactory extends Factory
                 'Review pull requests',
                 'Create release notes',
                 'Design social media assets',
-                'Implement API endpoints'
+                'Implement API endpoints',
             ]),
         ];
     }
-} 
+}

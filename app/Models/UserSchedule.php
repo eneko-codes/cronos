@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 /**
  * Class UserSchedule
@@ -13,72 +13,68 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
  */
 class UserSchedule extends Model
 {
-  use HasFactory;
+    use HasFactory;
 
-  protected $table = 'user_schedules';
-  public $timestamps = true;
+    protected $table = 'user_schedules';
 
-  protected $fillable = [
-    'user_id',
-    'odoo_schedule_id',
-    'effective_from',
-    'effective_until',
-  ];
+    public $timestamps = true;
 
-  protected $casts = [
-    'effective_from' => 'datetime',
-    'effective_until' => 'datetime',
-  ];
+    protected $fillable = [
+        'user_id',
+        'odoo_schedule_id',
+        'effective_from',
+        'effective_until',
+    ];
 
-  protected $appends = ['duration'];
+    protected $casts = [
+        'effective_from' => 'datetime',
+        'effective_until' => 'datetime',
+    ];
 
-  /**
-   * The user that owns this schedule assignment.
-   *
-   * @return BelongsTo
-   */
-  public function user(): BelongsTo
-  {
-    return $this->belongsTo(User::class);
-  }
+    protected $appends = ['duration'];
 
-  /**
-   * The schedule associated with this assignment.
-   *
-   * @return BelongsTo
-   */
-  public function schedule(): BelongsTo
-  {
-    return $this->belongsTo(
-      Schedule::class,
-      'odoo_schedule_id',
-      'odoo_schedule_id'
-    );
-  }
-
-  /**
-   * Accessor for the duration attribute.
-   *
-   * @return string|null
-   */
-  public function getDurationAttribute(): ?string
-  {
-    if ($this->effective_from && $this->effective_until) {
-      return $this->effective_from->diffForHumans($this->effective_until, true);
+    /**
+     * The user that owns this schedule assignment.
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
-    return null;
-  }
 
-  protected static function boot()
-  {
-    parent::boot();
+    /**
+     * The schedule associated with this assignment.
+     */
+    public function schedule(): BelongsTo
+    {
+        return $this->belongsTo(
+            Schedule::class,
+            'odoo_schedule_id',
+            'odoo_schedule_id'
+        );
+    }
 
-    static::created(function ($userSchedule) {
-      // Additional logic can be added here if needed.
-    });
+    /**
+     * Accessor for the duration attribute.
+     */
+    public function getDurationAttribute(): ?string
+    {
+        if ($this->effective_from && $this->effective_until) {
+            return $this->effective_from->diffForHumans($this->effective_until, true);
+        }
 
-    static::deleting(function ($userSchedule) {
-      // Additional logic can be added here if needed.
-    });
-  }
+        return null;
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::created(function ($userSchedule) {
+            // Additional logic can be added here if needed.
+        });
+
+        static::deleting(function ($userSchedule) {
+            // Additional logic can be added here if needed.
+        });
+    }
 }

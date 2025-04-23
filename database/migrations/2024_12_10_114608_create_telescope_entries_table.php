@@ -6,51 +6,51 @@ use Illuminate\Support\Facades\Schema;
 
 class CreateTelescopeEntriesTable extends Migration
 {
-  /**
-   * Get the migration connection name.
-   */
-  public function getConnection(): ?string
-  {
-    return config('telescope.storage.database.connection');
-  }
+    /**
+     * Get the migration connection name.
+     */
+    public function getConnection(): ?string
+    {
+        return config('telescope.storage.database.connection');
+    }
 
-  /**
-   * Run the migrations.
-   */
-  public function up(): void
-  {
-    $schema = Schema::connection($this->getConnection());
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        $schema = Schema::connection($this->getConnection());
 
-    $schema->create('telescope_entries', function (Blueprint $table) {
-      $table->comment(
-        'Stores the entries of the Laravel Telescope monitoring tool.'
-      );
-      $table->bigIncrements('sequence');
-      $table->uuid('uuid');
-      $table->uuid('batch_id');
-      $table->string('family_hash')->nullable();
-      $table->boolean('should_display_on_index')->default(true);
-      $table->string('type', 20);
-      $table->longText('content');
-      $table->dateTime('created_at')->nullable();
+        $schema->create('telescope_entries', function (Blueprint $table) {
+            $table->comment(
+                'Stores the entries of the Laravel Telescope monitoring tool.'
+            );
+            $table->bigIncrements('sequence');
+            $table->uuid('uuid');
+            $table->uuid('batch_id');
+            $table->string('family_hash')->nullable();
+            $table->boolean('should_display_on_index')->default(true);
+            $table->string('type', 20);
+            $table->longText('content');
+            $table->dateTime('created_at')->nullable();
 
-      $table->unique('uuid');
-      $table->index('batch_id');
-      $table->index('family_hash');
-      $table->index('created_at');
-      $table->index(['type', 'should_display_on_index']);
-    });
-  }
+            $table->unique('uuid');
+            $table->index('batch_id');
+            $table->index('family_hash');
+            $table->index('created_at');
+            $table->index(['type', 'should_display_on_index']);
+        });
+    }
 
-  /**
-   * Reverse the migrations.
-   */
-  public function down(): void
-  {
-    $schema = Schema::connection($this->getConnection());
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        $schema = Schema::connection($this->getConnection());
 
-    $schema->dropIfExists('telescope_entries_tags');
-    $schema->dropIfExists('telescope_entries');
-    $schema->dropIfExists('telescope_monitoring');
-  }
+        $schema->dropIfExists('telescope_entries_tags');
+        $schema->dropIfExists('telescope_entries');
+        $schema->dropIfExists('telescope_monitoring');
+    }
 }

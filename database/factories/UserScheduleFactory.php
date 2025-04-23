@@ -24,12 +24,12 @@ class UserScheduleFactory extends Factory
             'effective_until' => null,
         ];
     }
-    
+
     /**
      * Set a specific effective date range
      *
-     * @param Carbon $from Start date
-     * @param Carbon|null $until End date (null for ongoing)
+     * @param  Carbon  $from  Start date
+     * @param  Carbon|null  $until  End date (null for ongoing)
      * @return static
      */
     public function effectiveRange(Carbon $from, ?Carbon $until = null)
@@ -39,7 +39,7 @@ class UserScheduleFactory extends Factory
             'effective_until' => $until,
         ]);
     }
-    
+
     /**
      * Create a schedule assignment with an end date
      *
@@ -51,7 +51,7 @@ class UserScheduleFactory extends Factory
             'effective_until' => Carbon::parse($attributes['effective_from'])->addMonths(fake()->numberBetween(1, 6)),
         ]);
     }
-    
+
     /**
      * Create a current/ongoing schedule assignment
      *
@@ -64,4 +64,4 @@ class UserScheduleFactory extends Factory
             'effective_until' => null,
         ]);
     }
-} 
+}

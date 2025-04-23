@@ -5,8 +5,8 @@ namespace App\Jobs;
 use App\Models\Category;
 use App\Services\OdooApiCalls;
 use Exception;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Class SyncOdooCategories
@@ -18,114 +18,104 @@ use Illuminate\Support\Collection;
  */
 class SyncOdooCategories extends BaseSyncJob
 {
-  /**
-   * The priority of the job in the queue.
-   * Lower numbers indicate higher priority.
-   *
-   * @var int
-   */
-  public int $priority = 1;
+    /**
+     * The priority of the job in the queue.
+     * Lower numbers indicate higher priority.
+     */
+    public int $priority = 1;
 
-  /**
-   * SyncOdooCategories constructor.
-   *
-   * @param OdooApiCalls $odoo An instance of the OdooApiCalls service.
-   */
-  public function __construct(OdooApiCalls $odoo)
-  {
-    // Assign to parent's $odoo
-    $this->odoo = $odoo;
-  }
+    /**
+     * SyncOdooCategories constructor.
+     *
+     * @param  OdooApiCalls  $odoo  An instance of the OdooApiCalls service.
+     */
+    public function __construct(OdooApiCalls $odoo)
+    {
+        // Assign to parent's $odoo
+        $this->odoo = $odoo;
+    }
 
-  /**
-   * Executes the synchronization process.
-   *
-   * This method performs the following operations:
-   * 1. Fetches categories from Odoo API and maps them to local structure
-   * 2. Creates or updates local categories based on Odoo data
-   * 3. Identifies categories that exist locally but not in Odoo
-   * 4. Logs missing categories for historical integrity
-   *
-   * @throws Exception If any part of the synchronization process fails
-   */
-  protected function execute(): void
-  {
-    // Step 1: Fetch and map categories from Odoo
-    $mappedCategories = $this->mapOdooCategories();
+    /**
+     * Executes the synchronization process.
+     *
+     * This method performs the following operations:
+     * 1. Fetches categories from Odoo API and maps them to local structure
+     * 2. Creates or updates local categories based on Odoo data
+     * 3. Identifies categories that exist locally but not in Odoo
+     * 4. Logs missing categories for historical integrity
+     *
+     * @throws Exception If any part of the synchronization process fails
+     */
+    protected function execute(): void
+    {
+        // Step 1: Fetch and map categories from Odoo
+        $mappedCategories = $this->mapOdooCategories();
 
-    // Step 2: Create or update local categories
-    $this->syncCategories($mappedCategories);
+        // Step 2: Create or update local categories
+        $this->syncCategories($mappedCategories);
 
-    // Step 3: Log categories that exist locally but not in Odoo
-    $this->logMissingCategories($mappedCategories->pluck('odoo_category_id'));
-  }
+        // Step 3: Log categories that exist locally but not in Odoo
+        $this->logMissingCategories($mappedCategories->pluck('odoo_category_id'));
+    }
 
-  /**
-   * Maps Odoo categories to our local structure.
-   *
-   * @return Collection
-   */
-  private function mapOdooCategories(): Collection
-  {
-    return $this->odoo->getCategories()->map(function ($cat) {
-      return [
-        'odoo_category_id' => $cat['id'],
-        'name' => $cat['name'],
-        'active' => $cat['active'] ?? true,
-      ];
-    });
-  }
+    /**
+     * Maps Odoo categories to our local structure.
+     */
+    private function mapOdooCategories(): Collection
+    {
+        return $this->odoo->getCategories()->map(function ($cat) {
+            return [
+                'odoo_category_id' => $cat['id'],
+                'name' => $cat['name'],
+                'active' => $cat['active'] ?? true,
+            ];
+        });
+    }
 
-  /**
-   * Creates or updates local categories based on Odoo data.
-   *
-   * @param Collection $mappedCategories
-   * @return void
-   */
-  private function syncCategories(Collection $mappedCategories): void
-  {
-    $mappedCategories->each(function ($cat) {
-      Category::updateOrCreate(
-        ['odoo_category_id' => $cat['odoo_category_id']],
-        [
-          'name' => $cat['name'],
-          'active' => $cat['active'],
-        ]
-      );
-    });
-  }
-
-  /**
-   * Logs categories that exist locally but not in Odoo for historical integrity.
-   *
-   * @param Collection $currentOdooCategoryIds
-   * @return void
-   */
-  private function logMissingCategories(
-    Collection $currentOdooCategoryIds
-  ): void {
-    Category::pluck('odoo_category_id')
-      ->diff($currentOdooCategoryIds)
-      ->pipe(function ($categoriesToLog) {
-        if ($categoriesToLog->isEmpty()) {
-          return;
-        }
-
-        Category::whereIn('odoo_category_id', $categoriesToLog)
-          ->get()
-          ->each(function ($category) {
-            Log::info(
-              class_basename($this) .
-                ": Category '{$category->name}' no longer exists in Odoo but preserved for historical integrity",
-              [
-                'odoo_category_id' => $category->odoo_category_id,
-                'name' => $category->name,
-                'created_at' => $category->created_at->toDateTimeString(),
-                'updated_at' => $category->updated_at->toDateTimeString(),
-                'detected_at' => now()->toDateTimeString(),
-              ]
+    /**
+     * Creates or updates local categories based on Odoo data.
+     */
+    private function syncCategories(Collection $mappedCategories): void
+    {
+        $mappedCategories->each(function ($cat) {
+            Category::updateOrCreate(
+                ['odoo_category_id' => $cat['odoo_category_id']],
+                [
+                    'name' => $cat['name'],
+                    'active' => $cat['active'],
+                ]
             );
-          });
-      });
-  }
+        });
+    }
+
+    /**
+     * Logs categories that exist locally but not in Odoo for historical integrity.
+     */
+    private function logMissingCategories(
+        Collection $currentOdooCategoryIds
+    ): void {
+        Category::pluck('odoo_category_id')
+            ->diff($currentOdooCategoryIds)
+            ->pipe(function ($categoriesToLog) {
+                if ($categoriesToLog->isEmpty()) {
+                    return;
+                }
+
+                Category::whereIn('odoo_category_id', $categoriesToLog)
+                    ->get()
+                    ->each(function ($category) {
+                        Log::info(
+                            class_basename($this).
+                              ": Category '{$category->name}' no longer exists in Odoo but preserved for historical integrity",
+                            [
+                                'odoo_category_id' => $category->odoo_category_id,
+                                'name' => $category->name,
+                                'created_at' => $category->created_at->toDateTimeString(),
+                                'updated_at' => $category->updated_at->toDateTimeString(),
+                                'detected_at' => now()->toDateTimeString(),
+                            ]
+                        );
+                    });
+            });
+    }
 }

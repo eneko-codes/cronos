@@ -28,8 +28,8 @@ class CategoryFactory extends Factory
                 'C-Level',
                 'Product Owners',
                 'Marketing Team',
-                'Support Staff'
+                'Support Staff',
             ]),
         ];
     }
-} 
+}

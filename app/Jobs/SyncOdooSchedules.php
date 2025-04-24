@@ -246,13 +246,15 @@ class SyncOdooSchedules extends BaseSyncJob
                 // If no new schedule, close out the old
                 if (! $newOdooScheduleId) {
                     if ($activeSchedule) {
+                        $oldScheduleModel = $activeSchedule->schedule; // Get the model before updating
                         $activeSchedule->update(['effective_until' => $startOfDay]);
 
                         // Notify user if their schedule was removed/ended
-                        if ($activeSchedule->schedule) {
+                        if ($oldScheduleModel) {
                             $notification = new ScheduleChangeNotification(
                                 $user,
-                                "Your previous schedule '{$activeSchedule->schedule->description}' has ended."
+                                $oldScheduleModel, // Pass old schedule model
+                                null // No new schedule
                             );
                             if ($user->canReceiveNotification($notification)) {
                                 $user->notify($notification);
@@ -270,6 +272,12 @@ class SyncOdooSchedules extends BaseSyncJob
                     return;
                 }
 
+                // Get the new schedule model if it exists
+                $newScheduleModel = Schedule::where(
+                    'odoo_schedule_id',
+                    $newOdooScheduleId
+                )->first();
+
                 // If it's the same schedule, do nothing
                 if (
                     $activeSchedule &&
@@ -280,17 +288,15 @@ class SyncOdooSchedules extends BaseSyncJob
 
                 // Close old schedule
                 if ($activeSchedule) {
+                    $oldScheduleModelForNotification = $activeSchedule->schedule; // Get the model before updating
                     $activeSchedule->update(['effective_until' => $startOfDay]);
 
-                    // Notify user about the change
-                    $newScheduleModel = Schedule::where(
-                        'odoo_schedule_id',
-                        $newOdooScheduleId
-                    )->first();
-                    if ($newScheduleModel) {
-                        $notification = new ScheduleChangeNotification(
+                    // Notify user about the change (pass both old and new)
+                    if ($newScheduleModel && $oldScheduleModelForNotification) {
+                         $notification = new ScheduleChangeNotification(
                             $user,
-                            "Your schedule has been changed to '{$newScheduleModel->description}'."
+                            $oldScheduleModelForNotification, // Pass old schedule
+                            $newScheduleModel // Pass new schedule
                         );
                         if ($user->canReceiveNotification($notification)) {
                             $user->notify($notification);
@@ -298,12 +304,14 @@ class SyncOdooSchedules extends BaseSyncJob
                     }
                 }
 
-                // Create new schedule assignment
-                $user->userSchedules()->create([
-                    'odoo_schedule_id' => $newOdooScheduleId,
-                    'effective_from' => $startOfDay,
-                    'effective_until' => null,
-                ]);
+                // Create new schedule assignment only if a valid schedule exists
+                if ($newScheduleModel) {
+                    $user->userSchedules()->create([
+                        'odoo_schedule_id' => $newOdooScheduleId,
+                        'effective_from' => $startOfDay,
+                        'effective_until' => null,
+                    ]);
+                }
 
                 // Notify user about the newly assigned schedule (only if it wasn't the same as an ended one)
                 if (
@@ -311,9 +319,13 @@ class SyncOdooSchedules extends BaseSyncJob
                       $activeSchedule->odoo_schedule_id != $newOdooScheduleId) &&
                     $newScheduleModel
                 ) {
+                    // Determine the old schedule model for comparison (might be null if no active schedule existed)
+                    $oldScheduleModelForNotification = $activeSchedule ? $activeSchedule->schedule : null;
+
                     $notification = new ScheduleChangeNotification(
                         $user,
-                        "You have been assigned a new schedule: '{$newScheduleModel->description}'."
+                        $oldScheduleModelForNotification, // Pass potentially null old schedule
+                        $newScheduleModel // Pass new schedule
                     );
                     if ($user->canReceiveNotification($notification)) {
                         $user->notify($notification);

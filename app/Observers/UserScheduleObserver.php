@@ -20,27 +20,27 @@ class UserScheduleObserver
         $userSchedule->load(['user', 'schedule']);
 
         $user = $userSchedule->user;
-        $schedule = $userSchedule->schedule;
+        $newSchedule = $userSchedule->schedule;
 
         // Ensure user and schedule exist before proceeding
-        if (! $user || ! $schedule) {
+        if (! $user || ! $newSchedule) {
             Log::warning(
                 'UserScheduleObserver: User or Schedule relationship missing for created UserSchedule',
                 [
                     'user_schedule_id' => $userSchedule->id,
                     'user_exists' => ! is_null($user),
-                    'schedule_exists' => ! is_null($schedule),
+                    'schedule_exists' => ! is_null($newSchedule),
                 ]
             );
 
             return;
         }
 
+        // Pass null for old schedule, and the new schedule model
         $notification = new ScheduleChangeNotification(
             $user,
-            "You have been assigned a new schedule: '{$schedule->description}'. Effective from {$userSchedule->effective_from->format(
-                'Y-m-d'
-            )}."
+            null,
+            $newSchedule
         );
 
         if ($user->canReceiveNotification($notification)) {
@@ -65,27 +65,27 @@ class UserScheduleObserver
             $userSchedule->load(['user', 'schedule']);
 
             $user = $userSchedule->user;
-            $schedule = $userSchedule->schedule;
+            $oldSchedule = $userSchedule->schedule;
 
             // Ensure user and schedule exist
-            if (! $user || ! $schedule) {
+            if (! $user || ! $oldSchedule) {
                 Log::warning(
                     'UserScheduleObserver: User or Schedule relationship missing for updated UserSchedule',
                     [
                         'user_schedule_id' => $userSchedule->id,
                         'user_exists' => ! is_null($user),
-                        'schedule_exists' => ! is_null($schedule),
+                        'schedule_exists' => ! is_null($oldSchedule),
                     ]
                 );
 
                 return;
             }
 
+            // Pass the ended schedule as old, and null for new
             $notification = new ScheduleChangeNotification(
                 $user,
-                "Your previous schedule '{$schedule->description}' ended on {$userSchedule->effective_until->format(
-                    'Y-m-d'
-                )}."
+                $oldSchedule,
+                null
             );
 
             if ($user->canReceiveNotification($notification)) {

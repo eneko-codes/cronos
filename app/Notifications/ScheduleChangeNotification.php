@@ -2,30 +2,34 @@
 
 namespace App\Notifications;
 
+use App\Models\Schedule;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Str;
 
 class ScheduleChangeNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
     public User $user;
-
-    public string $changeDetails;
+    public ?Schedule $oldSchedule;
+    public ?Schedule $newSchedule;
 
     /**
      * Create a new notification instance.
      *
-     * @param  User  $user  The user whose schedule changed.
-     * @param  string  $changeDetails  Description of the change.
+     * @param User $user The user whose schedule changed.
+     * @param ?Schedule $oldSchedule The user's previous schedule (or null).
+     * @param ?Schedule $newSchedule The user's new schedule (or null).
      */
-    public function __construct(User $user, string $changeDetails)
+    public function __construct(User $user, ?Schedule $oldSchedule, ?Schedule $newSchedule)
     {
         $this->user = $user;
-        $this->changeDetails = $changeDetails;
+        $this->oldSchedule = $oldSchedule;
+        $this->newSchedule = $newSchedule;
     }
 
     /**
@@ -36,7 +40,7 @@ class ScheduleChangeNotification extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        return ['mail'];
+        return ['mail']; // Add 'database' if you want to store it
     }
 
     /**
@@ -44,17 +48,60 @@ class ScheduleChangeNotification extends Notification implements ShouldQueue
      */
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)
+        $mailMessage = (new MailMessage)
             ->subject('Your Work Schedule Has Been Updated')
             ->greeting("Hello {$this->user->name},")
-            ->line('Your assigned work schedule has been updated.')
-            ->line("Details: {$this->changeDetails}")
-            ->action('View Schedule', url('/schedule'));
+            ->line('Your assigned work schedule has been updated.');
+
+        if ($this->oldSchedule) {
+            $mailMessage->line("**Previous Schedule:** {$this->oldSchedule->description}")
+                        ->line($this->formatScheduleDetails($this->oldSchedule));
+        }
+
+        if ($this->newSchedule) {
+            $mailMessage->line("**New Schedule:** {$this->newSchedule->description}")
+                        ->line($this->formatScheduleDetails($this->newSchedule));
+        } elseif (! $this->oldSchedule) {
+            // Case where both are null somehow (shouldn't happen but good to handle)
+            $mailMessage->line('No schedule information available for this update.');
+        } elseif ($this->oldSchedule && ! $this->newSchedule) {
+            // Case where the schedule was removed
+            $mailMessage->line('Your previous schedule has now ended.');
+        }
+
+        // Removed the ->action() button
+
+        return $mailMessage;
+    }
+
+    /**
+     * Formats the details of a schedule into a readable string.
+     *
+     * @param Schedule $schedule
+     * @return string
+     */
+    protected function formatScheduleDetails(Schedule $schedule): string
+    {
+        $detailsString = "";
+        $daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+        // Group details by weekday
+        $groupedDetails = $schedule->scheduleDetails->sortBy(['weekday', 'day_period'])->groupBy('weekday');
+
+        foreach ($groupedDetails as $weekday => $details) {
+            $dayName = $daysOfWeek[$weekday] ?? 'Unknown Day';
+            $detailsString .= "\n**{$dayName}:**";
+            foreach ($details as $detail) {
+                $period = Str::ucfirst($detail->day_period);
+                $detailsString .= "\n  - {$period}: {$detail->start} - {$detail->end} (UTC)";
+            }
+        }
+
+        return $detailsString ?: "\n  - No specific details available.";
     }
 
     /**
      * Get the array representation of the notification.
-     * (Optional: Define if you want to store in 'database' channel)
      *
      * @return array<string, mixed>
      */
@@ -62,8 +109,9 @@ class ScheduleChangeNotification extends Notification implements ShouldQueue
     // {
     //     return [
     //         'user_id' => $this->user->id,
-    //         'message' => 'Your schedule was updated: ' . $this->changeDetails,
-    //         // Add other relevant data
+    //         'message' => 'Your schedule was updated.',
+    //         'old_schedule_id' => $this->oldSchedule?->id,
+    //         'new_schedule_id' => $this->newSchedule?->id,
     //     ];
     // }
 }

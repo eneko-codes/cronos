@@ -8,9 +8,6 @@ class CategoryObserver
 {
     /**
      * Handle the Category "deleting" event.
-     *
-     * @param  \App\Models\Category  $category
-     * @return void
      */
     public function deleting(Category $category): void
     {
@@ -21,4 +18,4 @@ class CategoryObserver
     }
 
     // Add other event methods if needed: created, updated, deleted, restored, forceDeleted
-} 
+}

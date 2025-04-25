@@ -8,9 +8,6 @@ class ScheduleObserver
 {
     /**
      * Handle the Schedule "deleting" event.
-     *
-     * @param  \App\Models\Schedule  $schedule
-     * @return void
      */
     public function deleting(Schedule $schedule): void
     {
@@ -26,4 +23,4 @@ class ScheduleObserver
     }
 
     // Add other event methods if needed: created, updated, deleted, restored, forceDeleted
-} 
+}

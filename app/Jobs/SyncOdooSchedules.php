@@ -4,7 +4,6 @@ namespace App\Jobs;
 
 use App\Models\Schedule;
 use App\Models\User;
-use App\Notifications\ScheduleChangeNotification;
 use App\Services\OdooApiCalls;
 use Carbon\Carbon;
 use Exception;

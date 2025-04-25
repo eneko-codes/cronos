@@ -2,21 +2,21 @@
 
 namespace App\Providers;
 
-use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
-use App\Models\User;
-use App\Observers\UserObserver;
-use App\Models\LeaveType;
-use App\Observers\LeaveTypeObserver;
-use App\Models\Department;
-use App\Observers\DepartmentObserver;
-use App\Models\Schedule;
-use App\Observers\ScheduleObserver;
-use App\Models\Project;
-use App\Observers\ProjectObserver;
-use App\Models\Task;
-use App\Observers\TaskObserver;
 use App\Models\Category;
+use App\Models\Department;
+use App\Models\LeaveType;
+use App\Models\Project;
+use App\Models\Schedule;
+use App\Models\Task;
+use App\Models\User;
 use App\Observers\CategoryObserver;
+use App\Observers\DepartmentObserver;
+use App\Observers\LeaveTypeObserver;
+use App\Observers\ProjectObserver;
+use App\Observers\ScheduleObserver;
+use App\Observers\TaskObserver;
+use App\Observers\UserObserver;
+use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 
 /**
  * Event Service Provider

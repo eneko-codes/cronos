@@ -8,9 +8,6 @@ class LeaveTypeObserver
 {
     /**
      * Handle the LeaveType "deleting" event.
-     *
-     * @param  \App\Models\LeaveType  $leaveType
-     * @return void
      */
     public function deleting(LeaveType $leaveType): void
     {
@@ -21,4 +18,4 @@ class LeaveTypeObserver
     }
 
     // Add other event methods if needed: created, updated, deleted, restored, forceDeleted
-} 
+}

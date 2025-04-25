@@ -8,9 +8,6 @@ class ProjectObserver
 {
     /**
      * Handle the Project "deleting" event.
-     *
-     * @param  \App\Models\Project  $project
-     * @return void
      */
     public function deleting(Project $project): void
     {
@@ -34,4 +31,4 @@ class ProjectObserver
     }
 
     // Add other event methods if needed: created, updated, deleted, restored, forceDeleted
-} 
+}

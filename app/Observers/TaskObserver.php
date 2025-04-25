@@ -8,9 +8,6 @@ class TaskObserver
 {
     /**
      * Handle the Task "deleting" event.
-     *
-     * @param  \App\Models\Task  $task
-     * @return void
      */
     public function deleting(Task $task): void
     {
@@ -26,4 +23,4 @@ class TaskObserver
     }
 
     // Add other event methods if needed: created, updated, deleted, restored, forceDeleted
-} 
+}

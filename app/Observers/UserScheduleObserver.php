@@ -11,11 +11,10 @@ class UserScheduleObserver
 {
     /**
      * Handle the UserSchedule "created" event.
-     *
      */
     public function created(UserSchedule $userSchedule): void
     {
-       //
+        //
     }
 
     /**

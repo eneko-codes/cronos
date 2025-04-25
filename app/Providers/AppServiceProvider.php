@@ -2,10 +2,6 @@
 
 namespace App\Providers;
 
-use App\Models\User;
-use App\Models\UserSchedule;
-use App\Observers\UserObserver;
-use App\Observers\UserScheduleObserver;
 use App\Services\DesktimeApiCalls;
 use App\Services\OdooApiCalls;
 use App\Services\ProofhubApiCalls;

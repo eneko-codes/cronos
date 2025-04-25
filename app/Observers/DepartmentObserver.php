@@ -8,9 +8,6 @@ class DepartmentObserver
 {
     /**
      * Handle the Department "deleting" event.
-     *
-     * @param  \App\Models\Department  $department
-     * @return void
      */
     public function deleting(Department $department): void
     {
@@ -22,4 +19,4 @@ class DepartmentObserver
     }
 
     // Add other event methods if needed: created, updated, deleted, restored, forceDeleted
-} 
+}

@@ -28,11 +28,11 @@ Schedule::job(new SendUserWeeklyReport)
     ->withoutOverlapping();
 
 /**
- * Schedule the Leave Reminder job to run daily at 9:00 AM
+ * Schedule the Leave Reminder job to run daily at 8:00 AM
  */
 Schedule::job(new SendUserLeaveReminder(1))
     ->daily()
-    ->at('09:00')
+    ->at('08:00')
     ->name('Daily Leave Reminder')
     ->withoutOverlapping();
 

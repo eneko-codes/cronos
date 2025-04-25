@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\UserLeave;
 use App\Notifications\LeaveReminderNotification;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -37,24 +38,24 @@ class SendUserLeaveReminder implements ShouldQueue
             ->addDays($this->daysInAdvance)
             ->toDateString();
         Log::info(
-            "SendUserLeaveReminder Job started for target date: {$targetDate} ({$this->daysInAdvance} day(s) advance)."
+            "SendUserLeaveReminder Job started for target date: $targetDate ($this->daysInAdvance day(s) advance)."
         );
 
         $upcomingLeaves = UserLeave::with('user')
-          // ->where('status', 'approved') // Optional filter
+            ->where('status', 'approved')
             ->whereDate('start_date', $targetDate)
             ->get();
 
         $sentCount = 0;
         if ($upcomingLeaves->isEmpty()) {
             Log::info(
-                "SendUserLeaveReminder Job: No upcoming leaves found starting on {$targetDate}."
+                "SendUserLeaveReminder Job: No upcoming leaves found starting on $targetDate."
             );
 
             return;
         }
         Log::info(
-            "SendUserLeaveReminder Job: Found {$upcomingLeaves->count()} leaves starting on {$targetDate}."
+            "SendUserLeaveReminder Job: Found {$upcomingLeaves->count()} leaves starting on $targetDate."
         );
 
         foreach ($upcomingLeaves as $leave) {
@@ -81,7 +82,7 @@ class SendUserLeaveReminder implements ShouldQueue
             }
 
             Log::info(
-                "SendUserLeaveReminder Job: Processing leave {$leave->id} for user {$user->id}"
+                "SendUserLeaveReminder Job: Processing leave $leave->id for user $user->id"
             );
 
             $notification = new LeaveReminderNotification($user, $leave);
@@ -90,12 +91,12 @@ class SendUserLeaveReminder implements ShouldQueue
                 try {
                     $user->notify($notification);
                     Log::info(
-                        "SendUserLeaveReminder Job: Notification queued for user {$user->id}, leave {$leave->id}"
+                        "SendUserLeaveReminder Job: Notification queued for user $user->id, leave $leave->id"
                     );
                     $sentCount++;
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     Log::error(
-                        "SendUserLeaveReminder Job: Failed to queue notification for user {$user->id}, leave {$leave->id}",
+                        "SendUserLeaveReminder Job: Failed to queue notification for user $user->id, leave $leave->id",
                         [
                             'error' => $e->getMessage(),
                         ]
@@ -103,11 +104,11 @@ class SendUserLeaveReminder implements ShouldQueue
                 }
             } else {
                 Log::info(
-                    "SendUserLeaveReminder Job: Skipped notification for user {$user->id}, leave {$leave->id} (checks failed)"
+                    "SendUserLeaveReminder Job: Skipped notification for user $user->id, leave $leave->id (checks failed)"
                 );
             }
         }
-        $summary = "SendUserLeaveReminder Job finished. Processed {$upcomingLeaves->count()} leaves, queued {$sentCount} notifications.";
+        $summary = "SendUserLeaveReminder Job finished. Processed {$upcomingLeaves->count()} leaves, queued $sentCount notifications.";
         Log::info($summary);
     }
 }

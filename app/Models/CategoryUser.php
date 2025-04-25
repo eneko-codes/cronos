@@ -51,22 +51,4 @@ class CategoryUser extends Pivot
      * @var array
      */
     protected $fillable = ['user_id', 'category_id'];
-
-    /**
-     * The "booted" method of the model.
-     *
-     * Defines model event listeners.
-     *
-     * @return void
-     */
-    protected static function booted()
-    {
-        static::creating(function ($pivot) {
-            // Additional logic if needed
-        });
-
-        static::deleting(function ($pivot) {
-            // Additional logic if needed
-        });
-    }
 }

@@ -65,22 +65,4 @@ class ScheduleDetail extends Model
             'odoo_schedule_id'
         );
     }
-
-    /**
-     * The "booted" method of the model.
-     *
-     * Defines model event listeners.
-     *
-     * @return void
-     */
-    protected static function booted()
-    {
-        static::deleting(function ($scheduleDetail) {
-            // Additional logic if needed
-        });
-
-        static::created(function ($scheduleDetail) {
-            // Additional logic if needed
-        });
-    }
 }

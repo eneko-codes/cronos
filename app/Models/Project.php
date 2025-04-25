@@ -48,36 +48,6 @@ class Project extends Model
     protected $fillable = ['proofhub_project_id', 'name'];
 
     /**
-     * The "booted" method of the model.
-     *
-     * Defines model event listeners.
-     *
-     * @return void
-     */
-    protected static function booted()
-    {
-        static::deleting(function ($project) {
-            // Detach each user individually to emit model events
-            foreach ($project->users as $user) {
-                $project->users()->detach($user->id);
-            }
-
-            // Delete associated tasks and their time entries to emit model events
-            foreach ($project->tasks as $task) {
-                foreach ($task->timeEntries as $timeEntry) {
-                    $timeEntry->delete();
-                }
-                $task->delete();
-            }
-
-            // Delete associated time entries not linked to tasks to emit model events
-            foreach ($project->timeEntries as $timeEntry) {
-                $timeEntry->delete();
-            }
-        });
-    }
-
-    /**
      * The users that belong to the project.
      */
     public function users(): BelongsToMany

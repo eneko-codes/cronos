@@ -98,24 +98,4 @@ class UserAttendance extends Model
               : Carbon::parse($value)->setTimezone('UTC')->toDateString()
         );
     }
-
-    /**
-     * The "booted" method of the model.
-     *
-     * Sets up event listeners for the model lifecycle events.
-     * Currently prepared with placeholders for additional business logic
-     * that might be needed in the future (like notifications or stats updates).
-     *
-     * @return void
-     */
-    protected static function booted()
-    {
-        static::deleting(function ($userAttendance) {
-            // Additional logic if needed
-        });
-
-        static::created(function ($userAttendance) {
-            // Additional logic if needed
-        });
-    }
 }

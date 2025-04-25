@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Models\User;
 use App\Notifications\AdminPromotionEmail;
+use App\Notifications\WelcomeEmail;
 use Illuminate\Support\Facades\Notification;
 
 class UserObserver
@@ -13,7 +14,60 @@ class UserObserver
      */
     public function created(User $user): void
     {
-        //
+        // Create default notification preferences for the new user
+        $user->notificationPreferences()->create();
+
+        // Create the notification instance
+        $welcomeNotification = new WelcomeEmail($user);
+
+        // Use the centralized check AND ensure user has an email before dispatching
+        if ($user->email && $user->canReceiveNotification($welcomeNotification)) {
+            $user->notify(new WelcomeEmail($user));
+        }
+    }
+
+    /**
+     * Handle the User "updating" event.
+     */
+    public function updating(User $user): void
+    {
+        // Handle do_not_track logic
+        if (! $user->isDirty('do_not_track')) {
+            return;
+        }
+
+        if ($user->do_not_track) {
+            // Delete hasMany relations individually to emit model events
+            foreach ($user->userSchedules as $schedule) {
+                $schedule->delete();
+            }
+
+            foreach ($user->userLeaves as $leave) {
+                $leave->delete();
+            }
+
+            foreach ($user->userAttendances as $attendance) {
+                $attendance->delete();
+            }
+
+            foreach ($user->timeEntries as $timeEntry) {
+                $timeEntry->delete();
+            }
+
+            // Detach belongsToMany relations individually to emit model events
+            foreach ($user->projects as $project) {
+                $user->projects()->detach($project->id);
+            }
+
+            foreach ($user->categories as $category) {
+                $user->categories()->detach($category->id);
+            }
+
+            foreach ($user->tasks as $task) {
+                // Detach this specific user from this specific task
+                $task->users()->detach($user->id);
+            }
+        }
     }
 
     /**
@@ -38,6 +92,50 @@ class UserObserver
                     $admin->notifyNow($notification);
                 }
             }
+        }
+    }
+
+    /**
+     * Handle the User "deleting" event.
+     */
+    public function deleting(User $user): void
+    {
+        // Delete hasMany relations individually to emit model events
+        foreach ($user->loginTokens as $loginToken) {
+            $loginToken->delete();
+        }
+
+        foreach ($user->userSchedules as $schedule) {
+            $schedule->delete();
+        }
+
+        foreach ($user->userLeaves as $leave) {
+            $leave->delete();
+        }
+
+        foreach ($user->userAttendances as $attendance) {
+            $attendance->delete();
+        }
+
+        foreach ($user->timeEntries as $timeEntry) {
+            $timeEntry->delete();
+        }
+
+        // Delete the related notification preferences record
+        $user->notificationPreferences()->delete();
+
+        // Detach belongsToMany relations individually to emit model events
+        foreach ($user->projects as $project) {
+            $user->projects()->detach($project->id);
+        }
+
+        foreach ($user->categories as $category) {
+            $user->categories()->detach($category->id);
+        }
+
+        foreach ($user->tasks as $task) {
+            // Detach this specific user from this specific task
+            $task->users()->detach($user->id);
         }
     }
 

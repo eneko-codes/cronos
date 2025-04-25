@@ -51,22 +51,4 @@ class ProjectUser extends Pivot
     {
         return $this->user_id.'-'.$this->proofhub_project_id;
     }
-
-    /**
-     * The "booted" method of the model.
-     *
-     * Defines model event listeners.
-     *
-     * @return void
-     */
-    protected static function booted()
-    {
-        static::creating(function ($pivot) {
-            // Additional logic if needed
-        });
-
-        static::deleting(function ($pivot) {
-            // Additional logic if needed
-        });
-    }
 }

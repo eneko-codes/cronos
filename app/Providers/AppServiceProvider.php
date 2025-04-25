@@ -63,8 +63,5 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(30)->by($request->user()?->id ?: $request->ip());
         });
 
-        // Register Model Observers
-        User::observe(UserObserver::class);
-        UserSchedule::observe(UserScheduleObserver::class);
     }
 }

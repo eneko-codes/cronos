@@ -12,41 +12,10 @@ class UserScheduleObserver
     /**
      * Handle the UserSchedule "created" event.
      *
-     * Notifies the user when a new schedule assignment is created.
      */
     public function created(UserSchedule $userSchedule): void
     {
-        // Eager load relationships to avoid extra queries
-        $userSchedule->load(['user', 'schedule']);
-
-        $user = $userSchedule->user;
-        $newSchedule = $userSchedule->schedule;
-
-        // Ensure user and schedule exist before proceeding
-        if (! $user || ! $newSchedule) {
-            Log::warning(
-                'UserScheduleObserver: User or Schedule relationship missing for created UserSchedule',
-                [
-                    'user_schedule_id' => $userSchedule->id,
-                    'user_exists' => ! is_null($user),
-                    'schedule_exists' => ! is_null($newSchedule),
-                ]
-            );
-
-            return;
-        }
-
-        // Pass null for old schedule, and the new schedule model
-        $notification = new ScheduleChangeNotification(
-            $user,
-            null,
-            $newSchedule
-        );
-
-        if ($user->canReceiveNotification($notification)) {
-            // Queue the notification as it's not as critical
-            $user->notify($notification);
-        }
+       //
     }
 
     /**
@@ -99,7 +68,7 @@ class UserScheduleObserver
      */
     public function deleted(UserSchedule $userSchedule): void
     {
-        // Potential logic: Notify if a schedule assignment is deleted unexpectedly?
+        //
     }
 
     /**

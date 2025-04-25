@@ -76,28 +76,6 @@ class Department extends Model
     protected $casts = ['active' => 'boolean'];
 
     /**
-     * The "booted" method of the model.
-     *
-     * Sets up event listeners for model lifecycle events:
-     * - When a department is deleted, all associated users have their department_id
-     *   set to null, ensuring proper data integrity and audit trail.
-     * - This approach emits individual model events for each user update rather than
-     *   using a bulk update that would skip events.
-     *
-     * @return void
-     */
-    protected static function booted()
-    {
-        static::deleting(function ($department) {
-            // Set 'department_id' to null for each associated user to emit model events
-            foreach ($department->users as $user) {
-                $user->department_id = null;
-                $user->save();
-            }
-        });
-    }
-
-    /**
      * Get the users associated with the department.
      *
      * Retrieves all employees that belong to this department.

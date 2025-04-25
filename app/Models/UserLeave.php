@@ -234,24 +234,4 @@ class UserLeave extends Model
             $toMin
         );
     }
-
-    /**
-     * The "booted" method of the model.
-     *
-     * Sets up event listeners to ensure proper data integrity:
-     * - When a leave is deleted, it cascades to clean up related data
-     * - When a leave's status changes, it emits appropriate events
-     *
-     * @return void
-     */
-    protected static function booted()
-    {
-        static::deleting(function ($userLeave) {
-            // Additional logic if needed
-        });
-
-        static::created(function ($userLeave) {
-            // Additional logic if needed
-        });
-    }
 }

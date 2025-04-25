@@ -85,30 +85,6 @@ class Schedule extends Model
     protected $with = ['scheduleDetails', 'userSchedules'];
 
     /**
-     * The "booted" method of the model.
-     *
-     * Sets up cascading deletion of related records when a schedule is deleted.
-     * This ensures all schedule details and user assignments are properly removed,
-     * and their model events are emitted for proper tracking/auditing.
-     *
-     * @return void
-     */
-    protected static function booted()
-    {
-        static::deleting(function ($schedule) {
-            // Delete associated schedule details to emit model events
-            foreach ($schedule->scheduleDetails as $detail) {
-                $detail->delete();
-            }
-
-            // Delete associated user schedule assignments to emit model events
-            foreach ($schedule->userSchedules as $userSchedule) {
-                $userSchedule->delete();
-            }
-        });
-    }
-
-    /**
      * Get the schedule details (time slots) associated with this schedule.
      *
      * Schedule details define the specific working hours for each day of the week.

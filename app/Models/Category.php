@@ -62,23 +62,6 @@ class Category extends Model
     protected $casts = ['active' => 'boolean'];
 
     /**
-     * The "booted" method of the model.
-     *
-     * Defines model event listeners.
-     *
-     * @return void
-     */
-    protected static function booted()
-    {
-        static::deleting(function ($category) {
-            // Detach each user individually to emit model events
-            foreach ($category->users as $user) {
-                $category->users()->detach($user->id);
-            }
-        });
-    }
-
-    /**
      * The users that belong to the category.
      */
     public function users(): BelongsToMany

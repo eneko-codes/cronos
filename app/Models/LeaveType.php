@@ -84,21 +84,4 @@ class LeaveType extends Model
             'odoo_leave_type_id'
         );
     }
-
-    /**
-     * The "booted" method of the model.
-     *
-     * Defines model event listeners.
-     *
-     * @return void
-     */
-    protected static function booted()
-    {
-        static::deleting(function ($leaveType) {
-            // Delete related UserLeave records to emit model events
-            foreach ($leaveType->leaves as $leave) {
-                $leave->delete();
-            }
-        });
-    }
 }

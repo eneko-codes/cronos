@@ -248,18 +248,6 @@ class SyncOdooSchedules extends BaseSyncJob
                     if ($activeSchedule) {
                         $oldScheduleModel = $activeSchedule->schedule; // Get the model before updating
                         $activeSchedule->update(['effective_until' => $startOfDay]);
-
-                        // Notify user if their schedule was removed/ended
-                        if ($oldScheduleModel) {
-                            $notification = new ScheduleChangeNotification(
-                                $user,
-                                $oldScheduleModel, // Pass old schedule model
-                                null // No new schedule
-                            );
-                            if ($user->canReceiveNotification($notification)) {
-                                $user->notify($notification);
-                            }
-                        }
                     }
 
                     return;
@@ -290,18 +278,6 @@ class SyncOdooSchedules extends BaseSyncJob
                 if ($activeSchedule) {
                     $oldScheduleModelForNotification = $activeSchedule->schedule; // Get the model before updating
                     $activeSchedule->update(['effective_until' => $startOfDay]);
-
-                    // Notify user about the change (pass both old and new)
-                    if ($newScheduleModel && $oldScheduleModelForNotification) {
-                         $notification = new ScheduleChangeNotification(
-                            $user,
-                            $oldScheduleModelForNotification, // Pass old schedule
-                            $newScheduleModel // Pass new schedule
-                        );
-                        if ($user->canReceiveNotification($notification)) {
-                            $user->notify($notification);
-                        }
-                    }
                 }
 
                 // Create new schedule assignment only if a valid schedule exists
@@ -311,25 +287,6 @@ class SyncOdooSchedules extends BaseSyncJob
                         'effective_from' => $startOfDay,
                         'effective_until' => null,
                     ]);
-                }
-
-                // Notify user about the newly assigned schedule (only if it wasn't the same as an ended one)
-                if (
-                    (! $activeSchedule ||
-                      $activeSchedule->odoo_schedule_id != $newOdooScheduleId) &&
-                    $newScheduleModel
-                ) {
-                    // Determine the old schedule model for comparison (might be null if no active schedule existed)
-                    $oldScheduleModelForNotification = $activeSchedule ? $activeSchedule->schedule : null;
-
-                    $notification = new ScheduleChangeNotification(
-                        $user,
-                        $oldScheduleModelForNotification, // Pass potentially null old schedule
-                        $newScheduleModel // Pass new schedule
-                    );
-                    if ($user->canReceiveNotification($notification)) {
-                        $user->notify($notification);
-                    }
                 }
             });
         } catch (Exception $e) {

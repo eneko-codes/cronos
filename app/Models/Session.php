@@ -76,22 +76,4 @@ class Session extends Model
     {
         return $this->belongsTo(User::class);
     }
-
-    /**
-     * The "booted" method of the model.
-     *
-     * Defines model event listeners.
-     *
-     * @return void
-     */
-    protected static function booted()
-    {
-        static::deleting(function ($session) {
-            // Additional logic if needed
-        });
-
-        static::created(function ($session) {
-            // Additional logic if needed
-        });
-    }
 }

@@ -64,17 +64,4 @@ class UserSchedule extends Model
 
         return null;
     }
-
-    protected static function boot()
-    {
-        parent::boot();
-
-        static::created(function ($userSchedule) {
-            // Additional logic can be added here if needed.
-        });
-
-        static::deleting(function ($userSchedule) {
-            // Additional logic can be added here if needed.
-        });
-    }
 }

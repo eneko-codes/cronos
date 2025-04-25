@@ -50,28 +50,6 @@ class Task extends Model
     protected $fillable = ['proofhub_task_id', 'proofhub_project_id', 'name'];
 
     /**
-     * The "booted" method of the model.
-     *
-     * Defines model event listeners.
-     *
-     * @return void
-     */
-    protected static function booted()
-    {
-        static::deleting(function ($task) {
-            // Detach each user individually to emit model events
-            foreach ($task->users as $user) {
-                $task->users()->detach($user->id);
-            }
-
-            // Delete associated time entries to emit model events
-            foreach ($task->timeEntries as $timeEntry) {
-                $timeEntry->delete();
-            }
-        });
-    }
-
-    /**
      * The users that belong to the task.
      */
     public function users(): BelongsToMany

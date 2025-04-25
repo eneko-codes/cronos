@@ -1,8 +1,5 @@
 <?php
 
-use App\Jobs\SendUserLeaveReminder;
-use App\Jobs\SendUserWeeklyReport;
-use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -19,13 +16,5 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
-    })
-    ->withSchedule(function (Schedule $schedule) {
-        $schedule
-            ->job(new SendUserWeeklyReport)
-            ->weekly()
-            ->mondays()
-            ->at('08:00');
-        $schedule->job(new SendUserLeaveReminder(1))->daily()->at('09:00');
     })
     ->create();

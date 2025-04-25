@@ -9,6 +9,7 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\URL;
 
 class LoginEmail extends Mailable implements ShouldQueue
 {
@@ -48,7 +49,7 @@ class LoginEmail extends Mailable implements ShouldQueue
     public function content(): Content
     {
         // Build the magic link with the 'remember' parameter
-        $url = route('login.verify', [
+        $url = URL::route('login.verify', [
             'token' => $this->tokenString,
             'remember' => $this->remember ? '1' : '0',
         ]);

@@ -101,15 +101,7 @@
                   <p class="font-medium">Personal Notifications Muted</p>
                   <p>
                     You have currently muted all your personal email
-                    notifications. You can re-enable them in the
-                    <button
-                      type="button"
-                      wire:click="$set('activeTab', 'settings')"
-                      class="font-semibold underline hover:text-blue-700 dark:hover:text-blue-100"
-                    >
-                      Settings tab
-                    </button>
-                    .
+                    notifications.
                   </p>
                 </div>
               @endif

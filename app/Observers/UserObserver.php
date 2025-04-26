@@ -6,7 +6,6 @@ use App\Models\User;
 use App\Notifications\AdminPromotionEmail;
 use App\Notifications\WelcomeEmail;
 use App\Services\NotificationPermissionService;
-use Illuminate\Support\Facades\Notification;
 
 class UserObserver
 {

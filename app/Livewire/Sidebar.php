@@ -48,7 +48,6 @@ class Sidebar extends Component
 
     protected $listeners = [
         'notification-updated' => 'refreshNotifications',
-        // 'refresh-unread-count' => 'handleRefreshUnreadCount' // Listener added via attribute below
     ];
 
     // Define the available user-specific notification keys and their labels

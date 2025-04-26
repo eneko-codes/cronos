@@ -19,11 +19,17 @@ class NotificationDetailsModal extends Component
 
     // Properties to hold notification details
     public string $notificationType = '';
+
     public string $notificationMessage = '';
+
     public string $notificationCreatedAtDiff = '';
+
     public string $notificationCreatedAtFormatted = '';
+
     public ?string $notificationReadAtDiff = null;
+
     public ?string $notificationReadAtFormatted = null;
+
     public array $notificationData = [];
 
     #[On('openNotificationDetailsModal')]
@@ -50,6 +56,7 @@ class NotificationDetailsModal extends Component
         if (! $user) {
             $this->dispatch('add-toast', message: 'Authentication error.', variant: 'error');
             $this->closeModal();
+
             return;
         }
 
@@ -70,15 +77,15 @@ class NotificationDetailsModal extends Component
     {
         $this->notificationType = Str::headline(Str::snake(class_basename($notification->type)));
         $this->notificationMessage = $notification->data['message'] ?? 'No specific message.';
-        
+
         // Prepare Created At dates
         $this->notificationCreatedAtDiff = $notification->created_at->diffForHumans();
         $this->notificationCreatedAtFormatted = $notification->created_at->format('M d, Y H:i:s T'); // Precise format
-        
+
         // Prepare Read At dates (if applicable)
         $this->notificationReadAtDiff = $notification->read_at ? $notification->read_at->diffForHumans() : null;
         $this->notificationReadAtFormatted = $notification->read_at ? $notification->read_at->format('M d, Y H:i:s T') : null; // Precise format
-        
+
         $this->notificationData = $notification->data;
     }
 
@@ -102,7 +109,7 @@ class NotificationDetailsModal extends Component
     public function deleteNotification(): void
     {
         if ($this->notificationId) {
-             $user = Auth::user();
+            $user = Auth::user();
             $notification = $user?->notifications()->find($this->notificationId);
             if ($notification) {
                 $notification->delete();
@@ -125,9 +132,8 @@ class NotificationDetailsModal extends Component
         $this->notificationData = [];
     }
 
-
     public function render()
     {
         return view('livewire.notification-details-modal');
     }
-} 
+}

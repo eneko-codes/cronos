@@ -28,8 +28,11 @@ class UserDetailsModal extends Component
     public $systempinId = ''; // User SystemPin ID
 
     public string $createdAtDiff = ''; // Add diff property
+
     public string $createdAtFormatted = ''; // Add formatted property
+
     public string $updatedAtDiff = ''; // Add diff property
+
     public string $updatedAtFormatted = ''; // Add formatted property
 
     public $isAdmin = false; // User admin status

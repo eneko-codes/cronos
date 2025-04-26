@@ -94,8 +94,8 @@ class UserObserver
             foreach ($adminUsers as $admin) {
                 // Use the injected service
                 if ($this->notificationPermissionService->canUserReceiveNotification($admin, $notification)) {
-                    // Use notifyNow as it's an important immediate event
-                    $admin->notifyNow($notification);
+                    // Use notify to respect the queue
+                    $admin->notify($notification);
                 }
             }
         }

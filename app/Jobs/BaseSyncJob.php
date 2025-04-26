@@ -167,7 +167,7 @@ abstract class BaseSyncJob implements ShouldBeEncrypted, ShouldQueue
                         // Use the resolved service
                         foreach ($adminUsers as $admin) {
                             if ($notificationPermissionService->canUserReceiveNotification($admin, $apiDownNotification)) {
-                                $admin->notifyNow($apiDownNotification); // Use notifyNow for immediate critical alert
+                                $admin->notify($apiDownNotification); // Use notify to respect queue
                             }
                         }
                     }
@@ -183,7 +183,7 @@ abstract class BaseSyncJob implements ShouldBeEncrypted, ShouldQueue
                     // Use the resolved service
                     foreach ($adminUsers as $admin) {
                         if ($notificationPermissionService->canUserReceiveNotification($admin, $apiDownNotification)) {
-                            $admin->notifyNow($apiDownNotification); // Use notifyNow for immediate critical alert
+                            $admin->notify($apiDownNotification); // Use notify to respect queue
                         }
                     }
                 }

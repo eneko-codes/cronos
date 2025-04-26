@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Notifications\Notification;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
  * User Model
@@ -132,43 +133,15 @@ class User extends Authenticatable
     protected $appends = ['is_online'];
 
     /**
-     * Check if notifications should be sent to this user.
-     *
-     * @return bool Returns false if notifications are muted, true otherwise
-     */
-    public function shouldReceiveNotifications(): bool
-    {
-        // First, check if notifications are globally disabled by an administrator.
-        $isGloballyEnabled = (bool) Setting::getValue(
-            'notifications.global_enabled',
-            true
-        ); // Default to true if setting doesn't exist
-        if (! $isGloballyEnabled) {
-            return false; // Globally disabled, user should not receive notifications.
-        }
-
-        // Next, check the user's specific preference to mute all their notifications.
-        $preferences = $this->notificationPreferences;
-
-        // If preferences record exists and mute_all is true, user has opted out.
-        if ($preferences && $preferences->mute_all) {
-            return false;
-        }
-
-        // If globally enabled and user hasn't muted all, they should receive notifications.
-        return true;
-    }
-
-    /**
      * Scope a query to only include users who are trackable (do_not_track is false).
      *
      * Use this scope in sync operations to exclude users who have opted out of tracking.
      * Example: User::trackable()->where(...)->get();
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param Builder $query
+     * @return Builder
      */
-    public function scopeTrackable($query)
+    public function scopeTrackable(Builder $query): Builder
     {
         return $query->where('do_not_track', false);
     }
@@ -179,10 +152,10 @@ class User extends Authenticatable
      * Use this scope when you specifically need to find users who have opted out of tracking.
      * Example: User::notTrackable()->get();
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @param Builder $query
+     * @return Builder
      */
-    public function scopeNotTrackable($query)
+    public function scopeNotTrackable(Builder $query): Builder
     {
         return $query->where('do_not_track', true);
     }
@@ -331,76 +304,6 @@ class User extends Authenticatable
     }
 
     /**
-     * Returns data for the user within a specified date range.
-     *
-     * Collects and organizes all user data (schedules, leaves, attendances, time entries)
-     * within the provided date range for comprehensive reporting.
-     *
-     * @param  Carbon  $startDate  Beginning of the date range
-     * @param  Carbon  $endDate  End of the date range
-     * @return array Associative array of user data organized by date
-     */
-    public function getDataForDateRange(Carbon $startDate, Carbon $endDate): array
-    {
-        // Ensure we're working with dates at day precision
-        $startDateObject = $startDate->copy()->startOfDay();
-        $endDateObject = $endDate->copy()->endOfDay();
-
-        // Get schedules with eager loading to avoid N+1 queries
-        $schedules = $this->userSchedules()
-            ->with(['schedule.scheduleDetails'])
-            ->where('effective_from', '<=', $endDateObject)
-            ->where(function ($query) use ($startDateObject) {
-                $query
-                    ->where('effective_until', '>=', $startDateObject)
-                    ->orWhereNull('effective_until');
-            })
-            ->get();
-
-        // Get leaves with eager loading
-        $leaves = $this->userLeaves()
-            ->with(['leaveType', 'department', 'category'])
-            ->where(function ($query) use ($startDateObject, $endDateObject) {
-                $query
-                    ->whereBetween('start_date', [$startDateObject, $endDateObject])
-                    ->orWhereBetween('end_date', [$startDateObject, $endDateObject])
-                    ->orWhere(function ($innerQuery) use (
-                        $startDateObject,
-                        $endDateObject
-                    ) {
-                        $innerQuery
-                            ->where('start_date', '<=', $startDateObject)
-                            ->where('end_date', '>=', $endDateObject);
-                    });
-            })
-            ->get();
-
-        // Get attendances with eager loading
-        $attendances = $this->userAttendances()
-            ->whereBetween('date', [
-                $startDateObject->toDateString(),
-                $endDateObject->toDateString(),
-            ])
-            ->get();
-
-        // Get time entries with eager loading
-        $timeEntries = $this->timeEntries()
-            ->with(['project', 'task'])
-            ->whereBetween('date', [
-                $startDateObject->toDateString(),
-                $endDateObject->toDateString(),
-            ])
-            ->get();
-
-        return [
-            'schedules' => $schedules,
-            'leaves' => $leaves,
-            'attendances' => $attendances,
-            'time_entries' => $timeEntries,
-        ];
-    }
-
-    /**
      * Check if the user is an administrator
      */
     public function isAdmin(): bool
@@ -414,93 +317,5 @@ class User extends Authenticatable
     public function notificationPreferences(): HasOne
     {
         return $this->hasOne(UserNotificationPreference::class)->withDefault();
-    }
-
-    /**
-     * Centralized check to determine if a user should receive a specific notification.
-     *
-     * This method considers:
-     * 1. Global notification enablement.
-     * 2. User's master mute preference.
-     * 3. System-wide toggle for the specific notification type (if applicable).
-     * 4. User's individual preference for the specific notification type (if applicable).
-     *
-     * @param  Notification  $notification  The notification instance to be sent.
-     * @return bool True if the user should receive the notification, false otherwise.
-     */
-    public function canReceiveNotification(Notification $notification): bool
-    {
-        // Step 1 & 2: Check global enable and user master mute.
-        // We can reuse the existing method for this part.
-        if (! $this->shouldReceiveNotifications()) {
-            return false;
-        }
-
-        // Step 3: Check system-wide toggles for specific notification types.
-        if ($notification instanceof WelcomeEmail) {
-            if (
-                ! (bool) Setting::getValue('notification.welcome_email.enabled', true)
-            ) {
-                return false; // Welcome emails are globally disabled.
-            }
-        }
-
-        if ($notification instanceof ApiDownWarning) {
-            if (
-                ! (bool) Setting::getValue(
-                    'notification.api_down_warning_mail.enabled',
-                    true
-                )
-            ) {
-                return false; // API down warnings are globally disabled.
-            }
-        }
-
-        // Add checks for other system-wide toggles here (e.g., AdminPromotionEmail)
-        // if ($notification instanceof AdminPromotionEmail) {
-        //     if (!(bool)Setting::getValue('notification.admin_promotion.enabled', true)) {
-        //         return false;
-        //     }
-        // }
-
-        // Step 4: Check user's individual preferences for specific notification types.
-        $preferences = $this->notificationPreferences; // Uses withDefault() ensuring it's an object
-
-        // Add checks for specific user preference columns based on notification type.
-        // These checks assume the corresponding Notification class exists.
-
-        // Check for ScheduleChangeNotification preference:
-        if ($notification instanceof ScheduleChangeNotification) {
-            // Ensure the preference property exists and check its value
-            if (
-                property_exists($preferences, 'schedule_change') &&
-                ! $preferences->schedule_change
-            ) {
-                return false; // User opted out of schedule change notifications.
-            }
-        }
-
-        // Check for WeeklyUserReportNotification preference:
-        if ($notification instanceof WeeklyUserReportNotification) {
-            if (
-                property_exists($preferences, 'weekly_user_report') &&
-                ! $preferences->weekly_user_report
-            ) {
-                return false; // User opted out of weekly reports.
-            }
-        }
-
-        // Check for LeaveReminderNotification preference:
-        if ($notification instanceof LeaveReminderNotification) {
-            if (
-                property_exists($preferences, 'leave_reminder') &&
-                ! $preferences->leave_reminder
-            ) {
-                return false; // User opted out of leave reminders.
-            }
-        }
-
-        // If all checks pass, the user can receive the notification.
-        return true;
     }
 }

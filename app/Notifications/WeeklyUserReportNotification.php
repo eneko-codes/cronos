@@ -36,7 +36,7 @@ class WeeklyUserReportNotification extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        return ['mail'];
+        return ['mail', 'database'];
     }
 
     /**
@@ -59,11 +59,14 @@ class WeeklyUserReportNotification extends Notification implements ShouldQueue
      *
      * @return array<string, mixed>
      */
-    // public function toArray(object $notifiable): array
-    // {
-    //     return [
-    //         'user_id' => $this->user->id,
-    //         'report_data' => $this->reportData,
-    //     ];
-    // }
+    public function toDatabase(object $notifiable): array
+    {
+        return [
+            'user_id' => $this->user->id,
+            'user_name' => $this->user->name,
+            'message' => 'Your weekly activity report is available.',
+            'report_data' => $this->reportData,
+            'link' => url('/dashboard'),
+        ];
+    }
 }

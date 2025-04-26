@@ -5,10 +5,16 @@ namespace App\Observers;
 use App\Models\User;
 use App\Notifications\AdminPromotionEmail;
 use App\Notifications\WelcomeEmail;
+use App\Services\NotificationPermissionService;
 use Illuminate\Support\Facades\Notification;
 
 class UserObserver
 {
+    public function __construct(
+        protected NotificationPermissionService $notificationPermissionService
+    ) {
+    }
+
     /**
      * Handle the User "created" event.
      */
@@ -20,8 +26,8 @@ class UserObserver
         // Create the notification instance
         $welcomeNotification = new WelcomeEmail($user);
 
-        // Use the centralized check AND ensure user has an email before dispatching
-        if ($user->email && $user->canReceiveNotification($welcomeNotification)) {
+        // Use the injected service
+        if ($user->email && $this->notificationPermissionService->canUserReceiveNotification($user, $welcomeNotification)) {
             $user->notify(new WelcomeEmail($user));
         }
     }
@@ -87,7 +93,8 @@ class UserObserver
 
             // Send notification to all other admins who can receive it
             foreach ($adminUsers as $admin) {
-                if ($admin->canReceiveNotification($notification)) {
+                // Use the injected service
+                if ($this->notificationPermissionService->canUserReceiveNotification($admin, $notification)) {
                     // Use notifyNow as it's an important immediate event
                     $admin->notifyNow($notification);
                 }

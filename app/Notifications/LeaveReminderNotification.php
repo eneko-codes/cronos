@@ -37,7 +37,7 @@ class LeaveReminderNotification extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        return ['mail'];
+        return ['mail', 'database'];
     }
 
     /**
@@ -66,13 +66,21 @@ class LeaveReminderNotification extends Notification implements ShouldQueue
      *
      * @return array<string, mixed>
      */
-    // public function toArray(object $notifiable): array
-    // {
-    //     return [
-    //         'user_id' => $this->user->id,
-    //         'leave_id' => $this->leave->id,
-    //         'leave_type' => $this->leave->leaveType?->name,
-    //         'start_date' => $this->leave->start_date->toDateString(),
-    //     ];
-    // }
+    public function toDatabase(object $notifiable): array
+    {
+        $leaveType = $this->leave->leaveType?->name ?? 'Time Off';
+        $startDate = $this->leave->start_date->format('F j, Y');
+
+        return [
+            'user_id' => $this->user->id,
+            'user_name' => $this->user->name,
+            'leave_id' => $this->leave->id,
+            'leave_type' => $leaveType,
+            'start_date' => $this->leave->start_date->toDateString(),
+            'end_date' => $this->leave->end_date->toDateString(),
+            'duration_days' => $this->leave->duration_days,
+            'message' => "Reminder: Your {$leaveType} starts on {$startDate}.",
+            'link' => url('/'),
+        ];
+    }
 }

@@ -8,6 +8,7 @@ use App\Notifications\ApiDownWarning;
 use App\Services\DesktimeApiCalls;
 use App\Services\OdooApiCalls;
 use App\Services\ProofhubApiCalls;
+use App\Services\NotificationPermissionService;
 use Exception;
 use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
@@ -145,6 +146,9 @@ abstract class BaseSyncJob implements ShouldBeEncrypted, ShouldQueue
             'ProofHub' => $this->proofhub,
         ];
 
+        // Resolve the service here
+        $notificationPermissionService = resolve(NotificationPermissionService::class);
+
         foreach ($apis as $serviceName => $service) {
             if ($service instanceof Pingable) {
                 try {
@@ -160,9 +164,9 @@ abstract class BaseSyncJob implements ShouldBeEncrypted, ShouldQueue
                             $errorMessage
                         );
 
-                        // Use the centralized check for each admin
+                        // Use the resolved service
                         foreach ($adminUsers as $admin) {
-                            if ($admin->canReceiveNotification($apiDownNotification)) {
+                            if ($notificationPermissionService->canUserReceiveNotification($admin, $apiDownNotification)) {
                                 $admin->notifyNow($apiDownNotification); // Use notifyNow for immediate critical alert
                             }
                         }
@@ -176,9 +180,9 @@ abstract class BaseSyncJob implements ShouldBeEncrypted, ShouldQueue
                         $errorMessage
                     );
 
-                    // Use the centralized check for each admin
+                    // Use the resolved service
                     foreach ($adminUsers as $admin) {
-                        if ($admin->canReceiveNotification($apiDownNotification)) {
+                        if ($notificationPermissionService->canUserReceiveNotification($admin, $apiDownNotification)) {
                             $admin->notifyNow($apiDownNotification); // Use notifyNow for immediate critical alert
                         }
                     }

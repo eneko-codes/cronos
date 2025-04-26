@@ -27,7 +27,7 @@ class ApiDownWarning extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        return ['mail'];
+        return ['mail', 'database'];
     }
 
     /**
@@ -46,5 +46,23 @@ class ApiDownWarning extends Notification implements ShouldQueue
                 'This issue requires immediate attention to prevent data synchronization problems.'
             )
             ->action('View Dashboard', url('/dashboard'));
+    }
+
+    /**
+     * Get the array representation of the notification.
+     *
+     * @param  object  $notifiable
+     * @return array
+     */
+    public function toDatabase(object $notifiable): array
+    {
+        return [
+            'service_name' => $this->serviceName,
+            'error_message' => $this->errorMessage,
+            'timestamp' => now()->toDateTimeString(),
+            'message' => "API Down Alert: {$this->serviceName} - {$this->errorMessage}",
+            'level' => 'error', // Indicate severity
+            'link' => url('/dashboard'),
+        ];
     }
 }

@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\UserLeave;
 use App\Notifications\LeaveReminderNotification;
+use App\Services\NotificationPermissionService;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Bus\Queueable;
@@ -32,7 +33,7 @@ class SendUserLeaveReminder implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(): void
+    public function handle(NotificationPermissionService $notificationPermissionService): void
     {
         $targetDate = Carbon::today()
             ->addDays($this->daysInAdvance)
@@ -87,7 +88,7 @@ class SendUserLeaveReminder implements ShouldQueue
 
             $notification = new LeaveReminderNotification($user, $leave);
 
-            if ($user->canReceiveNotification($notification)) {
+            if ($notificationPermissionService->canUserReceiveNotification($user, $notification)) {
                 try {
                     $user->notify($notification);
                     Log::info(

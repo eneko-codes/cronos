@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\UserDataService;
 use Carbon\Carbon;
 use Carbon\CarbonInterval;
 use Illuminate\Support\Collection;
@@ -83,6 +84,14 @@ class UserDashboard extends Component
      * Indicates if notifications are enabled globally.
      */
     public bool $isGloballyEnabled = true;
+
+    // Inject service via constructor
+    protected UserDataService $userDataService;
+
+    public function boot(UserDataService $userDataService): void
+    {
+        $this->userDataService = $userDataService;
+    }
 
     /**
      * Initializes the component, loads the user, sets the initial period, and loads data.
@@ -381,11 +390,23 @@ class UserDashboard extends Component
      */
     protected function getPeriodStart(): Carbon
     {
-        $date = Carbon::parse($this->currentDate);
+        return Carbon::parse($this->currentDate)->startOfDay();
+    }
 
-        return $this->viewMode === 'weekly'
-          ? $date->startOfWeek()
-          : $date->startOfMonth();
+    /**
+     * Calculates the end date of the current period based on the view mode.
+     *
+     * @return Carbon The end date of the period.
+     */
+    protected function getPeriodEnd(): Carbon
+    {
+        $startDate = $this->getPeriodStart();
+
+        if ($this->viewMode === 'weekly') {
+            return $startDate->clone()->endOfWeek();
+        } else {
+            return $startDate->clone()->endOfMonth();
+        }
     }
 
     /**
@@ -394,30 +415,14 @@ class UserDashboard extends Component
     protected function loadPeriodDataAndTotals(): void
     {
         $startDate = $this->getPeriodStart();
+        $endDate = $this->getPeriodEnd();
 
-        // Set end date based on view mode
-        $endDate =
-          $this->viewMode === 'weekly'
-            ? $startDate->copy()->endOfWeek()
-            : $startDate->copy()->endOfMonth();
+        // Get raw data using the service
+        $rawData = $this->userDataService->getDataForUserAndDateRange($this->user, $startDate, $endDate);
 
-        // Get all user data for the date range
-        $userData = $this->user->getDataForDateRange($startDate, $endDate);
-
-        // Ensure necessary relationships are loaded for the filtered data
-        if (
-            $userData['leaves'] instanceof \Illuminate\Database\Eloquent\Collection
-        ) {
-            $userData['leaves']->loadMissing('leaveType');
-        }
-        // TODO: Potentially load other relationships here if needed, e.g., for time entries
-        // if ($userData['time_entries'] instanceof \Illuminate\Database\Eloquent\Collection) {
-        //   $userData['time_entries']->loadMissing(['project', 'task']);
-        // }
-
-        // Process the data for each day in the period
+        // Process the raw data for the view
         $this->periodData = $this->processPeriodData(
-            $userData,
+            $rawData,
             $startDate,
             $endDate
         );

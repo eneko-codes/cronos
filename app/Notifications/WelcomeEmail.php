@@ -30,8 +30,8 @@ class WelcomeEmail extends Notification implements ShouldQueue
      */
     public function via($notifiable): array
     {
-        // This notification only uses the mail channel.
-        return ['mail'];
+        // Use both mail and database channels.
+        return ['mail', 'database'];
     }
 
     /**
@@ -48,5 +48,21 @@ class WelcomeEmail extends Notification implements ShouldQueue
                 "You can log in using your work email: {$this->user->email}. You'll receive a magic login link."
             )
             ->action('Go to Login Page', $this->url);
+    }
+
+    /**
+     * Get the array representation of the notification.
+     *
+     * @param  object  $notifiable
+     * @return array
+     */
+    public function toDatabase(object $notifiable): array
+    {
+        return [
+            'user_id' => $this->user->id,
+            'user_name' => $this->user->name,
+            'message' => 'Welcome to '.config('app.name').'!',
+            'link' => $this->url,
+        ];
     }
 }

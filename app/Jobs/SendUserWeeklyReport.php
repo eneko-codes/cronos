@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\User;
 use App\Notifications\WeeklyUserReportNotification;
+use App\Services\NotificationPermissionService;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -27,7 +28,7 @@ class SendUserWeeklyReport implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(): void
+    public function handle(NotificationPermissionService $notificationPermissionService): void
     {
         Log::info('SendUserWeeklyReport Job started.');
 
@@ -66,7 +67,7 @@ class SendUserWeeklyReport implements ShouldQueue
 
             $notification = new WeeklyUserReportNotification($user, $reportData);
 
-            if ($user->canReceiveNotification($notification)) {
+            if ($notificationPermissionService->canUserReceiveNotification($user, $notification)) {
                 try {
                     $user->notify($notification);
                     Log::info(

@@ -33,8 +33,8 @@ class AdminPromotionEmail extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        // Sent to admin users, primarily via email.
-        return ['mail'];
+        // Send via mail and store in database.
+        return ['mail', 'database'];
     }
 
     /**
@@ -57,11 +57,14 @@ class AdminPromotionEmail extends Notification implements ShouldQueue
      *
      * @return array<string, mixed>
      */
-    // public function toArray(object $notifiable): array
-    // {
-    //     return [
-    //         'promoted_user_id' => $this->promotedUser->id,
-    //         'promoted_user_name' => $this->promotedUser->name,
-    //     ];
-    // }
+    public function toDatabase(object $notifiable): array
+    {
+        return [
+            'promoted_user_id' => $this->promotedUser->id,
+            'promoted_user_name' => $this->promotedUser->name,
+            'promoted_user_email' => $this->promotedUser->email,
+            'message' => "User '{$this->promotedUser->name}' was promoted to admin.",
+            'link' => url('/users'), // Or a specific link to the user's profile
+        ];
+    }
 }

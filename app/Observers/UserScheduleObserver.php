@@ -5,10 +5,16 @@ namespace App\Observers;
 use App\Models\User;
 use App\Models\UserSchedule;
 use App\Notifications\ScheduleChangeNotification;
+use App\Services\NotificationPermissionService;
 use Illuminate\Support\Facades\Log;
 
 class UserScheduleObserver
 {
+    public function __construct(
+        protected NotificationPermissionService $notificationPermissionService
+    ) {
+    }
+
     /**
      * Handle the UserSchedule "created" event.
      */
@@ -56,7 +62,7 @@ class UserScheduleObserver
                 null
             );
 
-            if ($user->canReceiveNotification($notification)) {
+            if ($this->notificationPermissionService->canUserReceiveNotification($user, $notification)) {
                 $user->notify($notification);
             }
         }

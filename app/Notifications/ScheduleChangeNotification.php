@@ -40,7 +40,7 @@ class ScheduleChangeNotification extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        return ['mail']; // Add 'database' if you want to store it
+        return ['mail', 'database']; // Use both mail and database channels
     }
 
     /**
@@ -105,13 +105,16 @@ class ScheduleChangeNotification extends Notification implements ShouldQueue
      *
      * @return array<string, mixed>
      */
-    // public function toArray(object $notifiable): array
-    // {
-    //     return [
-    //         'user_id' => $this->user->id,
-    //         'message' => 'Your schedule was updated.',
-    //         'old_schedule_id' => $this->oldSchedule?->id,
-    //         'new_schedule_id' => $this->newSchedule?->id,
-    //     ];
-    // }
+    public function toDatabase(object $notifiable): array
+    {
+        return [
+            'user_id' => $this->user->id,
+            'user_name' => $this->user->name,
+            'message' => 'Your work schedule has been updated.',
+            'old_schedule_desc' => $this->oldSchedule?->description,
+            'new_schedule_desc' => $this->newSchedule?->description,
+            // Optional: Add a link/route for the user to view their schedule
+            'link' => route('user.dashboard', ['id' => $this->user->id]),
+        ];
+    }
 }

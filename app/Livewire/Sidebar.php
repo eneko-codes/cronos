@@ -9,18 +9,21 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 class Sidebar extends Component
 {
+    use WithPagination;
+
     /**
      * Whether the sidebar is currently visible.
      */
     public bool $isOpen = false;
 
     /**
-     * The currently active tab: 'settings'
+     * The currently active tab: 'notifications' or 'settings'.
      */
-    public string $activeTab = 'settings';
+    public string $activeTab = 'notifications';
 
     /**
      * Bound property for the 'Mute All' toggle.
@@ -59,6 +62,23 @@ class Sidebar extends Component
         }
 
         return $keys;
+    }
+
+    /**
+     * Get the user's notifications, paginated.
+     */
+    #[Computed]
+    public function notifications()
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+        if (! $user) {
+            // Return an empty paginator instance if no user
+            return new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10);
+        }
+
+        // Fetch notifications sorted by creation date, 10 per page
+        return $user->notifications()->paginate(10);
     }
 
     public function mount(): void
@@ -319,6 +339,114 @@ class Sidebar extends Component
     }
 
     /**
+     * Change the active tab in the sidebar.
+     */
+    public function changeTab(string $tab): void
+    {
+        if (in_array($tab, ['notifications', 'settings'])) {
+            $this->activeTab = $tab;
+            $this->resetPage(); // Reset pagination when changing tabs
+        }
+    }
+
+    /**
+     * Mark a specific notification as read.
+     */
+    public function markAsRead(string $notificationId): void
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+        if ($user) {
+            $notification = $user->notifications()->find($notificationId);
+            if ($notification && $notification->unread()) {
+                $notification->markAsRead();
+                $this->dispatch(
+                    'add-toast',
+                    message: 'Notification marked as read.',
+                    variant: 'success'
+                );
+                // Refresh computed property by unsetting (Livewire v3+)
+                unset($this->notifications);
+            }
+        }
+    }
+
+    /**
+     * Mark all unread notifications as read.
+     */
+    public function markAllAsRead(): void
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+        if ($user) {
+            $count = $user->unreadNotifications()->count();
+            if ($count > 0) {
+                $user->unreadNotifications()->update(['read_at' => now()]);
+                $this->dispatch(
+                    'add-toast',
+                    message: 'All notifications marked as read.',
+                    variant: 'success'
+                );
+                unset($this->notifications); // Refresh
+            } else {
+                $this->dispatch(
+                    'add-toast',
+                    message: 'No unread notifications.',
+                    variant: 'info'
+                );
+            }
+        }
+    }
+
+    /**
+     * Delete a specific notification.
+     */
+    public function deleteNotification(string $notificationId): void
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+        if ($user) {
+            $notification = $user->notifications()->find($notificationId);
+            if ($notification) {
+                $notification->delete();
+                $this->dispatch(
+                    'add-toast',
+                    message: 'Notification deleted.',
+                    variant: 'success'
+                );
+                unset($this->notifications); // Refresh
+            }
+        }
+    }
+
+    /**
+     * Delete all notifications for the user.
+     */
+    public function deleteAllNotifications(): void
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+        if ($user) {
+            $count = $user->notifications()->count();
+             if ($count > 0) {
+                $user->notifications()->delete();
+                $this->dispatch(
+                    'add-toast',
+                    message: 'All notifications deleted.',
+                    variant: 'success'
+                );
+                unset($this->notifications); // Refresh
+            } else {
+                $this->dispatch(
+                    'add-toast',
+                    message: 'No notifications to delete.',
+                    variant: 'info'
+                );
+            }
+        }
+    }
+
+    /**
      * Render the component.
      *
      * @return \Illuminate\View\View
@@ -327,6 +455,7 @@ class Sidebar extends Component
     {
         // Pass the preference keys for the view loop,
         // the view will use the public $muteAll, $individualPreferences, and $isGloballyEnabled properties
+        // The `notifications` computed property will be available automatically
         return view('livewire.sidebar', [
             'preferenceKeys' => $this->preferenceKeys,
         ]);

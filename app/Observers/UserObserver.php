@@ -12,8 +12,7 @@ class UserObserver
 {
     public function __construct(
         protected NotificationPermissionService $notificationPermissionService
-    ) {
-    }
+    ) {}
 
     /**
      * Handle the User "created" event.

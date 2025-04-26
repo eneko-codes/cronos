@@ -18,7 +18,6 @@ class NotificationPermissionService
      *
      * This checks global settings and the user's master mute preference.
      *
-     * @param  User  $user
      * @return bool Returns false if notifications are globally disabled or user muted all, true otherwise.
      */
     public function shouldUserReceiveAnyNotification(User $user): bool
@@ -53,7 +52,7 @@ class NotificationPermissionService
      * 3. System-wide toggle for the specific notification type (if applicable).
      * 4. User's individual preference for the specific notification type (if applicable).
      *
-     * @param  User  $user The user instance.
+     * @param  User  $user  The user instance.
      * @param  Notification  $notification  The notification instance to be sent.
      * @return bool True if the user should receive the notification, false otherwise.
      */
@@ -124,4 +123,4 @@ class NotificationPermissionService
         // If no specific rule prevented it, the user can receive the notification.
         return true;
     }
-} 
+}

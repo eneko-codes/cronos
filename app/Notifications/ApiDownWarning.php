@@ -50,9 +50,6 @@ class ApiDownWarning extends Notification implements ShouldQueue
 
     /**
      * Get the array representation of the notification.
-     *
-     * @param  object  $notifiable
-     * @return array
      */
     public function toDatabase(object $notifiable): array
     {

@@ -2,12 +2,7 @@
 
 namespace App\Models;
 
-use App\Notifications\ApiDownWarning;
-use App\Notifications\LeaveReminderNotification;
-use App\Notifications\ScheduleChangeNotification;
-use App\Notifications\WeeklyUserReportNotification;
-use App\Notifications\WelcomeEmail;
-use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -15,7 +10,6 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Notifications\Notification;
-use Illuminate\Database\Eloquent\Builder;
 
 /**
  * User Model
@@ -137,9 +131,6 @@ class User extends Authenticatable
      *
      * Use this scope in sync operations to exclude users who have opted out of tracking.
      * Example: User::trackable()->where(...)->get();
-     *
-     * @param Builder $query
-     * @return Builder
      */
     public function scopeTrackable(Builder $query): Builder
     {
@@ -151,9 +142,6 @@ class User extends Authenticatable
      *
      * Use this scope when you specifically need to find users who have opted out of tracking.
      * Example: User::notTrackable()->get();
-     *
-     * @param Builder $query
-     * @return Builder
      */
     public function scopeNotTrackable(Builder $query): Builder
     {

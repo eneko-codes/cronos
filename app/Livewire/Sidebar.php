@@ -428,7 +428,7 @@ class Sidebar extends Component
         $user = Auth::user();
         if ($user) {
             $count = $user->notifications()->count();
-             if ($count > 0) {
+            if ($count > 0) {
                 $user->notifications()->delete();
                 $this->dispatch(
                     'add-toast',

@@ -13,7 +13,7 @@ class UserDataService
      * Collects and organizes all user data (schedules, leaves, attendances, time entries)
      * within the provided date range for comprehensive reporting.
      *
-     * @param  User  $user The user for whom to fetch data.
+     * @param  User  $user  The user for whom to fetch data.
      * @param  Carbon  $startDate  Beginning of the date range.
      * @param  Carbon  $endDate  End of the date range.
      * @return array Associative array of user data organized by date.
@@ -77,4 +77,4 @@ class UserDataService
             'time_entries' => $timeEntries,
         ];
     }
-} 
+}

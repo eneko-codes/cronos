@@ -15,15 +15,17 @@ class ScheduleChangeNotification extends Notification implements ShouldQueue
     use Queueable;
 
     public User $user;
+
     public ?Schedule $oldSchedule;
+
     public ?Schedule $newSchedule;
 
     /**
      * Create a new notification instance.
      *
-     * @param User $user The user whose schedule changed.
-     * @param ?Schedule $oldSchedule The user's previous schedule (or null).
-     * @param ?Schedule $newSchedule The user's new schedule (or null).
+     * @param  User  $user  The user whose schedule changed.
+     * @param  ?Schedule  $oldSchedule  The user's previous schedule (or null).
+     * @param  ?Schedule  $newSchedule  The user's new schedule (or null).
      */
     public function __construct(User $user, ?Schedule $oldSchedule, ?Schedule $newSchedule)
     {
@@ -55,12 +57,12 @@ class ScheduleChangeNotification extends Notification implements ShouldQueue
 
         if ($this->oldSchedule) {
             $mailMessage->line("**Previous Schedule:** {$this->oldSchedule->description}")
-                        ->line($this->formatScheduleDetails($this->oldSchedule));
+                ->line($this->formatScheduleDetails($this->oldSchedule));
         }
 
         if ($this->newSchedule) {
             $mailMessage->line("**New Schedule:** {$this->newSchedule->description}")
-                        ->line($this->formatScheduleDetails($this->newSchedule));
+                ->line($this->formatScheduleDetails($this->newSchedule));
         } elseif (! $this->oldSchedule) {
             // Case where both are null somehow (shouldn't happen but good to handle)
             $mailMessage->line('No schedule information available for this update.');
@@ -76,13 +78,10 @@ class ScheduleChangeNotification extends Notification implements ShouldQueue
 
     /**
      * Formats the details of a schedule into a readable string.
-     *
-     * @param Schedule $schedule
-     * @return string
      */
     protected function formatScheduleDetails(Schedule $schedule): string
     {
-        $detailsString = "";
+        $detailsString = '';
         $daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
         // Group details by weekday

@@ -12,8 +12,7 @@ class UserScheduleObserver
 {
     public function __construct(
         protected NotificationPermissionService $notificationPermissionService
-    ) {
-    }
+    ) {}
 
     /**
      * Handle the UserSchedule "created" event.

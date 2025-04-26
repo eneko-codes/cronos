@@ -4,10 +4,13 @@ namespace App\Jobs;
 
 use App\Models\Schedule;
 use App\Models\User;
+use App\Notifications\DuplicateScheduleWarning;
 use App\Services\OdooApiCalls;
 use Carbon\Carbon;
 use Exception;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 
 /**
@@ -123,35 +126,52 @@ class SyncOdooSchedules extends BaseSyncJob
                         return $group->count() > 1;
                     });
 
+                // Prepare duplicate data for logging/notification regardless of whether it's empty
+                $duplicatesDetailsForNotification = $duplicates
+                    ->map(function ($group) {
+                        $firstDetail = $group->first();
+                        $dayPeriod = isset($firstDetail['day_period'])
+                            ? Str::lower($firstDetail['day_period'])
+                            : 'morning';
+                        $dayOfWeek = $firstDetail['dayofweek'];
+
+                        return [
+                            'weekday' => $dayOfWeek,
+                            'day_period' => $dayPeriod,
+                            'count' => $group->count(),
+                            'details' => $group->pluck('id'),
+                        ];
+                    })
+                    ->values(); // Ensures we have a simple array
+
                 if ($duplicates->isNotEmpty()) {
+                    // Log the warning as before
                     Log::warning(
                         class_basename($this).
                           ": Schedule #{$odooScheduleId} ({$scheduleData['name']}) has duplicate details",
                         [
                             'schedule_id' => $odooScheduleId,
-                            'duplicates' => $duplicates
-                                ->map(function ($group) {
-                                    $parts = collect(
-                                        explode(
-                                            '-',
-                                            $group->first()['dayofweek'].
-                                              '-'.
-                                              (isset($group->first()['day_period'])
-                                                ? Str::lower($group->first()['day_period'])
-                                                : 'morning')
-                                        )
-                                    );
-
-                                    return [
-                                        'weekday' => $parts->get(0),
-                                        'day_period' => $parts->get(1),
-                                        'count' => $group->count(),
-                                        'details' => $group->pluck('id'),
-                                    ];
-                                })
-                                ->values(),
+                            'duplicates' => $duplicatesDetailsForNotification->toArray(), // Use prepared data
                         ]
                     );
+
+                    // Send notification to admins, avoiding duplicates using cache
+                    $cacheKey = 'duplicate_schedule_warning_'.$odooScheduleId;
+                    if (! Cache::has($cacheKey)) {
+                        $admins = User::where('is_admin', true)->get();
+                        if ($admins->isNotEmpty()) {
+                            $notification = (new DuplicateScheduleWarning(
+                                $odooScheduleId,
+                                $scheduleData['name'],
+                                $duplicatesDetailsForNotification // Pass the prepared data
+                            ))->afterCommit(); // Apply afterCommit to the notification instance
+
+                            Notification::send($admins, $notification);
+                            
+                            // Cache for 24 hours to prevent repeat notifications
+                            Cache::put($cacheKey, true, now()->addHours(24));
+                        }
+                    }
                 }
 
                 // Process schedule details

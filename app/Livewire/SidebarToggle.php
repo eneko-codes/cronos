@@ -30,7 +30,7 @@ class SidebarToggle extends Component
      * Update the unread notification count.
      */
     #[On('unread-count-changed')]
-    public function updateCount(int $count = null): void
+    public function updateCount(?int $count = null): void
     {
         // If count is passed directly, use it. Otherwise, query the DB.
         if ($count !== null) {

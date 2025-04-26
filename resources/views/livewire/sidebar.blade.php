@@ -85,6 +85,42 @@
           x-show="$wire.activeTab === 'notifications'"
         >
           <div class="space-y-4">
+            {{-- Global Notification Status Indicator --}}
+            @unless ($isGloballyEnabled)
+              <div
+                wire:key="global-disabled-msg-notifications"
+                class="rounded-md border border-orange-300 bg-orange-50 p-3 text-xs text-orange-800 dark:border-orange-600 dark:bg-orange-900/30 dark:text-orange-200"
+              >
+                <p class="font-medium">Notifications Globally Disabled</p>
+                <p>
+                  All user email notifications are currently turned off by an
+                  administrator.
+                </p>
+              </div>
+            @else
+              {{-- User Mute Status Indicator --}}
+              @if ($muteAll)
+                <div
+                  wire:key="user-muted-msg-notifications"
+                  class="rounded-md border border-blue-300 bg-blue-50 p-3 text-xs text-blue-800 dark:border-blue-600 dark:bg-blue-900/30 dark:text-blue-200"
+                >
+                  <p class="font-medium">Personal Notifications Muted</p>
+                  <p>
+                    You have currently muted all your personal email
+                    notifications. You can re-enable them in the
+                    <button
+                      type="button"
+                      wire:click="$set('activeTab', 'settings')"
+                      class="font-semibold underline hover:text-blue-700 dark:hover:text-blue-100"
+                    >
+                      Settings tab
+                    </button>
+                    .
+                  </p>
+                </div>
+              @endif
+            @endunless
+
             {{-- Bulk Actions --}}
             <div class="flex justify-end gap-2">
               <x-button

@@ -20,6 +20,20 @@
           fill="currentColor"
         />
       </svg>
+
+      @if ($unreadCount > 0)
+        <span
+          class="absolute -right-0.5 -top-0.5 flex size-2"
+          title="{{ $unreadCount }} unread notification{{ $unreadCount > 1 ? 's' : '' }}"
+        >
+          <span
+            class="absolute inline-flex size-full animate-ping rounded-full bg-blue-400 opacity-75 dark:bg-blue-500"
+          ></span>
+          <span
+            class="relative inline-flex size-2 rounded-full bg-blue-500 dark:bg-blue-600"
+          ></span>
+        </span>
+      @endif
     </button>
   </x-tooltip>
 </div>

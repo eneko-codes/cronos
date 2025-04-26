@@ -46,7 +46,10 @@ class Sidebar extends Component
      */
     public string $notificationFilter = 'all';
 
-    protected $listeners = ['notification-updated' => 'refreshNotifications'];
+    protected $listeners = [
+        'notification-updated' => 'refreshNotifications',
+        // 'refresh-unread-count' => 'handleRefreshUnreadCount' // Listener added via attribute below
+    ];
 
     // Define the available user-specific notification keys and their labels
     #[Computed]
@@ -98,9 +101,47 @@ class Sidebar extends Component
         return $query->paginate(10);
     }
 
+    /**
+     * Calculate counts for different notification filters.
+     */
+    #[Computed]
+    public function notificationCounts(): array
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+        if (! $user) {
+            return ['all' => 0, 'unread' => 0, 'read' => 0];
+        }
+
+        $unreadCount = $user->unreadNotifications()->count();
+        $readCount = $user->readNotifications()->count();
+        $allCount = $unreadCount + $readCount; // Or $user->notifications()->count() if preferred
+
+        return [
+            'all' => $allCount,
+            'unread' => $unreadCount,
+            'read' => $readCount,
+        ];
+    }
+
+    /**
+     * Dispatch event to update the toggle button's indicator.
+     */
+    private function dispatchUnreadCountChanged(): void
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+        $count = $user ? $user->unreadNotifications()->count() : 0;
+        // Dispatch globally so SidebarToggle can hear it
+        $this->dispatch('unread-count-changed', count: $count);
+    }
+
     public function mount(): void
     {
         $this->loadPreferences();
+        // Dispatch initial count when mounted, as sidebar might be open initially
+        // or toggle needs count even if closed.
+        $this->dispatchUnreadCountChanged();
     }
 
     /**
@@ -180,6 +221,8 @@ class Sidebar extends Component
     {
         if (! $this->isOpen) {
             $this->loadPreferences(); // Reload preferences when opening
+            // Refresh count when opening, in case it changed while closed
+            $this->dispatchUnreadCountChanged();
         }
         $this->isOpen = ! $this->isOpen;
     }
@@ -368,6 +411,7 @@ class Sidebar extends Component
 
     /**
      * Mark a specific notification as read.
+     * Observer handles the count update dispatch.
      */
     public function markAsRead(string $notificationId): void
     {
@@ -376,20 +420,20 @@ class Sidebar extends Component
         if ($user) {
             $notification = $user->notifications()->find($notificationId);
             if ($notification && $notification->unread()) {
-                $notification->markAsRead();
+                $notification->markAsRead(); // Observer will handle dispatch
                 $this->dispatch(
                     'add-toast',
                     message: 'Notification marked as read.',
                     variant: 'success'
                 );
-                // Refresh computed property by unsetting (Livewire v3+)
-                unset($this->notifications);
+                unset($this->notifications); // Refresh computed property
             }
         }
     }
 
     /**
      * Mark all unread notifications as read.
+     * Manual dispatch required as mass updates don't trigger observers.
      */
     public function markAllAsRead(): void
     {
@@ -405,6 +449,7 @@ class Sidebar extends Component
                     variant: 'success'
                 );
                 unset($this->notifications); // Refresh
+                $this->dispatchUnreadCountChanged(); // Manually dispatch after mass update
             } else {
                 $this->dispatch(
                     'add-toast',
@@ -417,6 +462,7 @@ class Sidebar extends Component
 
     /**
      * Delete a specific notification.
+     * Observer handles the count update dispatch.
      */
     public function deleteNotification(string $notificationId): void
     {
@@ -425,6 +471,7 @@ class Sidebar extends Component
         if ($user) {
             $notification = $user->notifications()->find($notificationId);
             if ($notification) {
+                // Observer will handle dispatch based on original read_at state
                 $notification->delete();
                 $this->dispatch(
                     'add-toast',
@@ -438,12 +485,14 @@ class Sidebar extends Component
 
     /**
      * Delete all notifications for the user.
+     * Manual dispatch required as mass deletes don't trigger observers.
      */
     public function deleteAllNotifications(): void
     {
         /** @var User|null $user */
         $user = Auth::user();
         if ($user) {
+            $unreadCountBefore = $user->unreadNotifications()->count(); // Check before deleting
             $count = $user->notifications()->count();
             if ($count > 0) {
                 $user->notifications()->delete();
@@ -453,6 +502,9 @@ class Sidebar extends Component
                     variant: 'success'
                 );
                 unset($this->notifications); // Refresh
+                if ($unreadCountBefore > 0) { // Only dispatch if unread notifications were deleted
+                    $this->dispatchUnreadCountChanged(); // Manually dispatch after mass delete
+                }
             } else {
                 $this->dispatch(
                     'add-toast',
@@ -483,11 +535,14 @@ class Sidebar extends Component
     }
 
     /**
-     * Refresh the notification list.
+     * Refresh the notification list and the count.
+     * Triggered by external events (e.g., new notification via Pusher/Echo).
      */
+    #[On('notification-updated')]
     public function refreshNotifications(): void
     {
         unset($this->notifications); // Unset computed property to force refresh
+        $this->dispatchUnreadCountChanged(); // Refresh count as well
     }
 
     /**

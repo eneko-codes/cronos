@@ -125,8 +125,8 @@
                   'unread' => 'Unread',
                   'read' => 'Read',
                 ]"
+                :counts="$this->notificationCounts"
                 onFilterChange="setNotificationFilter"
-                :showCounts="false"
                 variant="underline"
               />
             </div>

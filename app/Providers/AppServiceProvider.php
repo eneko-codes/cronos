@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Observers\NotificationObserver;
 use App\Services\DesktimeApiCalls;
 use App\Services\OdooApiCalls;
 use App\Services\ProofhubApiCalls;

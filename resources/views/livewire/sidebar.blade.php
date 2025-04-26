@@ -76,7 +76,6 @@
             ]"
             onFilterChange="changeTab"
             :showCounts="false"
-            class="w-full"
           />
         </div>
 

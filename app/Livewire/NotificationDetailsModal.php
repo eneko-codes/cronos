@@ -1,0 +1,133 @@
+<?php
+
+namespace App\Livewire;
+
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Notifications\DatabaseNotification;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
+use Livewire\Attributes\Locked;
+use Livewire\Attributes\On;
+use Livewire\Component;
+
+class NotificationDetailsModal extends Component
+{
+    public bool $isOpen = false; // Modal open state
+
+    #[Locked]
+    public ?string $notificationId = null; // Notification ID
+
+    // Properties to hold notification details
+    public string $notificationType = '';
+    public string $notificationMessage = '';
+    public string $notificationCreatedAtDiff = '';
+    public string $notificationCreatedAtFormatted = '';
+    public ?string $notificationReadAtDiff = null;
+    public ?string $notificationReadAtFormatted = null;
+    public array $notificationData = [];
+
+    #[On('openNotificationDetailsModal')]
+    public function openModal(string $notificationId): void
+    {
+        $this->notificationId = $notificationId;
+        $this->isOpen = true;
+        $this->loadNotificationDetails();
+    }
+
+    public function closeModal(): void
+    {
+        $this->isOpen = false;
+        $this->resetData(); // Reset data when closing
+    }
+
+    public function loadNotificationDetails(): void
+    {
+        if (! $this->notificationId) {
+            return;
+        }
+
+        $user = Auth::user();
+        if (! $user) {
+            $this->dispatch('add-toast', message: 'Authentication error.', variant: 'error');
+            $this->closeModal();
+            return;
+        }
+
+        try {
+            /** @var DatabaseNotification|null $notification */
+            $notification = $user->notifications()->findOrFail($this->notificationId);
+            $this->prepareDetails($notification);
+        } catch (ModelNotFoundException $e) {
+            $this->dispatch('add-toast', message: 'Notification not found.', variant: 'error');
+            $this->closeModal();
+        } catch (\Exception $e) {
+            $this->dispatch('add-toast', message: 'Error loading notification details.', variant: 'error');
+            $this->closeModal();
+        }
+    }
+
+    protected function prepareDetails(DatabaseNotification $notification): void
+    {
+        $this->notificationType = Str::headline(Str::snake(class_basename($notification->type)));
+        $this->notificationMessage = $notification->data['message'] ?? 'No specific message.';
+        
+        // Prepare Created At dates
+        $this->notificationCreatedAtDiff = $notification->created_at->diffForHumans();
+        $this->notificationCreatedAtFormatted = $notification->created_at->format('M d, Y H:i:s T'); // Precise format
+        
+        // Prepare Read At dates (if applicable)
+        $this->notificationReadAtDiff = $notification->read_at ? $notification->read_at->diffForHumans() : null;
+        $this->notificationReadAtFormatted = $notification->read_at ? $notification->read_at->format('M d, Y H:i:s T') : null; // Precise format
+        
+        $this->notificationData = $notification->data;
+    }
+
+    // Optional: Method to mark as read directly from the modal
+    public function markAsRead(): void
+    {
+        if ($this->notificationId && ! $this->notificationReadAtDiff) {
+            $user = Auth::user();
+            $notification = $user?->notifications()->find($this->notificationId);
+            if ($notification) {
+                $notification->markAsRead();
+                $this->notificationReadAtDiff = now()->diffForHumans();
+                $this->notificationReadAtFormatted = now()->format('M d, Y H:i:s T');
+                $this->dispatch('add-toast', message: 'Marked as read.', variant: 'success');
+                $this->dispatch('notification-updated'); // Notify sidebar to refresh potentially
+            }
+        }
+    }
+
+    // Optional: Method to delete directly from the modal
+    public function deleteNotification(): void
+    {
+        if ($this->notificationId) {
+             $user = Auth::user();
+            $notification = $user?->notifications()->find($this->notificationId);
+            if ($notification) {
+                $notification->delete();
+                $this->dispatch('add-toast', message: 'Notification deleted.', variant: 'success');
+                $this->dispatch('notification-updated'); // Notify sidebar to refresh
+                $this->closeModal(); // Close modal after deletion
+            }
+        }
+    }
+
+    protected function resetData(): void
+    {
+        $this->notificationId = null;
+        $this->notificationType = '';
+        $this->notificationMessage = '';
+        $this->notificationCreatedAtDiff = '';
+        $this->notificationCreatedAtFormatted = '';
+        $this->notificationReadAtDiff = null;
+        $this->notificationReadAtFormatted = null;
+        $this->notificationData = [];
+    }
+
+
+    public function render()
+    {
+        return view('livewire.notification-details-modal');
+    }
+} 

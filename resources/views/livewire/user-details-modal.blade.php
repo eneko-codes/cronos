@@ -10,11 +10,11 @@
       <div
         wire:key="modal-content"
         wire:click.stop
-        class="z-50 flex min-w-[400px] flex-col overflow-hidden rounded-lg border-2 border-gray-200 bg-gray-100 shadow-lg transition-transform duration-300 dark:border-gray-700 dark:bg-gray-800"
+        class="relative z-50 flex min-w-[400px] flex-col overflow-hidden rounded-lg border-2 border-gray-200 bg-gray-100 shadow-lg transition-transform duration-300 dark:border-gray-700 dark:bg-gray-800"
       >
         <button
           wire:click="$set('isOpen', false)"
-          class="ml-auto mr-2 mt-2 text-gray-500 hover:text-gray-700 dark:text-gray-50 dark:hover:text-gray-300"
+          class="absolute right-2 top-2 z-10 rounded-full p-1 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -30,7 +30,7 @@
           </svg>
         </button>
 
-        <div class="overflow-x-auto px-6 pb-6 pt-3">
+        <div class="overflow-x-auto p-6">
           <div
             class="flex flex-col gap-4"
             wire:target="isOpen"
@@ -51,6 +51,30 @@
                   </p>
                 </li>
               @endforeach
+
+              {{-- Add Created At with Tooltip --}}
+              <li
+                class="flex flex-col border-b border-gray-300 py-2 dark:border-gray-700"
+              >
+                <p class="text-sm font-semibold">Created at:</p>
+                <x-tooltip :text="$createdAtFormatted">
+                  <p class="overflow-x-scroll text-sm font-light">
+                    {{ $createdAtDiff }}
+                  </p>
+                </x-tooltip>
+              </li>
+
+              {{-- Add Updated At with Tooltip --}}
+              <li
+                class="flex flex-col border-b border-gray-300 py-2 dark:border-gray-700"
+              >
+                <p class="text-sm font-semibold">Updated at:</p>
+                <x-tooltip :text="$updatedAtFormatted">
+                  <p class="overflow-x-scroll text-sm font-light">
+                    {{ $updatedAtDiff }}
+                  </p>
+                </x-tooltip>
+              </li>
             </ul>
 
             <!-- Admin Management Section -->

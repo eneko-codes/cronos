@@ -21,26 +21,22 @@
         <!-- Title -->
         <div class="flex items-center gap-2">
           <svg
-            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 25"
             fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
+            xmlns="http://www.w3.org/2000/svg"
             class="size-6 rounded-full bg-gray-100 p-1 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
           >
             <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 0 1 0-.255c.007-.378-.138-.75-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"
+              d="M12.7516 3.00098C12.7516 2.58676 12.4158 2.25098 12.0016 2.25098C11.5874 2.25098 11.2516 2.58676 11.2516 3.00098V3.78801C7.46161 4.1643 4.5016 7.36197 4.5016 11.251V14.365L3.80936 16.2109C3.25776 17.6819 4.34514 19.251 5.9161 19.251H18.0871C19.658 19.2509 20.7454 17.6819 20.1938 16.2109L19.5016 14.365V11.251C19.5016 7.36197 16.5416 4.1643 12.7516 3.78801V3.00098Z"
+              fill="currentColor"
             />
             <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+              d="M14.8735 20.251H9.1261C9.55865 21.418 10.6823 22.2495 11.9998 22.2495C13.3173 22.2495 14.441 21.418 14.8735 20.251Z"
+              fill="currentColor"
             />
           </svg>
           <h2 class="text-md font-semibold text-gray-900 dark:text-white">
-            Settings
+            Your notifications
           </h2>
         </div>
 
@@ -51,7 +47,7 @@
             class="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
           >
             <svg
-              class="h-5 w-5"
+              class="size-5"
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
               fill="currentColor"
@@ -67,17 +63,15 @@
       <!-- Content -->
       <div class="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
         {{-- Tabs --}}
-        <div class="mb-4">
-          <x-tabs
-            :active="$activeTab"
-            :filters="[
-              'notifications' => 'Notifications',
-              'settings' => 'Settings',
-            ]"
-            onFilterChange="changeTab"
-            :showCounts="false"
-          />
-        </div>
+        <x-tabs
+          :active="$activeTab"
+          :filters="[
+            'notifications' => 'Notifications',
+            'settings' => 'Settings',
+          ]"
+          onFilterChange="changeTab"
+          :showCounts="false"
+        />
 
         {{-- Notifications Tab Content --}}
         <div
@@ -121,59 +115,98 @@
               @endif
             @endunless
 
+            {{-- Notification Filters --}}
+            <div class="pb-2">
+              <x-tabs
+                wire:key="notification-filter-tabs"
+                :active="$notificationFilter"
+                :filters="[
+                  'all' => 'All',
+                  'unread' => 'Unread',
+                  'read' => 'Read',
+                ]"
+                onFilterChange="setNotificationFilter"
+                :showCounts="false"
+                variant="underline"
+              />
+            </div>
+
             {{-- Bulk Actions --}}
             <div class="flex justify-end gap-2">
               <x-button
                 wire:click="markAllAsRead"
                 size="xs"
-                variant="outline"
+                variant="info"
                 :disabled="! $this->notifications->contains(fn ($n) => $n->unread())"
               >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="currentColor"
+                  class="size-3"
+                  viewBox="0 0 16 16"
+                >
+                  <path
+                    d="M2.5 8a5.5 5.5 0 0 1 8.25-4.764.5.5 0 0 0 .5-.866A6.5 6.5 0 1 0 14.5 8a.5.5 0 0 0-1 0 5.5 5.5 0 1 1-11 0"
+                  />
+                  <path
+                    d="M15.354 3.354a.5.5 0 0 0-.708-.708L8 9.293 5.354 6.646a.5.5 0 1 0-.708.708l3 3a.5.5 0 0 0 .708 0z"
+                  />
+                </svg>
                 Mark All Read
               </x-button>
               <x-button
                 wire:click="deleteAllNotifications"
                 size="xs"
-                variant="danger-outline"
+                variant="alert"
                 wire:confirm="Are you sure you want to delete ALL notifications? This cannot be undone."
                 :disabled="! $this->notifications->total() > 0"
               >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="currentColor"
+                  class="size-3"
+                  viewBox="0 0 16 16"
+                >
+                  <path
+                    d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5"
+                  />
+                </svg>
                 Delete All
               </x-button>
             </div>
 
             {{-- Notification List --}}
             @if ($this->notifications->total() > 0)
-              <ul
-                class="divide-y divide-gray-200 dark:divide-gray-700"
-                wire:key="notification-list"
-              >
+              <ul class="space-y-2" wire:key="notification-list">
                 @foreach ($this->notifications as $notification)
                   <li
                     wire:key="notification-{{ $notification->id }}"
-                    class="{{ $notification->read_at ? 'opacity-70' : '' }} relative py-3"
+                    wire:click="showNotificationDetails('{{ $notification->id }}')"
+                    class="{{ $notification->read_at ? 'opacity-70' : '' }} relative cursor-pointer rounded-md bg-gray-50 p-3 transition duration-150 ease-in-out hover:bg-gray-100 dark:bg-gray-800/50 dark:hover:bg-gray-700/50"
                   >
-                    {{-- Unread Indicator --}}
-                    @if ($notification->unread())
-                      <span
-                        class="absolute left-0 top-1/2 -translate-x-3 -translate-y-1/2 transform"
-                        title="Unread"
-                      >
-                        <span
-                          class="block size-1.5 rounded-full bg-blue-500"
-                        ></span>
-                      </span>
-                    @endif
-
                     <div class="flex items-start justify-between">
                       <div class="flex-1 space-y-1">
-                        {{-- Notification Content (Adjust based on your data structure) --}}
-                        <p
-                          class="text-sm font-medium text-gray-900 dark:text-white"
-                        >
-                          {{-- Try to get a message, fallback to type --}}
-                          {{ $notification->data['message'] ?? Str::headline(Str::snake($notification->type)) }}
-                        </p>
+                        {{-- Flex container for indicator + title --}}
+                        <div class="flex items-center gap-2">
+                          {{-- Inline Unread Indicator (or placeholder) --}}
+                          @if ($notification->unread())
+                            <span title="Unread">
+                              <span
+                                class="block size-1.5 animate-pulse rounded-full bg-blue-500"
+                              ></span>
+                            </span>
+                          @endif
+
+                          {{-- Notification Title --}}
+                          <p
+                            class="text-sm font-medium text-gray-900 dark:text-white"
+                          >
+                            {{-- Try to get a message, fallback to type --}}
+                            {{ $notification->data['message'] ?? Str::headline(Str::snake($notification->type)) }}
+                          </p>
+                        </div>
+
+                        {{-- Timestamp --}}
                         <p class="text-xs text-gray-500 dark:text-gray-400">
                           {{ $notification->created_at->diffForHumans() }}
                         </p>
@@ -182,19 +215,20 @@
                         @if ($notification->unread())
                           <x-tooltip text="Mark as Read">
                             <button
-                              wire:click="markAsRead('{{ $notification->id }}')"
+                              wire:click.stop="markAsRead('{{ $notification->id }}')"
                               class="inline-flex items-center rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-300"
                             >
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 16 16"
                                 fill="currentColor"
-                                class="size-4"
+                                class="size-3"
+                                viewBox="0 0 16 16"
                               >
                                 <path
-                                  fill-rule="evenodd"
-                                  d="M1 8a7 7 0 1 1 14 0A7 7 0 0 1 1 8Zm10.744-2.023a.75.75 0 0 0-1.06-.018L6.999 9.16l-1.69-1.78a.75.75 0 0 0-1.118 1.004l2.25 2.375a.75.75 0 0 0 1.086.017l3.75-4a.75.75 0 0 0-.018-1.06Z"
-                                  clip-rule="evenodd"
+                                  d="M2.5 8a5.5 5.5 0 0 1 8.25-4.764.5.5 0 0 0 .5-.866A6.5 6.5 0 1 0 14.5 8a.5.5 0 0 0-1 0 5.5 5.5 0 1 1-11 0"
+                                />
+                                <path
+                                  d="M15.354 3.354a.5.5 0 0 0-.708-.708L8 9.293 5.354 6.646a.5.5 0 1 0-.708.708l3 3a.5.5 0 0 0 .708 0z"
                                 />
                               </svg>
                             </button>
@@ -203,19 +237,17 @@
 
                         <x-tooltip text="Delete">
                           <button
-                            wire:click="deleteNotification('{{ $notification->id }}')"
+                            wire:click.stop="deleteNotification('{{ $notification->id }}')"
                             class="inline-flex items-center rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/50 dark:hover:text-red-400"
                           >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
-                              viewBox="0 0 16 16"
                               fill="currentColor"
-                              class="size-4"
+                              class="size-3"
+                              viewBox="0 0 16 16"
                             >
                               <path
-                                fill-rule="evenodd"
-                                d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z"
-                                clip-rule="evenodd"
+                                d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5"
                               />
                             </svg>
                           </button>
@@ -375,4 +407,7 @@
       </div>
     </div>
   @endif
+
+  {{-- Include the Notification Details Modal --}}
+  <livewire:notification-details-modal />
 </div>

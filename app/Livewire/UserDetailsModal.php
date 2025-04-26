@@ -27,9 +27,10 @@ class UserDetailsModal extends Component
 
     public $systempinId = ''; // User SystemPin ID
 
-    public $createdAt = ''; // User creation date
-
-    public $updatedAt = ''; // User update date
+    public string $createdAtDiff = ''; // Add diff property
+    public string $createdAtFormatted = ''; // Add formatted property
+    public string $updatedAtDiff = ''; // Add diff property
+    public string $updatedAtFormatted = ''; // Add formatted property
 
     public $isAdmin = false; // User admin status
 
@@ -90,12 +91,15 @@ class UserDetailsModal extends Component
         $this->proofhubId = $user->proofhub_id ?? '-';
         $this->desktimeId = $user->desktime_id ?? '-';
         $this->systempinId = $user->systempin_id ?? '-';
-        $this->createdAt = $user->created_at
-          ? $user->created_at->diffForHumans()
-          : '-';
-        $this->updatedAt = $user->updated_at
-          ? $user->updated_at->diffForHumans()
-          : '-';
+
+        // Prepare Created At dates
+        $this->createdAtDiff = $user->created_at ? $user->created_at->diffForHumans() : '-';
+        $this->createdAtFormatted = $user->created_at ? $user->created_at->format('M d, Y H:i:s T') : '-';
+
+        // Prepare Updated At dates
+        $this->updatedAtDiff = $user->updated_at ? $user->updated_at->diffForHumans() : '-';
+        $this->updatedAtFormatted = $user->updated_at ? $user->updated_at->format('M d, Y H:i:s T') : '-';
+
         $this->isAdmin = $user->is_admin;
         $this->isDoNotTrack = $user->do_not_track;
         // Use the new preferences relationship
@@ -107,8 +111,8 @@ class UserDetailsModal extends Component
             'Proofhub ID' => $this->proofhubId,
             'Desktime ID' => $this->desktimeId,
             'SystemPin ID' => $this->systempinId,
-            'Created at' => $this->createdAt,
-            'Updated at' => $this->updatedAt,
+            // 'Created at' => $this->createdAt,
+            // 'Updated at' => $this->updatedAt,
         ];
     }
 

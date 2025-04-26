@@ -26,7 +26,7 @@
   $disabledClass = $disabled || $attributes->has('disabled') ? 'cursor-not-allowed opacity-50' : '';
 
   // Base classes that will be merged
-  $baseClasses = "inline-flex whitespace-nowrap h-fit w-fit flex-row gap-2 shadow-sm items-center justify-center rounded-lg font-semibold {$variantClass} {$sizeClass} {$disabledClass}";
+  $baseClasses = "inline-flex whitespace-nowrap h-fit w-fit flex-row gap-1 shadow-sm items-center justify-center rounded-lg font-semibold {$variantClass} {$sizeClass} {$disabledClass}";
 @endphp
 
 <button

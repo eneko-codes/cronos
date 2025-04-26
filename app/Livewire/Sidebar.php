@@ -41,6 +41,13 @@ class Sidebar extends Component
      */
     public bool $isGloballyEnabled = true;
 
+    /**
+     * The current filter for the notification list: 'all', 'unread', 'read'.
+     */
+    public string $notificationFilter = 'all';
+
+    protected $listeners = ['notification-updated' => 'refreshNotifications'];
+
     // Define the available user-specific notification keys and their labels
     #[Computed]
     public function preferenceKeys(): array
@@ -77,8 +84,18 @@ class Sidebar extends Component
             return new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10);
         }
 
+        // Start building the query
+        $query = $user->notifications();
+
+        // Apply filter based on state
+        match ($this->notificationFilter) {
+            'unread' => $query->whereNull('read_at'),
+            'read' => $query->whereNotNull('read_at'),
+            default => null, // 'all' or default doesn't need an extra condition
+        };
+
         // Fetch notifications sorted by creation date, 10 per page
-        return $user->notifications()->paginate(10);
+        return $query->paginate(10);
     }
 
     public function mount(): void
@@ -444,6 +461,33 @@ class Sidebar extends Component
                 );
             }
         }
+    }
+
+    /**
+     * Set the filter for the notification list and reset pagination.
+     */
+    public function setNotificationFilter(string $filter): void
+    {
+        if (in_array($filter, ['all', 'unread', 'read'])) {
+            $this->notificationFilter = $filter;
+            $this->resetPage(); // Reset pagination when filter changes
+        }
+    }
+
+    /**
+     * Open the notification details modal.
+     */
+    public function showNotificationDetails(string $notificationId): void
+    {
+        $this->dispatch('openNotificationDetailsModal', notificationId: $notificationId);
+    }
+
+    /**
+     * Refresh the notification list.
+     */
+    public function refreshNotifications(): void
+    {
+        unset($this->notifications); // Unset computed property to force refresh
     }
 
     /**

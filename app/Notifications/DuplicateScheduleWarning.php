@@ -2,7 +2,6 @@
 
 namespace App\Notifications;
 
-use App\Models\Schedule;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -13,7 +12,9 @@ class DuplicateScheduleWarning extends Notification implements ShouldQueue
     use Queueable;
 
     public int $odooScheduleId;
+
     public string $scheduleName;
+
     public $duplicatesData; // Store the duplicates data
 
     /**
@@ -44,18 +45,17 @@ class DuplicateScheduleWarning extends Notification implements ShouldQueue
     {
         $subject = "Duplicate Schedule Details Warning: {$this->scheduleName} (#{$this->odooScheduleId})";
         $lines = [
-            "A potential issue was detected during the Odoo schedule synchronization process.",
+            'A potential issue was detected during the Odoo schedule synchronization process.',
             "The schedule '{$this->scheduleName}' (Odoo ID: {$this->odooScheduleId}) has duplicate time slot definitions for the same weekday and period.",
-            "This might cause inconsistencies or errors in schedule processing.",
-            "Please review the schedule details in Odoo to resolve the conflict.",
-            "Details of duplicates:",
+            'This might cause inconsistencies or errors in schedule processing.',
+            'Please review the schedule details in Odoo to resolve the conflict.',
+            'Details of duplicates:',
         ];
 
         // Add details about the duplicates
         foreach ($this->duplicatesData as $duplicate) {
             $lines[] = "- Day: {$duplicate['weekday']}, Period: {$duplicate['day_period']}, Count: {$duplicate['count']}";
         }
-
 
         $mailMessage = (new MailMessage)->subject($subject)->error(); // Use error level for warnings
         foreach ($lines as $line) {
@@ -82,7 +82,7 @@ class DuplicateScheduleWarning extends Notification implements ShouldQueue
         ];
     }
 
-     /**
+    /**
      * Get the array representation of the notification.
      * Needed for compatibility, delegating to toDatabase.
      *

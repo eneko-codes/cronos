@@ -167,7 +167,7 @@ class SyncOdooSchedules extends BaseSyncJob
                             ))->afterCommit(); // Apply afterCommit to the notification instance
 
                             Notification::send($admins, $notification);
-                            
+
                             // Cache for 24 hours to prevent repeat notifications
                             Cache::put($cacheKey, true, now()->addHours(24));
                         }

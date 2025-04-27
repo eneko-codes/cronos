@@ -66,8 +66,8 @@
         <x-tabs
           :active="$activeTab"
           :filters="[
-            'notifications' => 'Notifications',
-            'settings' => 'Settings',
+              'notifications' => 'Notifications',
+              'settings' => 'Settings',
           ]"
           onFilterChange="changeTab"
           :showCounts="false"
@@ -113,9 +113,9 @@
                 wire:key="notification-filter-tabs"
                 :active="$notificationFilter"
                 :filters="[
-                  'all' => 'All',
-                  'unread' => 'Unread',
-                  'read' => 'Read',
+                    'all' => 'All',
+                    'unread' => 'Unread',
+                    'read' => 'Read',
                 ]"
                 :counts="$this->notificationCounts"
                 onFilterChange="setNotificationFilter"
@@ -174,29 +174,28 @@
                   <li
                     wire:key="notification-{{ $notification->id }}"
                     wire:click="showNotificationDetails('{{ $notification->id }}')"
-                    class="{{ $notification->read_at ? 'opacity-70' : '' }} relative cursor-pointer rounded-md bg-gray-50 p-3 transition duration-150 ease-in-out hover:bg-gray-100 dark:bg-gray-800/50 dark:hover:bg-gray-700/50"
+                    class="@if ($notification->unread())
+                        bg-gray-100
+                        dark:bg-gray-700/60
+                        hover:bg-gray-200
+                        dark:hover:bg-gray-700/80
+                    @else
+                        bg-gray-50
+                        dark:bg-gray-800/50
+                        opacity-70
+                        hover:bg-gray-100
+                        dark:hover:bg-gray-700/50
+                    @endif relative cursor-pointer rounded-md p-3 shadow transition duration-150 ease-in-out"
                   >
                     <div class="flex items-start justify-between">
                       <div class="flex-1 space-y-1">
-                        {{-- Flex container for indicator + title --}}
-                        <div class="flex items-center gap-2">
-                          {{-- Inline Unread Indicator (or placeholder) --}}
-                          @if ($notification->unread())
-                            <span title="Unread">
-                              <span
-                                class="block size-1.5 animate-pulse rounded-full bg-blue-500"
-                              ></span>
-                            </span>
-                          @endif
-
-                          {{-- Notification Title --}}
-                          <p
-                            class="text-sm font-medium text-gray-900 dark:text-white"
-                          >
-                            {{-- Try to get a message, fallback to type --}}
-                            {{ $notification->data['message'] ?? Str::headline(Str::snake($notification->type)) }}
-                          </p>
-                        </div>
+                        {{-- Notification Title --}}
+                        <p
+                          class="text-sm font-medium text-gray-900 dark:text-white"
+                        >
+                          {{-- Try to get a message, fallback to type --}}
+                          {{ $notification->data["message"] ?? Str::headline(Str::snake($notification->type)) }}
+                        </p>
 
                         {{-- Timestamp --}}
                         <p class="text-xs text-gray-500 dark:text-gray-400">
@@ -312,7 +311,7 @@
 
             {{-- User Master Mute Toggle --}}
             <div
-              class="{{ ! $isGloballyEnabled ? 'opacity-50' : '' }} flex items-center justify-between rounded-md bg-gray-50 p-3 dark:bg-gray-700"
+              class="{{ ! $isGloballyEnabled ? "opacity-50" : "" }} flex items-center justify-between rounded-md bg-gray-50 p-3 dark:bg-gray-700"
             >
               <div class="flex items-center gap-3">
                 <svg
@@ -321,7 +320,7 @@
                   viewBox="0 0 24 24"
                   stroke-width="1.5"
                   stroke="currentColor"
-                  class="{{ ! $isGloballyEnabled ? 'text-gray-400 dark:text-gray-600' : 'text-gray-600 dark:text-gray-400' }} size-5"
+                  class="{{ ! $isGloballyEnabled ? "text-gray-400 dark:text-gray-600" : "text-gray-600 dark:text-gray-400" }} size-5"
                 >
                   <path
                     stroke-linecap="round"
@@ -338,19 +337,19 @@
                 </svg>
                 <div>
                   <p
-                    class="{{ ! $isGloballyEnabled ? 'text-gray-400 dark:text-gray-600' : 'text-sm font-medium text-gray-900 dark:text-white' }}"
+                    class="{{ ! $isGloballyEnabled ? "text-gray-400 dark:text-gray-600" : "text-sm font-medium text-gray-900 dark:text-white" }}"
                   >
                     Mute All Personal Notifications
                   </p>
                   <p
-                    class="{{ ! $isGloballyEnabled ? 'text-gray-400 dark:text-gray-600' : 'text-gray-500 dark:text-gray-400' }} text-xs"
+                    class="{{ ! $isGloballyEnabled ? "text-gray-400 dark:text-gray-600" : "text-gray-500 dark:text-gray-400" }} text-xs"
                   >
-                    {{ $muteAll ? 'Currently muted' : 'Currently active' }}
+                    {{ $muteAll ? "Currently muted" : "Currently active" }}
                   </p>
                 </div>
               </div>
               <label
-                class="{{ ! $isGloballyEnabled ? 'cursor-not-allowed' : 'cursor-pointer' }} relative inline-flex items-center"
+                class="{{ ! $isGloballyEnabled ? "cursor-not-allowed" : "cursor-pointer" }} relative inline-flex items-center"
               >
                 <input
                   type="checkbox"
@@ -366,7 +365,7 @@
 
             {{-- Individual Preference Toggles --}}
             <div
-              class="{{ ! $isGloballyEnabled ? 'opacity-50' : '' }} ml-2 space-y-3"
+              class="{{ ! $isGloballyEnabled ? "opacity-50" : "" }} ml-2 space-y-3"
             >
               @foreach ($this->preferenceKeys as $key => $label)
                 <div
@@ -374,12 +373,12 @@
                   class="@if (!$isGloballyEnabled || $muteAll) opacity-50 @endif flex items-center justify-between"
                 >
                   <label
-                    class="{{ ! $isGloballyEnabled || $muteAll ? 'text-gray-400 dark:text-gray-600' : 'text-gray-900 dark:text-white' }} text-sm font-medium"
+                    class="{{ ! $isGloballyEnabled || $muteAll ? "text-gray-400 dark:text-gray-600" : "text-gray-900 dark:text-white" }} text-sm font-medium"
                   >
                     {{ $label }}
                   </label>
                   <label
-                    class="{{ ! $isGloballyEnabled || $muteAll ? 'cursor-not-allowed' : 'cursor-pointer' }} relative inline-flex items-center"
+                    class="{{ ! $isGloballyEnabled || $muteAll ? "cursor-not-allowed" : "cursor-pointer" }} relative inline-flex items-center"
                   >
                     <input
                       type="checkbox"

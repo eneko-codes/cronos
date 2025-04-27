@@ -1,4 +1,4 @@
-<div>
+<div wire:poll.20s="updateCount">
   <x-tooltip text="Your notifications">
     <button
       wire:click="toggleSidebar"

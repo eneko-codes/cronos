@@ -189,13 +189,15 @@
                   >
                     <div class="flex items-start justify-between">
                       <div class="flex-1 space-y-1">
-                        {{-- Notification Title --}}
-                        <p
-                          class="text-sm font-medium text-gray-900 dark:text-white"
-                        >
-                          {{-- Try to get a message, fallback to type --}}
-                          {{ $notification->data["message"] ?? Str::headline(Str::snake($notification->type)) }}
-                        </p>
+                        {{-- Notification Title and Badge --}}
+                        <div class="flex items-center gap-2">
+                          <p
+                            class="text-sm font-medium text-gray-900 dark:text-white"
+                          >
+                            {{-- Show subject or limited message as fallback --}}
+                            {{ $notification->data["subject"] ?? Str::limit($notification->data["message"] ?? "", 50) }}
+                          </p>
+                        </div>
 
                         {{-- Timestamp --}}
                         <p class="text-xs text-gray-500 dark:text-gray-400">

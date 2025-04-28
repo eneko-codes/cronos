@@ -15,16 +15,19 @@ class DuplicateScheduleWarning extends Notification implements ShouldQueue
 
     public string $scheduleName;
 
-    public $duplicatesData; // Store the duplicates data
+    public array $duplicatesData;
 
     /**
      * Create a new notification instance.
+     * @param int $odooScheduleId
+     * @param string $scheduleName
+     * @param array $duplicatesData Data about the duplicates.
      */
-    public function __construct(int $odooScheduleId, string $scheduleName, $duplicatesData)
+    public function __construct(int $odooScheduleId, string $scheduleName, array $duplicatesData)
     {
         $this->odooScheduleId = $odooScheduleId;
         $this->scheduleName = $scheduleName;
-        $this->duplicatesData = $duplicatesData; // Store the passed data
+        $this->duplicatesData = $duplicatesData;
     }
 
     /**
@@ -43,53 +46,66 @@ class DuplicateScheduleWarning extends Notification implements ShouldQueue
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $subject = "Duplicate Schedule Details Warning: {$this->scheduleName} (#{$this->odooScheduleId})";
-        $lines = [
-            'A potential issue was detected during the Odoo schedule synchronization process.',
-            "The schedule '{$this->scheduleName}' (Odoo ID: {$this->odooScheduleId}) has duplicate time slot definitions for the same weekday and period.",
-            'This might cause inconsistencies or errors in schedule processing.',
-            'Please review the schedule details in Odoo to resolve the conflict.',
-            'Details of duplicates:',
-        ];
 
-        // Add details about the duplicates
+        $mailMessage = (new MailMessage)
+            ->subject("Duplicated Schedule Details: {$this->scheduleName}")
+            ->greeting('Hello ' . $notifiable->name . ',')
+            ->line('A potential issue was detected during the Odoo schedule synchronization process.')
+            ->line("The schedule '{$this->scheduleName}' (Odoo ID: {$this->odooScheduleId}) has duplicate time slot definitions for the same weekday and period.")
+            ->line('This might cause inaccurate calculations of the schedule. When there are duplicated schedule details for the same weekday and period, the app will use the average hours per day pulled from Odoo for that schedule.')
+            ->line('Please review the schedule details in Odoo to resolve the conflict.')
+            ->line('Details of duplicates:');
+
+        // Add details about the duplicates using chained lines
         foreach ($this->duplicatesData as $duplicate) {
-            $lines[] = "- Day: {$duplicate['weekday']}, Period: {$duplicate['day_period']}, Count: {$duplicate['count']}";
+             $day = $duplicate['weekday'] ?? '?';
+             $period = $duplicate['day_period'] ?? '?';
+             $count = $duplicate['count'] ?? '?';
+             $mailMessage->line("- Day: {$day}, Period: {$period}, Count: {$count}");
         }
 
-        $mailMessage = (new MailMessage)->subject($subject)->error(); // Use error level for warnings
-        foreach ($lines as $line) {
-            $mailMessage->line($line);
-        }
-        $mailMessage->line('Thank you.');
+        // Update the concluding action
+        $mailMessage->action("Open " . config('app.name'), url('/'));
 
         return $mailMessage;
-
-    }
-
-    /**
-     * Get the array representation of the notification for the database.
-     *
-     * @return array<string, mixed>
-     */
-    public function toDatabase(object $notifiable): array
-    {
-        return [
-            'odoo_schedule_id' => $this->odooScheduleId,
-            'schedule_name' => $this->scheduleName,
-            'message' => "Duplicate schedule details detected for schedule '{$this->scheduleName}' (#{$this->odooScheduleId}). Please review in Odoo.",
-            'duplicates_details' => $this->duplicatesData->toArray(), // Store duplicate details as JSON
-        ];
     }
 
     /**
      * Get the array representation of the notification.
-     * Needed for compatibility, delegating to toDatabase.
      *
-     * @return array<string, mixed>
+     * @return array
      */
     public function toArray(object $notifiable): array
     {
-        return $this->toDatabase($notifiable);
+        $subject = "Duplicate Schedule Details: {$this->scheduleName}";
+
+        // Construct the detailed message lines as an array
+        $messageLines = [
+            "A potential issue was detected during the Odoo schedule synchronization process.",
+            "The schedule '{$this->scheduleName}' (Odoo ID: {$this->odooScheduleId}) has duplicate time slot definitions for the same weekday and period.",
+            "This might cause inaccurate calculations of the schedule. When there are duplicated schedule details for the same weekday and period, the app will use the average hours per day pulled from Odoo for that schedule.",
+            "Please review the schedule details in Odoo to resolve the conflict.",
+            "Details of duplicates:",
+        ];
+
+        if (!empty($this->duplicatesData)) {
+            foreach ($this->duplicatesData as $duplicate) {
+                 $day = $duplicate['weekday'] ?? '?';
+                 $period = $duplicate['day_period'] ?? '?';
+                 $count = $duplicate['count'] ?? '?';
+                 $messageLines[] = "- Day: {$day}, Period: {$period}, Count: {$count}";
+            }
+        } else {
+            $messageLines[] = "- Oups! No specific duplicate details are available.";
+        }
+
+        $message = implode("\n", $messageLines);
+
+        return [
+            'subject' => $subject,
+            'message' => $message,
+            'level' => 'warning'
+        ];
     }
+
 }

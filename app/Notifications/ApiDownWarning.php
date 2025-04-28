@@ -36,30 +36,37 @@ class ApiDownWarning extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->error() // Mark as error notification
-            ->subject("🔴 API Down Alert: {$this->serviceName}")
-            ->greeting('⚠️ API Service Alert')
+            ->error()
+            ->subject("🔴 {$this->serviceName} API is down")
+            ->greeting("Hello {$notifiable->name},")
             ->line("The {$this->serviceName} API service is currently unavailable.")
             ->line("Error details: {$this->errorMessage}")
-            ->line('Time: '.now()->toDateTimeString())
-            ->line(
-                'This issue requires immediate attention to prevent data synchronization problems.'
-            )
-            ->action('View Dashboard', url('/dashboard'));
+            ->action("Open " . config('app.name'), url('/'));
+
     }
 
     /**
      * Get the array representation of the notification.
+     *
+     * @return array
      */
-    public function toDatabase(object $notifiable): array
+    public function toArray(object $notifiable): array
     {
+        // Match mail subject
+        $subject = "🔴 {$this->serviceName} API is down";
+
+        // Construct message from mail lines
+        $messageLines = [
+            "The {$this->serviceName} API service is currently unavailable.",
+            "Error details:",
+            "{$this->errorMessage}"
+        ];
+        $message = implode("\n", $messageLines);
+
         return [
-            'service_name' => $this->serviceName,
-            'error_message' => $this->errorMessage,
-            'timestamp' => now()->toDateTimeString(),
-            'message' => "API Down Alert: {$this->serviceName} - {$this->errorMessage}",
-            'level' => 'error', // Indicate severity
-            'link' => url('/dashboard'),
+            'subject' => $subject,
+            'message' => $message,
+            'level' => 'error',
         ];
     }
 }

@@ -160,16 +160,25 @@ class SyncOdooSchedules extends BaseSyncJob
                     if (! Cache::has($cacheKey)) {
                         $admins = User::where('is_admin', true)->get();
                         if ($admins->isNotEmpty()) {
-                            $notification = (new DuplicateScheduleWarning(
-                                $odooScheduleId,
-                                $scheduleData['name'],
-                                $duplicatesDetailsForNotification // Pass the prepared data
-                            ))->afterCommit(); // Apply afterCommit to the notification instance
+                            try {
+                                $notification = (new DuplicateScheduleWarning(
+                                    $odooScheduleId,
+                                    $scheduleData['name'],
+                                    $duplicatesDetailsForNotification->toArray() // Convert to array before passing
+                                ))->afterCommit(); // Ensure the notification is sent after the job db transaction is committed
 
-                            Notification::send($admins, $notification);
+                                Notification::send($admins, $notification);
 
-                            // Cache for 24 hours to prevent repeat notifications
-                            Cache::put($cacheKey, true, now()->addHours(24));
+                                // Cache ONLY after successful notification send
+                                Cache::put($cacheKey, true, now()->addHours(24));
+                                Log::debug(class_basename($this) . ": Sent duplicate schedule warning and cached for schedule ID: {$odooScheduleId}");
+
+                            } catch (Exception $e) {
+                                // Log the error if notification sending failed
+                                Log::error(class_basename($this) . ": Failed to send DuplicateScheduleWarning for schedule ID {$odooScheduleId}: " . $e->getMessage(), [
+                                    'exception' => $e
+                                ]);
+                            }
                         }
                     }
                 }

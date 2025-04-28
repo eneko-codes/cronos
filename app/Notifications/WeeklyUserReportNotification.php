@@ -48,25 +48,36 @@ class WeeklyUserReportNotification extends Notification implements ShouldQueue
 
         return (new MailMessage)
             ->subject('Your Weekly Activity Report')
-            ->greeting("Hello {$this->user->name},")
+            ->greeting("Hello {$notifiable->name},")
             ->line('Here is your activity report for the past week.')
             ->line($reportSummary)
-            ->action('View Dashboard', url('/dashboard'));
+            ->action("Open " . config('app.name'), url('/'));
     }
 
     /**
      * Get the array representation of the notification.
      *
-     * @return array<string, mixed>
+     * @return array
      */
-    public function toDatabase(object $notifiable): array
+    public function toArray(object $notifiable): array
     {
+        // Match mail subject
+        $subject = 'Your Weekly Activity Report';
+        
+        // Construct message from mail lines 
+        // NOTE: This matches the current toMail, which might be too simple.
+        // Consider if report data should be included here instead.
+        $reportSummaryLine = "This week's summary: \n"; // Matches the variable used in toMail
+        $messageLines = [
+            'Here is your activity report for the past week.',
+            $reportSummaryLine 
+        ];
+        $message = implode("\n", $messageLines);
+
         return [
-            'user_id' => $this->user->id,
-            'user_name' => $this->user->name,
-            'message' => 'Your weekly activity report is available.',
-            'report_data' => $this->reportData,
-            'link' => url('/dashboard'),
+            'subject' => $subject,
+            'message' => $message,
+            'level' => 'info',
         ];
     }
 }

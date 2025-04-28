@@ -21,12 +21,13 @@ class UserObserver
         // Create default notification preferences for the new user
         $user->notificationPreferences()->create();
 
-        // Create the notification instance
-        $welcomeNotification = new WelcomeEmail($user);
+        // Create the notification instance 
+        $welcomeNotification = new WelcomeEmail();
 
-        // Use the injected service
+        // Use the injected service and the created notification instance
         if ($user->email && $this->notificationPermissionService->canUserReceiveNotification($user, $welcomeNotification)) {
-            $user->notify(new WelcomeEmail($user));
+            // Send the already created instance
+            $user->notify($welcomeNotification);
         }
     }
 

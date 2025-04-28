@@ -43,28 +43,29 @@ class AdminPromotionEmail extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('User Promoted to Administrator')
-            ->greeting('Hello Admin,') // Generic greeting for admins
+            ->subject("{$this->promotedUser->name} has been promoted to admin")
+            ->greeting('Hello ' . $notifiable->name . ',')
             ->line(
-                "The user '{$this->promotedUser->name}' ({$this->promotedUser->email}) has been promoted to an administrator role."
+                "{$this->promotedUser->name} has been promoted to an administrator role."
             )
             ->line('You are receiving this notification as an administrator.')
-            ->action('View Users', url('/users')); // Link to user management page
+            ->action("Open " . config('app.name'), url('/'));
     }
 
     /**
      * Get the array representation of the notification.
      *
-     * @return array<string, mixed>
+     * @return array
      */
-    public function toDatabase(object $notifiable): array
+    public function toArray(object $notifiable): array
     {
+        $subject = "{$this->promotedUser->name} has been promoted to admin";
+        $message = "{$this->promotedUser->name} has been promoted to administrator role.";
+
         return [
-            'promoted_user_id' => $this->promotedUser->id,
-            'promoted_user_name' => $this->promotedUser->name,
-            'promoted_user_email' => $this->promotedUser->email,
-            'message' => "User '{$this->promotedUser->name}' was promoted to admin.",
-            'link' => url('/users'), // Or a specific link to the user's profile
+            'subject' => $subject,
+            'message' => $message,
+            'level' => 'info',
         ];
     }
 }

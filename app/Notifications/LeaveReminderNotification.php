@@ -52,35 +52,44 @@ class LeaveReminderNotification extends Notification implements ShouldQueue
 
         return (new MailMessage)
             ->subject("Upcoming Leave Reminder: {$leaveType}")
-            ->greeting("Hello {$this->user->name},")
+            ->greeting("Hello {$notifiable->name},")
             ->line("This is a reminder about your upcoming {$leaveType}.")
             ->line("Start Date: {$startDate}")
             ->line("End Date: {$endDate}")
             ->line("Duration: {$duration} day(s)")
             ->line("Description: {$this->leave->description}")
-            ->action('View Leave Details', url('/'));
+            ->action("Open " . config('app.name'), url('/'));
     }
 
     /**
      * Get the array representation of the notification.
      *
-     * @return array<string, mixed>
+     * @return array
      */
-    public function toDatabase(object $notifiable): array
+    public function toArray(object $notifiable): array
     {
         $leaveType = $this->leave->leaveType?->name ?? 'Time Off';
         $startDate = $this->leave->start_date->format('F j, Y');
+        $endDate = $this->leave->end_date->format('F j, Y');
+        $duration = $this->leave->duration_days;
+
+        $subject = "Upcoming Leave Reminder: {$leaveType}";
+
+        $messageLines = [
+            "This is a reminder about your upcoming {$leaveType}.",
+            "Start Date: {$startDate}",
+            "End Date: {$endDate}",
+            "Duration: {$duration} day(s)",
+            "Description: {$this->leave->description}"
+        ];
+        $message = implode("\n", $messageLines);
 
         return [
-            'user_id' => $this->user->id,
-            'user_name' => $this->user->name,
-            'leave_id' => $this->leave->id,
-            'leave_type' => $leaveType,
-            'start_date' => $this->leave->start_date->toDateString(),
-            'end_date' => $this->leave->end_date->toDateString(),
-            'duration_days' => $this->leave->duration_days,
-            'message' => "Reminder: Your {$leaveType} starts on {$startDate}.",
-            'link' => url('/'),
+            'subject' => $subject,
+            'message' => $message,
+            'leave_end_date' => $this->leave->end_date->toDateString(),
+            'leave_type' => $this->leave->leaveType->name,
+            'level' => 'info',
         ];
     }
 }

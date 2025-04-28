@@ -12,24 +12,19 @@ use Livewire\Component;
 
 class NotificationDetailsModal extends Component
 {
-    public bool $isOpen = false; // Modal open state
+    public bool $isOpen = false;
 
     #[Locked]
-    public ?string $notificationId = null; // Notification ID
+    public ?string $notificationId = null; 
 
     // Properties to hold notification details
+    public string $notificationSubject = '';
     public string $notificationType = '';
-
     public string $notificationMessage = '';
-
     public string $notificationCreatedAtDiff = '';
-
     public string $notificationCreatedAtFormatted = '';
-
     public ?string $notificationReadAtDiff = null;
-
     public ?string $notificationReadAtFormatted = null;
-
     public array $notificationData = [];
 
     #[On('openNotificationDetailsModal')]
@@ -43,7 +38,7 @@ class NotificationDetailsModal extends Component
     public function closeModal(): void
     {
         $this->isOpen = false;
-        $this->resetData(); // Reset data when closing
+        $this->resetData();
     }
 
     public function loadNotificationDetails(): void
@@ -76,7 +71,11 @@ class NotificationDetailsModal extends Component
     protected function prepareDetails(DatabaseNotification $notification): void
     {
         $this->notificationType = Str::headline(Str::snake(class_basename($notification->type)));
-        $this->notificationMessage = $notification->data['message'] ?? 'No specific message.';
+        $this->notificationSubject = $notification->data['subject'] ?? $this->notificationType;
+        
+        // Get raw message and convert newlines to <br> tags safely
+        $rawMessage = $notification->data['message'] ?? 'No specific message.';
+        $this->notificationMessage = nl2br(e($rawMessage)); // nl2br converts \n to <br>, e() escapes HTML
 
         // Prepare Created At dates
         $this->notificationCreatedAtDiff = $notification->created_at->diffForHumans();
@@ -89,7 +88,7 @@ class NotificationDetailsModal extends Component
         $this->notificationData = $notification->data;
     }
 
-    // Optional: Method to mark as read directly from the modal
+    //  Method to mark as read directly from the modal
     public function markAsRead(): void
     {
         if ($this->notificationId && ! $this->notificationReadAtDiff) {
@@ -105,7 +104,7 @@ class NotificationDetailsModal extends Component
         }
     }
 
-    // Optional: Method to delete directly from the modal
+    // Method to delete directly from the modal
     public function deleteNotification(): void
     {
         if ($this->notificationId) {
@@ -123,6 +122,7 @@ class NotificationDetailsModal extends Component
     protected function resetData(): void
     {
         $this->notificationId = null;
+        $this->notificationSubject = '';
         $this->notificationType = '';
         $this->notificationMessage = '';
         $this->notificationCreatedAtDiff = '';

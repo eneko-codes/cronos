@@ -52,7 +52,7 @@ class ScheduleChangeNotification extends Notification implements ShouldQueue
     {
         $mailMessage = (new MailMessage)
             ->subject('Your Work Schedule Has Been Updated')
-            ->greeting("Hello {$this->user->name},")
+            ->greeting("Hello {$notifiable->name},")
             ->line('Your assigned work schedule has been updated.');
 
         if ($this->oldSchedule) {
@@ -71,49 +71,88 @@ class ScheduleChangeNotification extends Notification implements ShouldQueue
             $mailMessage->line('Your previous schedule has now ended.');
         }
 
-        // Removed the ->action() button
+        // Add the standard action
+        $mailMessage->action("Open " . config('app.name'), url('/'));
 
         return $mailMessage;
     }
 
     /**
-     * Formats the details of a schedule into a readable string.
+     * Formats the details of a schedule into a readable string using plain PHP arrays.
      */
     protected function formatScheduleDetails(Schedule $schedule): string
     {
-        $detailsString = '';
         $daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-        // Group details by weekday
-        $groupedDetails = $schedule->scheduleDetails->sortBy(['weekday', 'day_period'])->groupBy('weekday');
+        // Sort and group details by weekday using Eloquent Collection methods,
+        // but then convert to array for processing.
+        $groupedDetailsArray = $schedule->scheduleDetails
+            ->sortBy(['weekday', 'day_period'])
+            ->groupBy('weekday')
+            ->toArray(); // Convert to array here
 
-        foreach ($groupedDetails as $weekday => $details) {
-            $dayName = $daysOfWeek[$weekday] ?? 'Unknown Day';
-            $detailsString .= "\n**{$dayName}:**";
-            foreach ($details as $detail) {
-                $period = Str::ucfirst($detail->day_period);
-                $detailsString .= "\n  - {$period}: {$detail->start} - {$detail->end} (UTC)";
-            }
+        if (empty($groupedDetailsArray)) {
+            return "\n  - No specific details available.";
         }
 
-        return $detailsString ?: "\n  - No specific details available.";
+        $formattedDays = [];
+        foreach ($groupedDetailsArray as $weekday => $details) {
+            $dayName = $daysOfWeek[$weekday] ?? 'Unknown Day';
+            $dayLines = ["**{$dayName}:**"]; // Start with day name
+            
+            // Map each detail within the day to its string representation
+            foreach ($details as $detail) {
+                // Access properties as object or array depending on what ->toArray() returns
+                $period = Str::ucfirst(is_array($detail) ? $detail['day_period'] : $detail->day_period);
+                $start = is_array($detail) ? $detail['start'] : $detail->start;
+                $end = is_array($detail) ? $detail['end'] : $detail->end;
+                $dayLines[] = "  - {$period}: {$start} - {$end} (UTC)";
+            }
+            // Implode the lines for this day
+            $formattedDays[] = implode("\n", $dayLines);
+        }
+
+        // Combine all formatted days with newlines
+        return implode("\n", $formattedDays);
     }
 
     /**
      * Get the array representation of the notification.
      *
-     * @return array<string, mixed>
+     * @return array
      */
-    public function toDatabase(object $notifiable): array
+    public function toArray(object $notifiable): array
     {
+        $subject = 'Your Work Schedule Has Been Updated';
+
+        // Use plain array to build message lines
+        $messageLines = [];
+        $messageLines[] = 'Your assigned work schedule has been updated.';
+
+        if ($this->oldSchedule) {
+            $messageLines[] = "\n**Previous Schedule:** {$this->oldSchedule->description}";
+            $messageLines[] = $this->formatScheduleDetails($this->oldSchedule);
+        }
+
+        if ($this->newSchedule) {
+            $messageLines[] = "\n**New Schedule:** {$this->newSchedule->description}";
+            $messageLines[] = $this->formatScheduleDetails($this->newSchedule);
+        } elseif (! $this->oldSchedule) {
+            $messageLines[] = 'No schedule information available for this update.';
+        } elseif ($this->oldSchedule && ! $this->newSchedule) {
+            $messageLines[] = 'Your previous schedule has now ended.';
+        }
+
+        $message = implode("\n", $messageLines);
+
         return [
-            'user_id' => $this->user->id,
-            'user_name' => $this->user->name,
-            'message' => 'Your work schedule has been updated.',
-            'old_schedule_desc' => $this->oldSchedule?->description,
-            'new_schedule_desc' => $this->newSchedule?->description,
-            // Optional: Add a link/route for the user to view their schedule
-            'link' => route('user.dashboard', ['id' => $this->user->id]),
+            'subject' => $subject,
+            'message' => $message,
+            'old_schedule_id' => $this->oldSchedule?->id,
+            'old_schedule_description' => $this->oldSchedule?->description,
+            'new_schedule_id' => $this->newSchedule?->id,
+            'new_schedule_description' => $this->newSchedule?->description,
+            'level' => 'info',
         ];
     }
 }

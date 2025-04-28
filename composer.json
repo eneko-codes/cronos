@@ -11,14 +11,14 @@
     "php": "^8.2",
     "laravel/framework": "v12.9.2",
     "laravel/octane": "^2.9",
-    "laravel/pulse": "^1.2",
+    "laravel/pulse": "^1.4",
     "livewire/livewire": "^3.0"
   },
   "require-dev": {
     "fakerphp/faker": "^1.23",
     "laravel/pail": "^1.1",
     "laravel/pint": "*",
-    "laravel/telescope": "^5.2",
+    "laravel/telescope": "^5.7",
     "laravel/tinker": "^2.9",
     "mockery/mockery": "^1.6",
     "nunomaduro/collision": "^8.1",

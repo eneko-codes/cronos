@@ -37,45 +37,13 @@ Schedule::job(new SendUserLeaveReminder(1))
     ->withoutOverlapping();
 
 /**
- * Schedule the `telescope:prune` command based on the
- * 'notification.telescope_prune.value' setting (default: weekly).
- * Logs errors and throws an exception for invalid frequency settings.
+ * Schedule daily pruning of Telescope entries.
  */
-try {
-    $frequency = Setting::getValue(
-        'notification.telescope_prune.value',
-        'weekly'
-    );
-
-    $scheduleTelescopePrune = Schedule::command('telescope:prune')
-        ->name('Telescope Prune')
-        ->withoutOverlapping();
-
-    match ($frequency) {
-        'daily' => $scheduleTelescopePrune->daily()->at('23:00'),
-        'weekly' => $scheduleTelescopePrune->weekly()->at('23:00'),
-        'monthly' => $scheduleTelescopePrune->monthly()->at('23:00'),
-        default => throw new InvalidArgumentException(
-            'Invalid Telescope prune frequency configured: '.$frequency
-        ),
-    };
-} catch (InvalidArgumentException $e) {
-    Log::error(
-        'Invalid Telescope prune frequency configuration: '.$e->getMessage(),
-        [
-            'frequency' => $frequency ?? 'not fetched',
-            'exception' => $e,
-            'trace' => $e->getTraceAsString(),
-        ]
-    );
-    throw $e; // Rethrow to make the configuration error visible.
-} catch (Exception $e) {
-    // Log other scheduling errors but allow later schedules to run.
-    Log::error('Failed to schedule Telescope pruning: '.$e->getMessage(), [
-        'exception' => $e,
-        'trace' => $e->getTraceAsString(),
-    ]);
-}
+Schedule::command('telescope:prune')
+    ->daily()
+    ->at('23:00')
+    ->name('Telescope Prune')
+    ->environments('local');
 
 /**
  * Schedule daily pruning of old job batches.

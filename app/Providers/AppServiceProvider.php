@@ -37,6 +37,12 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(SystemPinApiCalls::class, function () {
             return new SystemPinApiCalls;
         });
+
+        // Register TelescopeServiceProvider if the environment is local
+        if ($this->app->environment('local') && class_exists(\Laravel\Telescope\TelescopeServiceProvider::class)) {
+            $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);
+            $this->app->register(TelescopeServiceProvider::class);
+        }
     }
 
     /**

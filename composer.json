@@ -10,6 +10,7 @@
   "require": {
     "php": "^8.2",
     "laravel/framework": "v12.9.2",
+    "laravel/octane": "^2.9",
     "laravel/pulse": "^1.2",
     "laravel/slack-notification-channel": "^3.4",
     "laravel/telescope": "^5.2",

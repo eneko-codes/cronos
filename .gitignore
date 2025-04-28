@@ -78,3 +78,7 @@ Thumbs.db
 
 # Tests coverage
 /tests/coverage
+
+**/caddy
+frankenphp
+frankenphp-worker.php

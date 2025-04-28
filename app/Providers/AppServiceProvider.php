@@ -2,12 +2,14 @@
 
 namespace App\Providers;
 
+use App\Models\User;
 use App\Services\DesktimeApiCalls;
 use App\Services\OdooApiCalls;
 use App\Services\ProofhubApiCalls;
 use App\Services\SystemPinApiCalls;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -50,6 +52,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Only users who are admin can access pulse in production
+        Gate::define('viewPulse', function (User $user) {
+            return $user->isAdmin();
+        });
         // Login attempts limiter
         RateLimiter::for('login', function (Request $request) {
             return Limit::perMinute(10)->by($request->ip());

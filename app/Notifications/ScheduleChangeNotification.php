@@ -72,7 +72,7 @@ class ScheduleChangeNotification extends Notification implements ShouldQueue
         }
 
         // Add the standard action
-        $mailMessage->action("Open " . config('app.name'), url('/'));
+        $mailMessage->action('Open '.config('app.name'), url('/'));
 
         return $mailMessage;
     }
@@ -99,7 +99,7 @@ class ScheduleChangeNotification extends Notification implements ShouldQueue
         foreach ($groupedDetailsArray as $weekday => $details) {
             $dayName = $daysOfWeek[$weekday] ?? 'Unknown Day';
             $dayLines = ["**{$dayName}:**"]; // Start with day name
-            
+
             // Map each detail within the day to its string representation
             foreach ($details as $detail) {
                 // Access properties as object or array depending on what ->toArray() returns
@@ -118,8 +118,6 @@ class ScheduleChangeNotification extends Notification implements ShouldQueue
 
     /**
      * Get the array representation of the notification.
-     *
-     * @return array
      */
     public function toArray(object $notifiable): array
     {

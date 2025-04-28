@@ -15,16 +15,23 @@ class NotificationDetailsModal extends Component
     public bool $isOpen = false;
 
     #[Locked]
-    public ?string $notificationId = null; 
+    public ?string $notificationId = null;
 
     // Properties to hold notification details
     public string $notificationSubject = '';
+
     public string $notificationType = '';
+
     public string $notificationMessage = '';
+
     public string $notificationCreatedAtDiff = '';
+
     public string $notificationCreatedAtFormatted = '';
+
     public ?string $notificationReadAtDiff = null;
+
     public ?string $notificationReadAtFormatted = null;
+
     public array $notificationData = [];
 
     #[On('openNotificationDetailsModal')]
@@ -72,7 +79,7 @@ class NotificationDetailsModal extends Component
     {
         $this->notificationType = Str::headline(Str::snake(class_basename($notification->type)));
         $this->notificationSubject = $notification->data['subject'] ?? $this->notificationType;
-        
+
         // Get raw message and convert newlines to <br> tags safely
         $rawMessage = $notification->data['message'] ?? 'No specific message.';
         $this->notificationMessage = nl2br(e($rawMessage)); // nl2br converts \n to <br>, e() escapes HTML

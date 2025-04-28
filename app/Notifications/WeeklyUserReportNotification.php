@@ -51,26 +51,24 @@ class WeeklyUserReportNotification extends Notification implements ShouldQueue
             ->greeting("Hello {$notifiable->name},")
             ->line('Here is your activity report for the past week.')
             ->line($reportSummary)
-            ->action("Open " . config('app.name'), url('/'));
+            ->action('Open '.config('app.name'), url('/'));
     }
 
     /**
      * Get the array representation of the notification.
-     *
-     * @return array
      */
     public function toArray(object $notifiable): array
     {
         // Match mail subject
         $subject = 'Your Weekly Activity Report';
-        
-        // Construct message from mail lines 
+
+        // Construct message from mail lines
         // NOTE: This matches the current toMail, which might be too simple.
         // Consider if report data should be included here instead.
         $reportSummaryLine = "This week's summary: \n"; // Matches the variable used in toMail
         $messageLines = [
             'Here is your activity report for the past week.',
-            $reportSummaryLine 
+            $reportSummaryLine,
         ];
         $message = implode("\n", $messageLines);
 

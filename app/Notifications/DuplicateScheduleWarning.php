@@ -19,9 +19,8 @@ class DuplicateScheduleWarning extends Notification implements ShouldQueue
 
     /**
      * Create a new notification instance.
-     * @param int $odooScheduleId
-     * @param string $scheduleName
-     * @param array $duplicatesData Data about the duplicates.
+     *
+     * @param  array  $duplicatesData  Data about the duplicates.
      */
     public function __construct(int $odooScheduleId, string $scheduleName, array $duplicatesData)
     {
@@ -49,7 +48,7 @@ class DuplicateScheduleWarning extends Notification implements ShouldQueue
 
         $mailMessage = (new MailMessage)
             ->subject("Duplicated Schedule Details: {$this->scheduleName}")
-            ->greeting('Hello ' . $notifiable->name . ',')
+            ->greeting('Hello '.$notifiable->name.',')
             ->line('A potential issue was detected during the Odoo schedule synchronization process.')
             ->line("The schedule '{$this->scheduleName}' (Odoo ID: {$this->odooScheduleId}) has duplicate time slot definitions for the same weekday and period.")
             ->line('This might cause inaccurate calculations of the schedule. When there are duplicated schedule details for the same weekday and period, the app will use the average hours per day pulled from Odoo for that schedule.')
@@ -58,22 +57,20 @@ class DuplicateScheduleWarning extends Notification implements ShouldQueue
 
         // Add details about the duplicates using chained lines
         foreach ($this->duplicatesData as $duplicate) {
-             $day = $duplicate['weekday'] ?? '?';
-             $period = $duplicate['day_period'] ?? '?';
-             $count = $duplicate['count'] ?? '?';
-             $mailMessage->line("- Day: {$day}, Period: {$period}, Count: {$count}");
+            $day = $duplicate['weekday'] ?? '?';
+            $period = $duplicate['day_period'] ?? '?';
+            $count = $duplicate['count'] ?? '?';
+            $mailMessage->line("- Day: {$day}, Period: {$period}, Count: {$count}");
         }
 
         // Update the concluding action
-        $mailMessage->action("Open " . config('app.name'), url('/'));
+        $mailMessage->action('Open '.config('app.name'), url('/'));
 
         return $mailMessage;
     }
 
     /**
      * Get the array representation of the notification.
-     *
-     * @return array
      */
     public function toArray(object $notifiable): array
     {
@@ -81,22 +78,22 @@ class DuplicateScheduleWarning extends Notification implements ShouldQueue
 
         // Construct the detailed message lines as an array
         $messageLines = [
-            "A potential issue was detected during the Odoo schedule synchronization process.",
+            'A potential issue was detected during the Odoo schedule synchronization process.',
             "The schedule '{$this->scheduleName}' (Odoo ID: {$this->odooScheduleId}) has duplicate time slot definitions for the same weekday and period.",
-            "This might cause inaccurate calculations of the schedule. When there are duplicated schedule details for the same weekday and period, the app will use the average hours per day pulled from Odoo for that schedule.",
-            "Please review the schedule details in Odoo to resolve the conflict.",
-            "Details of duplicates:",
+            'This might cause inaccurate calculations of the schedule. When there are duplicated schedule details for the same weekday and period, the app will use the average hours per day pulled from Odoo for that schedule.',
+            'Please review the schedule details in Odoo to resolve the conflict.',
+            'Details of duplicates:',
         ];
 
-        if (!empty($this->duplicatesData)) {
+        if (! empty($this->duplicatesData)) {
             foreach ($this->duplicatesData as $duplicate) {
-                 $day = $duplicate['weekday'] ?? '?';
-                 $period = $duplicate['day_period'] ?? '?';
-                 $count = $duplicate['count'] ?? '?';
-                 $messageLines[] = "- Day: {$day}, Period: {$period}, Count: {$count}";
+                $day = $duplicate['weekday'] ?? '?';
+                $period = $duplicate['day_period'] ?? '?';
+                $count = $duplicate['count'] ?? '?';
+                $messageLines[] = "- Day: {$day}, Period: {$period}, Count: {$count}";
             }
         } else {
-            $messageLines[] = "- Oups! No specific duplicate details are available.";
+            $messageLines[] = '- Oups! No specific duplicate details are available.';
         }
 
         $message = implode("\n", $messageLines);
@@ -104,8 +101,7 @@ class DuplicateScheduleWarning extends Notification implements ShouldQueue
         return [
             'subject' => $subject,
             'message' => $message,
-            'level' => 'warning'
+            'level' => 'warning',
         ];
     }
-
 }

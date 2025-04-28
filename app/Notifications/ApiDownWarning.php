@@ -41,14 +41,12 @@ class ApiDownWarning extends Notification implements ShouldQueue
             ->greeting("Hello {$notifiable->name},")
             ->line("The {$this->serviceName} API service is currently unavailable.")
             ->line("Error details: {$this->errorMessage}")
-            ->action("Open " . config('app.name'), url('/'));
+            ->action('Open '.config('app.name'), url('/'));
 
     }
 
     /**
      * Get the array representation of the notification.
-     *
-     * @return array
      */
     public function toArray(object $notifiable): array
     {
@@ -58,8 +56,8 @@ class ApiDownWarning extends Notification implements ShouldQueue
         // Construct message from mail lines
         $messageLines = [
             "The {$this->serviceName} API service is currently unavailable.",
-            "Error details:",
-            "{$this->errorMessage}"
+            'Error details:',
+            "{$this->errorMessage}",
         ];
         $message = implode("\n", $messageLines);
 

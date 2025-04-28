@@ -58,13 +58,11 @@ class LeaveReminderNotification extends Notification implements ShouldQueue
             ->line("End Date: {$endDate}")
             ->line("Duration: {$duration} day(s)")
             ->line("Description: {$this->leave->description}")
-            ->action("Open " . config('app.name'), url('/'));
+            ->action('Open '.config('app.name'), url('/'));
     }
 
     /**
      * Get the array representation of the notification.
-     *
-     * @return array
      */
     public function toArray(object $notifiable): array
     {
@@ -80,7 +78,7 @@ class LeaveReminderNotification extends Notification implements ShouldQueue
             "Start Date: {$startDate}",
             "End Date: {$endDate}",
             "Duration: {$duration} day(s)",
-            "Description: {$this->leave->description}"
+            "Description: {$this->leave->description}",
         ];
         $message = implode("\n", $messageLines);
 

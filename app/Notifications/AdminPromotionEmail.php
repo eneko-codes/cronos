@@ -44,18 +44,16 @@ class AdminPromotionEmail extends Notification implements ShouldQueue
     {
         return (new MailMessage)
             ->subject("{$this->promotedUser->name} has been promoted to admin")
-            ->greeting('Hello ' . $notifiable->name . ',')
+            ->greeting('Hello '.$notifiable->name.',')
             ->line(
                 "{$this->promotedUser->name} has been promoted to an administrator role."
             )
             ->line('You are receiving this notification as an administrator.')
-            ->action("Open " . config('app.name'), url('/'));
+            ->action('Open '.config('app.name'), url('/'));
     }
 
     /**
      * Get the array representation of the notification.
-     *
-     * @return array
      */
     public function toArray(object $notifiable): array
     {

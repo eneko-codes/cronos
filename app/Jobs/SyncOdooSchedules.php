@@ -171,12 +171,12 @@ class SyncOdooSchedules extends BaseSyncJob
 
                                 // Cache ONLY after successful notification send
                                 Cache::put($cacheKey, true, now()->addHours(24));
-                                Log::debug(class_basename($this) . ": Sent duplicate schedule warning and cached for schedule ID: {$odooScheduleId}");
+                                Log::debug(class_basename($this).": Sent duplicate schedule warning and cached for schedule ID: {$odooScheduleId}");
 
                             } catch (Exception $e) {
                                 // Log the error if notification sending failed
-                                Log::error(class_basename($this) . ": Failed to send DuplicateScheduleWarning for schedule ID {$odooScheduleId}: " . $e->getMessage(), [
-                                    'exception' => $e
+                                Log::error(class_basename($this).": Failed to send DuplicateScheduleWarning for schedule ID {$odooScheduleId}: ".$e->getMessage(), [
+                                    'exception' => $e,
                                 ]);
                             }
                         }

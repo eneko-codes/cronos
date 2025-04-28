@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Telescope\IncomingEntry;
 use Laravel\Telescope\Telescope;
@@ -14,24 +15,17 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
      */
     public function register(): void
     {
-        Telescope::night();
-
         $this->hideSensitiveRequestDetails();
 
-        $isLocal = $this->app->environment('local');
-
         Telescope::filter(function (IncomingEntry $entry) {
-            // Allow all entries for debugging even if not local (so Telescope is always available even in production servers)
-            return true;
+            if ($this->app->environment('local')) {
+                return true;
+            }
 
-            // Original logic:
-            // return $isLocal ||
-            //   $entry->isReportableException() ||
-            //   $entry->isFailedRequest() ||
-            //   $entry->isFailedJob() ||
-            //   $entry->isScheduledTask() ||
-            //   $entry->hasMonitoredTag() ||
-            //   $entry->isLog();
+            return $entry->isReportableException() ||
+                   $entry->isFailedJob() ||
+                   $entry->isScheduledTask() ||
+                   $entry->hasMonitoredTag();
         });
     }
 
@@ -46,7 +40,11 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
 
         Telescope::hideRequestParameters(['_token']);
 
-        Telescope::hideRequestHeaders(['cookie', 'x-csrf-token', 'x-xsrf-token']);
+        Telescope::hideRequestHeaders([
+            'cookie',
+            'x-csrf-token',
+            'x-xsrf-token',
+        ]);
     }
 
     /**

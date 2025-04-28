@@ -47,7 +47,7 @@
         @foreach ($users as $user)
           <tr
             wire:key="user-{{ $user->id }}"
-            class="flex flex-row items-center justify-between gap-4 border-b border-gray-200 p-2 text-gray-800 hover:cursor-pointer dark:border-gray-800 dark:text-gray-200 dark:hover:bg-gray-800/50"
+            class="flex flex-row items-center justify-between gap-4 border-b border-gray-200 p-2 text-gray-800 hover:cursor-pointer hover:bg-gray-100 dark:border-gray-800 dark:text-gray-200 dark:hover:bg-gray-800/50"
           >
             <!-- User Info Column -->
             <td

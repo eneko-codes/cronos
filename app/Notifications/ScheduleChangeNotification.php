@@ -36,7 +36,6 @@ class ScheduleChangeNotification extends Notification implements ShouldQueue
 
     /**
      * Get the notification's delivery channels.
-     * Note: Eligibility checks are handled centrally in User::canReceiveNotification().
      *
      * @return array<int, string>
      */

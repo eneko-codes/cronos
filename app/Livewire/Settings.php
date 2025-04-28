@@ -28,8 +28,6 @@ class Settings extends Component
 
     public int $dataRetentionGlobalPeriod = 0; // Stores the global retention period in days
 
-    public string $telescopePruneFrequency = 'weekly';
-
     public bool $globalNotificationsEnabled = true; // Added
 
     public bool $adminPromotionEmailEnabled = true; // Added for admin promotion email
@@ -63,10 +61,6 @@ class Settings extends Component
         $this->dataRetentionGlobalPeriod = (int) Setting::getValue(
             'data_retention.global_period', // New key for global period
             0
-        );
-        $this->telescopePruneFrequency = Setting::getValue(
-            'notification.telescope_prune.value', // Key from data migration
-            'weekly'
         );
         $this->adminPromotionEmailEnabled = (bool) Setting::getValue(
             'notification.admin_promotion.enabled', // New key
@@ -122,20 +116,6 @@ class Settings extends Component
             730 => '2 years',
             1095 => '3 years',
             1825 => '5 years',
-        ];
-    }
-
-    /**
-     * Get the available frequency options for the Telescope prune job.
-     *
-     * @return array<string, string> Key-value pairs of frequency slugs and labels.
-     */
-    public function getTelescopeFrequencyOptions(): array
-    {
-        return [
-            'daily' => 'Daily',
-            'weekly' => 'Weekly',
-            'monthly' => 'Monthly',
         ];
     }
 
@@ -257,35 +237,6 @@ class Settings extends Component
     }
 
     /**
-     * Save Telescope prune frequency when the property is updated.
-     *
-     * @param  string  $value  The new value for telescopePruneFrequency.
-     */
-    public function updatedTelescopePruneFrequency($value): void
-    {
-        // Basic validation
-        if (! array_key_exists($value, $this->getTelescopeFrequencyOptions())) {
-            $this->dispatch(
-                'add-toast',
-                message: 'Invalid Telescope prune frequency selected.',
-                variant: 'error'
-            );
-            // Revert component property to the old value from the database.
-            $this->telescopePruneFrequency = Setting::getValue(
-                'notification.telescope_prune.value',
-                'weekly'
-            );
-
-            return;
-        }
-        $this->saveSetting(
-            'notification.telescope_prune.value',
-            $value,
-            'Telescope prune frequency updated.'
-        );
-    }
-
-    /**
      * Save admin promotion email enabled state when the property is updated.
      *
      * @param  bool  $value  The new value for adminPromotionEmailEnabled.
@@ -355,7 +306,6 @@ class Settings extends Component
             'notification.api_down_warning_mail.enabled' => 'apiDownWarningMailEnabled',
             'notification.welcome_email.enabled' => 'welcomeEmailEnabled',
             'data_retention.global_period' => 'dataRetentionGlobalPeriod',
-            'notification.telescope_prune.value' => 'telescopePruneFrequency',
             'notification.admin_promotion.enabled' => 'adminPromotionEmailEnabled', // Added mapping
             // 'data_retention.enabled' is handled within updatedDataRetentionGlobalPeriod
         ];
@@ -374,7 +324,6 @@ class Settings extends Component
             'notification.api_down_warning_mail.enabled' => true,
             'notification.welcome_email.enabled' => true,
             'data_retention.global_period' => 0,
-            'notification.telescope_prune.value' => 'weekly',
             'notification.admin_promotion.enabled' => true, // Added default
         ];
         // Need to handle boolean conversion for string '1'/'0'
@@ -535,14 +484,17 @@ class Settings extends Component
         $telescopeEnabled =
           app()->bound(EntriesRepository::class) && config('telescope.enabled');
 
+        // Check if Pulse is enabled via its configuration.
+        $pulseEnabled = config('pulse.enabled', false); // Default to false if config is missing
+
         return view('livewire.settings', [
             'syncFrequencyOptions' => $this->getSyncFrequencyOptions(),
             'dataRetentionOptions' => $this->getDataRetentionOptions(),
-            'telescopeFrequencyOptions' => $this->getTelescopeFrequencyOptions(),
             'totalUsers' => $totalUsers,
             'activeUsers' => $activeUsers,
             'activeAdmins' => $activeAdmins,
             'telescopeEnabled' => $telescopeEnabled,
+            'pulseEnabled' => $pulseEnabled, // Pass pulse status to the view
         ]);
     }
 }

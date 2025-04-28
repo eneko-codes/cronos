@@ -1,82 +1,50 @@
 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-  <!-- Telescope -->
-  @if ($telescopeEnabled)
+  <!-- Monitoring Section -->
+  @if ($telescopeEnabled || $pulseEnabled)
     <section class="relative lg:col-span-1">
       <div
         class="flex h-full flex-col gap-4 rounded-xl border border-gray-200 bg-gray-100 p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
       >
         <div class="flex flex-col items-start gap-1 text-lg font-bold">
           <div class="inline-flex flex-row items-center gap-2">
-            <!-- SVG Icon -->
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
               fill="currentColor"
               class="size-5 text-gray-400 dark:text-gray-500"
+              viewBox="0 0 16 16"
             >
               <path
-                fill-rule="evenodd"
-                d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.466 7.89l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5ZM16.5 15a.75.75 0 0 1 .712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 0 1 0 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 0 1-1.422 0l-.395-1.183a1.5 1.5 0 0 0-.948-.948l-1.183-.395a.75.75 0 0 1 0-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0 1 16.5 15Z"
-                clip-rule="evenodd"
+                d="M4.5 1A1.5 1.5 0 0 0 3 2.5V3h4v-.5A1.5 1.5 0 0 0 5.5 1zM7 4v1h2V4h4v.882a.5.5 0 0 0 .276.447l.895.447A1.5 1.5 0 0 1 15 7.118V13H9v-1.5a.5.5 0 0 1 .146-.354l.854-.853V9.5a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5v.793l.854.853A.5.5 0 0 1 7 11.5V13H1V7.118a1.5 1.5 0 0 1 .83-1.342l.894-.447A.5.5 0 0 0 3 4.882V4zM1 14v.5A1.5 1.5 0 0 0 2.5 16h3A1.5 1.5 0 0 0 7 14.5V14zm8 0v.5a1.5 1.5 0 0 0 1.5 1.5h3a1.5 1.5 0 0 0 1.5-1.5V14zm4-11H9v-.5A1.5 1.5 0 0 1 10.5 1h1A1.5 1.5 0 0 1 13 2.5z"
               />
             </svg>
 
-            <h2>Laravel Telescope</h2>
+            <h2>Monitoring</h2>
           </div>
           <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
-            Access Laravel Telescope to monitor your application's requests,
-            jobs, logs and more.
+            Access dashboards to monitor your application's performance,
+            requests, jobs, logs and more.
           </p>
         </div>
-        <div>
-          <a href="/telescope" target="_blank" class="w-full">
-            <x-button type="button" size="md" variant="info" class="w-full">
-              <span>Telescope Dashboard</span>
-            </x-button>
-          </a>
-        </div>
+        <div class="space-y-2">
+          @if ($pulseEnabled)
+            <div>
+              <a href="/pulse" target="_blank" class="w-full">
+                <x-button type="button" size="md" variant="info" class="w-full">
+                  <span>Pulse Dashboard</span>
+                </x-button>
+              </a>
+            </div>
+          @endif
 
-        <!-- Telescope Pruning Settings (No Form or Save Button) -->
-        <div
-          class="space-y-4 border-t border-gray-300 pt-4 dark:border-gray-600"
-        >
-          <div>
-            <label
-              for="telescopePruneFrequencySelect"
-              class="inline-flex flex-row items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300"
-            >
-              Prune Telescope Data Frequency
-              <x-tooltip>
-                <x-slot name="text">
-                  How often should old Telescope entries be automatically
-                  deleted?
-                </x-slot>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                  stroke="currentColor"
-                  class="size-3"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-                  />
-                </svg>
-              </x-tooltip>
-            </label>
-            <select
-              id="telescopePruneFrequencySelect"
-              wire:model.change="telescopePruneFrequency"
-              class="mt-1 block w-full rounded-md border border-gray-300 bg-gray-200 px-2 text-sm dark:border-gray-700 dark:bg-gray-700"
-            >
-              @foreach ($telescopeFrequencyOptions as $value => $label)
-                <option value="{{ $value }}">{{ $label }}</option>
-              @endforeach
-            </select>
-          </div>
+          @if ($telescopeEnabled)
+            <div>
+              <a href="/telescope" target="_blank" class="w-full">
+                <x-button type="button" size="md" variant="info" class="w-full">
+                  <span>Telescope Dashboard</span>
+                </x-button>
+              </a>
+            </div>
+          @endif
         </div>
       </div>
     </section>
@@ -242,16 +210,12 @@
           <div class="inline-flex flex-row items-center gap-2">
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
+              fill="currentColor"
               class="size-5 text-gray-400 dark:text-gray-500"
+              viewBox="0 0 16 16"
             >
               <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0M3.124 7.5A8.969 8.969 0 0 1 5.292 3m13.416 0a8.969 8.969 0 0 1 2.168 4.5"
+                d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2m.995-14.901a1 1 0 1 0-1.99 0A5 5 0 0 0 3 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901"
               />
             </svg>
             <h2>Notification Settings</h2>
@@ -463,10 +427,12 @@
               viewBox="0 0 16 16"
             >
               <path
-                d="M4 .5a.5.5 0 0 0-1 0V1H2a2 2 0 0 0-2 2v1h16V3a2 2 0 0 0-2-2h-1V.5a.5.5 0 0 0-1 0V1H4zM16 14V5H0v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2M6.854 8.146 8 9.293l1.146-1.147a.5.5 0 1 1 .708.708L8.707 10l1.147 1.146a.5.5 0 0 1-.708.708L8 10.707l-1.146 1.147a.5.5 0 0 1-.708-.708"
+                d="M13.879 10.414a2.501 2.501 0 0 0-3.465 3.465zm.707.707-3.465 3.465a2.501 2.501 0 0 0 3.465-3.465m-4.56-1.096a3.5 3.5 0 1 1 4.949 4.95 3.5 3.5 0 0 1-4.95-4.95ZM8 1c-1.573 0-3.022.289-4.096.777C2.875 2.245 2 2.993 2 4s.875 1.755 1.904 2.223C4.978 6.711 6.427 7 8 7s3.022-.289 4.096-.777C13.125 5.755 14 5.007 14 4s-.875-1.755-1.904-2.223C11.022 1.289 9.573 1 8 1"
+              />
+              <path
+                d="M2 7v-.839c.457.432 1.004.751 1.49.972C4.722 7.693 6.318 8 8 8s3.278-.307 4.51-.867c.486-.22 1.033-.54 1.49-.972V7c0 .424-.155.802-.411 1.133a4.51 4.51 0 0 0-4.815 1.843A12 12 0 0 1 8 10c-1.573 0-3.022-.289-4.096-.777C2.875 8.755 2 8.007 2 7m6.257 3.998L8 11c-1.682 0-3.278-.307-4.51-.867-.486-.22-1.033-.54-1.49-.972V10c0 1.007.875 1.755 1.904 2.223C4.978 12.711 6.427 13 8 13h.027a4.55 4.55 0 0 1 .23-2.002m-.002 3L8 14c-1.682 0-3.278-.307-4.51-.867-.486-.22-1.033-.54-1.49-.972V13c0 1.007.875 1.755 1.904 2.223C4.978 15.711 6.427 16 8 16c.536 0 1.058-.034 1.555-.097a4.5 4.5 0 0 1-1.3-1.905"
               />
             </svg>
-
             <h2>Data Retention Settings</h2>
           </div>
           <p class="text-sm font-medium text-gray-500 dark:text-gray-400">

@@ -29,7 +29,7 @@ class ScheduleDetailView extends Component
     #[Title('Schedule: ')] // Placeholder, will be completed by computed property
     public function title(): string
     {
-        return 'Schedule: ' . ($this->schedule->description ?? $this->schedule->odoo_schedule_id);
+        return 'Schedule: '.($this->schedule->description ?? $this->schedule->odoo_schedule_id);
     }
 
     /**

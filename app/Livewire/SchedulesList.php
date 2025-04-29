@@ -4,9 +4,9 @@ namespace App\Livewire;
 
 use App\Models\Schedule;
 use Livewire\Attributes\Title;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Livewire\Attributes\Url;
 
 #[Title('Schedules')]
 class SchedulesList extends Component
@@ -82,14 +82,14 @@ class SchedulesList extends Component
                 'userSchedules as current_users_count' => function ($query) use ($now) {
                     $query->where(function ($subQuery) use ($now) {
                         $subQuery->whereNull('effective_until')
-                                 ->orWhere('effective_until', '>=', $now);
+                            ->orWhere('effective_until', '>=', $now);
                     });
-                }
+                },
             ])
             ->when($this->search, function ($query) {
                 // Search only by schedule description
                 $query->whereRaw('LOWER(description) LIKE ?', [
-                    '%' . strtolower($this->search) . '%',
+                    '%'.strtolower($this->search).'%',
                 ]);
             })
             // Apply Filters
@@ -103,7 +103,7 @@ class SchedulesList extends Component
                 $query->whereHas('userSchedules', function ($subQuery) use ($now) {
                     $subQuery->where(function ($q) use ($now) {
                         $q->whereNull('effective_until')
-                          ->orWhere('effective_until', '>=', $now);
+                            ->orWhere('effective_until', '>=', $now);
                     });
                 });
             })
@@ -111,7 +111,7 @@ class SchedulesList extends Component
                 $query->whereDoesntHave('userSchedules', function ($subQuery) use ($now) {
                     $subQuery->where(function ($q) use ($now) {
                         $q->whereNull('effective_until')
-                          ->orWhere('effective_until', '>=', $now);
+                            ->orWhere('effective_until', '>=', $now);
                     });
                 });
             })

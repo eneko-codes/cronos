@@ -25,6 +25,7 @@ Schedule::job(new SendUserWeeklyReport)
     ->mondays()
     ->at('08:00')
     ->name('Weekly User Report')
+    ->onOneServer()
     ->withoutOverlapping();
 
 /**
@@ -34,6 +35,7 @@ Schedule::job(new SendUserLeaveReminder(1))
     ->daily()
     ->at('08:00')
     ->name('Daily Leave Reminder')
+    ->onOneServer()
     ->withoutOverlapping();
 
 /**
@@ -51,6 +53,7 @@ Schedule::command('telescope:prune')
 Schedule::command('queue:prune-batches --hours=48')
     ->daily()
     ->name('Prune Job Batches')
+    ->onOneServer()
     ->withoutOverlapping();
 
 /**
@@ -59,15 +62,7 @@ Schedule::command('queue:prune-batches --hours=48')
 Schedule::command('queue:prune-failed --hours=48')
     ->daily()
     ->name('Prune Failed Jobs')
-    ->withoutOverlapping();
-
-/**
- * Schedule hourly queue worker restarts to prevent memory leaks.
- * Assumes a process manager like Supervisor is restarting workers.
- */
-Schedule::command('queue:restart')
-    ->hourly()
-    ->name('Restart Queue Workers')
+    ->onOneServer()
     ->withoutOverlapping();
 
 /**
@@ -85,8 +80,8 @@ try {
     if ($syncFrequency !== 'never') {
         $scheduleSyncJobs = Schedule::command('sync all')
             ->name('Data Synchronization Scheduler')
-            ->withoutOverlapping()
-            ->runInBackground();
+            ->onOneServer()
+            ->withoutOverlapping();
 
         match ($syncFrequency) {
             'everyMinute' => $scheduleSyncJobs->everyMinute(),

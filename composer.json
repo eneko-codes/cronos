@@ -10,7 +10,6 @@
   "require": {
     "php": "^8.2",
     "laravel/framework": "v12.9.2",
-    "laravel/octane": "^2.9",
     "laravel/pulse": "^1.4",
     "livewire/livewire": "^3.0"
   },

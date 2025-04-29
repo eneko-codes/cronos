@@ -1,5 +1,5 @@
 <div class="flex flex-col gap-6">
-  <!-- Back Link -->
+  <!-- Back button -->
   <a
     href="{{ route('projects.list') }}"
     wire:navigate
@@ -21,28 +21,20 @@
   </a>
 
   <!-- Project Header -->
-  <div class="flex flex-col gap-2 border-b-2 dark:border-gray-700">
+  <div class="flex flex-col gap-2">
     <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-100">
       {{ $project->name }}
     </h1>
     <div
-      class="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400"
+      class="flex flex-wrap items-center gap-4 text-xs text-gray-500 dark:text-gray-400"
     >
-      <span class="flex flex-row items-center gap-1">
-        Created:
-        <x-tooltip text="{{ $project->created_at->format('Y-m-d H:i') }}">
-          <span>{{ $project->created_at->diffForHumans() }}</span>
-        </x-tooltip>
-      </span>
+      <x-tooltip text="{{ $project->created_at->format('Y-m-d H:i') }}">
+        <span>Created {{ $project->created_at->diffForHumans() }}</span>
+      </x-tooltip>
 
-      <span>|</span>
-
-      <span class="flex flex-row items-center gap-1">
-        Updated:
-        <x-tooltip text="{{ $project->updated_at->format('Y-m-d H:i') }}">
-          <span>{{ $project->updated_at->diffForHumans() }}</span>
-        </x-tooltip>
-      </span>
+      <x-tooltip text="{{ $project->updated_at->format('Y-m-d H:i') }}">
+        <span>Updated {{ $project->updated_at->diffForHumans() }}</span>
+      </x-tooltip>
     </div>
     @if ($project->users->isNotEmpty())
       <div class="flex flex-wrap gap-1">

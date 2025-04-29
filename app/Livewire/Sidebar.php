@@ -96,8 +96,8 @@ class Sidebar extends Component
             default => null, // 'all' or default doesn't need an extra condition
         };
 
-        // Fetch notifications sorted by creation date, 10 per page
-        return $query->paginate(10);
+        // Fetch notifications sorted by creation date, 15 per page
+        return $query->paginate(15);
     }
 
     /**

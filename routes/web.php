@@ -5,6 +5,8 @@ use App\Livewire\Dashboard;
 use App\Livewire\Login;
 use App\Livewire\ProjectDetailView;
 use App\Livewire\ProjectsListView;
+use App\Livewire\ScheduleDetailView;
+use App\Livewire\SchedulesList;
 use App\Livewire\Settings;
 use App\Livewire\UserDashboard;
 use App\Livewire\UsersList;
@@ -34,6 +36,11 @@ Route::middleware(['auth', 'throttle:api'])->group(function () {
                 '/projects/{project:proofhub_project_id}',
                 ProjectDetailView::class
             )->name('projects.show');
+            Route::get('/schedules', SchedulesList::class)->name('schedules.list');
+            Route::get(
+                '/schedules/{schedule:odoo_schedule_id}',
+                ScheduleDetailView::class
+            )->name('schedules.show');
         }
     );
 });

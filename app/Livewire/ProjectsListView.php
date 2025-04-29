@@ -100,8 +100,9 @@ class ProjectsListView extends Component
                     $query->whereNull('proofhub_task_id');
                 },
             ])
-          // Eager load users for the list view badges if needed
-            ->with('users:id,name') // Only load necessary columns
+            ->withCount('users') // Add count of users
+          // Eager load users for the list view badges if needed (REMOVED, using withCount now)
+          // ->with('users:id,name') // Only load necessary columns
           // Apply Sorting
             ->when($this->sortBy, function ($query) {
                 // Changed Builder import requirement

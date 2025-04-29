@@ -129,8 +129,6 @@ class UserDashboard extends Component
               : now()->startOfMonth()
         );
 
-        $this->checkPermissions();
-
         // Load cache data for the current period
         // TODO: Implement caching strategy if performance becomes an issue.
         $this->loadPeriodDataAndTotals();
@@ -1098,23 +1096,6 @@ class UserDashboard extends Component
     protected function setPeriodStart(Carbon $date): void
     {
         $this->currentDate = $date->toDateString();
-    }
-
-    /**
-     * Verifies if the authenticated user is authorized to view the target user's data.
-     * Sets the isAdmin flag.
-     */
-    protected function checkPermissions(): void
-    {
-        $currentUser = Auth::user();
-
-        // Check if user can view this user's data
-        if (! Gate::allows('view', $this->user)) {
-            abort(403, 'You are not authorized to view this user\'s data.');
-        }
-
-        // Set admin status
-        $this->isAdmin = $currentUser->isAdmin();
     }
 
     /**

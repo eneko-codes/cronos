@@ -7,6 +7,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Illuminate\Support\Collection as SupportCollection; // Import base collection
 
 #[Title('Schedule Details')]
 class ScheduleDetailView extends Component
@@ -26,6 +27,9 @@ class ScheduleDetailView extends Component
     public Collection $currentUserSchedules;
 
     public Collection $pastUserSchedules;
+
+    // Property to hold schedule details grouped and sorted by weekday (Mon-Sun)
+    public SupportCollection $groupedScheduleDetails;
 
     /**
      * Mount the component and load the schedule.
@@ -57,6 +61,21 @@ class ScheduleDetailView extends Component
         // Get unique users who were previously assigned BUT are NOT currently assigned
         $currentlyAssignedUserIds = $this->currentUserSchedules->pluck('user_id');
         $this->pastUserSchedules = $pastAssignments->whereNotIn('user_id', $currentlyAssignedUserIds)->unique('user_id');
+
+        // Group and sort schedule details for the view
+        $grouped = $this->schedule->scheduleDetails
+            ->sortBy('start') // Sort by start time within each day
+            ->groupBy('weekday');
+
+        // Custom sort keys: Mon (1) to Sun (0)
+        $this->groupedScheduleDetails = $grouped->sortBy(function ($group, $weekday) {
+            // Map weekday to sort order: 1 (Mon) -> 1, ..., 6 (Sat) -> 6, 0 (Sun) -> 7
+            return ($weekday == 0) ? 7 : $weekday;
+        })
+        // Convert inner Eloquent Collections to base SupportCollections
+        ->map(function ($details) {
+            return collect($details->all()); // Use collect() helper or new SupportCollection()
+        });
     }
 
     /**

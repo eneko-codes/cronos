@@ -77,12 +77,12 @@ class Schedule extends Model
         'average_hours_day' => 'float',
     ];
 
-    /**
-     * The relationships that should always be loaded.
-     *
-     * @var array
-     */
-    protected $with = ['scheduleDetails', 'userSchedules'];
+    // /**
+    //  * The relationships that should always be loaded.
+    //  *
+    //  * @var array
+    //  */
+    // protected $with = ['scheduleDetails', 'userSchedules']; // Commented out
 
     /**
      * Get the schedule details (time slots) associated with this schedule.

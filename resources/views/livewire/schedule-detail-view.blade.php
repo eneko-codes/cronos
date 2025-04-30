@@ -70,30 +70,57 @@
 
       {{-- Content (Conditionally Rendered) --}}
       @if ($showScheduleDetails)
-        @if (($schedule->scheduleDetails ?? collect())->isNotEmpty())
-          <ul class="list-none space-y-2 pl-0 text-sm">
-            @foreach ($schedule->scheduleDetails->sortBy('day_of_week') as $detail)
-              <div
-                class="rounded-md border border-gray-300 bg-gray-50 p-2 dark:border-gray-500 dark:bg-gray-700"
-              >
-                <span class="font-semibold">
-                  {{ jddayofweek($detail->day_of_week - 1, 1) }}
-                </span>
-                :
-                {{ \Carbon\Carbon::parse($detail->start_time)->format('H:i') }}
-                -
-                {{ \Carbon\Carbon::parse($detail->end_time)->format('H:i') }}
-                <span class="text-gray-500">
-                  ({{ $detail->duration_in_hours }} hours)
-                </span>
-                @if ($detail->is_off_day)
-                  <span class="ml-1 font-medium text-orange-500">
-                    (Off Day)
-                  </span>
-                @endif
+        @if ($groupedScheduleDetails->isNotEmpty())
+          <div class="space-y-4">
+            {{-- Loop through grouped details (sorted Mon-Sun in component) --}}
+            @foreach ($groupedScheduleDetails as $weekday => $details)
+              <div class="flex flex-col gap-1">
+                {{-- Day Header --}}
+                <h4 class="font-semibold text-gray-700 dark:text-gray-300">
+                  {{ Carbon\Carbon::now()->startOfWeek(Carbon\Carbon::SUNDAY)->addDays($weekday)->format('l') }}
+                </h4>
+                {{-- List of details for this day --}}
+                <ul class="list-none space-y-2 pl-0 text-sm">
+                  @foreach ($details as $detail)
+                    {{-- $details are already sorted by start time --}}
+                    <div
+                      class="rounded-md border border-gray-300 bg-gray-50 p-2 dark:border-gray-500 dark:bg-gray-700"
+                    >
+                      <span class="font-semibold">
+                        {{-- Removed Day name + period from here, handled in header/row --}}
+                        {{-- {{ Carbon\Carbon::now()->startOfWeek(Carbon\Carbon::SUNDAY)->addDays($detail->weekday)->format('l') }} --}}
+                        {{ ucfirst($detail->day_period) }}
+                      </span>
+                      :
+                      {{-- Use correct properties and Carbon format --}}
+                      {{ $detail->start->format('H:i') }}
+                      -
+                      {{ $detail->end->format('H:i') }}
+                      <span class="text-gray-500">
+                        @php
+                          $interval = $detail->start->diff($detail->end);
+                          $durationParts = [];
+                          if ($interval->h > 0) {
+                            $durationParts[] = $interval->h . ' hour' . ($interval->h > 1 ? 's' : '');
+                          }
+                          if ($interval->i > 0) {
+                            $durationParts[] = $interval->i . ' minute' . ($interval->i > 1 ? 's' : '');
+                          }
+                          $durationString = implode(' ', $durationParts);
+                          if (empty($durationString)) {
+                            $durationString = '0 minutes';
+                          }
+                        @endphp
+
+                        ({{ $durationString }})
+                      </span>
+                      {{-- is_off_day check likely needs adjustment if property doesn't exist, removing for now --}}
+                    </div>
+                  @endforeach
+                </ul>
               </div>
             @endforeach
-          </ul>
+          </div>
         @else
           <div
             class="rounded-md border border-dashed border-gray-300 bg-white p-4 text-center dark:border-gray-500 dark:bg-gray-700"

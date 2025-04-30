@@ -86,19 +86,42 @@
                     <div
                       class="rounded-md border border-gray-300 bg-gray-50 p-2 dark:border-gray-500 dark:bg-gray-700"
                     >
-                      <span class="font-semibold">
-                        {{-- Removed Day name + period from here, handled in header/row --}}
-                        {{-- {{ Carbon\Carbon::now()->startOfWeek(Carbon\Carbon::SUNDAY)->addDays($detail->weekday)->format('l') }} --}}
+                      <span
+                        class="flex flex-row items-center gap-1 font-semibold"
+                      >
+                        {{-- Display period --}}
                         {{ ucfirst($detail->day_period) }}
+                        {{-- Display warning icon if duplicates exist --}}
+                        @if ($detail->has_duplicates)
+                          <x-tooltip
+                            text="Duplicate entries detected for this day and period."
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                              class="inline-block size-4 text-yellow-500"
+                            >
+                              <path
+                                fill-rule="evenodd"
+                                d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 6a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 6Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"
+                                clip-rule="evenodd"
+                              />
+                            </svg>
+                          </x-tooltip>
+                        @endif
                       </span>
-                      :
+
                       {{-- Use correct properties and Carbon format --}}
-                      {{ $detail->start->format('H:i') }}
-                      -
-                      {{ $detail->end->format('H:i') }}
+                      {{ \Carbon\Carbon::parse($detail->start)->format('H:i') }}
+                      →
+                      {{ \Carbon\Carbon::parse($detail->end)->format('H:i') }}
                       <span class="text-gray-500">
                         @php
-                          $interval = $detail->start->diff($detail->end);
+                          // Re-parse start/end strings as Carbon objects for diff
+                          $startCarbon = \Carbon\Carbon::parse($detail->start);
+                          $endCarbon = \Carbon\Carbon::parse($detail->end);
+                          $interval = $startCarbon->diff($endCarbon);
                           $durationParts = [];
                           if ($interval->h > 0) {
                             $durationParts[] = $interval->h . ' hour' . ($interval->h > 1 ? 's' : '');

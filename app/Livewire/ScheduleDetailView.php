@@ -67,14 +67,34 @@ class ScheduleDetailView extends Component
             ->sortBy('start') // Sort by start time within each day
             ->groupBy('weekday');
 
+        // --- Detect and mark duplicates within each day/period group ---
+        foreach ($grouped as $weekday => $weekdayDetails) {
+            $periodGroups = $weekdayDetails->groupBy('day_period');
+            foreach ($periodGroups as $period => $periodDetails) {
+                if ($periodDetails->count() > 1) {
+                    // Mark all details in this specific group as having duplicates
+                    foreach ($periodDetails as $detail) {
+                        $detail->has_duplicates = true; // Add temporary property to the model instance
+                    }
+                }
+            }
+        }
+        // --- End duplicate detection ---
+
         // Custom sort keys: Mon (1) to Sun (0)
         $this->groupedScheduleDetails = $grouped->sortBy(function ($group, $weekday) {
             // Map weekday to sort order: 1 (Mon) -> 1, ..., 6 (Sat) -> 6, 0 (Sun) -> 7
             return ($weekday == 0) ? 7 : $weekday;
         })
-        // Convert inner Eloquent Collections to base SupportCollections
+        // Convert inner Eloquent Collections to base SupportCollections of stdClass objects
             ->map(function ($details) {
-                return collect($details->all()); // Use collect() helper or new SupportCollection()
+                // Convert each detail model, explicitly adding has_duplicates if it was set
+                return collect($details->map(function ($model) {
+                    $data = $model->toArray(); // Convert base attributes
+                    // Check the original model instance for the flag and add it to the array
+                    $data['has_duplicates'] = (isset($model->has_duplicates) && $model->has_duplicates);
+                    return (object) $data; // Return as stdClass object
+                })->all());
             });
     }
 
@@ -83,7 +103,7 @@ class ScheduleDetailView extends Component
      *
      * Computed property ensures the title updates if the schedule description changes.
      */
-    #[Title('Schedule: ')] // Placeholder, will be completed by computed property
+    #[Title('Schedule: ')] 
     public function title(): string
     {
         return 'Schedule: '.($this->schedule->description ?? $this->schedule->odoo_schedule_id);
@@ -118,14 +138,7 @@ class ScheduleDetailView extends Component
      */
     public function render()
     {
-        // Group user schedules by user ID for cleaner display - REMOVED calculation from here
-        // $uniqueUserSchedules = $this->schedule->userSchedules->unique('user_id');
-
-        // Now just return the view, accessing computed properties directly
         return view('livewire.schedule-detail-view');
-        // REMOVED passing data explicitly:
-        // [
-        //     'uniqueUserSchedules' => $uniqueUserSchedules,
-        // ]);
+
     }
 }

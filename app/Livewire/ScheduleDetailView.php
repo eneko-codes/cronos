@@ -3,7 +3,6 @@
 namespace App\Livewire;
 
 use App\Models\Schedule;
-use App\Models\UserSchedule;
 use Illuminate\Database\Eloquent\Collection;
 use Livewire\Attributes\Title;
 use Livewire\Component;

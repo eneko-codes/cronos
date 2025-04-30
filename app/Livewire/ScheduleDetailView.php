@@ -15,13 +15,16 @@ class ScheduleDetailView extends Component
 
     // State for section visibility
     public bool $showScheduleDetails = true;
+
     // State for currently assigned users
-    public bool $showCurrentlyAssigned = true; 
+    public bool $showCurrentlyAssigned = true;
+
     // State for previously assigned users
     public bool $showPreviouslyAssigned = true;
 
     // Properties to hold current and past user schedules
     public Collection $currentUserSchedules;
+
     public Collection $pastUserSchedules;
 
     /**
@@ -45,7 +48,7 @@ class ScheduleDetailView extends Component
 
         // Filter for assignments that ended in the past
         $pastAssignments = $allUserSchedules->filter(function ($us) use ($now) {
-            return !is_null($us->effective_until) && $us->effective_until < $now;
+            return ! is_null($us->effective_until) && $us->effective_until < $now;
         });
 
         // Get unique users currently assigned

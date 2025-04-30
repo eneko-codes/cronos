@@ -42,8 +42,10 @@
 
   <!-- Sections Container: Details and Users -->
   <div class="grid grid-cols-1 items-start gap-6 md:grid-cols-2">
-    {{-- Schedule Details Section --}}
-    <div class="flex flex-col gap-3 rounded-md bg-white p-4 dark:bg-gray-800">
+    {{-- Schedule Details Section (Column 1) --}}
+    <div
+      class="flex flex-col gap-3 rounded-md bg-white p-4 md:col-span-1 dark:bg-gray-800"
+    >
       {{-- Header with Toggle --}}
       <div
         wire:click="toggleScheduleDetails"
@@ -104,62 +106,126 @@
       @endif
     </div>
 
-    {{-- Assigned Users Section --}}
-    <div class="flex flex-col gap-3 rounded-md bg-white p-4 dark:bg-gray-800">
-      {{-- Header with Toggle --}}
-      <div
-        wire:click="toggleAssignedUsers"
-        class="flex cursor-pointer items-center justify-between"
-      >
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          Assigned Users (Current & Past)
-        </h2>
-        <svg
-          class="{{ $showAssignedUsers ? 'rotate-180' : '' }} size-5 transform text-gray-500 transition-transform duration-200 dark:text-gray-400"
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 20 20"
-          fill="currentColor"
+    {{-- User Assignments Column (Column 2) --}}
+    <div class="flex flex-col gap-6 md:col-span-1">
+      {{-- Content Area (Conditionally Rendered based on toggle) --}}
+      {{-- @if ($showUserAssignments) --}}
+      {{-- Currently Assigned Users Section --}}
+      <div class="flex flex-col gap-3 rounded-md bg-white p-4 dark:bg-gray-800">
+        {{-- Header with Toggle --}}
+        <div
+          wire:click="toggleCurrentlyAssigned"
+          class="flex cursor-pointer items-center justify-between"
         >
-          <path
-            fill-rule="evenodd"
-            d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.06z"
-            clip-rule="evenodd"
-          />
-        </svg>
+          <h3 class="font-semibold text-gray-800 dark:text-gray-200">
+            Currently Assigned
+          </h3>
+          <svg
+            class="{{ $showCurrentlyAssigned ? 'rotate-180' : '' }} size-5 transform text-gray-500 transition-transform duration-200 dark:text-gray-400"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.06z"
+              clip-rule="evenodd"
+            />
+          </svg>
+        </div>
+
+        {{-- Content (Conditionally Rendered) --}}
+        @if ($showCurrentlyAssigned)
+          @if ($currentUserSchedules->isNotEmpty())
+            <div class="flex flex-wrap gap-2">
+              @foreach ($currentUserSchedules as $userSchedule)
+                @if ($userSchedule->user)
+                  <x-tooltip
+                    text="Assigned from {{ $userSchedule->effective_from->format('Y-m-d') }} {{ $userSchedule->effective_until ? 'to ' . $userSchedule->effective_until->format('Y-m-d') : 'indefinitely' }}"
+                  >
+                    <a
+                      href="{{ route('user.dashboard', ['id' => $userSchedule->user->id]) }}"
+                      wire:navigate
+                      class="inline-block"
+                    >
+                      <x-badge size="sm" variant="info">
+                        {{ $userSchedule->user->name }}
+                      </x-badge>
+                    </a>
+                  </x-tooltip>
+                @endif
+              @endforeach
+            </div>
+          @else
+            <div
+              class="rounded-md border border-dashed border-gray-300 bg-white p-4 text-center dark:border-gray-500 dark:bg-gray-700"
+            >
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                No users currently assigned to this schedule.
+              </p>
+            </div>
+          @endif
+        @endif
       </div>
 
-      {{-- Content (Conditionally Rendered) --}}
-      @if ($showAssignedUsers)
-        @if (($uniqueUserSchedules ?? collect())->isNotEmpty())
-          <div class="flex flex-wrap gap-2">
-            @foreach ($uniqueUserSchedules as $userSchedule)
-              @if ($userSchedule->user)
-                <x-tooltip
-                  text="Assigned from {{ $userSchedule->effective_from->format('Y-m-d') }} {{ $userSchedule->effective_until ? 'to ' . $userSchedule->effective_until->format('Y-m-d') : 'indefinitely' }}"
-                >
-                  <a
-                    href="{{ route('user.dashboard', ['id' => $userSchedule->user->id]) }}"
-                    wire:navigate
-                    class="inline-block"
-                  >
-                    <x-badge size="sm" variant="default">
-                      {{ $userSchedule->user->name }}
-                    </x-badge>
-                  </a>
-                </x-tooltip>
-              @endif
-            @endforeach
-          </div>
-        @else
-          <div
-            class="rounded-md border border-dashed border-gray-300 bg-white p-4 text-center dark:border-gray-500 dark:bg-gray-700"
+      {{-- Previously Assigned Users Section --}}
+      <div class="flex flex-col gap-3 rounded-md bg-white p-4 dark:bg-gray-800">
+        {{-- Header with Toggle --}}
+        <div
+          wire:click="togglePreviouslyAssigned"
+          class="flex cursor-pointer items-center justify-between"
+        >
+          <h3 class="font-semibold text-gray-800 dark:text-gray-200">
+            Previously Assigned
+          </h3>
+          <svg
+            class="{{ $showPreviouslyAssigned ? 'rotate-180' : '' }} size-5 transform text-gray-500 transition-transform duration-200 dark:text-gray-400"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
           >
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-              No users currently or previously assigned to this schedule.
-            </p>
-          </div>
+            <path
+              fill-rule="evenodd"
+              d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.06z"
+              clip-rule="evenodd"
+            />
+          </svg>
+        </div>
+
+        {{-- Content (Conditionally Rendered) --}}
+        @if ($showPreviouslyAssigned)
+          @if ($pastUserSchedules->isNotEmpty())
+            <div class="flex flex-wrap gap-2">
+              @foreach ($pastUserSchedules as $userSchedule)
+                @if ($userSchedule->user)
+                  <x-tooltip
+                    text="Assigned from {{ $userSchedule->effective_from->format('Y-m-d') }} to {{ $userSchedule->effective_until ? $userSchedule->effective_until->format('Y-m-d') : 'Error: No end date?' }}"
+                  >
+                    <a
+                      href="{{ route('user.dashboard', ['id' => $userSchedule->user->id]) }}"
+                      wire:navigate
+                      class="inline-block"
+                    >
+                      <x-badge size="sm" variant="alert">
+                        {{ $userSchedule->user->name }}
+                      </x-badge>
+                    </a>
+                  </x-tooltip>
+                @endif
+              @endforeach
+            </div>
+          @else
+            <div
+              class="rounded-md border border-dashed border-gray-300 bg-white p-4 text-center dark:border-gray-500 dark:bg-gray-700"
+            >
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                No users previously assigned (who aren't currently assigned).
+              </p>
+            </div>
+          @endif
         @endif
-      @endif
+      </div>
+      {{-- @endif --}}
     </div>
   </div>
   <!-- End Sections Container -->

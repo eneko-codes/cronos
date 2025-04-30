@@ -18,7 +18,7 @@
     }"
     x-init="window.addEventListener('resize', handleResize)"
     @resize.window="handleResize"
-    class="min-h-screen bg-gray-50 font-sans text-gray-800 antialiased dark:bg-gray-900 dark:text-gray-200"
+    class="min-h-screen bg-gray-100 font-sans text-gray-800 antialiased dark:bg-gray-900 dark:text-gray-200"
   >
     <!-- Navigation Header -->
     <header

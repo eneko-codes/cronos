@@ -3,7 +3,7 @@
   @if ($telescopeEnabled || $pulseEnabled)
     <section class="relative lg:col-span-1">
       <div
-        class="flex h-full flex-col gap-4 rounded-xl border border-gray-200 bg-gray-100 p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
+        class="flex h-full flex-col gap-4 rounded-xl border border-gray-200 bg-white p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
       >
         <div class="flex flex-col items-start gap-1 text-lg font-bold">
           <div class="inline-flex flex-row items-center gap-2">
@@ -78,7 +78,7 @@
   <!-- API Health Check -->
   <section class="relative lg:col-span-1">
     <div
-      class="flex h-full flex-col gap-4 rounded-xl border border-gray-200 bg-gray-100 p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
+      class="flex h-full flex-col gap-4 rounded-xl border border-gray-200 bg-white p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
     >
       <div class="flex flex-col items-start gap-1 text-lg font-bold">
         <div class="inline-flex flex-row items-center gap-2">
@@ -102,7 +102,7 @@
           Test the connection to the different APIs used by the application.
         </p>
       </div>
-      <div class="flex w-full flex-col gap-2">
+      <div class="space-y-2">
         <x-button
           wire:click="pingOdoo"
           wire:target="pingOdoo"
@@ -156,70 +156,70 @@
   <!-- Data Synchronization Settings -->
   <section class="relative sm:col-span-2 lg:col-span-2">
     <div
-      class="flex h-full flex-col gap-4 rounded-xl border border-gray-200 bg-gray-100 p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
+      class="flex h-full flex-col gap-4 rounded-xl border border-gray-200 bg-white p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
     >
-      <div class="flex h-full flex-col justify-between">
-        <div class="space-y-4">
-          <div class="flex flex-col items-start gap-1 text-lg font-bold">
-            <div class="inline-flex flex-row items-center gap-2">
+      <div class="flex flex-col items-start gap-1 text-lg font-bold">
+        <div class="inline-flex flex-row items-center gap-2">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="currentColor"
+            class="size-5 text-gray-400 dark:text-gray-500"
+            viewBox="0 0 16 16"
+          >
+            <path
+              d="M12.5 9a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7m.354 5.854 1.5-1.5a.5.5 0 0 0-.708-.708l-.646.647V10.5a.5.5 0 0 0-1 0v2.793l-.646-.647a.5.5 0 0 0-.708.708l1.5 1.5a.5.5 0 0 0 .708 0M8 1c-1.573 0-3.022.289-4.096.777C2.875 2.245 2 2.993 2 4s.875 1.755 1.904 2.223C4.978 6.711 6.427 7 8 7s3.022-.289 4.096-.777C13.125 5.755 14 5.007 14 4s-.875-1.755-1.904-2.223C11.022 1.289 9.573 1 8 1"
+            />
+            <path
+              d="M2 7v-.839c.457.432 1.004.751 1.49.972C4.722 7.693 6.318 8 8 8s3.278-.307 4.51-.867c.486-.22 1.033-.54 1.49-.972V7c0 .424-.155.802-.411 1.133a4.51 4.51 0 0 0-4.815 1.843A12 12 0 0 1 8 10c-1.573 0-3.022-.289-4.096-.777C2.875 8.755 2 8.007 2 7m6.257 3.998L8 11c-1.682 0-3.278-.307-4.51-.867-.486-.22-1.033-.54-1.49-.972V10c0 1.007.875 1.755 1.904 2.223C4.978 12.711 6.427 13 8 13h.027a4.55 4.55 0 0 1 .23-2.002m-.002 3L8 14c-1.682 0-3.278-.307-4.51-.867-.486-.22-1.033-.54-1.49-.972V13c0 1.007.875 1.755 1.904 2.223C4.978 15.711 6.427 16 8 16c.536 0 1.058-.034 1.555-.097a4.5 4.5 0 0 1-1.3-1.905"
+            />
+          </svg>
+          <h2>Data Synchronization Settings</h2>
+        </div>
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
+          Configure how often the system synchronizes all data from connected
+          APIs.
+        </p>
+      </div>
+      <div class="space-y-4">
+        <div
+          class="flex items-center justify-between rounded-md bg-gray-50 p-3 dark:bg-gray-700"
+        >
+          <label
+            for="syncFrequencySelect"
+            class="inline-flex flex-row items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300"
+          >
+            Data Synchronization Frequency
+            <x-tooltip>
+              <x-slot name="text">
+                Determines how often the system runs a complete data
+                synchronization process from all connected services to update
+                local database.
+              </x-slot>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                fill="currentColor"
-                class="size-5 text-gray-400 dark:text-gray-500"
-                viewBox="0 0 16 16"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="size-3"
               >
                 <path
-                  d="M12.5 9a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7m.354 5.854 1.5-1.5a.5.5 0 0 0-.708-.708l-.646.647V10.5a.5.5 0 0 0-1 0v2.793l-.646-.647a.5.5 0 0 0-.708.708l1.5 1.5a.5.5 0 0 0 .708 0M8 1c-1.573 0-3.022.289-4.096.777C2.875 2.245 2 2.993 2 4s.875 1.755 1.904 2.223C4.978 6.711 6.427 7 8 7s3.022-.289 4.096-.777C13.125 5.755 14 5.007 14 4s-.875-1.755-1.904-2.223C11.022 1.289 9.573 1 8 1"
-                />
-                <path
-                  d="M2 7v-.839c.457.432 1.004.751 1.49.972C4.722 7.693 6.318 8 8 8s3.278-.307 4.51-.867c.486-.22 1.033-.54 1.49-.972V7c0 .424-.155.802-.411 1.133a4.51 4.51 0 0 0-4.815 1.843A12 12 0 0 1 8 10c-1.573 0-3.022-.289-4.096-.777C2.875 8.755 2 8.007 2 7m6.257 3.998L8 11c-1.682 0-3.278-.307-4.51-.867-.486-.22-1.033-.54-1.49-.972V10c0 1.007.875 1.755 1.904 2.223C4.978 12.711 6.427 13 8 13h.027a4.55 4.55 0 0 1 .23-2.002m-.002 3L8 14c-1.682 0-3.278-.307-4.51-.867-.486-.22-1.033-.54-1.49-.972V13c0 1.007.875 1.755 1.904 2.223C4.978 15.711 6.427 16 8 16c.536 0 1.058-.034 1.555-.097a4.5 4.5 0 0 1-1.3-1.905"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
                 />
               </svg>
-              <h2>Data Synchronization Settings</h2>
-            </div>
-            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
-              Configure how often the system synchronizes all data from
-              connected APIs.
-            </p>
-          </div>
-          <div class="flex items-center justify-between">
-            <label
-              for="syncFrequencySelect"
-              class="inline-flex flex-row items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300"
-            >
-              Data Synchronization Frequency
-              <x-tooltip>
-                <x-slot name="text">
-                  Determines how often the system runs a complete data
-                  synchronization process from all connected services to update
-                  local database.
-                </x-slot>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                  stroke="currentColor"
-                  class="size-3"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-                  />
-                </svg>
-              </x-tooltip>
-            </label>
-            <select
-              id="syncFrequencySelect"
-              wire:model.change="syncFrequency"
-              class="block w-48 rounded-md border border-gray-300 bg-gray-200 px-2 text-sm dark:border-gray-700 dark:bg-gray-700"
-            >
-              @foreach ($syncFrequencyOptions as $value => $label)
-                <option value="{{ $value }}">{{ $label }}</option>
-              @endforeach
-            </select>
-          </div>
+            </x-tooltip>
+          </label>
+          <select
+            id="syncFrequencySelect"
+            wire:model.change="syncFrequency"
+            class="block w-48 rounded-md border border-gray-300 bg-gray-200 px-2 text-sm dark:border-gray-700 dark:bg-gray-700"
+          >
+            @foreach ($syncFrequencyOptions as $value => $label)
+              <option value="{{ $value }}">{{ $label }}</option>
+            @endforeach
+          </select>
         </div>
       </div>
     </div>
@@ -228,28 +228,27 @@
   <!-- Notification Settings Section -->
   <section class="relative sm:col-span-2 lg:col-span-2">
     <div
-      class="flex h-full flex-col gap-4 rounded-xl border border-gray-200 bg-gray-100 p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
+      class="flex h-full flex-col gap-4 rounded-xl border border-gray-200 bg-white p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
     >
-      <div class="space-y-4">
-        <div class="flex flex-col items-start gap-1 text-lg font-bold">
-          <div class="inline-flex flex-row items-center gap-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="currentColor"
-              class="size-5 text-gray-400 dark:text-gray-500"
-              viewBox="0 0 16 16"
-            >
-              <path
-                d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2m.995-14.901a1 1 0 1 0-1.99 0A5 5 0 0 0 3 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901"
-              />
-            </svg>
-            <h2>Notification Settings</h2>
-          </div>
-          <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
-            Control system-wide email notifications.
-          </p>
+      <div class="flex flex-col items-start gap-1 text-lg font-bold">
+        <div class="inline-flex flex-row items-center gap-2">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="currentColor"
+            class="size-5 text-gray-400 dark:text-gray-500"
+            viewBox="0 0 16 16"
+          >
+            <path
+              d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2m.995-14.901a1 1 0 1 0-1.99 0A5 5 0 0 0 3 6c0 1.098-.5 6-2 7h14c-1.5-1-2-5.902-2-7 0-2.42-1.72-4.44-4.005-4.901"
+            />
+          </svg>
+          <h2>Notification Settings</h2>
         </div>
-
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
+          Control system-wide email notifications.
+        </p>
+      </div>
+      <div class="space-y-4">
         <div
           class="flex items-center justify-between rounded-md bg-gray-50 p-3 dark:bg-gray-700"
         >
@@ -290,8 +289,7 @@
             ></div>
           </label>
         </div>
-
-        <div class="ml-2 space-y-4">
+        <div class="space-y-2 rounded-md bg-gray-50 p-3 dark:bg-gray-700">
           <div
             class="@if (!$globalNotificationsEnabled) opacity-50 @endif flex items-center justify-between"
           >
@@ -440,95 +438,86 @@
   <!-- Data Retention Settings Section -->
   <section class="relative sm:col-span-2 lg:col-span-2">
     <div
-      class="flex h-full flex-col gap-4 rounded-xl border border-gray-200 bg-gray-100 p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
+      class="flex h-full flex-col gap-4 rounded-xl border border-gray-200 bg-white p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
     >
+      <div class="flex flex-col items-start gap-1 text-lg font-bold">
+        <div class="inline-flex flex-row items-center gap-2">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="currentColor"
+            class="size-5 text-gray-400 dark:text-gray-500"
+            viewBox="0 0 16 16"
+          >
+            <path
+              d="M13.879 10.414a2.501 2.501 0 0 0-3.465 3.465zm.707.707-3.465 3.465a2.501 2.501 0 0 0 3.465-3.465m-4.56-1.096a3.5 3.5 0 1 1 4.949 4.95 3.5 3.5 0 0 1-4.95-4.95ZM8 1c-1.573 0-3.022.289-4.096.777C2.875 2.245 2 2.993 2 4s.875 1.755 1.904 2.223C4.978 6.711 6.427 7 8 7s3.022-.289 4.096-.777C13.125 5.755 14 5.007 14 4s-.875-1.755-1.904-2.223C11.022 1.289 9.573 1 8 1"
+            />
+            <path
+              d="M2 7v-.839c.457.432 1.004.751 1.49.972C4.722 7.693 6.318 8 8 8s3.278-.307 4.51-.867c.486-.22 1.033-.54 1.49-.972V7c0 .424-.155.802-.411 1.133a4.51 4.51 0 0 0-4.815 1.843A12 12 0 0 1 8 10c-1.573 0-3.022-.289-4.096-.777C2.875 8.755 2 8.007 2 7m6.257 3.998L8 11c-1.682 0-3.278-.307-4.51-.867-.486-.22-1.033-.54-1.49-.972V10c0 1.007.875 1.755 1.904 2.223C4.978 12.711 6.427 13 8 13h.027a4.55 4.55 0 0 1 .23-2.002m-.002 3L8 14c-1.682 0-3.278-.307-4.51-.867-.486-.22-1.033-.54-1.49-.972V13c0 1.007.875 1.755 1.904 2.223C4.978 15.711 6.427 16 8 16c.536 0 1.058-.034 1.555-.097a4.5 4.5 0 0 1-1.3-1.905"
+            />
+          </svg>
+          <h2>Data Retention Settings</h2>
+        </div>
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
+          Configure automatic deletion of old time-related user data. This
+          setting affects Time Entries, Attendances, Schedules, and Leaves.
+        </p>
+      </div>
+
       <div class="space-y-4">
-        <div class="flex flex-col items-start gap-1 text-lg font-bold">
-          <div class="inline-flex flex-row items-center gap-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="currentColor"
-              class="size-5 text-gray-400 dark:text-gray-500"
-              viewBox="0 0 16 16"
-            >
-              <path
-                d="M13.879 10.414a2.501 2.501 0 0 0-3.465 3.465zm.707.707-3.465 3.465a2.501 2.501 0 0 0 3.465-3.465m-4.56-1.096a3.5 3.5 0 1 1 4.949 4.95 3.5 3.5 0 0 1-4.95-4.95ZM8 1c-1.573 0-3.022.289-4.096.777C2.875 2.245 2 2.993 2 4s.875 1.755 1.904 2.223C4.978 6.711 6.427 7 8 7s3.022-.289 4.096-.777C13.125 5.755 14 5.007 14 4s-.875-1.755-1.904-2.223C11.022 1.289 9.573 1 8 1"
-              />
-              <path
-                d="M2 7v-.839c.457.432 1.004.751 1.49.972C4.722 7.693 6.318 8 8 8s3.278-.307 4.51-.867c.486-.22 1.033-.54 1.49-.972V7c0 .424-.155.802-.411 1.133a4.51 4.51 0 0 0-4.815 1.843A12 12 0 0 1 8 10c-1.573 0-3.022-.289-4.096-.777C2.875 8.755 2 8.007 2 7m6.257 3.998L8 11c-1.682 0-3.278-.307-4.51-.867-.486-.22-1.033-.54-1.49-.972V10c0 1.007.875 1.755 1.904 2.223C4.978 12.711 6.427 13 8 13h.027a4.55 4.55 0 0 1 .23-2.002m-.002 3L8 14c-1.682 0-3.278-.307-4.51-.867-.486-.22-1.033-.54-1.49-.972V13c0 1.007.875 1.755 1.904 2.223C4.978 15.711 6.427 16 8 16c.536 0 1.058-.034 1.555-.097a4.5 4.5 0 0 1-1.3-1.905"
-              />
-            </svg>
-            <h2>Data Retention Settings</h2>
-          </div>
-          <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
-            Configure automatic deletion of old time-related user data. Changes
-            saved automatically.
-          </p>
+        <div
+          class="flex items-center justify-between rounded-md bg-gray-50 p-3 dark:bg-gray-700"
+        >
+          <label
+            for="dataRetentionSelect"
+            class="flex flex-row items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300"
+          >
+            Retention period
+            <x-tooltip>
+              <x-slot name="text">
+                Select how long to keep time entries, user attendances,
+                schedules, and leaves. Select "Disabled" to disable automatic
+                deletion.
+              </x-slot>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="size-3"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+                />
+              </svg>
+            </x-tooltip>
+          </label>
+          <select
+            id="dataRetentionSelect"
+            wire:model.change="dataRetentionGlobalPeriod"
+            class="block w-40 rounded-md border border-gray-300 bg-gray-200 px-2 text-sm dark:border-gray-700 dark:bg-gray-700"
+          >
+            @foreach ($dataRetentionOptions as $days => $label)
+              <option value="{{ $days }}">{{ $label }}</option>
+            @endforeach
+          </select>
         </div>
 
-        <div class="space-y-4">
-          <div class="flex items-center justify-between">
-            <label
-              for="dataRetentionSelect"
-              class="flex flex-row items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300"
-            >
-              Retain time-related data for
-              <x-tooltip>
-                <x-slot name="text">
-                  Select how long to keep time entries, user attendances,
-                  schedules, and leaves. Select "Disabled" to disable automatic
-                  deletion.
-                </x-slot>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                  stroke="currentColor"
-                  class="size-3"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-                  />
-                </svg>
-              </x-tooltip>
-            </label>
-            <select
-              id="dataRetentionSelect"
-              wire:model.change="dataRetentionGlobalPeriod"
-              class="block w-40 rounded-md border border-gray-300 bg-gray-200 px-2 text-sm dark:border-gray-700 dark:bg-gray-700"
-            >
-              @foreach ($dataRetentionOptions as $days => $label)
-                <option value="{{ $days }}">{{ $label }}</option>
-              @endforeach
-            </select>
-          </div>
-
-          <div class="rounded-md bg-gray-50 p-3 dark:bg-gray-700">
-            <p class="text-xs font-medium text-gray-600 dark:text-gray-300">
-              This setting affects Time Entries, Attendances, Schedules, and
-              Leaves.
-            </p>
-          </div>
-
-          <div class="mt-4">
-            <x-button
-              wire:click="runDataRetention"
-              wire:target="runDataRetention"
-              wire:confirm="Are you sure you want to run the data purge now? This cannot be undone."
-              type="button"
-              size="sm"
-              variant="danger"
-              :disabled="!$dataRetentionEnabled"
-              class="w-full disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <span wire:target="runDataRetention">Run Purge Now</span>
-              <x-spinner size="4" wire:loading wire:target="runDataRetention" />
-            </x-button>
-          </div>
-        </div>
+        <x-button
+          wire:click="runDataRetention"
+          wire:target="runDataRetention"
+          wire:confirm="Are you sure you want to run the data purge now? This cannot be undone."
+          type="button"
+          size="lg"
+          variant="alert"
+          :disabled="!$dataRetentionEnabled"
+          class="w-full disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <span wire:target="runDataRetention">Run Purge Now</span>
+          <x-spinner size="4" wire:loading wire:target="runDataRetention" />
+        </x-button>
       </div>
     </div>
   </section>

@@ -166,7 +166,7 @@
             >
               <span>Tasks: {{ $project->tasks_count }}</span>
               <span>
-                Project Entries: {{ $project->project_time_entries_count }}
+                Time Entries: {{ $project->project_time_entries_count }}
               </span>
               <span>Assigned Users: {{ $project->users_count }}</span>
             </div>

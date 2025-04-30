@@ -30,43 +30,32 @@ class ProjectDetailView extends Component
 
     /**
      * Mount the component, accepting the Project model via route model binding.
-     * Load initial data.
+     * Load initial data using eager loading.
      */
     public function mount(Project $project)
     {
-        $this->project = $project->load('users:id,name,is_admin');
+        // Eager load project with users, tasks (incl. relations/counts), and project-level time entries
+        $project->load([
+            'users:id,name,is_admin',
+            'tasks' => function ($query) {
+                $query->with('users:id,name,is_admin') // Load task users
+                    ->withCount('timeEntries')       // Count task time entries
+                    ->orderBy('name');               // Order tasks
+            },
+            'timeEntries' => function ($query) {
+                $query->whereNull('proofhub_task_id') // Only project-level entries
+                    ->with('user:id,name,is_admin') // Load entry user
+                    ->orderBy('date', 'desc')
+                    ->orderBy('created_at', 'desc');
+            },
+        ]);
 
-        $this->loadTasks();
-        $this->loadProjectTimeEntries();
+        $this->project = $project;
+        $this->tasks = $project->tasks;
+        $this->projectTimeEntries = $project->timeEntries;
+
         // Initialize with an empty Eloquent Collection to match the type hint
         $this->taskTimeEntries = new \Illuminate\Database\Eloquent\Collection;
-    }
-
-    /**
-     * Load tasks associated with the current project.
-     */
-    protected function loadTasks(): void
-    {
-        $this->tasks = $this->project
-            ->tasks()
-            ->with('users:id,name,is_admin')
-            ->withCount('timeEntries')
-            ->orderBy('name')
-            ->get();
-    }
-
-    /**
-     * Load time entries directly associated with the project (not linked to a task).
-     */
-    protected function loadProjectTimeEntries(): void
-    {
-        $this->projectTimeEntries = $this->project
-            ->timeEntries()
-            ->whereNull('proofhub_task_id') // Only project-level entries
-            ->with('user:id,name,is_admin')
-            ->orderBy('date', 'desc')
-            ->orderBy('created_at', 'desc')
-            ->get();
     }
 
     /**
@@ -131,5 +120,14 @@ class ProjectDetailView extends Component
     public function render()
     {
         return view('livewire.project-detail-view');
+    }
+
+    /**
+     * Define the title for the page.
+     */
+    #[Title('Project: ')]
+    public function title(): string
+    {
+        return 'Project: ' . $this->project->name;
     }
 }

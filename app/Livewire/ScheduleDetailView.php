@@ -93,6 +93,7 @@ class ScheduleDetailView extends Component
                     $data = $model->toArray(); // Convert base attributes
                     // Check the original model instance for the flag and add it to the array
                     $data['has_duplicates'] = (isset($model->has_duplicates) && $model->has_duplicates);
+
                     return (object) $data; // Return as stdClass object
                 })->all());
             });
@@ -103,7 +104,7 @@ class ScheduleDetailView extends Component
      *
      * Computed property ensures the title updates if the schedule description changes.
      */
-    #[Title('Schedule: ')] 
+    #[Title('Schedule: ')]
     public function title(): string
     {
         return 'Schedule: '.($this->schedule->description ?? $this->schedule->odoo_schedule_id);

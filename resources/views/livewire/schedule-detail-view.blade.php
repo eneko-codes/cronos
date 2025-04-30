@@ -70,10 +70,11 @@
 
       {{-- Content (Conditionally Rendered) --}}
       @if ($showScheduleDetails)
-        @if ($groupedScheduleDetails->isNotEmpty())
+        {{-- Access computed property like a public property --}}
+        @if ($this->groupedScheduleDetails->isNotEmpty())
           <div class="space-y-4">
             {{-- Loop through grouped details (sorted Mon-Sun in component) --}}
-            @foreach ($groupedScheduleDetails as $weekday => $details)
+            @foreach ($this->groupedScheduleDetails as $weekday => $details)
               <div class="flex flex-col gap-1">
                 {{-- Day Header --}}
                 <h4 class="font-semibold text-gray-700 dark:text-gray-300">
@@ -117,25 +118,8 @@
                       →
                       {{ \Carbon\Carbon::parse($detail->end)->format('H:i') }}
                       <span class="text-gray-500">
-                        @php
-                          // Re-parse start/end strings as Carbon objects for diff
-                          $startCarbon = \Carbon\Carbon::parse($detail->start);
-                          $endCarbon = \Carbon\Carbon::parse($detail->end);
-                          $interval = $startCarbon->diff($endCarbon);
-                          $durationParts = [];
-                          if ($interval->h > 0) {
-                            $durationParts[] = $interval->h . ' hour' . ($interval->h > 1 ? 's' : '');
-                          }
-                          if ($interval->i > 0) {
-                            $durationParts[] = $interval->i . ' minute' . ($interval->i > 1 ? 's' : '');
-                          }
-                          $durationString = implode(' ', $durationParts);
-                          if (empty($durationString)) {
-                            $durationString = '0 minutes';
-                          }
-                        @endphp
-
-                        ({{ $durationString }})
+                        {{-- Use pre-calculated duration string from component --}}
+                        ({{ $detail->duration_string ?? 'N/A' }})
                       </span>
                       {{-- is_off_day check likely needs adjustment if property doesn't exist, removing for now --}}
                     </div>
@@ -186,9 +170,11 @@
 
         {{-- Content (Conditionally Rendered) --}}
         @if ($showCurrentlyAssigned)
-          @if ($currentUserSchedules->isNotEmpty())
+          {{-- Access computed property via method call --}}
+          @if ($this->currentUserSchedules()->isNotEmpty())
             <div class="flex flex-wrap gap-2">
-              @foreach ($currentUserSchedules as $userSchedule)
+              {{-- Loop through computed property result --}}
+              @foreach ($this->currentUserSchedules() as $userSchedule)
                 @if ($userSchedule->user)
                   <x-tooltip
                     text="Assigned from {{ $userSchedule->effective_from->format('Y-m-d') }} {{ $userSchedule->effective_until ? 'to ' . $userSchedule->effective_until->format('Y-m-d') : 'indefinitely' }}"
@@ -244,9 +230,11 @@
 
         {{-- Content (Conditionally Rendered) --}}
         @if ($showPreviouslyAssigned)
-          @if ($pastUserSchedules->isNotEmpty())
+          {{-- Access computed property via method call --}}
+          @if ($this->pastUserSchedules()->isNotEmpty())
             <div class="flex flex-wrap gap-2">
-              @foreach ($pastUserSchedules as $userSchedule)
+              {{-- Loop through computed property result --}}
+              @foreach ($this->pastUserSchedules() as $userSchedule)
                 @if ($userSchedule->user)
                   <x-tooltip
                     text="Assigned from {{ $userSchedule->effective_from->format('Y-m-d') }} to {{ $userSchedule->effective_until ? $userSchedule->effective_until->format('Y-m-d') : 'Error: No end date?' }}"

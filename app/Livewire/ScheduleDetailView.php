@@ -5,9 +5,9 @@ namespace App\Livewire;
 use App\Models\Schedule;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection as SupportCollection;
 use Livewire\Attributes\Title;
-use Livewire\Component;
-use Illuminate\Support\Collection as SupportCollection; // Import base collection
+use Livewire\Component; // Import base collection
 
 #[Title('Schedule Details')]
 class ScheduleDetailView extends Component
@@ -73,9 +73,9 @@ class ScheduleDetailView extends Component
             return ($weekday == 0) ? 7 : $weekday;
         })
         // Convert inner Eloquent Collections to base SupportCollections
-        ->map(function ($details) {
-            return collect($details->all()); // Use collect() helper or new SupportCollection()
-        });
+            ->map(function ($details) {
+                return collect($details->all()); // Use collect() helper or new SupportCollection()
+            });
     }
 
     /**

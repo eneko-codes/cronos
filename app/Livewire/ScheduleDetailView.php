@@ -30,7 +30,7 @@ class ScheduleDetailView extends Component
      * Uses route model binding to automatically fetch the Schedule model.
      */
     public function mount(Schedule $schedule): void
-    {.
+    {
         $this->schedule = $schedule->loadMissing(['scheduleDetails', 'userSchedules.user']);
     }
 
@@ -84,6 +84,7 @@ class ScheduleDetailView extends Component
             $clone = $detail->replicate(); // Use replicate or newFromBuilder if needed
             $clone->id = $detail->id; // Ensure ID is copied if replicate doesn't handle it well
             $clone->has_duplicates = false; // Initialize flag
+
             return $clone;
         });
 
@@ -110,38 +111,38 @@ class ScheduleDetailView extends Component
             return ($weekday == 0) ? 7 : $weekday;
         })
         // Convert inner Eloquent Collections to base SupportCollections of stdClass objects
-        ->map(function ($details) {
-            // Convert each detail model, explicitly adding has_duplicates and duration_string
-            return collect($details->map(function ($model) {
-                $data = $model->toArray(); // Convert base attributes
-                $data['has_duplicates'] = $model->has_duplicates; // Use the flag from the copied instance
+            ->map(function ($details) {
+                // Convert each detail model, explicitly adding has_duplicates and duration_string
+                return collect($details->map(function ($model) {
+                    $data = $model->toArray(); // Convert base attributes
+                    $data['has_duplicates'] = $model->has_duplicates; // Use the flag from the copied instance
 
-                // Calculate duration string
-                try {
-                    $startCarbon = Carbon::parse($model->start);
-                    $endCarbon = Carbon::parse($model->end);
-                    $interval = $startCarbon->diff($endCarbon);
-                    $durationParts = [];
-                    if ($interval->h > 0) {
-                        $durationParts[] = $interval->h . ' hour' . ($interval->h > 1 ? 's' : '');
+                    // Calculate duration string
+                    try {
+                        $startCarbon = Carbon::parse($model->start);
+                        $endCarbon = Carbon::parse($model->end);
+                        $interval = $startCarbon->diff($endCarbon);
+                        $durationParts = [];
+                        if ($interval->h > 0) {
+                            $durationParts[] = $interval->h.' hour'.($interval->h > 1 ? 's' : '');
+                        }
+                        if ($interval->i > 0) {
+                            $durationParts[] = $interval->i.' minute'.($interval->i > 1 ? 's' : '');
+                        }
+                        $durationString = implode(' ', $durationParts);
+                        if (empty($durationString)) {
+                            $durationString = '0 minutes';
+                        }
+                        $data['duration_string'] = $durationString;
+                    } catch (\Exception $e) {
+                        // Handle potential parsing errors if start/end are not valid time strings
+                        $data['duration_string'] = 'Error calculating';
+                        // Log::error("Error parsing schedule detail time: " . $e->getMessage(), ['detail_id' => $model->id]);
                     }
-                    if ($interval->i > 0) {
-                        $durationParts[] = $interval->i . ' minute' . ($interval->i > 1 ? 's' : '');
-                    }
-                    $durationString = implode(' ', $durationParts);
-                    if (empty($durationString)) {
-                        $durationString = '0 minutes';
-                    }
-                    $data['duration_string'] = $durationString;
-                } catch (\Exception $e) {
-                    // Handle potential parsing errors if start/end are not valid time strings
-                    $data['duration_string'] = 'Error calculating';
-                    // Log::error("Error parsing schedule detail time: " . $e->getMessage(), ['detail_id' => $model->id]);
-                }
 
-                return (object) $data; // Return as stdClass object
-            })->all());
-        });
+                    return (object) $data; // Return as stdClass object
+                })->all());
+            });
     }
 
     /**

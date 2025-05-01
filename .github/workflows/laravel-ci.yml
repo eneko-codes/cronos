@@ -180,9 +180,15 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Install NPM Dependencies for Blade Style Check
+        run: npm ci
+
+      - name: List node_modules/.bin to verify prettier
+        run: ls -la ./node_modules/.bin
+
       - name: Run Prettier Blade Check
-        # Use npx with the explicit path to the locally installed prettier
-        run: npx ./node_modules/.bin/prettier --check "**/*.blade.php" --plugin=prettier-plugin-blade
+        # Try running without the explicit path now that npm ci has run
+        run: npx prettier --check "**/*.blade.php" --plugin=prettier-plugin-blade
 
   # --- Static Analysis --- #
 

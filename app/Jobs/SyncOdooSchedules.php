@@ -52,13 +52,12 @@ class SyncOdooSchedules extends BaseSyncJob
     protected function execute(): void
     {
         try {
-            // Step 1: Fetch all schedule-related data
-            $data = $this->odoo->getAllScheduleData();
-            $odooSchedules = collect($data->get('schedules'));
-            $odooTimeSlots = collect($data->get('timeSlots'))->groupBy(
-                'calendar_id.0'
-            );
-            $odooEmployees = collect($data->get('employees'));
+            // Step 1: Fetch schedules and time slots separately
+            $odooSchedules = $this->odoo->getSchedules();
+            // Fetch all schedule details (time slots)
+            $odooTimeSlots = $this->odoo->getScheduleDetails();
+            // Group the fetched time slots by their parent calendar ID
+            $odooTimeSlotsGrouped = $odooTimeSlots->groupBy('calendar_id.0');
 
             // Step 2: Create or update local schedules
             $odooSchedules->each(function ($scheduleData) {
@@ -93,7 +92,7 @@ class SyncOdooSchedules extends BaseSyncJob
             }
 
             // Step 4: Synchronize schedule details (time slots)
-            $odooSchedules->each(function ($scheduleData) use ($odooTimeSlots) {
+            $odooSchedules->each(function ($scheduleData) use ($odooTimeSlotsGrouped) {
                 $odooScheduleId = $scheduleData['id'];
                 $timezone = $scheduleData['tz'] ?? 'UTC';
 
@@ -105,8 +104,8 @@ class SyncOdooSchedules extends BaseSyncJob
                     return;
                 }
 
-                // Group time slots
-                $odooDetails = $odooTimeSlots->get($odooScheduleId, collect());
+                // Get time slots for the current schedule
+                $odooDetails = $odooTimeSlotsGrouped->get($odooScheduleId, collect());
                 $odooDetailsById = $odooDetails->keyBy('id');
                 $existingDetails = $schedule
                     ->scheduleDetails()
@@ -252,81 +251,15 @@ class SyncOdooSchedules extends BaseSyncJob
                 }
             });
 
-            // Step 5: Update user schedule assignments
-            $startOfDay = Carbon::now()->startOfDay();
-            $odooEmployees->filter()->each(function ($emp) use ($startOfDay) {
-                $odooUserId = $emp['id'];
-                $newOdooScheduleId = collect($emp['resource_calendar_id'])->first();
-
-                // Skip users marked do_not_track
-                $user = User::where('odoo_id', $odooUserId)->trackable()->first();
-
-                if (! $user) {
-                    return;
-                }
-
-                // Get active schedule
-                $activeSchedule = $user
-                    ->userSchedules()
-                    ->whereNull('effective_until')
-                    ->first();
-
-                // If no new schedule, close out the old
-                if (! $newOdooScheduleId) {
-                    if ($activeSchedule) {
-                        $oldScheduleModel = $activeSchedule->schedule; // Get the model before updating
-                        $activeSchedule->update(['effective_until' => $startOfDay]);
-                    }
-
-                    return;
-                }
-
-                // Ensure schedule exists
-                if (
-                    ! Schedule::where('odoo_schedule_id', $newOdooScheduleId)->exists()
-                ) {
-                    return;
-                }
-
-                // Get the new schedule model if it exists
-                $newScheduleModel = Schedule::where(
-                    'odoo_schedule_id',
-                    $newOdooScheduleId
-                )->first();
-
-                // If it's the same schedule, do nothing
-                if (
-                    $activeSchedule &&
-                    $activeSchedule->odoo_schedule_id === $newOdooScheduleId
-                ) {
-                    return;
-                }
-
-                // Close old schedule
-                if ($activeSchedule) {
-                    $oldScheduleModelForNotification = $activeSchedule->schedule; // Get the model before updating
-                    $activeSchedule->update(['effective_until' => $startOfDay]);
-                }
-
-                // Create new schedule assignment only if a valid schedule exists
-                if ($newScheduleModel) {
-                    $user->userSchedules()->create([
-                        'odoo_schedule_id' => $newOdooScheduleId,
-                        'effective_from' => $startOfDay,
-                        'effective_until' => null,
-                    ]);
-                }
-            });
+            // Step 5 (User schedule assignments) is now handled in SyncOdooUsers.
         } catch (Exception $e) {
             // If it's a duplicate schedule issue, mark the job as failed rather than retrying
-            if (
-                Str::contains($e->getMessage(), 'duplicate') ||
-                Str::contains($e->getMessage(), 'Schedule Duplication Error')
-            ) {
-                $this->fail($e);
+            if (Str::contains($e->getMessage(), 'duplicate key value violates unique constraint')) {
+                Log::error(class_basename($this).": Failed due to potential duplicate schedule detail: {$e->getMessage()}");
+                $this->fail($e); // Mark as failed
             } else {
-                // For other exceptions, let Laravel's retry mechanism work
-                throw $e;
+                Log::error(class_basename($this).": Synchronization failed: {$e->getMessage()}", ['exception' => $e]);
+                throw $e; // Re-throw other exceptions to allow retries
             }
         }
     }

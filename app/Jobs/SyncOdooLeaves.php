@@ -186,6 +186,7 @@ class SyncOdooLeaves extends BaseSyncJob
      */
     private function checkLeaveState(array $leave): void
     {
+        // Expanded valid states based on API call change
         $validStates = [
             'validate',
             'refuse',

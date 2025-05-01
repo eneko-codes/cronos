@@ -3,7 +3,6 @@
 namespace App\Jobs;
 
 use App\Models\Department;
-use App\Models\User;
 use App\Services\OdooApiCalls;
 use Exception;
 use Illuminate\Support\Arr;
@@ -40,11 +39,9 @@ class SyncOdooDepartments extends BaseSyncJob
      * Executes the synchronization process.
      *
      * This method performs the following operations:
-     * 1. Fetches departments from Odoo API and maps them to local structure
+     * 1. Fetches all departments from Odoo API
      * 2. Creates or updates local departments based on Odoo data
-     * 3. Identifies departments that exist locally but not in Odoo
-     * 4. Logs missing departments for historical integrity
-     * 5. Updates user department assignments based on Odoo relations
+     * 3. Logs departments that exist locally but not in Odoo for historical integrity
      *
      * @throws Exception If any part of the synchronization process fails
      */
@@ -60,9 +57,6 @@ class SyncOdooDepartments extends BaseSyncJob
         $this->logMissingDepartments(
             $mappedDepartments->pluck('odoo_department_id')
         );
-
-        // Step 4: Update user department assignments
-        $this->updateUserDepartments();
     }
 
     /**
@@ -75,6 +69,8 @@ class SyncOdooDepartments extends BaseSyncJob
                 'odoo_department_id' => $dept['id'],
                 'name' => $dept['name'],
                 'active' => $dept['active'] ?? true,
+                'odoo_manager_employee_id' => Arr::get($dept, 'manager_id.0'),
+                'odoo_parent_department_id' => Arr::get($dept, 'parent_id.0'),
             ];
         });
     }
@@ -90,6 +86,8 @@ class SyncOdooDepartments extends BaseSyncJob
                 [
                     'name' => $dept['name'],
                     'active' => $dept['active'],
+                    'odoo_manager_employee_id' => $dept['odoo_manager_employee_id'],
+                    'odoo_parent_department_id' => $dept['odoo_parent_department_id'],
                 ]
             );
         });
@@ -120,31 +118,6 @@ class SyncOdooDepartments extends BaseSyncJob
                                 'detected_at' => now()->toDateTimeString(),
                             ]
                         );
-                    });
-            });
-    }
-
-    /**
-     * Updates user department assignments based on Odoo relations.
-     */
-    private function updateUserDepartments(): void
-    {
-        collect($this->odoo->getUserRelations())
-            ->filter(function ($relation) {
-                return Arr::has($relation, 'department_id.0');
-            })
-            ->each(function ($relation) {
-                User::where('odoo_id', $relation['id'])
-                    ->trackable()
-                    ->get()
-                    ->each(function ($user) use ($relation) {
-                        $deptId = $relation['department_id'][0];
-                        $user->department_id = $deptId;
-
-                        // Only save if the department_id actually changed
-                        if ($user->isDirty('department_id')) {
-                            $user->save();
-                        }
                     });
             });
     }

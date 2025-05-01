@@ -27,6 +27,12 @@ class UserDetailsModal extends Component
 
     public $systempinId = ''; // User SystemPin ID
 
+    public $jobTitle = ''; // User Job Title
+
+    public $managerName = ''; // User Manager Name
+
+    public $subordinateNames = ''; // User Subordinates (comma-separated)
+
     public string $createdAtDiff = ''; // Add diff property
 
     public string $createdAtFormatted = ''; // Add formatted property
@@ -65,8 +71,8 @@ class UserDetailsModal extends Component
 
     public function loadUserDetails(): void
     {
-        // Fetch user details
-        $user = User::findOrFail($this->userId);
+        // Fetch user details with manager and subordinates relationships
+        $user = User::with('manager', 'subordinates', 'notificationPreferences')->findOrFail($this->userId);
 
         // Prepare user details for display
         $this->prepareDetails($user);
@@ -94,6 +100,10 @@ class UserDetailsModal extends Component
         $this->proofhubId = $user->proofhub_id ?? '-';
         $this->desktimeId = $user->desktime_id ?? '-';
         $this->systempinId = $user->systempin_id ?? '-';
+        $this->jobTitle = $user->job_title ?? '-'; // Populate job title
+        $this->managerName = $user->manager?->name ?? '-'; // Populate manager name
+        // Populate subordinates names
+        $this->subordinateNames = $user->subordinates->isNotEmpty() ? $user->subordinates->pluck('name')->implode(', ') : '-';
 
         // Prepare Created At dates
         $this->createdAtDiff = $user->created_at ? $user->created_at->diffForHumans() : '-';
@@ -114,6 +124,9 @@ class UserDetailsModal extends Component
             'Proofhub ID' => $this->proofhubId,
             'Desktime ID' => $this->desktimeId,
             'SystemPin ID' => $this->systempinId,
+            'Job Title' => $this->jobTitle, // Add Job Title
+            'Manager' => $this->managerName, // Add Manager Name
+            'Subordinates' => $this->subordinateNames, // Add Subordinates
             // 'Created at' => $this->createdAt,
             // 'Updated at' => $this->updatedAt,
         ];

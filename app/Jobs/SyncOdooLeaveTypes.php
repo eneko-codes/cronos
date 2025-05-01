@@ -40,8 +40,7 @@ class SyncOdooLeaveTypes extends BaseSyncJob
      * This method performs the following operations:
      * 1. Fetches leave types from Odoo API and maps them to local structure
      * 2. Creates or updates local leave types based on Odoo data
-     * 3. Identifies leave types that exist locally but not in Odoo
-     * 4. Logs missing leave types for historical integrity
+     * 3. Logs leave types that exist locally but not in Odoo for historical integrity
      *
      * @throws Exception If any part of the synchronization process fails
      */
@@ -63,12 +62,21 @@ class SyncOdooLeaveTypes extends BaseSyncJob
     private function mapOdooLeaveTypes(): Collection
     {
         return $this->odoo->getLeaveTypes()->map(function ($lt) {
+            // Map allocation_type to requires_allocation for compatibility if needed
+            $requiresAllocation = match ($lt['allocation_type'] ?? 'no') {
+                'fixed_allocation', 'fixed' => true,
+                default => false,
+            };
+
             return [
                 'odoo_leave_type_id' => $lt['id'],
                 'name' => $lt['name'],
-                'limit' => $lt['limit'] ?? false,
-                'requires_allocation' => $lt['requires_allocation'] ?? false,
+                'validation_type' => $lt['validation_type'] ?? null,
+                'request_unit' => $lt['request_unit'] ?? null,
+                'limit' => false,
+                'requires_allocation' => $requiresAllocation,
                 'active' => $lt['active'] ?? true,
+                'is_unpaid' => $lt['unpaid'] ?? false,
             ];
         });
     }
@@ -83,9 +91,12 @@ class SyncOdooLeaveTypes extends BaseSyncJob
                 ['odoo_leave_type_id' => $leaveType['odoo_leave_type_id']],
                 [
                     'name' => $leaveType['name'],
+                    'validation_type' => $leaveType['validation_type'],
+                    'request_unit' => $leaveType['request_unit'],
                     'limit' => $leaveType['limit'],
                     'requires_allocation' => $leaveType['requires_allocation'],
                     'active' => $leaveType['active'],
+                    'is_unpaid' => $leaveType['is_unpaid'],
                 ]
             );
         });

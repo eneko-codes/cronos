@@ -192,6 +192,9 @@ class OdooApiCalls implements Pingable
             'work_email',
             'tz',
             'active',
+            'department_id',
+            'category_ids',
+            'resource_calendar_id',
         ]);
     }
 
@@ -204,6 +207,8 @@ class OdooApiCalls implements Pingable
             'id',
             'name',
             'active',
+            'manager_id',
+            'parent_id',
         ]);
     }
 
@@ -227,9 +232,11 @@ class OdooApiCalls implements Pingable
         return $this->searchRead('hr.leave.type', $domain, [
             'id',
             'name',
-            'limit',
-            'requires_allocation',
             'active',
+            'allocation_type',
+            'validation_type',
+            'request_unit',
+            'unpaid',
         ]);
     }
 
@@ -246,7 +253,7 @@ class OdooApiCalls implements Pingable
         array $domain = []
     ): Collection {
         $baseFilters = [
-            ['state', 'in', ['validate', 'validate1', 'refuse', 'cancel']],
+            ['state', 'in', ['validate', 'validate1', 'refuse', 'cancel', 'draft', 'confirm']],
             ['holiday_type', 'in', ['employee', 'category', 'department']],
         ];
 
@@ -276,22 +283,6 @@ class OdooApiCalls implements Pingable
     }
 
     /**
-     * Retrieves all schedule-related data from Odoo, including calendars,
-     * schedule details, and employee schedule assignments.
-     */
-    public function getAllScheduleData(
-        array $scheduleDomain = [],
-        array $slotsDomain = [],
-        array $employeesDomain = []
-    ): Collection {
-        return collect([
-            'schedules' => $this->getSchedules($scheduleDomain),
-            'timeSlots' => $this->getScheduleDetails($slotsDomain),
-            'employees' => $this->getUserSchedules($employeesDomain),
-        ]);
-    }
-
-    /**
      * Retrieves "resource.calendar" records from Odoo.
      */
     public function getSchedules(array $domain = []): Collection
@@ -302,42 +293,40 @@ class OdooApiCalls implements Pingable
     }
 
     /**
-     * Retrieves "resource.calendar.attendance" records from Odoo.
+     * Retrieves schedule details (attendances) from Odoo.
      */
-    private function getScheduleDetails(array $domain = []): Collection
+    public function getScheduleDetails(array $domain = []): Collection
     {
-        $fields = [
+        return $this->searchRead('resource.calendar.attendance', $domain, [
             'id',
             'calendar_id',
+            'name',
             'dayofweek',
             'hour_from',
             'hour_to',
-            'day_period',
-        ];
-
-        return $this->searchRead('resource.calendar.attendance', $domain, $fields);
+            'day_period', // Ensure this field is fetched if used
+        ]);
     }
 
     /**
-     * Retrieves "hr.employee" schedule assignments (resource_calendar_id) from Odoo.
+     * Retrieves version information from Odoo.
      */
-    private function getUserSchedules(array $domain = []): Collection
+    public function getServerVersion(): mixed
     {
-        $fields = ['id', 'resource_calendar_id'];
+        try {
+            $result = $this->call('common', 'version');
 
-        return $this->searchRead('hr.employee', $domain, $fields);
-    }
-
-    /**
-     * Retrieves "hr.employee" relations, including department and category associations.
-     */
-    public function getUserRelations(): Collection
-    {
-        return $this->searchRead(
-            'hr.employee',
-            [],
-            ['id', 'department_id', 'category_ids']
-        );
+            return [
+                'success' => true,
+                'message' => 'Odoo API is reachable.',
+                'version' => $result['server_version'] ?? 'Unknown',
+            ];
+        } catch (OdooConnectionException|OdooRequestException|OdooResponseException $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage(),
+            ];
+        }
     }
 
     /**

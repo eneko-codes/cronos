@@ -35,12 +35,16 @@ jobs:
           DB_CONNECTION: sqlite
           DB_DATABASE: database/database.sqlite # Use relative path for CI
 
-      # Generate IDE Helper files
-      - name: Generate IDE Helper files
+      # Run IDE Helper Setup
+      - name: Run IDE Helper Setup
         run: composer ide-setup
         env:
           DB_CONNECTION: sqlite
           DB_DATABASE: database/database.sqlite # Use relative path for CI
+
+      # Fix Code Style (Pint)
+      - name: Fix Code Style (Pint)
+        run: composer fix
 
       # Run Pint Linter Check (Uses 'lint' script from composer.json)
       - name: Check Code Style (Pint)

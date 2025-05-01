@@ -32,6 +32,12 @@ jobs:
           php -r "file_exists('.env') || copy('.env.example', '.env');"
           php artisan key:generate
 
+      # Setup Database for CI
+      - name: Setup Database
+        run: |
+          touch database/database.sqlite
+          php artisan migrate --force
+
       # Generate IDE Helper files
       - name: Generate IDE Helper files
         run: composer ide-setup

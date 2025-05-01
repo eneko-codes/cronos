@@ -1,0 +1,307 @@
+name: Laravel CI
+
+on:
+  push:
+    branches: ['main']
+  pull_request:
+    branches: ['main']
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      # Output flags to indicate setup completion for dependency caching
+      composer-installed: ${{ steps.install-composer-deps.outcome == 'success' }}
+      npm-installed: ${{ steps.install-npm-deps.outcome == 'success' }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # ------------- Composer Setup -------------
+      - name: Cache Composer dependencies
+        id: composer-cache
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, sqlite, pdo_sqlite, bcmath, gd
+          coverage: none
+
+      - name: Validate composer.json and composer.lock
+        run: composer validate --strict
+
+      - name: Install Composer Dependencies
+        id: install-composer-deps
+        if: steps.composer-cache.outputs.cache-hit != 'true'
+        run: composer install --prefer-dist --no-progress
+
+      - name: Show Composer Outdated (Info Only)
+        run: composer outdated -D --strict # Use -D for direct dependencies only
+
+      # ------------- NPM Setup -------------
+      - name: Cache Node modules
+        id: npm-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Specify your Node.js version
+
+      - name: Install NPM Dependencies
+        id: install-npm-deps
+        if: steps.npm-cache.outputs.cache-hit != 'true'
+        run: npm ci
+
+      # ------------- Artifact Upload -------------
+      # Upload vendor and node_modules for subsequent jobs
+      - name: Upload vendor directory
+        uses: actions/upload-artifact@v4
+        with:
+          name: vendor-${{ github.sha }}
+          path: vendor
+
+      - name: Upload node_modules directory
+        uses: actions/upload-artifact@v4
+        with:
+          name: node_modules-${{ github.sha }}
+          path: node_modules
+
+  # --- Security Audits --- #
+
+  audit-composer:
+    runs-on: ubuntu-latest
+    needs: setup
+    if: needs.setup.outputs.composer-installed == 'true' # Run only if composer install happened in setup
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download vendor artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: vendor-${{ github.sha }}
+          path: vendor
+
+      - name: Setup PHP # Needed for composer
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - name: Run Composer Audit
+        run: composer audit --locked
+
+  audit-npm:
+    runs-on: ubuntu-latest
+    needs: setup
+    if: needs.setup.outputs.npm-installed == 'true' # Run only if npm install happened in setup
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download node_modules artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: node_modules-${{ github.sha }}
+          path: node_modules
+
+      - name: Setup Node.js # Needed for npm
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run NPM Audit
+        run: npm audit --omit=dev # Adjust level as needed (e.g., --audit-level=high)
+
+  # --- Code Style --- #
+
+  check-php-style:
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download vendor artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: vendor-${{ github.sha }}
+          path: vendor
+
+      - name: Setup PHP # Needed for pint
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - name: Run Laravel Pint (Check Only)
+        run: ./vendor/bin/pint --test
+
+  check-blade-style:
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download node_modules artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: node_modules-${{ github.sha }}
+          path: node_modules
+
+      - name: Setup Node.js # Needed for prettier
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run Prettier Blade Check
+        # Use npx to run the locally installed prettier
+        run: npx prettier --check "**/*.blade.php" --plugin=prettier-plugin-blade
+
+  # --- Static Analysis --- #
+
+  analyze-php:
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download vendor artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: vendor-${{ github.sha }}
+          path: vendor
+
+      - name: Setup PHP # Needed for phpstan
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, sqlite, pdo_sqlite, bcmath, gd # Ensure all extensions needed by your app/phpstan are here
+          coverage: none
+
+      - name: Run PHPStan
+        run: ./vendor/bin/phpstan analyse --memory-limit=2G # Adjust level/paths in phpstan.neon
+
+  # --- Testing --- #
+
+  prepare-test-environment:
+    runs-on: ubuntu-latest
+    needs: setup
+    outputs:
+      test-env-ready: ${{ steps.generate-key.outcome == 'success' }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download vendor artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: vendor-${{ github.sha }}
+          path: vendor
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, sqlite, pdo_sqlite, bcmath, gd
+          coverage: none
+
+      - name: Copy .env
+        run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+
+      - name: Generate Application Key
+        id: generate-key
+        run: php artisan key:generate
+
+      - name: Create SQLite Database
+        run: |
+          mkdir -p database
+          touch database/database.sqlite
+
+      - name: Run Migrations
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/database.sqlite
+        run: php artisan migrate --force # Use --force for non-interactive environments
+
+      # Optional: Run IDE Helper (can be slow, consider if needed in CI)
+      # - name: Generate IDE Helper files
+      #   run: |
+      #     php artisan ide-helper:generate
+      #     php artisan ide-helper:models --nowrite
+      #     php artisan ide-helper:meta
+
+      # Upload the prepared environment (optional, but could speed up test job if needed)
+      # - name: Upload Test Environment Artifact
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: test-env-${{ github.sha }}
+      #     path: |
+      #       .
+      #       !vendor/
+      #       !node_modules/
+
+  run-tests:
+    runs-on: ubuntu-latest
+    needs: prepare-test-environment
+    if: needs.prepare-test-environment.outputs.test-env-ready == 'true'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Download artifacts needed for testing
+      - name: Download vendor artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: vendor-${{ github.sha }}
+          path: vendor
+
+      - name: Download node_modules artifact # If JS/frontend tests are involved
+        uses: actions/download-artifact@v4
+        with:
+          name: node_modules-${{ github.sha }}
+          path: node_modules
+
+      # Optional: Download prepared environment artifact instead of re-running setup steps
+      # - name: Download Test Environment Artifact
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: test-env-${{ github.sha }}
+      #     path: .
+
+      # --- Re-run minimal setup if not using test-env artifact ---
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, sqlite, pdo_sqlite, bcmath, gd
+          coverage: none # Set coverage driver if generating report
+
+      - name: Copy .env
+        run: php -r "file_exists('.env') || copy('.env.example', '.env');" # Ensure .env exists for tests
+
+      - name: Create SQLite Database # Ensure DB file exists
+        run: touch database/database.sqlite
+      # --- End minimal setup --- #
+
+      - name: Execute tests (Pest)
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/database.sqlite
+          # Add other necessary test environment variables
+        run: php artisan test # Or ./vendor/bin/pest for more Pest options

@@ -26,21 +26,21 @@ jobs:
       - name: Install Composer Dependencies
         run: composer install --prefer-dist --no-progress --no-interaction
 
-      # Copy environment file and generate key
-      - name: Setup Laravel Environment
-        run: |
-          php -r "file_exists('.env') || copy('.env.example', '.env');"
-          php artisan key:generate
-
       # Setup Database for CI
       - name: Setup Database
         run: |
           touch database/database.sqlite
           php artisan migrate --force
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/database.sqlite # Use relative path for CI
 
       # Generate IDE Helper files
       - name: Generate IDE Helper files
         run: composer ide-setup
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/database.sqlite # Use relative path for CI
 
       # Run Pint Linter Check (Uses 'lint' script from composer.json)
       - name: Check Code Style (Pint)
@@ -53,3 +53,6 @@ jobs:
       # Run Tests (Uses 'test' script from composer.json)
       - name: Run Tests (Pest)
         run: composer test
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/database.sqlite # Also needed for tests

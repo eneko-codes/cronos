@@ -2,6 +2,81 @@
 
 For the web app to work, you will need to install a queue manager such as Supervisor in your Ngnx instance!
 
+## 👨🏻‍💻 Development Setup
+
+### Git Hooks (Pre-commit)
+
+This project uses a Git pre-commit hook to automatically run `composer fix` before each commit, ensuring code style consistency. This helps prevent CI failures due to formatting issues.
+
+**Installation (Recommended):**
+
+To enable this hook, you need to manually create the pre-commit hook file in your local `.git/hooks` directory and make it executable. Follow these steps from the project root:
+
+1.  **Create the hook file:**
+
+    ```bash
+    touch .git/hooks/pre-commit
+    ```
+
+2.  **Open the file** (`.git/hooks/pre-commit`) in your text editor.
+
+3.  **Paste the entire script content below** into the file:
+
+    ```sh
+    #!/bin/sh
+    #
+    # Pre-commit hook that runs 'composer fix' and stages any changes.
+    #
+
+    echo "Running composer fix..."
+
+    # Run composer fix and capture its output
+    fix_output=$(composer fix 2>&1)
+    fix_exit_code=$?
+
+    # Check if composer fix failed
+    if [ $fix_exit_code -ne 0 ]; then
+      echo >&2 "composer fix failed:"
+      echo >&2 "$fix_output"
+      exit 1
+    fi
+
+    echo "$fix_output"
+    echo "composer fix completed."
+
+    # Check for staged changes after running pint
+    # Use porcelain v1 for scriptability
+    staged_changes=$(git diff --name-only --cached)
+    unstaged_changes=$(git status --porcelain=v1 | grep -E '^( M|A | D)' | cut -c 4-)
+
+    if [ -n "$unstaged_changes" ]; then
+        echo "Staging changes made by composer fix..."
+        # Add only the files modified/added by composer fix that were previously tracked or are new
+        # This avoids accidentally adding untracked files not related to the fix
+        echo "$unstaged_changes" | while IFS= read -r file; do
+            # Check if the file exists before trying to add it
+            if [ -f "$file" ]; then
+                git add "$file"
+            fi
+        done
+        echo "Changes staged."
+    else
+        echo "No changes detected from composer fix."
+    fi
+
+    # Exit with 0 to allow the commit
+    exit 0
+    ```
+
+4.  **Save and close** the file.
+
+5.  **Make the hook executable:**
+    ```bash
+    chmod +x .git/hooks/pre-commit
+    ```
+
+**Note:** This setup needs to be performed once per local clone of the repository.
+
 ## ⛓️ SETUP API CONNECTIONS
 
 ### Odoo

@@ -14,6 +14,15 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
 
+      # Cache Composer dependencies
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor # The directory to cache
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-
+
       # Setup PHP Action - Installs PHP and necessary extensions
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -25,6 +34,26 @@ jobs:
       # Install Composer Dependencies (including dev)
       - name: Install Composer Dependencies
         run: composer install --prefer-dist --no-progress --no-interaction
+
+      # Audit Composer Dependencies for Vulnerabilities
+      - name: Audit Composer Dependencies
+        run: composer audit
+
+      # Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Or your preferred Node.js version
+          cache: 'npm'
+
+      # Install NPM Dependencies
+      - name: Install NPM Dependencies
+        run: npm ci # Use ci for faster, more reliable installs in CI
+
+      # Audit NPM Dependencies for Vulnerabilities
+      # You might want to adjust the fail level, e.g., --audit-level=high
+      - name: Audit NPM Dependencies
+        run: npm audit
 
       # Setup Database for CI
       - name: Setup Database
@@ -42,13 +71,13 @@ jobs:
           DB_CONNECTION: sqlite
           DB_DATABASE: database/database.sqlite # Use relative path for CI
 
-      # Fix Code Style (Pint)
-      - name: Fix Code Style (Pint)
-        run: composer fix
-
-      # Run Pint Linter Check (Uses 'lint' script from composer.json)
+      # Check Code Style (Pint) (Uses 'lint' script from composer.json)
       - name: Check Code Style (Pint)
         run: composer lint
+
+      # Check Blade Formatting (Prettier)
+      - name: Check Blade Formatting (Prettier)
+        run: npx prettier --check '**/*.blade.php'
 
       # Run Static Analysis (Uses 'analyse' script from composer.json)
       - name: Static Analysis (PHPStan)

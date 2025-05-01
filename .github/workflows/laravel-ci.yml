@@ -109,40 +109,31 @@ jobs:
   audit-npm:
     runs-on: ubuntu-latest
     needs: setup
-    if: needs.setup.outputs.npm-installed == 'true' # Run only if npm install happened in setup
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Remove node_modules download
-      # - name: Download node_modules artifact
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: node_modules-${{ github.sha }}
-      #     path: node_modules
-
-      - name: Setup Node.js # Needed for prettier
+      # Add Node.js setup steps for npm audit
+      - name: Setup Node.js for NPM Audit
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # Restore cache if needed (optional but good practice)
-      - name: Cache Node modules
-        id: npm-cache # Use a different ID if needed, or reuse if scope matches setup
+      - name: Cache Node modules for NPM Audit
+        id: npm-cache-audit # Use a distinct ID
         uses: actions/cache@v4
         with:
-          path: ~/.npm # Cache npm's internal cache
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          path: ~/.npm
+          key: ${{ runner.os }}-node-audit-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
+            ${{ runner.os }}-node-audit-
             ${{ runner.os }}-node-
 
-      # Install node modules
-      - name: Install NPM Dependencies for Blade Style Check
+      - name: Install NPM Dependencies for Audit
         run: npm ci
 
-      - name: Run Prettier Blade Check
-        # Use npx with the explicit path to the locally installed prettier
-        run: npx ./node_modules/.bin/prettier --check "**/*.blade.php" --plugin=prettier-plugin-blade
+      - name: Run NPM Audit
+        run: npm audit --omit=dev # Adjust level as needed (e.g., --audit-level=high)
 
   # --- Code Style --- #
 

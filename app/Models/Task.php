@@ -16,6 +16,28 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $proofhub_task_id
  * @property string $proofhub_project_id
  * @property string $name
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \App\Models\Project $project
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Project> $projects
+ * @property-read int|null $projects_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\TimeEntry> $timeEntries
+ * @property-read int|null $time_entries_count
+ * @property-read \App\Models\TaskUser|null $pivot
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\User> $users
+ * @property-read int|null $users_count
+ *
+ * @method static \Database\Factories\TaskFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Task newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Task newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Task query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Task whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Task whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Task whereProofhubProjectId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Task whereProofhubTaskId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Task whereUpdatedAt($value)
+ *
+ * @mixin \Eloquent
  */
 class Task extends Model
 {

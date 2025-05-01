@@ -26,6 +26,22 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property \Carbon\Carbon|null $created_at When record was created locally
  * @property \Carbon\Carbon|null $updated_at When record was last updated locally
  * @property-read \App\Models\User $user The user this attendance record belongs to
+ *
+ * @method static \Database\Factories\UserAttendanceFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserAttendance newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserAttendance newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserAttendance query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserAttendance whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserAttendance whereDate($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserAttendance whereEnd($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserAttendance whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserAttendance whereIsRemote($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserAttendance wherePresenceSeconds($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserAttendance whereStart($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserAttendance whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserAttendance whereUserId($value)
+ *
+ * @mixin \Eloquent
  */
 class UserAttendance extends Model
 {

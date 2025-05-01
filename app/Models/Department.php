@@ -19,6 +19,23 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property \Carbon\Carbon|null $created_at When record was created locally
  * @property \Carbon\Carbon|null $updated_at When record was last updated locally
  * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\User[] $users Employees in this department
+ * @property int|null $odoo_manager_employee_id
+ * @property int|null $odoo_parent_department_id
+ * @property-read int|null $users_count
+ *
+ * @method static \Database\Factories\DepartmentFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Department newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Department newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Department query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Department whereActive($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Department whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Department whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Department whereOdooDepartmentId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Department whereOdooManagerEmployeeId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Department whereOdooParentDepartmentId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Department whereUpdatedAt($value)
+ *
+ * @mixin \Eloquent
  */
 class Department extends Model
 {
@@ -66,14 +83,25 @@ class Department extends Model
      *
      * @var array
      */
-    protected $fillable = ['odoo_department_id', 'name', 'active'];
+    protected $fillable = [
+        'odoo_department_id',
+        'name',
+        'active',
+        'odoo_manager_employee_id',
+        'odoo_parent_department_id',
+    ];
 
     /**
      * The attributes that should be cast to native types.
      *
      * @var array
      */
-    protected $casts = ['active' => 'boolean'];
+    protected $casts = [
+        'odoo_department_id' => 'integer',
+        'active' => 'boolean',
+        'odoo_manager_employee_id' => 'integer',
+        'odoo_parent_department_id' => 'integer',
+    ];
 
     /**
      * Get the users associated with the department.

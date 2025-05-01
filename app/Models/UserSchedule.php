@@ -10,6 +10,31 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Class UserSchedule
  *
  * Represents an employee's schedule assignment history.
+ *
+ * @property int $id
+ * @property int $user_id
+ * @property int $odoo_schedule_id
+ * @property \Illuminate\Support\Carbon $effective_from
+ * @property \Illuminate\Support\Carbon|null $effective_until
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read string|null $duration
+ * @property-read \App\Models\Schedule $schedule
+ * @property-read \App\Models\User $user
+ *
+ * @method static \Database\Factories\UserScheduleFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserSchedule newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserSchedule newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserSchedule query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserSchedule whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserSchedule whereEffectiveFrom($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserSchedule whereEffectiveUntil($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserSchedule whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserSchedule whereOdooScheduleId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserSchedule whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserSchedule whereUserId($value)
+ *
+ * @mixin \Eloquent
  */
 class UserSchedule extends Model
 {

@@ -21,6 +21,20 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property \Carbon\Carbon|null $updated_at When record was last updated
  * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\ScheduleDetail[] $scheduleDetails Daily time slots in this schedule
  * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\UserSchedule[] $userSchedules User assignments to this schedule
+ * @property-read int|null $schedule_details_count
+ * @property-read int|null $user_schedules_count
+ *
+ * @method static \Database\Factories\ScheduleFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Schedule newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Schedule newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Schedule query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Schedule whereAverageHoursDay($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Schedule whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Schedule whereDescription($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Schedule whereOdooScheduleId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Schedule whereUpdatedAt($value)
+ *
+ * @mixin \Eloquent
  */
 class Schedule extends Model
 {

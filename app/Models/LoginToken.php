@@ -15,6 +15,22 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $token
  * @property \Carbon\Carbon $expires_at
  * @property bool $remember
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \App\Models\User $user
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|LoginToken newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|LoginToken newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|LoginToken query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|LoginToken whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|LoginToken whereExpiresAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|LoginToken whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|LoginToken whereRemember($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|LoginToken whereToken($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|LoginToken whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|LoginToken whereUserId($value)
+ *
+ * @mixin \Eloquent
  */
 class LoginToken extends Model
 {

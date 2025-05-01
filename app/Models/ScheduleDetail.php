@@ -17,6 +17,26 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $day_period
  * @property string $start
  * @property string $end
+ * @property int $odoo_detail_id
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \App\Models\Schedule $schedule
+ *
+ * @method static \Database\Factories\ScheduleDetailFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail whereDayPeriod($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail whereEnd($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail whereOdooDetailId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail whereOdooScheduleId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail whereStart($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail whereWeekday($value)
+ *
+ * @mixin \Eloquent
  */
 class ScheduleDetail extends Model
 {

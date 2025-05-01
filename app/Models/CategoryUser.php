@@ -11,6 +11,18 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  *
  * @property int $user_id
  * @property int $category_id
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CategoryUser newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CategoryUser newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CategoryUser query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CategoryUser whereCategoryId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CategoryUser whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CategoryUser whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|CategoryUser whereUserId($value)
+ *
+ * @mixin \Eloquent
  */
 class CategoryUser extends Pivot
 {

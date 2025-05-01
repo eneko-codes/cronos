@@ -11,6 +11,20 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  *
  * @property int $user_id
  * @property string $proofhub_project_id
+ * @property int $id
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProjectUser newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProjectUser newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProjectUser query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProjectUser whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProjectUser whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProjectUser whereProofhubProjectId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProjectUser whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProjectUser whereUserId($value)
+ *
+ * @mixin \Eloquent
  */
 class ProjectUser extends Pivot
 {

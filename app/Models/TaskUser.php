@@ -11,6 +11,20 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  *
  * @property int $user_id
  * @property int $proofhub_task_id
+ * @property int $id
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TaskUser newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TaskUser newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TaskUser query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TaskUser whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TaskUser whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TaskUser whereProofhubTaskId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TaskUser whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TaskUser whereUserId($value)
+ *
+ * @mixin \Eloquent
  */
 class TaskUser extends Pivot
 {

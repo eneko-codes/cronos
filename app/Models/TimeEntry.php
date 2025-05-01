@@ -29,6 +29,25 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property-read \App\Models\User $user The user who logged this time
  * @property-read \App\Models\Project $project The project this time entry belongs to
  * @property-read \App\Models\Task|null $task The task this time entry is associated with (if any)
+ * @property int $duration_seconds
+ *
+ * @method static \Database\Factories\TimeEntryFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TimeEntry newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TimeEntry newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TimeEntry query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TimeEntry whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TimeEntry whereDate($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TimeEntry whereDescription($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TimeEntry whereDurationSeconds($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TimeEntry whereProofhubCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TimeEntry whereProofhubProjectId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TimeEntry whereProofhubTaskId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TimeEntry whereProofhubTimeEntryId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TimeEntry whereStatus($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TimeEntry whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TimeEntry whereUserId($value)
+ *
+ * @mixin \Eloquent
  */
 class TimeEntry extends Model
 {

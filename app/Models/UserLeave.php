@@ -30,6 +30,33 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property float|null $request_hour_to Ending hour for partial day leaves
  * @property \Carbon\Carbon|null $created_at When record was created
  * @property \Carbon\Carbon|null $updated_at When record was last updated
+ * @property-read \App\Models\Category|null $category
+ * @property-read \App\Models\Department|null $department
+ * @property-read \App\Models\LeaveType|null $leaveType
+ * @property-read \App\Models\User|null $user
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserLeave activeBetween(\Carbon\CarbonInterface $start, \Carbon\CarbonInterface $end)
+ * @method static \Database\Factories\UserLeaveFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserLeave newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserLeave newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserLeave query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserLeave whereCategoryId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserLeave whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserLeave whereDepartmentId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserLeave whereDurationDays($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserLeave whereEndDate($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserLeave whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserLeave whereLeaveTypeId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserLeave whereOdooLeaveId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserLeave whereRequestHourFrom($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserLeave whereRequestHourTo($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserLeave whereStartDate($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserLeave whereStatus($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserLeave whereType($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserLeave whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserLeave whereUserId($value)
+ *
+ * @mixin \Eloquent
  */
 class UserLeave extends Model
 {

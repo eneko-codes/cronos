@@ -14,6 +14,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $user_id
  * @property array $payload
  * @property int $last_activity
+ * @property string|null $ip_address
+ * @property string|null $user_agent
+ * @property-read \App\Models\User|null $user
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Session newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Session newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Session query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Session whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Session whereIpAddress($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Session whereLastActivity($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Session wherePayload($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Session whereUserAgent($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Session whereUserId($value)
+ *
+ * @mixin \Eloquent
  */
 class Session extends Model
 {

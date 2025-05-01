@@ -6,6 +6,31 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int $user_id
+ * @property bool $mute_all
+ * @property bool $schedule_change
+ * @property bool $weekly_user_report
+ * @property bool $leave_reminder
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \App\Models\User $user
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserNotificationPreference newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserNotificationPreference newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserNotificationPreference query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserNotificationPreference whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserNotificationPreference whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserNotificationPreference whereLeaveReminder($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserNotificationPreference whereMuteAll($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserNotificationPreference whereScheduleChange($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserNotificationPreference whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserNotificationPreference whereUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|UserNotificationPreference whereWeeklyUserReport($value)
+ *
+ * @mixin \Eloquent
+ */
 class UserNotificationPreference extends Model
 {
     use HasFactory;

@@ -1,0 +1,25 @@
+version: 2
+updates:
+  # Enable version updates for Composer (PHP dependencies)
+  - package-ecosystem: 'composer'
+    directory: '/' # Location of composer.json
+    schedule:
+      interval: 'daily'
+    # Optional: Add labels, assignees, reviewers, milestone
+    # labels:
+    #   - "php"
+    #   - "dependencies"
+    # assignees:
+    #   - "your-github-username"
+
+  # Enable version updates for npm (JavaScript dependencies)
+  - package-ecosystem: 'npm'
+    directory: '/' # Location of package.json
+    schedule:
+      interval: 'daily'
+    # Optional: Add labels, assignees, reviewers, milestone
+    # labels:
+    #  - "javascript"
+    #  - "dependencies"
+    # assignees:
+    #  - "your-github-username"

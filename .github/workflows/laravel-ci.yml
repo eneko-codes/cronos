@@ -334,6 +334,13 @@ jobs:
 
       - name: Create SQLite Database # Ensure DB file exists
         run: touch database/database.sqlite
+
+      - name: Run Migrations for Tests
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/database.sqlite
+        run: php artisan migrate --force # Use --force for non-interactive environments
+
       # --- End minimal setup --- #
 
       - name: Execute tests (Pest)

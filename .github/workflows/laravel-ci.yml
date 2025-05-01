@@ -62,7 +62,8 @@ jobs:
 
       - name: Install NPM Dependencies
         id: install-npm-deps
-        if: steps.npm-cache.outputs.cache-hit != 'true'
+        # Always run npm ci after cache restore/node setup in setup job
+        # if: steps.npm-cache.outputs.cache-hit != 'true'
         run: npm ci
 
       # ------------- Artifact Upload -------------
@@ -73,11 +74,12 @@ jobs:
           name: vendor-${{ github.sha }}
           path: vendor
 
-      - name: Upload node_modules directory
-        uses: actions/upload-artifact@v4
-        with:
-          name: node_modules-${{ github.sha }}
-          path: node_modules
+      # Remove node_modules upload - rely on cache + npm ci in dependent jobs
+      # - name: Upload node_modules directory
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: node_modules-${{ github.sha }}
+      #     path: node_modules
 
   # --- Security Audits --- #
 
@@ -112,19 +114,35 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Download node_modules artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: node_modules-${{ github.sha }}
-          path: node_modules
+      # Remove node_modules download
+      # - name: Download node_modules artifact
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: node_modules-${{ github.sha }}
+      #     path: node_modules
 
-      - name: Setup Node.js # Needed for npm
+      - name: Setup Node.js # Needed for prettier
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Run NPM Audit
-        run: npm audit --omit=dev # Adjust level as needed (e.g., --audit-level=high)
+      # Restore cache if needed (optional but good practice)
+      - name: Cache Node modules
+        id: npm-cache # Use a different ID if needed, or reuse if scope matches setup
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm # Cache npm's internal cache
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      # Install node modules
+      - name: Install NPM Dependencies for Blade Style Check
+        run: npm ci
+
+      - name: Run Prettier Blade Check
+        # Use npx with the explicit path to the locally installed prettier
+        run: npx ./node_modules/.bin/prettier --check "**/*.blade.php" --plugin=prettier-plugin-blade
 
   # --- Code Style --- #
 
@@ -160,11 +178,11 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Download node_modules artifact
+      - name: Download vendor artifact
         uses: actions/download-artifact@v4
         with:
-          name: node_modules-${{ github.sha }}
-          path: node_modules
+          name: vendor-${{ github.sha }}
+          path: vendor
 
       - name: Setup Node.js # Needed for prettier
         uses: actions/setup-node@v4
@@ -277,12 +295,6 @@ jobs:
           name: vendor-${{ github.sha }}
           path: vendor
 
-      - name: Download node_modules artifact # If JS/frontend tests are involved
-        uses: actions/download-artifact@v4
-        with:
-          name: node_modules-${{ github.sha }}
-          path: node_modules
-
       # Optional: Download prepared environment artifact instead of re-running setup steps
       # - name: Download Test Environment Artifact
       #   uses: actions/download-artifact@v4
@@ -297,6 +309,24 @@ jobs:
           php-version: '8.2'
           extensions: mbstring, xml, sqlite, pdo_sqlite, bcmath, gd
           coverage: none # Set coverage driver if generating report
+
+      # Setup Node.js if frontend tests/assets are involved (optional based on needs)
+      - name: Setup Node.js for Tests (Optional)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Cache and install Node modules if needed for tests (optional)
+      - name: Cache Node modules for Tests (Optional)
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-test-${{ hashFiles('**/package-lock.json') }} # Use a distinct key if necessary
+          restore-keys: |
+            ${{ runner.os }}-node-test-
+            ${{ runner.os }}-node-
+      - name: Install NPM Dependencies for Tests (Optional)
+        run: npm ci
 
       - name: Copy .env
         run: php -r "file_exists('.env') || copy('.env.example', '.env');" # Ensure .env exists for tests

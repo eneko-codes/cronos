@@ -22,9 +22,9 @@ jobs:
           extensions: mbstring, xml, sqlite, pdo_sqlite, bcmath, gd # Common extensions, adjust if needed
           coverage: none # Set to xdebug or pcov if you want coverage in the future
 
-      # Install Composer Dependencies
+      # Install Composer Dependencies (including dev)
       - name: Install Composer Dependencies
-        run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+        run: composer install --prefer-dist --no-progress --no-interaction
 
       # Copy environment file and generate key
       - name: Setup Laravel Environment
@@ -32,9 +32,9 @@ jobs:
           php -r "file_exists('.env') || copy('.env.example', '.env');"
           php artisan key:generate
 
-      # Re-run post-install scripts (like package discovery)
-      - name: Run Composer Scripts
-        run: composer run-script post-autoload-dump --no-dev
+      # Generate IDE Helper files
+      - name: Generate IDE Helper files
+        run: composer ide-setup
 
       # Run Pint Linter Check (Uses 'lint' script from composer.json)
       - name: Check Code Style (Pint)

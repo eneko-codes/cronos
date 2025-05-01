@@ -147,6 +147,9 @@ jobs:
           php-version: '8.2'
           coverage: none
 
+      - name: Make pint executable
+        run: chmod +x ./vendor/bin/pint
+
       - name: Run Laravel Pint (Check Only)
         run: ./vendor/bin/pint --test
 
@@ -169,8 +172,8 @@ jobs:
           node-version: '20'
 
       - name: Run Prettier Blade Check
-        # Use npx to run the locally installed prettier
-        run: npx prettier --check "**/*.blade.php" --plugin=prettier-plugin-blade
+        # Use npx with the explicit path to the locally installed prettier
+        run: npx ./node_modules/.bin/prettier --check "**/*.blade.php" --plugin=prettier-plugin-blade
 
   # --- Static Analysis --- #
 
@@ -193,6 +196,9 @@ jobs:
           php-version: '8.2'
           extensions: mbstring, xml, sqlite, pdo_sqlite, bcmath, gd # Ensure all extensions needed by your app/phpstan are here
           coverage: none
+
+      - name: Make phpstan executable
+        run: chmod +x ./vendor/bin/phpstan
 
       - name: Run PHPStan
         run: ./vendor/bin/phpstan analyse --memory-limit=2G # Adjust level/paths in phpstan.neon
@@ -294,6 +300,9 @@ jobs:
 
       - name: Copy .env
         run: php -r "file_exists('.env') || copy('.env.example', '.env');" # Ensure .env exists for tests
+
+      - name: Generate Application Key # Required for tests that use encryption/sessions
+        run: php artisan key:generate
 
       - name: Create SQLite Database # Ensure DB file exists
         run: touch database/database.sqlite

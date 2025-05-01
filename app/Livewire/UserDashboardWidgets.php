@@ -2,20 +2,22 @@
 
 namespace App\Livewire;
 
+use App\Models\TimeEntry;
 use App\Models\UserAttendance;
 use App\Models\UserLeave;
 use App\Models\UserSchedule;
-use App\Models\TimeEntry;
 use Carbon\Carbon;
-use Carbon\CarbonInterval;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 class UserDashboardWidgets extends Component
 {
     public ?array $todaysSchedule = null;
+
     public ?array $todaysAttendance = null;
+
     public ?string $todaysLoggedTime = '0h 0m';
+
     public ?UserLeave $upcomingLeave = null;
 
     // Reusable helper from UserDashboard, consider refactoring to a Trait or Service if used more widely
@@ -26,6 +28,7 @@ class UserDashboardWidgets extends Component
         }
         $totalHours = floor($minutes / 60);
         $remainingMinutes = $minutes % 60;
+
         return sprintf('%dh %dm', $totalHours, $remainingMinutes);
     }
 
@@ -36,6 +39,7 @@ class UserDashboardWidgets extends Component
         sscanf($duration, '%dh %dm', $hours, $minutes);
         $hours = (int) $hours;
         $minutes = (int) $minutes;
+
         return $hours * 60 + $minutes;
     }
 
@@ -50,7 +54,7 @@ class UserDashboardWidgets extends Component
             ->where('effective_from', '<=', $today)
             ->where(function ($query) use ($today) {
                 $query->whereNull('effective_until')
-                      ->orWhere('effective_until', '>=', $today);
+                    ->orWhere('effective_until', '>=', $today);
             })
             ->with('schedule:id,odoo_schedule_id,description') // Just load schedule with needed fields
             ->first();
@@ -63,17 +67,17 @@ class UserDashboardWidgets extends Component
             $details = $schedule->scheduleDetails()->where('weekday', $weekday)->get();
 
             $totalMinutes = 0;
-             if ($details->isNotEmpty()){
-                 foreach ($details->sortBy('start') as $detail) {
+            if ($details->isNotEmpty()) {
+                foreach ($details->sortBy('start') as $detail) {
                     $start = Carbon::parse($detail->start)->setTimezone('UTC');
                     $end = Carbon::parse($detail->end)->setTimezone('UTC');
                     $minutesForSlot = $start->diffInMinutes($end);
                     $totalMinutes += $minutesForSlot;
                 }
-             }
+            }
 
-             // Set schedule data
-             $this->todaysSchedule = [
+            // Set schedule data
+            $this->todaysSchedule = [
                 'duration' => $this->formatMinutesToHoursMinutes($totalMinutes),
                 'name' => $schedule->description ?? 'Default Schedule',
             ];
@@ -97,41 +101,38 @@ class UserDashboardWidgets extends Component
                 $status = 'In Office - Clocked Out';
                 $start = Carbon::parse($attendance->start);
                 $end = Carbon::parse($attendance->end);
-                $timeInfo = $start->format('H:i') . ' - ' . $end->format('H:i');
+                $timeInfo = $start->format('H:i').' - '.$end->format('H:i');
                 $durationMinutes = $start->diffInMinutes($end);
-            } elseif ($attendance->start && !$attendance->end) {
-                 $status = 'In Office - Clocked In';
-                 $start = Carbon::parse($attendance->start);
-                 $timeInfo = 'Since ' . $start->format('H:i');
-                 // Duration might be presence_seconds if available, otherwise maybe calculate from start to now? Let's use presence_seconds if available
-                 $durationMinutes = round(($attendance->presence_seconds ?? 0) / 60);
-            } elseif (!$attendance->start && !$attendance->end && isset($attendance->presence_seconds) && $attendance->presence_seconds > 0){
-                 // Fallback if only presence_seconds is available (maybe from DeskTime sync without clock-in/out?)
-                 $status = 'Present (System)';
-                 $durationMinutes = round($attendance->presence_seconds / 60);
+            } elseif ($attendance->start && ! $attendance->end) {
+                $status = 'In Office - Clocked In';
+                $start = Carbon::parse($attendance->start);
+                $timeInfo = 'Since '.$start->format('H:i');
+                // Duration might be presence_seconds if available, otherwise maybe calculate from start to now? Let's use presence_seconds if available
+                $durationMinutes = round(($attendance->presence_seconds ?? 0) / 60);
+            } elseif (! $attendance->start && ! $attendance->end && isset($attendance->presence_seconds) && $attendance->presence_seconds > 0) {
+                // Fallback if only presence_seconds is available (maybe from DeskTime sync without clock-in/out?)
+                $status = 'Present (System)';
+                $durationMinutes = round($attendance->presence_seconds / 60);
             } else {
-                 $status = 'No Activity Recorded';
+                $status = 'No Activity Recorded';
             }
-
 
             $this->todaysAttendance = [
                 'status' => $status,
                 'time_info' => $timeInfo,
                 'duration' => $this->formatMinutesToHoursMinutes($durationMinutes),
                 'is_remote' => $attendance->is_remote,
-                'clocked_in' => $attendance->start && !$attendance->end, // Flag if currently clocked in
+                'clocked_in' => $attendance->start && ! $attendance->end, // Flag if currently clocked in
             ];
         } else {
-             $this->todaysAttendance = ['status' => 'Not Clocked In', 'time_info' => null, 'duration' => '0h 0m', 'is_remote' => false, 'clocked_in' => false];
+            $this->todaysAttendance = ['status' => 'Not Clocked In', 'time_info' => null, 'duration' => '0h 0m', 'is_remote' => false, 'clocked_in' => false];
         }
-
 
         // 3. Today's Logged Time
         $totalSecondsToday = TimeEntry::where('user_id', $user->id)
             ->whereDate('date', $today)
             ->sum('duration_seconds');
         $this->todaysLoggedTime = $this->formatMinutesToHoursMinutes(round($totalSecondsToday / 60));
-
 
         // 4. Upcoming Leave (Next 30 days)
         $this->upcomingLeave = UserLeave::where('user_id', $user->id)
@@ -147,4 +148,4 @@ class UserDashboardWidgets extends Component
     {
         return view('livewire.user-dashboard-widgets');
     }
-} 
+}

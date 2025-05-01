@@ -1,0 +1,49 @@
+name: Laravel CI
+
+on:
+  push:
+    branches: ['main']
+  pull_request:
+    branches: ['main']
+
+jobs:
+  laravel-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+
+      # Setup PHP Action - Installs PHP and necessary extensions
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2' # Match your composer.json requirement
+          extensions: mbstring, xml, sqlite, pdo_sqlite, bcmath, gd # Common extensions, adjust if needed
+          coverage: none # Set to xdebug or pcov if you want coverage in the future
+
+      # Copy environment file and generate key
+      - name: Setup Laravel Environment
+        run: |
+          php -r "file_exists('.env') || copy('.env.example', '.env');"
+          php artisan key:generate
+
+      # Install Composer Dependencies
+      - name: Install Dependencies
+        run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+
+      # Re-run post-install scripts (like package discovery)
+      - name: Run Composer Scripts
+        run: composer run-script post-autoload-dump --no-dev
+
+      # Run Pint Linter Check (Uses 'lint' script from composer.json)
+      - name: Check Code Style (Pint)
+        run: composer lint
+
+      # Run Static Analysis (Uses 'analyse' script from composer.json)
+      - name: Static Analysis (PHPStan)
+        run: composer analyse
+
+      # Run Tests (Uses 'test' script from composer.json)
+      - name: Run Tests (Pest)
+        run: composer test

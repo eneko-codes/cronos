@@ -1,0 +1,23 @@
+includes:
+    - ./vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 5
+
+    paths:
+        - app/
+        - database/
+        - routes/
+        - config/
+
+    # Level 5 is a good starting point
+    # level: 5
+
+    # Optional: Ignore specific errors or paths if needed
+    # ignoreErrors:
+    #     - '#Call to an undefined method.*#'
+    # excludePaths:
+    #     - ./*/*/File_/*.php
+
+    # Optional: Specify PHP version if not automatically detected
+    # phpVersion: 80200 

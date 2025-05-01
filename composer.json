@@ -14,7 +14,9 @@
     "livewire/livewire": "^3.0"
   },
   "require-dev": {
+    "barryvdh/laravel-ide-helper": "^3.5",
     "fakerphp/faker": "^1.23",
+    "larastan/larastan": "^3.4",
     "laravel/pail": "^1.1",
     "laravel/pint": "*",
     "laravel/telescope": "^5.7",
@@ -22,7 +24,8 @@
     "mockery/mockery": "^1.6",
     "nunomaduro/collision": "^8.1",
     "pestphp/pest": "^3.4",
-    "pestphp/pest-plugin-laravel": "^3.0"
+    "pestphp/pest-plugin-laravel": "^3.0",
+    "phpstan/phpstan": "^2.1"
   },
   "autoload": {
     "psr-4": {
@@ -41,22 +44,58 @@
       "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
       "@php artisan package:discover --ansi"
     ],
+    "post-autoload-dump:comment": "Discover packages and optimize autoloader after installs/updates",
     "post-update-cmd": [
       "@php artisan vendor:publish --tag=laravel-assets --ansi --force",
       "@php artisan vendor:publish --tag=livewire:assets --ansi --force"
     ],
+    "post-update-cmd:comment": "Publish vendor assets after updates",
     "post-root-package-install": [
       "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
     ],
+    "post-root-package-install:comment": "Copy .env.example to .env if it doesn't exist",
     "post-create-project-cmd": [
       "@php artisan key:generate --ansi",
       "@php -r \"file_exists('database/database.sqlite') || touch('database/database.sqlite');\"",
       "@php artisan migrate --graceful --ansi"
     ],
+    "post-create-project-cmd:comment": "Run initial setup commands after creating a new project",
     "dev": [
       "Composer\\Config::disableProcessTimeout",
       "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"php artisan pail\" \"npm run dev\" --names=server,queue,logs,vite"
-    ]
+    ],
+    "dev:comment": "Run development server, queue, logs, and Vite concurrently",
+    "analyse": [
+      "vendor/bin/phpstan analyse --memory-limit=1G"
+    ],
+    "analyse:comment": "Run PHPStan static analysis (level 5)",
+    "ide-setup": [
+      "@php artisan ide-helper:generate --no-interaction",
+      "@php artisan ide-helper:meta --no-interaction",
+      "@php artisan ide-helper:models --write --no-interaction"
+    ],
+    "ide-setup:comment": "Generate Laravel IDE helper files",
+    "test": [
+      "vendor/bin/pest"
+    ],
+    "test:comment": "Run all tests using Pest",
+    "test-coverage": [
+      "vendor/bin/pest --coverage"
+    ],
+    "test-coverage:comment": "Run tests and generate coverage report (requires Xdebug)",
+    "lint": [
+      "vendor/bin/pint --test"
+    ],
+    "lint:comment": "Check code style using Pint (no changes)",
+    "fix": [
+      "vendor/bin/pint"
+    ],
+    "fix:comment": "Automatically fix code style issues using Pint",
+    "check": [
+      "@composer lint",
+      "@composer analyse"
+    ],
+    "check:comment": "Run code style check and static analysis"
   },
   "extra": {
     "laravel": {

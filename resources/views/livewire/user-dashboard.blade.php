@@ -1,4 +1,27 @@
 <div class="flex flex-col gap-5">
+  <!-- Back button -->
+  @if ($isAdmin && $isViewingSpecificUser)
+    <a
+      href="{{ route('users.list') }}"
+      wire:navigate
+      class="inline-flex h-fit w-fit flex-row items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-gray-200/75 px-2 py-1 text-xs font-semibold text-gray-800 shadow-sm hover:bg-gray-200 dark:bg-gray-200 dark:text-gray-800 dark:hover:bg-gray-100"
+    >
+      <svg
+        class="size-4"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 20 20"
+        fill="currentColor"
+      >
+        <path
+          fill-rule="evenodd"
+          d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
+          clip-rule="evenodd"
+        />
+      </svg>
+      Back to Users
+    </a>
+  @endif
+
   <!-- Header Section -->
   <div class="flex flex-row items-center gap-2">
     <h1 class="text-xl font-bold">{{ $user->name }}</h1>

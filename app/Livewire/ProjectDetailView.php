@@ -55,7 +55,7 @@ class ProjectDetailView extends Component
         $this->projectTimeEntries = $project->timeEntries;
 
         // Initialize with an empty Eloquent Collection to match the type hint
-        $this->taskTimeEntries = new \Illuminate\Database\Eloquent\Collection;
+        $this->taskTimeEntries = new Collection;
     }
 
     /**

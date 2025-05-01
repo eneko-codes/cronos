@@ -80,6 +80,11 @@ class UserDashboard extends Component
     public bool $isAdmin = false;
 
     /**
+     * Flag indicating if we are viewing a specific user via ID, not the authenticated user's own dashboard.
+     */
+    public bool $isViewingSpecificUser = false;
+
+    /**
      * Indicates if notifications are enabled globally.
      */
     public bool $isGloballyEnabled = true;
@@ -99,6 +104,8 @@ class UserDashboard extends Component
      */
     public function mount($id = null): void
     {
+        $this->isViewingSpecificUser = $id !== null;
+
         if ($id !== null) {
             $this->user = User::with([
                 'userSchedules.schedule.scheduleDetails',
@@ -120,6 +127,9 @@ class UserDashboard extends Component
                 'timeEntries.task',
             ]);
         }
+
+        // Check if the authenticated user is an admin
+        $this->isAdmin = Auth::check() && Auth::user()->is_admin;
 
         // Always start with the current period based on view mode
         $this->setPeriodStart(

@@ -9,9 +9,9 @@
     @if ($isLoading)
       <x-spinner size="4" />
       <span>
-                {{ $syncType === 'users' ? 'Syncing Users...' : 'Syncing Data...' }}
-                ({{ $completedJobs }}/{{ $total_jobs }})
-            </span>
+        {{ $syncType === 'users' ? 'Syncing Users...' : 'Syncing Data...' }}
+        ({{ $completedJobs }}/{{ $total_jobs }})
+      </span>
     @else
       <svg
         xmlns="http://www.w3.org/2000/svg"

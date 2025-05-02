@@ -8,16 +8,73 @@ on:
 
 jobs:
   setup:
+    # This job now primarily focuses on initial validation and setting up caches if needed.
+    # Dependent jobs will handle their own installs using the cache.
     runs-on: ubuntu-latest
-    outputs:
-      # Output flags to indicate setup completion for dependency caching
-      composer-installed: ${{ steps.install-composer-deps.outcome == 'success' }}
-      npm-installed: ${{ steps.install-npm-deps.outcome == 'success' }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
       # ------------- Composer Setup -------------
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, sqlite, pdo_sqlite, bcmath, gd
+          coverage: none
+
+      - name: Cache Composer dependencies
+        id: composer-cache
+        uses: actions/cache@v4
+        with:
+          path: vendor # Cache the vendor directory
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-
+
+      - name: Validate composer.json and composer.lock
+        run: composer validate --strict
+
+      - name: Install Composer Dependencies (if cache missed)
+        # This primarily warms the cache if it's missing. Subsequent jobs will run install again.
+        if: steps.composer-cache.outputs.cache-hit != 'true'
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      # ------------- NPM Setup -------------
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache Node modules
+        id: npm-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm # Cache the global npm cache
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install NPM Dependencies (if cache missed)
+        # This primarily warms the cache. Subsequent jobs run npm ci.
+        if: steps.npm-cache.outputs.cache-hit != 'true'
+        run: npm ci
+
+  # --- Security Audits --- #
+
+  audit-composer:
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
       - name: Cache Composer dependencies
         id: composer-cache
         uses: actions/cache@v4
@@ -27,82 +84,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-php-
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.2'
-          extensions: mbstring, xml, sqlite, pdo_sqlite, bcmath, gd
-          coverage: none
-
-      - name: Validate composer.json and composer.lock
-        run: composer validate --strict
-
       - name: Install Composer Dependencies
-        id: install-composer-deps
-        if: steps.composer-cache.outputs.cache-hit != 'true'
-        run: composer install --prefer-dist --no-progress
-
-      - name: Show Composer Outdated (Info Only)
-        run: composer outdated -D --strict # Use -D for direct dependencies only
-
-      # ------------- NPM Setup -------------
-      - name: Cache Node modules
-        id: npm-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20' # Specify your Node.js version
-
-      - name: Install NPM Dependencies
-        id: install-npm-deps
-        # Always run npm ci after cache restore/node setup in setup job
-        # if: steps.npm-cache.outputs.cache-hit != 'true'
-        run: npm ci
-
-      # ------------- Artifact Upload -------------
-      # Upload vendor and node_modules for subsequent jobs
-      - name: Upload vendor directory
-        uses: actions/upload-artifact@v4
-        with:
-          name: vendor-${{ github.sha }}
-          path: vendor
-
-      # Remove node_modules upload - rely on cache + npm ci in dependent jobs
-      # - name: Upload node_modules directory
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: node_modules-${{ github.sha }}
-      #     path: node_modules
-
-  # --- Security Audits --- #
-
-  audit-composer:
-    runs-on: ubuntu-latest
-    needs: setup
-    # Always run audit, dependencies are available from cache or install
-    # if: needs.setup.outputs.composer-installed == 'true'
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Download vendor artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: vendor-${{ github.sha }}
-          path: vendor
-
-      - name: Setup PHP # Needed for composer
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.2'
-          coverage: none
+        run: composer install --prefer-dist --no-progress --no-interaction
 
       - name: Run Composer Audit
         run: composer audit --locked
@@ -114,27 +97,25 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Add Node.js setup steps for npm audit
-      - name: Setup Node.js for NPM Audit
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Cache Node modules for NPM Audit
-        id: npm-cache-audit # Use a distinct ID
+      - name: Cache Node modules
+        id: npm-cache
         uses: actions/cache@v4
         with:
           path: ~/.npm
-          key: ${{ runner.os }}-node-audit-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-node-audit-
             ${{ runner.os }}-node-
 
-      - name: Install NPM Dependencies for Audit
+      - name: Install NPM Dependencies
         run: npm ci
 
       - name: Run NPM Audit
-        run: npm audit --omit=dev # Adjust level as needed (e.g., --audit-level=high)
+        run: npm audit --omit=dev
 
   # --- Code Style --- #
 
@@ -145,23 +126,26 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Download vendor artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: vendor-${{ github.sha }}
-          path: vendor
-
-      - name: Setup PHP # Needed for pint
+      - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
           coverage: none
 
-      - name: Make pint executable
-        run: chmod +x ./vendor/bin/pint
+      - name: Cache Composer dependencies
+        id: composer-cache
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-
+
+      - name: Install Composer Dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
 
       - name: Run Laravel Pint (Check Only)
-        run: ./vendor/bin/pint --test
+        run: ./vendor/bin/pint --test # Assumes pint is executable or added to PATH
 
   check-blade-style:
     runs-on: ubuntu-latest
@@ -170,25 +154,24 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Download vendor artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: vendor-${{ github.sha }}
-          path: vendor
-
-      - name: Setup Node.js # Needed for prettier
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Install NPM Dependencies for Blade Style Check
+      - name: Cache Node modules
+        id: npm-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install NPM Dependencies
         run: npm ci
 
-      - name: List node_modules/.bin to verify prettier
-        run: ls -la ./node_modules/.bin
-
       - name: Run Prettier Blade Check
-        # Try running without the explicit path now that npm ci has run
         run: npx prettier --check "**/*.blade.php" --plugin=prettier-plugin-blade
 
   # --- Static Analysis --- #
@@ -200,152 +183,96 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Download vendor artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: vendor-${{ github.sha }}
-          path: vendor
-
-      - name: Setup PHP # Needed for phpstan
+      - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
-          extensions: mbstring, xml, sqlite, pdo_sqlite, bcmath, gd # Ensure all extensions needed by your app/phpstan are here
+          extensions: mbstring, xml, sqlite, pdo_sqlite, bcmath, gd
           coverage: none
 
-      - name: Make phpstan executable
-        run: chmod +x ./vendor/bin/phpstan
+      - name: Cache Composer dependencies
+        id: composer-cache
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-
+
+      - name: Install Composer Dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
 
       - name: Run PHPStan
-        run: ./vendor/bin/phpstan analyse --memory-limit=2G # Adjust level/paths in phpstan.neon
+        run: ./vendor/bin/phpstan analyse --memory-limit=2G
 
   # --- Testing --- #
 
-  prepare-test-environment:
-    runs-on: ubuntu-latest
-    needs: setup
-    outputs:
-      test-env-ready: ${{ steps.generate-key.outcome == 'success' }}
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Download vendor artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: vendor-${{ github.sha }}
-          path: vendor
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.2'
-          extensions: mbstring, xml, sqlite, pdo_sqlite, bcmath, gd
-          coverage: none
-
-      - name: Copy .env
-        run: php -r "file_exists('.env') || copy('.env.example', '.env');"
-
-      - name: Generate Application Key
-        id: generate-key
-        run: php artisan key:generate
-
-      - name: Create SQLite Database
-        run: |
-          mkdir -p database
-          touch database/database.sqlite
-
-      - name: Run Migrations
-        env:
-          DB_CONNECTION: sqlite
-          DB_DATABASE: database/database.sqlite
-        run: php artisan migrate --force # Use --force for non-interactive environments
-
-      # Optional: Run IDE Helper (can be slow, consider if needed in CI)
-      # - name: Generate IDE Helper files
-      #   run: |
-      #     php artisan ide-helper:generate
-      #     php artisan ide-helper:models --nowrite
-      #     php artisan ide-helper:meta
-
-      # Upload the prepared environment (optional, but could speed up test job if needed)
-      # - name: Upload Test Environment Artifact
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: test-env-${{ github.sha }}
-      #     path: |
-      #       .
-      #       !vendor/
-      #       !node_modules/
-
   run-tests:
     runs-on: ubuntu-latest
-    needs: prepare-test-environment
-    if: needs.prepare-test-environment.outputs.test-env-ready == 'true'
+    # Depends only on setup now, as it handles its own environment prep
+    needs: setup
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Download artifacts needed for testing
-      - name: Download vendor artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: vendor-${{ github.sha }}
-          path: vendor
-
-      # Optional: Download prepared environment artifact instead of re-running setup steps
-      # - name: Download Test Environment Artifact
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: test-env-${{ github.sha }}
-      #     path: .
-
-      # --- Re-run minimal setup if not using test-env artifact ---
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
           extensions: mbstring, xml, sqlite, pdo_sqlite, bcmath, gd
-          coverage: none # Set coverage driver if generating report
+          coverage: none # Adjust if generating coverage report
 
-      # Setup Node.js if frontend tests/assets are involved (optional based on needs)
+      - name: Cache Composer dependencies
+        id: composer-cache
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-
+
+      - name: Install Composer Dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      # Optional Node setup for tests if frontend assets/tests are needed
       - name: Setup Node.js for Tests (Optional)
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
-      # Cache and install Node modules if needed for tests (optional)
       - name: Cache Node modules for Tests (Optional)
+        id: npm-cache-test
         uses: actions/cache@v4
         with:
           path: ~/.npm
-          key: ${{ runner.os }}-node-test-${{ hashFiles('**/package-lock.json') }} # Use a distinct key if necessary
+          key: ${{ runner.os }}-node-test-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-test-
             ${{ runner.os }}-node-
       - name: Install NPM Dependencies for Tests (Optional)
         run: npm ci
 
-      - name: Copy .env
-        run: php -r "file_exists('.env') || copy('.env.example', '.env');" # Ensure .env exists for tests
+      # Prepare Test Environment (Moved from separate job)
+      - name: Copy .env for testing
+        run: php -r "file_exists('.env') || copy('.env.example', '.env');"
 
-      - name: Generate Application Key # Required for tests that use encryption/sessions
+      - name: Generate Application Key
         run: php artisan key:generate
 
-      - name: Create SQLite Database # Ensure DB file exists
-        run: touch database/database.sqlite
+      - name: Create SQLite Database file
+        run: |
+          mkdir -p database
+          touch database/database.sqlite
 
-      - name: Run Migrations for Tests
+      - name: Run Migrations for testing
         env:
           DB_CONNECTION: sqlite
           DB_DATABASE: database/database.sqlite
-        run: php artisan migrate --force # Use --force for non-interactive environments
+        run: php artisan migrate --force
 
-      # --- End minimal setup --- #
-
+      # Execute Tests
       - name: Execute tests (Pest)
         env:
           DB_CONNECTION: sqlite
           DB_DATABASE: database/database.sqlite
-          # Add other necessary test environment variables
-        run: php artisan test # Or ./vendor/bin/pest for more Pest options
+          # Add other necessary test environment variables here
+        run: php artisan test # Or ./vendor/bin/pest

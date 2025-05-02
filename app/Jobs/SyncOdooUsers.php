@@ -157,6 +157,7 @@ class SyncOdooUsers extends BaseSyncJob
         $startOfDay = Carbon::now()->startOfDay();
 
         // Get the currently active schedule assignment
+        /** @var \App\Models\UserSchedule|null $activeUserSchedule */
         $activeUserSchedule = $user->activeUserSchedule()->first();
         $currentOdooScheduleId = $activeUserSchedule?->odoo_schedule_id;
 

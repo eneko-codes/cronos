@@ -18,8 +18,8 @@ return new class extends Migration
             $table
                 ->foreignId('user_id')
                 ->constrained()
-                ->onDelete('cascade')
-                ->unique();
+                ->onDelete('cascade');
+            $table->unique('user_id');
             $table->boolean('mute_all')->default(false);
             $table->boolean('schedule_change')->default(true);
             $table->boolean('weekly_user_report')->default(true);

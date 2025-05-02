@@ -49,6 +49,7 @@ class SyncButton extends Component
             return;
         }
         $this->isLoading = true;
+        $batchName = ''; // Initialize batchName
 
         try {
             // Define batch name first to ensure it's available in the catch block
@@ -84,8 +85,8 @@ class SyncButton extends Component
                 ->catch(function (Batch $batch, Throwable $e) use ($batchName) {
                     Log::error("{$batchName} failed.", ['batch_id' => $batch->id, 'error' => $e->getMessage()]);
                     JobBatch::where('id', $batch->id)->update([
-                        'failed_jobs' => $batch->failedJobs(),
-                        'failed_job_ids' => $batch->failedJobIds(),
+                        'failed_jobs' => $batch->failedJobs,
+                        'failed_job_ids' => $batch->failedJobIds,
                         'finished_at' => now()->timestamp,
                     ]);
                     $this->isLoading = false;
@@ -126,9 +127,11 @@ class SyncButton extends Component
 
             $this->dispatch('add-toast', message: "{$batchName} started successfully.", variant: 'info');
         } catch (Throwable $e) {
-            Log::error("Failed to dispatch {$batchName}.", ['error' => $e->getMessage()]);
+            $logMessage = $batchName ? "Failed to dispatch {$batchName}." : 'Failed to dispatch batch.'; // Use batchName if defined
+            Log::error($logMessage, ['error' => $e->getMessage()]);
             $this->isLoading = false;
-            $this->dispatch('add-toast', message: "Failed to start {$batchName}.", variant: 'error');
+            $toastMessage = $batchName ? "Failed to start {$batchName}." : 'Failed to start sync.'; // Use batchName if defined
+            $this->dispatch('add-toast', message: $toastMessage, variant: 'error');
         }
     }
 

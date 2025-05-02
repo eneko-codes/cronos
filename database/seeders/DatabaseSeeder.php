@@ -316,10 +316,11 @@ class DatabaseSeeder extends Seeder
 
             // Create tasks for this project
             foreach ($data['tasks'] as $i => $taskName) {
-                $taskId = (int) ($project->proofhub_project_id * 100 + $i + 1);
+                // Use project's integer ID and task index for a more robust Task ID generation
+                $taskId = (int) ($project->id * 100 + $i + 1);
                 $task = Task::factory()->create([
-                    'proofhub_task_id' => $taskId,
-                    'proofhub_project_id' => $project->proofhub_project_id,
+                    'proofhub_task_id' => $taskId, // Assign the generated integer ID
+                    'proofhub_project_id' => $project->proofhub_project_id, // Keep original proofhub ID relationship
                     'name' => $taskName,
                 ]);
                 $tasks->push($task);

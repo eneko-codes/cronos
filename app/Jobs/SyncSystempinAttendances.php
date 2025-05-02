@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
-use Exception;
-
 /**
  * Class SyncSystempinAttendances
  *
@@ -30,9 +28,6 @@ class SyncSystempinAttendances extends BaseSyncJob
 
     /**
      * Executes the synchronization process.
-     *
-     *
-     * @throws Exception
      */
     protected function execute(): void
     {

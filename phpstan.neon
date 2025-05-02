@@ -1,5 +1,6 @@
 includes:
     - ./vendor/larastan/larastan/extension.neon
+    - ./vendor/calebdw/larastan-livewire/extension.neon
 
 parameters:
     level: 5
@@ -9,6 +10,7 @@ parameters:
         - database/
         - routes/
         - config/
+        - tests/
 
     # Level 5 is a good starting point
     # level: 5

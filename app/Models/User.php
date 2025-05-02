@@ -178,7 +178,7 @@ class User extends Authenticatable
     /**
      * The attributes that should be cast to native types.
      *
-     * @var array<string, string|class-string<\Illuminate\Contracts\Database\Eloquent\Casts\Castable>|\Illuminate\Contracts\Database\Eloquent\Casts\Attribute>
+     * @var array<string, string>
      */
     protected $casts = [
         'is_admin' => 'boolean',

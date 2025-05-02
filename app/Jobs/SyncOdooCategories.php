@@ -96,28 +96,25 @@ class SyncOdooCategories extends BaseSyncJob
     private function logMissingCategories(
         Collection $currentOdooCategoryIds
     ): void {
-        Category::pluck('odoo_category_id')
-            ->diff($currentOdooCategoryIds)
-            ->pipe(function ($categoriesToLog) {
-                if ($categoriesToLog->isEmpty()) {
-                    return;
-                }
+        $missingCategories = Category::whereNotIn('odoo_category_id', $currentOdooCategoryIds)
+            ->get();
 
-                Category::whereIn('odoo_category_id', $categoriesToLog)
-                    ->get()
-                    ->each(function ($category) {
-                        Log::info(
-                            class_basename($this).
-                              ": Category '{$category->name}' no longer exists in Odoo but preserved for historical integrity",
-                            [
-                                'odoo_category_id' => $category->odoo_category_id,
-                                'name' => $category->name,
-                                'created_at' => $category->created_at->toDateTimeString(),
-                                'updated_at' => $category->updated_at->toDateTimeString(),
-                                'detected_at' => now()->toDateTimeString(),
-                            ]
-                        );
-                    });
-            });
+        if ($missingCategories->isEmpty()) {
+            return;
+        }
+
+        $missingCategories->each(function ($category) {
+            Log::info(
+                class_basename($this).
+                    ": Category '{$category->name}' no longer exists in Odoo but preserved for historical integrity",
+                [
+                    'odoo_category_id' => $category->odoo_category_id,
+                    'name' => $category->name,
+                    'created_at' => $category->created_at->toDateTimeString(),
+                    'updated_at' => $category->updated_at->toDateTimeString(),
+                    'detected_at' => now()->toDateTimeString(),
+                ]
+            );
+        });
     }
 }

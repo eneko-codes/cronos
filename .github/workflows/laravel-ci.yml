@@ -44,6 +44,7 @@ jobs:
 
       - name: Show Composer Outdated (Info Only)
         run: composer outdated -D --strict # Use -D for direct dependencies only
+        continue-on-error: true # Continue workflow even if outdated dependencies are found
 
       # ------------- NPM Setup -------------
       - name: Cache Node modules

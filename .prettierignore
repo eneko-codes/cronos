@@ -1,18 +1,37 @@
+# Dependency directories
 node_modules/
 vendor/
+
+# Build artifacts and publicly accessible directories managed by build tools or Laravel
 public/hot
+/public/build
 public/storage
-storage/*.key
+
+# Sensitive environment files
 .env
 .env.*
+
+# IDE-specific configuration and caches
 .idea/
 .vscode/
+.cursor/
+
+# Log files
 *.log
+
+# General cache files
 *.cache
+
+# Tool-specific cache & generated files (PHPUnit, CS Fixer, PHPStan, PHPStorm)
 *.phpunit.result.cache
 .php_cs.cache
 .php_cs.dist
-.phpunit.result.cache
 .phpstorm.meta.php
+# Note: .phpstan.cache is typically covered by *.cache, but could be added explicitly if needed.
+
+# Storage keys
+storage/*.key
+
+# Configuration files (often user/environment specific)
 Homestead.yaml
 Homestead.json

@@ -6,7 +6,12 @@ For the web app to work, you will need to install a queue manager such as Superv
 
 ### Git Hooks (Pre-commit)
 
-This project uses a Git pre-commit hook to automatically run `composer fix` before each commit, ensuring code style consistency. This helps prevent CI failures due to formatting issues.
+This project uses a Git pre-commit hook to automatically format staged code before each commit, ensuring consistency. It runs:
+
+- `Pint` on staged PHP files (`*.php`)
+- `Prettier` on staged Blade files (`*.blade.php`)
+
+Any changes made by these formatters are automatically staged. This helps prevent CI failures due to formatting issues.
 
 **Installation (Recommended):**
 
@@ -25,45 +30,83 @@ To enable this hook, you need to manually create the pre-commit hook file in you
     ```sh
     #!/bin/sh
     #
-    # Pre-commit hook that runs 'composer fix' and stages any changes.
+    # Pre-commit hook that runs Pint on staged PHP files, checks Prettier for
+    # Blade files, and stages any changes made by either formatter.
     #
 
-    echo "Running composer fix..."
+    echo "Running Pint on staged PHP files..."
 
-    # Run composer fix and capture its output
-    fix_output=$(composer fix 2>&1)
-    fix_exit_code=$?
+    # Get staged PHP files
+    STAGED_PHP_FILES=$(git diff --cached --name-only --diff-filter=ACM -- '*.php')
 
-    # Check if composer fix failed
-    if [ $fix_exit_code -ne 0 ]; then
-      echo >&2 "composer fix failed:"
-      echo >&2 "$fix_output"
-      exit 1
-    fi
-
-    echo "$fix_output"
-    echo "composer fix completed."
-
-    # Check for staged changes after running pint
-    # Use porcelain v1 for scriptability
-    staged_changes=$(git diff --name-only --cached)
-    unstaged_changes=$(git status --porcelain=v1 | grep -E '^( M|A | D)' | cut -c 4-)
-
-    if [ -n "$unstaged_changes" ]; then
-        echo "Staging changes made by composer fix..."
-        # Add only the files modified/added by composer fix that were previously tracked or are new
-        # This avoids accidentally adding untracked files not related to the fix
-        echo "$unstaged_changes" | while IFS= read -r file; do
-            # Check if the file exists before trying to add it
-            if [ -f "$file" ]; then
-                git add "$file"
-            fi
-        done
-        echo "Changes staged."
+    if [ -z "$STAGED_PHP_FILES" ]; then
+      echo "No staged PHP files found to Pint."
     else
-        echo "No changes detected from composer fix."
+      # Check if Pint is installed
+      PINT_PATH="./vendor/bin/pint"
+      if [ ! -f "$PINT_PATH" ]; then
+          echo >&2 "Error: Laravel Pint not found at $PINT_PATH. Please run 'composer install'."
+          exit 1
+      fi
+
+      # Run Pint on the staged files.
+      PINT_OUTPUT=$("$PINT_PATH" $STAGED_PHP_FILES 2>&1)
+      PINT_EXIT_CODE=$?
+
+      # Check Pint exit code
+      if [ $PINT_EXIT_CODE -ne 0 ]; then
+        echo >&2 "Pint failed to format PHP files:"
+        echo >&2 "$PINT_OUTPUT"
+        exit 1
+      fi
+
+      # Re-stage the files potentially modified by Pint
+      echo "Staging potentially modified PHP files..."
+      echo "$STAGED_PHP_FILES" | while IFS= read -r file; do
+        # Check if the file still exists (it might have been deleted and staged)
+        if [ -f "$file" ]; then
+            git add "$file"
+        fi
+      done
+      echo "Pint formatting applied and staged for PHP files."
     fi
 
+    echo "Running Prettier on staged Blade files..."
+
+    # Get staged Blade files
+    STAGED_BLADE_FILES=$(git diff --cached --name-only --diff-filter=ACM -- '*.blade.php')
+
+    if [ -z "$STAGED_BLADE_FILES" ]; then
+      echo "No staged Blade files found to format."
+    else
+      # Check if node_modules exists (basic check for npm install)
+      if [ ! -d "node_modules" ]; then
+        echo >&2 "Error: node_modules directory not found. Please run 'npm install' or 'npm ci'."
+        exit 1
+      fi
+
+      # Run Prettier --write on staged Blade files
+      PRETTIER_OUTPUT=$(npx prettier --write $STAGED_BLADE_FILES 2>&1)
+      PRETTIER_EXIT_CODE=$?
+
+      if [ $PRETTIER_EXIT_CODE -ne 0 ]; then
+        echo >&2 "Prettier formatting failed for Blade files:"
+        echo >&2 "$PRETTIER_OUTPUT"
+        exit 1
+      fi
+
+      # Add logic to stage modified Blade files
+      echo "Staging potentially modified Blade files..."
+      echo "$STAGED_BLADE_FILES" | while IFS= read -r file; do
+        # Check if the file still exists
+        if [ -f "$file" ]; then
+            git add "$file"
+        fi
+      done
+      echo "Prettier formatting applied and staged for Blade files."
+    fi
+
+    echo "Pre-commit checks passed."
     # Exit with 0 to allow the commit
     exit 0
     ```

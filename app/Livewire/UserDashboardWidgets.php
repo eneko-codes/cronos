@@ -23,7 +23,7 @@ class UserDashboardWidgets extends Component
     public ?UserLeave $upcomingLeave = null;
 
     // Reusable helper from UserDashboard, consider refactoring to a Trait or Service if used more widely
-    protected function formatMinutesToHoursMinutes(int $minutes): string
+    protected function formatMinutesToHoursMinutes(float $minutes): string
     {
         if ($minutes <= 0) { // Handle zero or negative explicitly
             return '0h 0m';
@@ -61,8 +61,9 @@ class UserDashboardWidgets extends Component
             ->with('schedule:id,odoo_schedule_id,description') // Just load schedule with needed fields
             ->first();
 
-        // Check if schedule loaded
-        if ($activeSchedule && $activeSchedule->schedule) {
+        // Check if schedule loaded (Linter fix: simplified condition)
+        if ($activeSchedule) {
+            // Since we eager-loaded schedule, we can assume it exists if $activeSchedule exists
             $schedule = $activeSchedule->schedule; // Get the loaded schedule
 
             // Now load the details for this specific schedule and weekday
@@ -70,6 +71,7 @@ class UserDashboardWidgets extends Component
 
             $totalMinutes = 0;
             if ($details->isNotEmpty()) {
+                /** @var \App\Models\ScheduleDetail $detail */
                 foreach ($details->sortBy('start') as $detail) {
                     $start = Carbon::parse($detail->start)->setTimezone('UTC');
                     $end = Carbon::parse($detail->end)->setTimezone('UTC');
@@ -98,7 +100,7 @@ class UserDashboardWidgets extends Component
 
             if ($attendance->is_remote) {
                 $status = 'Remote';
-                $durationMinutes = round(($attendance->presence_seconds ?? 0) / 60);
+                $durationMinutes = (int) (($attendance->presence_seconds ?? 0) / 60);
             } elseif ($attendance->start && $attendance->end) {
                 $status = 'In Office - Clocked Out';
                 $start = Carbon::parse($attendance->start);
@@ -109,12 +111,11 @@ class UserDashboardWidgets extends Component
                 $status = 'In Office - Clocked In';
                 $start = Carbon::parse($attendance->start);
                 $timeInfo = 'Since '.$start->format('H:i');
-                // Duration might be presence_seconds if available, otherwise maybe calculate from start to now? Let's use presence_seconds if available
-                $durationMinutes = round(($attendance->presence_seconds ?? 0) / 60);
+                $durationMinutes = (int) (($attendance->presence_seconds ?? 0) / 60);
             } elseif (! $attendance->start && ! $attendance->end && isset($attendance->presence_seconds) && $attendance->presence_seconds > 0) {
                 // Fallback if only presence_seconds is available (maybe from DeskTime sync without clock-in/out?)
                 $status = 'Present (System)';
-                $durationMinutes = round($attendance->presence_seconds / 60);
+                $durationMinutes = (int) ($attendance->presence_seconds / 60);
             } else {
                 $status = 'No Activity Recorded';
             }
@@ -134,7 +135,8 @@ class UserDashboardWidgets extends Component
         $totalSecondsToday = TimeEntry::where('user_id', $user->id)
             ->whereDate('date', $today)
             ->sum('duration_seconds');
-        $this->todaysLoggedTime = $this->formatMinutesToHoursMinutes(round($totalSecondsToday / 60));
+        $loggedMinutes = $totalSecondsToday / 60;
+        $this->todaysLoggedTime = $this->formatMinutesToHoursMinutes($loggedMinutes);
 
         // 4. Upcoming Leave (Next 30 days)
         $this->upcomingLeave = UserLeave::where('user_id', $user->id)

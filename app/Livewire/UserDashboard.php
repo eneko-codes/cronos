@@ -331,7 +331,7 @@ class UserDashboard extends Component
                 'attendance_vs_scheduled' => 'attendance than scheduled',
                 'worked_vs_scheduled' => 'worked than scheduled',
                 'worked_vs_attendance' => 'worked than attendance',
-                default => 'difference', // Fallback
+                default => 'difference',
             };
 
             $details['tooltip'] = 'No difference'; // Default tooltip
@@ -626,8 +626,8 @@ class UserDashboard extends Component
 
         // Determine contextual info based on leave type.
         $contextInfo = match ($leave->type) {
-            'department' => $leave->department?->name ?? '',
-            'category' => $leave->category?->name ?? '',
+            'department' => $leave->department->name ?? '',
+            'category' => $leave->category->name ?? '',
             default => '',
         };
 
@@ -730,7 +730,7 @@ class UserDashboard extends Component
         return [
             'type' => $leave->type,
             'context' => $contextInfo,
-            'leave_type' => $leave->leaveType?->name ?? '[No Type Set]',
+            'leave_type' => $leave->leaveType->name ?? '[No Type Set]',
             'duration' => $durationText,
             'duration_hours' => $durationFormatted,
             'duration_days' => $leave->duration_days,
@@ -859,13 +859,7 @@ class UserDashboard extends Component
             $totalMinutes = $filtered->sum(function ($entry) {
                 // Use the duration_seconds column, which should now be accurate
                 // Fallback gracefully if it happens to be null or not set
-                return round(($entry->duration_seconds ?? 0) / 60);
-                /*
-                // Original logic based on API response keys (kept for reference)
-                return isset($entry->duration_seconds) && $entry->duration_seconds > 0 // Check if > 0 to prefer this if set correctly
-                  ? round($entry->duration_seconds / 60)
-                  : ($entry->logged_hours ?? 0) * 60 + ($entry->logged_mins ?? 0);
-                */
+                return ($entry->duration_seconds ?? 0) / 60;
             });
 
             // Group entries by project and extract tasks
@@ -891,13 +885,7 @@ class UserDashboard extends Component
             $detailedEntries = $filtered
                 ->map(function ($entry) {
                     // Calculate minutes from the reliable duration_seconds field
-                    $minutes = round(($entry->duration_seconds ?? 0) / 60);
-                    /*
-          // Original logic
-          $minutes = isset($entry->duration_seconds)
-                    ? round($entry->duration_seconds / 60)
-                    : ($entry->logged_hours ?? 0) * 60 + ($entry->logged_mins ?? 0);
-          */
+                    $minutes = ($entry->duration_seconds ?? 0) / 60;
 
                     return [
                         'project' => data_get($entry, 'project.name', 'Unknown Project'),
@@ -1010,31 +998,20 @@ class UserDashboard extends Component
                 // Add leave minutes when a leave exists AND it's validated
                 if (
                     isset($day['leave']) &&
-                    $day['leave'] &&
                     isset($day['leave']['status']) &&
                     $day['leave']['status'] === 'validate'
                 ) {
                     // Use actual_minutes when available, which accounts for schedule
-                    if (isset($day['leave']['actual_minutes'])) {
+                    if (array_key_exists('actual_minutes', $day['leave'])) {
                         // Only add to total leave if it's NOT the remote work type
-                        if (
-                            ! Str::contains(
-                                $day['leave']['leave_type'] ?? '',
-                                'Horas Teletrabajo'
-                            )
-                        ) {
+                        if (isset($day['leave']['leave_type']) && ! Str::contains($day['leave']['leave_type'], 'Horas Teletrabajo')) {
                             $totals['leave'] += $day['leave']['actual_minutes'];
                         }
                     }
                     // Fallback to duration_hours
-                    elseif (isset($day['leave']['duration_hours'])) {
+                    elseif (array_key_exists('duration_hours', $day['leave'])) {
                         // Only add to total leave if it's NOT the remote work type
-                        if (
-                            ! Str::contains(
-                                $day['leave']['leave_type'] ?? '',
-                                'Horas Teletrabajo'
-                            )
-                        ) {
+                        if (isset($day['leave']['leave_type']) && ! Str::contains($day['leave']['leave_type'], 'Horas Teletrabajo')) {
                             $totals['leave'] += $this->durationToMinutes(
                                 $day['leave']['duration_hours']
                             );
@@ -1073,10 +1050,10 @@ class UserDashboard extends Component
     /**
      * Utility function to format total minutes into a human-readable "Xh Ym" string.
      *
-     * @param  int  $minutes  Total minutes.
+     * @param  float  $minutes  Total minutes.
      * @return string Formatted duration string.
      */
-    public function formatMinutesToHoursMinutes(int $minutes): string
+    public function formatMinutesToHoursMinutes(float $minutes): string
     {
         if ($minutes < 0) {
             // Handle negative minutes if necessary
@@ -1094,7 +1071,7 @@ class UserDashboard extends Component
     /**
      * Alias for formatMinutesToHoursMinutes, potentially used internally.
      */
-    protected function formatDuration(int $minutes): string
+    protected function formatDuration(float $minutes): string
     {
         return $this->formatMinutesToHoursMinutes($minutes);
     }
@@ -1262,7 +1239,7 @@ class UserDashboard extends Component
                 'attendance_vs_scheduled' => 'attendance than scheduled',
                 'worked_vs_scheduled' => 'worked than scheduled',
                 'worked_vs_attendance' => 'worked than attendance',
-                default => 'difference', // Fallback
+                default => 'difference',
             };
 
             $details['tooltip'] = 'No difference'; // Default tooltip

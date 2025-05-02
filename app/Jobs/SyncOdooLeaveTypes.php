@@ -110,26 +110,23 @@ class SyncOdooLeaveTypes extends BaseSyncJob
     private function logMissingLeaveTypes(
         Collection $currentOdooLeaveTypeIds
     ): void {
-        LeaveType::pluck('odoo_leave_type_id')
-            ->diff($currentOdooLeaveTypeIds)
-            ->pipe(function ($leaveTypesToLog) {
-                if ($leaveTypesToLog->isEmpty()) {
-                    return;
-                }
+        $missingLeaveTypes = LeaveType::whereNotIn('odoo_leave_type_id', $currentOdooLeaveTypeIds)
+            ->get();
 
-                LeaveType::whereIn('odoo_leave_type_id', $leaveTypesToLog)
-                    ->get()
-                    ->each(function ($leaveType) {
-                        Log::info(
-                            class_basename($this).
-                              ': Leave type no longer exists in Odoo but preserved for historical integrity',
-                            [
-                                'odoo_leave_type_id' => $leaveType->odoo_leave_type_id,
-                                'name' => $leaveType->name,
-                                'detected_at' => now()->toDateTimeString(),
-                            ]
-                        );
-                    });
-            });
+        if ($missingLeaveTypes->isEmpty()) {
+            return;
+        }
+
+        $missingLeaveTypes->each(function ($leaveType) {
+            Log::info(
+                class_basename($this).
+                    ': Leave type no longer exists in Odoo but preserved for historical integrity',
+                [
+                    'odoo_leave_type_id' => $leaveType->odoo_leave_type_id,
+                    'name' => $leaveType->name,
+                    'detected_at' => now()->toDateTimeString(),
+                ]
+            );
+        });
     }
 }

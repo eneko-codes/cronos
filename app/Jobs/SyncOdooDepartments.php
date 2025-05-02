@@ -101,26 +101,23 @@ class SyncOdooDepartments extends BaseSyncJob
     private function logMissingDepartments(
         Collection $currentOdooDepartmentIds
     ): void {
-        Department::pluck('odoo_department_id')
-            ->diff($currentOdooDepartmentIds)
-            ->pipe(function ($departmentsToLog) {
-                if ($departmentsToLog->isEmpty()) {
-                    return;
-                }
+        $missingDepartments = Department::whereNotIn('odoo_department_id', $currentOdooDepartmentIds)
+            ->get();
 
-                Department::whereIn('odoo_department_id', $departmentsToLog)
-                    ->get()
-                    ->each(function ($department) {
-                        Log::info(
-                            class_basename($this).
-                              ': Department no longer exists in Odoo but preserved for historical integrity',
-                            [
-                                'odoo_department_id' => $department->odoo_department_id,
-                                'name' => $department->name,
-                                'detected_at' => now()->toDateTimeString(),
-                            ]
-                        );
-                    });
-            });
+        if ($missingDepartments->isEmpty()) {
+            return;
+        }
+
+        $missingDepartments->each(function ($department) {
+            Log::info(
+                class_basename($this).
+                    ': Department no longer exists in Odoo but preserved for historical integrity',
+                [
+                    'odoo_department_id' => $department->odoo_department_id,
+                    'name' => $department->name,
+                    'detected_at' => now()->toDateTimeString(),
+                ]
+            );
+        });
     }
 }

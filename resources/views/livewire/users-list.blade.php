@@ -56,11 +56,15 @@
             >
               <div class="flex items-center gap-2">
                 <!-- Online Status Indicator with Tooltip -->
-                <x-tooltip text="{{ $user->is_online ? 'Online' : 'Offline' }}">
-                  <div
-                    class="{{ $user->is_online ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-700' }} h-2 w-2 rounded-full"
-                  ></div>
-                </x-tooltip>
+                @if (! is_null($user->is_online))
+                  <x-tooltip
+                    text="{{ $user->is_online ? 'Online' : 'Offline' }}"
+                  >
+                    <div
+                      class="{{ $user->is_online ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-700' }} h-2 w-2 rounded-full"
+                    ></div>
+                  </x-tooltip>
+                @endif
 
                 <!-- User Name -->
                 <p class="text-md font-bold capitalize">

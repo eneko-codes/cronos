@@ -39,7 +39,7 @@ use Illuminate\Notifications\Notification;
  * @property \Carbon\Carbon|null $email_verified_at When email was verified
  * @property \Carbon\Carbon|null $created_at When record was created
  * @property \Carbon\Carbon|null $updated_at When record was last updated
- * @property bool $is_online Virtual attribute that determines if the user is currently online
+ * @property bool|null $is_online Virtual attribute that determines if the user is currently online (only works with database session driver)
  * @property string|null $remember_token
  * @property bool $is_active
  * @property string|null $job_title
@@ -134,7 +134,7 @@ class User extends Authenticatable
     /**
      * The attributes that are mass assignable.
      *
-     * @var array
+     * @var list<string>
      */
     protected $fillable = [
         'name',
@@ -157,14 +157,14 @@ class User extends Authenticatable
     /**
      * The attributes that are guarded.
      *
-     * @var array
+     * @var list<string>
      */
     protected $guarded = ['is_admin'];
 
     /**
      * The attributes that should be hidden for arrays.
      *
-     * @var array
+     * @var list<string>
      */
     protected $hidden = [
         'is_admin',
@@ -178,7 +178,7 @@ class User extends Authenticatable
     /**
      * The attributes that should be cast to native types.
      *
-     * @var array
+     * @var array<string, string|class-string<\Illuminate\Contracts\Database\Eloquent\Casts\Castable>|\Illuminate\Contracts\Database\Eloquent\Casts\Attribute>
      */
     protected $casts = [
         'is_admin' => 'boolean',
@@ -193,7 +193,7 @@ class User extends Authenticatable
     /**
      * The attributes that should be appended to the model's array form.
      *
-     * @var array
+     * @var list<string>
      */
     protected $appends = ['is_online'];
 
@@ -353,10 +353,16 @@ class User extends Authenticatable
     /**
      * Get the online status of the user.
      *
-     * A user is considered online if they have any active sessions.
+     * A user is considered online if they have any active sessions *and*
+     * the application session driver is set to 'database'. Otherwise, returns null.
      */
-    public function getIsOnlineAttribute(): bool
+    public function getIsOnlineAttribute(): ?bool
     {
+        // Only check sessions if the database driver is used
+        if (config('session.driver') !== 'database') {
+            return null;
+        }
+
         return $this->sessions()->exists();
     }
 

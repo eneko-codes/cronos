@@ -58,7 +58,7 @@ class UserDashboardWidgets extends Component
                 $query->whereNull('effective_until')
                     ->orWhere('effective_until', '>=', $today);
             })
-            ->with('schedule:id,odoo_schedule_id,description') // Just load schedule with needed fields
+            ->with('schedule:odoo_schedule_id,description') // Select only existing columns, ensuring the owner key 'odoo_schedule_id' is present
             ->first();
 
         // Check if schedule loaded (Linter fix: simplified condition)

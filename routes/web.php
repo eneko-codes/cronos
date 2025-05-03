@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\LoginController;
 use App\Livewire\Dashboard;
+use App\Livewire\LeaveTypesListView;
 use App\Livewire\Login;
 use App\Livewire\ProjectDetailView;
 use App\Livewire\ProjectsListView;
@@ -41,6 +42,7 @@ Route::middleware(['auth', 'throttle:api'])->group(function () {
                 '/schedules/{schedule:odoo_schedule_id}',
                 ScheduleDetailView::class
             )->name('schedules.show');
+            Route::get('/leave-types', LeaveTypesListView::class)->name('leave-types.list');
         }
     );
 });

@@ -65,7 +65,7 @@
 
               {{-- Dropdown Content Slot --}}
               <div class="space-y-1" role="none">
-                <label class="flex items-center gap-2 rounded px-2 py-1.5">
+                <label class="flex items-center gap-2 rounded px-3 py-1.5">
                   <input
                     type="checkbox"
                     wire:model.change="filters.has_details"
@@ -75,7 +75,7 @@
                     Has Details
                   </span>
                 </label>
-                <label class="flex items-center gap-2 rounded px-2 py-1.5">
+                <label class="flex items-center gap-2 rounded px-3 py-1.5">
                   <input
                     type="checkbox"
                     wire:model.change="filters.has_assigned_users"
@@ -86,7 +86,7 @@
                   </span>
                 </label>
                 <hr class="!my-2 border-gray-200 dark:border-gray-700" />
-                <label class="flex items-center gap-2 rounded px-2 py-1.5">
+                <label class="flex items-center gap-2 rounded px-3 py-1.5">
                   <input
                     type="checkbox"
                     wire:model.change="filters.has_no_details"
@@ -96,7 +96,7 @@
                     Has No Details
                   </span>
                 </label>
-                <label class="flex items-center gap-2 rounded px-2 py-1.5">
+                <label class="flex items-center gap-2 rounded px-3 py-1.5">
                   <input
                     type="checkbox"
                     wire:model.change="filters.has_no_assigned_users"

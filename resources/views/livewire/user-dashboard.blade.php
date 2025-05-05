@@ -4,7 +4,7 @@
     <a
       href="{{ route('users.list') }}"
       wire:navigate
-      class="inline-flex h-fit w-fit flex-row items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-gray-200/75 px-2 py-1 text-xs font-semibold text-gray-800 shadow-sm hover:bg-gray-200 dark:bg-gray-200 dark:text-gray-800 dark:hover:bg-gray-100"
+      class="inline-flex h-fit w-fit flex-row items-center justify-center gap-2 rounded-lg bg-gray-200/75 px-2 py-1 text-xs font-semibold whitespace-nowrap text-gray-800 shadow-sm hover:bg-gray-200 dark:bg-gray-200 dark:text-gray-800 dark:hover:bg-gray-100"
     >
       <svg
         class="size-4"
@@ -69,9 +69,9 @@
   {{-- Missing Account Notification --}}
   @if (! $user->do_not_track && (! $user->proofhub_id || ! $user->desktime_id || ! $user->systempin_id))
     <div
-      class="rounded-md border border-red-300 bg-red-50 p-2 text-sm text-red-800 dark:border-red-600/60 dark:bg-red-900/20 dark:text-red-200"
+      class="w-fit rounded-md border border-red-300 bg-red-50 p-4 text-sm text-red-800 dark:border-red-600/60 dark:bg-red-900/20 dark:text-red-200"
     >
-      <div class="flex flex-col gap-1">
+      <div class="flex flex-col gap-2">
         <div class="flex flex-row items-center gap-1">
           <svg
             class="h-5 w-5 flex-shrink-0 text-red-500 dark:text-red-600"
@@ -205,7 +205,7 @@
         >
           <tr>
             <th
-              class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-800"
+              class="border border-gray-300 p-2 whitespace-nowrap dark:border-gray-800"
             >
               Day
             </th>
@@ -217,7 +217,7 @@
               ])
               as $name => $tooltip)
               <th
-                class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-800"
+                class="border border-gray-300 p-2 whitespace-nowrap dark:border-gray-800"
               >
                 <div class="inline-flex flex-row items-center gap-1">
                   {{ $name }}
@@ -255,7 +255,7 @@
                 ])
                 as $name => $tooltip)
                 <th
-                  class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-800"
+                  class="border border-gray-300 p-2 whitespace-nowrap dark:border-gray-800"
                 >
                   <div class="inline-flex flex-row items-center gap-1">
                     {{ $name }}
@@ -296,7 +296,7 @@
             >
               <!-- Date Column -->
               <td
-                class="{{ $isFutureDate ? 'text-gray-500 dark:text-gray-400' : '' }} whitespace-nowrap border border-gray-300 bg-gray-200 p-2 font-semibold dark:border-gray-800 dark:bg-gray-700"
+                class="{{ $isFutureDate ? 'text-gray-500 dark:text-gray-400' : '' }} border border-gray-300 bg-gray-200 p-2 font-semibold whitespace-nowrap dark:border-gray-800 dark:bg-gray-700"
               >
                 <div class="flex items-center gap-2">
                   {{ $dayDate->translatedFormat('l d') }}
@@ -308,7 +308,7 @@
               </td>
 
               <!-- Scheduled -->
-              <td class="whitespace-nowrap border p-2 dark:border-gray-700">
+              <td class="border p-2 whitespace-nowrap dark:border-gray-700">
                 <div class="flex flex-col gap-1">
                   <x-tooltip>
                     <x-slot name="text">
@@ -348,7 +348,7 @@
               </td>
 
               <!-- Leave -->
-              <td class="whitespace-nowrap border p-2 dark:border-gray-700">
+              <td class="border p-2 whitespace-nowrap dark:border-gray-700">
                 @if ($day['leave'])
                   <div
                     class="{{ $day['leave']['status'] !== 'validate' ? 'opacity-60' : '' }} flex items-center gap-2"
@@ -379,7 +379,7 @@
 
                           @if ($day['leave']['status'] !== 'validate')
                             <span
-                              class="text-xs italic text-gray-500 dark:text-gray-400"
+                              class="text-xs text-gray-500 italic dark:text-gray-400"
                             >
                               {{ $day['leave']['status'] === 'confirm' ? 'Waiting approval' : 'Cancelled' }}
                             </span>
@@ -437,7 +437,7 @@
               </td>
 
               <!-- Attendance -->
-              <td class="whitespace-nowrap border p-2 dark:border-gray-700">
+              <td class="border p-2 whitespace-nowrap dark:border-gray-700">
                 <x-tooltip>
                   <x-slot name="text">
                     <div class="flex flex-col gap-1">
@@ -472,7 +472,7 @@
               </td>
 
               <!-- Worked -->
-              <td class="whitespace-nowrap border p-2 dark:border-gray-700">
+              <td class="border p-2 whitespace-nowrap dark:border-gray-700">
                 <div class="flex flex-col gap-1">
                   <x-tooltip>
                     <x-slot name="text">
@@ -491,7 +491,7 @@
                                   {{ $entry['project'] }}
                                 </span>
                                 <span
-                                  class="ml-2 whitespace-nowrap rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+                                  class="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-xs whitespace-nowrap text-gray-700 dark:bg-gray-700 dark:text-gray-300"
                                 >
                                   {{ $entry['duration'] }}
                                 </span>
@@ -506,7 +506,7 @@
 
                               @if (isset($entry['description']) && $entry['description'])
                                 <span
-                                  class="text-xs italic text-gray-500 dark:text-gray-400"
+                                  class="text-xs text-gray-500 italic dark:text-gray-400"
                                 >
                                   {{ Str::limit($entry['description'], 80) }}
                                 </span>
@@ -574,7 +574,7 @@
                 @endphp
 
                 <td
-                  class="{{ $attVsSchBgClass }} {{ ! $attVsSchShouldDisplay ? 'text-transparent' : '' }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-400' : '' }} whitespace-nowrap border p-2 dark:border-gray-700"
+                  class="{{ $attVsSchBgClass }} {{ ! $attVsSchShouldDisplay ? 'text-transparent' : '' }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-400' : '' }} border p-2 whitespace-nowrap dark:border-gray-700"
                 >
                   @if ($attVsSchShouldDisplay)
                     <x-tooltip :text="$attVsSchDetail['tooltip']">
@@ -607,7 +607,7 @@
                 @endphp
 
                 <td
-                  class="{{ $workVsSchBgClass }} {{ ! $workVsSchShouldDisplay ? 'text-transparent' : '' }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-400' : '' }} whitespace-nowrap border p-2 dark:border-gray-700"
+                  class="{{ $workVsSchBgClass }} {{ ! $workVsSchShouldDisplay ? 'text-transparent' : '' }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-400' : '' }} border p-2 whitespace-nowrap dark:border-gray-700"
                 >
                   @if ($workVsSchShouldDisplay)
                     <x-tooltip :text="$workVsSchDetail['tooltip']">
@@ -640,7 +640,7 @@
                 @endphp
 
                 <td
-                  class="{{ $workVsAttBgClass }} {{ ! $workVsAttShouldDisplay ? 'text-transparent' : '' }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-400' : '' }} whitespace-nowrap border p-2 dark:border-gray-700"
+                  class="{{ $workVsAttBgClass }} {{ ! $workVsAttShouldDisplay ? 'text-transparent' : '' }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-400' : '' }} border p-2 whitespace-nowrap dark:border-gray-700"
                 >
                   @if ($workVsAttShouldDisplay)
                     <x-tooltip :text="$workVsAttDetail['tooltip']">
@@ -657,7 +657,7 @@
           <!-- Totals Row -->
           <tr class="bg-gray-200 font-bold dark:bg-gray-700">
             <td
-              class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-800"
+              class="border border-gray-300 p-2 whitespace-nowrap dark:border-gray-800"
             >
               <x-tooltip
                 text="Totals only include past dates and today. Future dates are not counted in calculations."
@@ -688,7 +688,7 @@
 
             @foreach (collect(['scheduled', 'leave', 'attendance', 'worked']) as $type)
               <td
-                class="whitespace-nowrap border border-gray-300 p-2 dark:border-gray-800"
+                class="border border-gray-300 p-2 whitespace-nowrap dark:border-gray-800"
               >
                 @if ($type === 'scheduled')
                   {{-- Format the scheduled total --}}
@@ -724,7 +724,7 @@
                 @endphp
 
                 <td
-                  class="{{ $totalBgClass }} whitespace-nowrap border border-gray-300 p-2 dark:border-gray-800"
+                  class="{{ $totalBgClass }} border border-gray-300 p-2 whitespace-nowrap dark:border-gray-800"
                 >
                   @if ($totalShouldDisplay)
                     <x-tooltip :text="$details['tooltip']">

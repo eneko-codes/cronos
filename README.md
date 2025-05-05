@@ -1,124 +1,211 @@
-## 👨🏻‍💻 SETUP SERVER
+# Cronos
 
-For the web app to work, you will need to install a queue manager such as Supervisor in your Ngnx instance!
+Cronos is a Laravel application designed to synchronize data from various external platforms (Odoo, ProofHub, DeskTime) and provide related functionalities. It uses Livewire 3 for dynamic frontend components.
 
-## 👨🏻‍💻 Development Setup
+## 🚀 Requirements
 
-### Git Hooks (Pre-commit)
+- PHP 8.2+
+- Composer
+- Node.js & npm
+- A database supported by Laravel (e.g., MySQL, PostgreSQL, SQLite)
+- A queue worker (e.g., Supervisor) for background job processing
 
-This project uses a Git pre-commit hook to automatically format staged code before each commit, ensuring consistency. It runs:
+## 🛠️ Installation
 
-- `Pint` on staged PHP files (`*.php`)
-- `Prettier` on staged Blade files (`*.blade.php`)
-
-Any changes made by these formatters are automatically staged. This helps prevent CI failures due to formatting issues.
-
-**Installation (Recommended):**
-
-To enable this hook, you need to manually create the pre-commit hook file in your local `.git/hooks` directory and make it executable. Follow these steps from the project root:
-
-1.  **Create the hook file:**
+1.  **Clone the repository:**
 
     ```bash
-    touch .git/hooks/pre-commit
+    git clone <repository-url>
+    cd cronos
     ```
 
-2.  **Open the file** (`.git/hooks/pre-commit`) in your text editor.
+2.  **Install PHP Dependencies:**
 
-3.  **Paste the entire script content below** into the file:
-
-    ```sh
-    #!/bin/sh
-    #
-    # Pre-commit hook that runs Pint on staged PHP files, checks Prettier for
-    # Blade files, and stages any changes made by either formatter.
-    #
-
-    echo "Running Pint on staged PHP files..."
-
-    # Get staged PHP files
-    STAGED_PHP_FILES=$(git diff --cached --name-only --diff-filter=ACM -- '*.php')
-
-    if [ -z "$STAGED_PHP_FILES" ]; then
-      echo "No staged PHP files found to Pint."
-    else
-      # Check if Pint is installed
-      PINT_PATH="./vendor/bin/pint"
-      if [ ! -f "$PINT_PATH" ]; then
-          echo >&2 "Error: Laravel Pint not found at $PINT_PATH. Please run 'composer install'."
-          exit 1
-      fi
-
-      # Run Pint on the staged files.
-      PINT_OUTPUT=$("$PINT_PATH" $STAGED_PHP_FILES 2>&1)
-      PINT_EXIT_CODE=$?
-
-      # Check Pint exit code
-      if [ $PINT_EXIT_CODE -ne 0 ]; then
-        echo >&2 "Pint failed to format PHP files:"
-        echo >&2 "$PINT_OUTPUT"
-        exit 1
-      fi
-
-      # Re-stage the files potentially modified by Pint
-      echo "Staging potentially modified PHP files..."
-      echo "$STAGED_PHP_FILES" | while IFS= read -r file; do
-        # Check if the file still exists (it might have been deleted and staged)
-        if [ -f "$file" ]; then
-            git add "$file"
-        fi
-      done
-      echo "Pint formatting applied and staged for PHP files."
-    fi
-
-    echo "Running Prettier on staged Blade files..."
-
-    # Get staged Blade files
-    STAGED_BLADE_FILES=$(git diff --cached --name-only --diff-filter=ACM -- '*.blade.php')
-
-    if [ -z "$STAGED_BLADE_FILES" ]; then
-      echo "No staged Blade files found to format."
-    else
-      # Check if node_modules exists (basic check for npm install)
-      if [ ! -d "node_modules" ]; then
-        echo >&2 "Error: node_modules directory not found. Please run 'npm install' or 'npm ci'."
-        exit 1
-      fi
-
-      # Run Prettier --write on staged Blade files
-      PRETTIER_OUTPUT=$(npx prettier --write $STAGED_BLADE_FILES 2>&1)
-      PRETTIER_EXIT_CODE=$?
-
-      if [ $PRETTIER_EXIT_CODE -ne 0 ]; then
-        echo >&2 "Prettier formatting failed for Blade files:"
-        echo >&2 "$PRETTIER_OUTPUT"
-        exit 1
-      fi
-
-      # Add logic to stage modified Blade files
-      echo "Staging potentially modified Blade files..."
-      echo "$STAGED_BLADE_FILES" | while IFS= read -r file; do
-        # Check if the file still exists
-        if [ -f "$file" ]; then
-            git add "$file"
-        fi
-      done
-      echo "Prettier formatting applied and staged for Blade files."
-    fi
-
-    echo "Pre-commit checks passed."
-    # Exit with 0 to allow the commit
-    exit 0
-    ```
-
-4.  **Save and close** the file.
-
-5.  **Make the hook executable:**
     ```bash
-    chmod +x .git/hooks/pre-commit
+    composer install
     ```
 
-**Note:** This setup needs to be performed once per local clone of the repository.
+3.  **Install Node.js Dependencies:**
+
+    ```bash
+    npm install
+    ```
+
+4.  **Setup Environment:**
+    Copy the example environment file and configure it for your local setup:
+
+    ```bash
+    cp .env.example .env
+    ```
+
+    Open the `.env` file and update the following sections at minimum:
+
+    - **Database Credentials:** Configure `DB_CONNECTION`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`. If using SQLite (the default in `.env.example`), ensure the `DB_DATABASE` path points to your desired location (e.g., `database/database.sqlite`).
+    - **Application URL:** Set `APP_URL` to the URL you'll use for local development (e.g., `http://cronos.test`).
+    - **API Credentials:** Fill in the values for:
+      - `ODOO_BASE_URL`
+      - `ODOO_DATABASE`
+      - `ODOO_USERNAME`
+      - `ODOO_PASSWORD`
+      - `PROOFHUB_COMPANY_URL`
+      - `PROOFHUB_API_KEY`
+      - `DESKTIME_BASE_URL`
+      - `DESKTIME_API_KEY`
+
+5.  **Generate Application Key:**
+
+    ```bash
+    php artisan key:generate
+    ```
+
+6.  **Run Database Migrations:**
+    If using SQLite and the file doesn't exist, create it first: `touch database/database.sqlite` (adjust path if changed in `.env`).
+
+    ```bash
+    php artisan migrate
+    ```
+
+7.  **Compile Frontend Assets:**
+
+    ```bash
+    npm run build
+    ```
+
+8.  **Configure Queue Worker:**
+    Set up a queue worker like Supervisor to process the `php artisan queue:work` command. This is crucial for data synchronization jobs. Refer to the [Laravel Queue Documentation](https://laravel.com/docs/12.x/queues#supervisor-configuration).
+
+9.  **Configure Web Server:**
+    Configure your web server (e.g., Nginx, Apache) to point to the `public` directory.
+
+## ⚙️ Configuration
+
+### API Connections
+
+Update your `.env` file with the correct credentials and URLs for Odoo, ProofHub, and DeskTime as outlined in Installation step 4.
+
+After changing `.env` variables, clear the configuration cache:
+
+```bash
+php artisan config:clear
+php artisan cache:clear
+```
+
+### Scheduled Synchronization
+
+Data synchronization jobs are designed to run automatically. The schedule frequency might be configurable (check `app/Console/Kernel.php` or database settings if `Kernel.php` is not standard). Ensure the Laravel scheduler is running by adding the following Cron entry to your server:
+
+```cron
+* * * * * cd /path-to-your-project && php artisan schedule:run >> /dev/null 2>&1
+```
+
+_(Note: The `job_frequencies` table mentioned in the old README was not verified and might not be the current method for configuring sync frequency.)_
+
+## ▶️ Usage
+
+### Data Synchronization Command (`sync`)
+
+Manually trigger data synchronization using the `sync` Artisan command.
+
+**Command Signature:**
+
+```bash
+php artisan sync {platform?} {type?} [--from=Y-m-d] [--to=Y-m-d] [--user-id=ID]
+```
+
+- `platform`: `odoo`, `proofhub`, `desktime`, or `all` (required if `type` is specified, otherwise shows help).
+- `type`: Specific data type to sync (e.g., `users`, `leaves`, `projects`, `attendances`). Varies by platform.
+- `--from`: Start date for date-based sync (e.g., `leaves`, `time-entries`, `attendances`).
+- `--to`: End date for date-based sync.
+- `--user-id`: Filter by user ID (currently only for `desktime attendances`).
+
+**Examples:**
+
+```bash
+# Show general help
+php artisan sync
+
+# Show help for Odoo
+php artisan sync odoo
+
+# Sync all data from all platforms (dispatches a batch job)
+php artisan sync all
+
+# Sync all data for ProofHub (dispatches a batch job)
+php artisan sync proofhub
+
+# Sync only Odoo users
+php artisan sync odoo users
+
+# Sync DeskTime attendances for a specific user and date range
+php artisan sync desktime attendances --user-id=123 --from=2024-01-01 --to=2024-01-31
+```
+
+Jobs are dispatched to the queue and processed by your queue worker.
+
+### Data Retention (`app:purge-old-time-data`)
+
+Automatically delete old time-related data based on configured retention periods (likely managed via `App\Models\Setting`).
+
+**Command Signature:**
+
+```bash
+php artisan app:purge-old-time-data [--dry-run]
+```
+
+- `--dry-run`: Show what would be deleted without actually deleting.
+
+This command is typically run via the scheduler.
+
+### Queue Management
+
+Monitor and manage the queue:
+
+```bash
+# View active jobs (using Laravel Pulse or Telescope if configured)
+# Or check queue status via standard Laravel commands if Pulse/Telescope are not used
+# php artisan queue:monitor (if a suitable driver is installed)
+
+# View failed jobs
+php artisan queue:failed
+
+# Retry failed jobs
+php artisan queue:retry [failed-job-id]
+
+# Clear failed jobs
+php artisan queue:flush
+
+# Clear all jobs from a queue
+php artisan queue:clear [connection-name] --queue=default
+```
+
+## 👨🏻‍💻 Development
+
+### Running Locally
+
+Use the `dev` script defined in `composer.json` for a convenient local development environment:
+
+```bash
+composer dev
+```
+
+This typically starts the PHP development server, a queue listener, the `pail` log viewer, and the Vite development server concurrently.
+
+### Development Tools & Quality Checks
+
+This project includes tools to help maintain code quality:
+
+- **Pint:** For PHP code style formatting.
+  - Check: `composer lint`
+  - Fix: `composer fix`
+- **Rector:** For automated PHP code refactoring (configuration in `rector.php`).
+- **PHPStan:** For static analysis.
+  - Run: `composer analyse`
+- **Prettier:** For Blade template formatting (run via pre-commit hook or manually).
+- **Pest:** For running tests.
+  - Run: `composer test`
+  - Run with coverage: `composer test-coverage`
+
+Consider setting up the Git pre-commit hook (script available in the project history if needed) to automate formatting and checks before committing.
 
 ## ⛓️ SETUP API CONNECTIONS
 
@@ -420,22 +507,6 @@ The application includes detailed authentication logging for security monitoring
 - Authentication guard
 - Login token information (when applicable)
 
-#### Viewing Authentication Logs:
-
-```bash
-# View the most recent authentication logs
-tail -f storage/logs/auth.log
-
-# Search for failed login attempts
-grep "failed\|warning" storage/logs/auth.log
-
-# Search for activity from a specific IP
-grep "192.168.1.1" storage/logs/auth.log
-
-# Search for activity from a specific user
-grep "user@example.com" storage/logs/auth.log
-```
-
 ---
 
 ### Technical Details
@@ -448,3 +519,191 @@ grep "user@example.com" storage/logs/auth.log
 ## 🗑️ Data Retention
 
 Cronos includes a feature to automatically delete old user time-related data to manage database size and comply with data retention policies.
+
+### Pre-commit Hook
+
+This project uses a Git pre-commit hook to automatically format and check code before it is committed. The hook ensures consistency and helps catch potential issues early.
+
+**Setup (Recommended):**
+
+Git hooks are not version controlled, so you need to set this up manually once per local clone. Follow these steps from the project root:
+
+1.  **Create the hook file (if it doesn't exist):**
+
+    ```bash
+    touch .git/hooks/pre-commit
+    ```
+
+2.  **Open the file** (`.git/hooks/pre-commit`) in your text editor.
+
+3.  **Paste the entire script content below** into the file, replacing any existing content:
+
+    ```sh
+    #!/bin/sh
+    #
+    # Pre-commit hook that runs formatters (Pint, Rector, Prettier)
+    # on staged files and checks for debug statements.
+    # Modifications are automatically staged.
+    #
+
+    echo "Running Pint on staged PHP files..."
+
+    # Get staged PHP files
+    STAGED_PHP_FILES=$(git diff --cached --name-only --diff-filter=ACM -- '*.php')
+
+    if [ -z "$STAGED_PHP_FILES" ]; then
+      echo "No staged PHP files found to Pint."
+    else
+      # Check if Pint is installed
+      PINT_PATH="./vendor/bin/pint"
+      if [ ! -f "$PINT_PATH" ]; then
+          echo >&2 "Error: Laravel Pint not found at $PINT_PATH. Please run 'composer install'."
+          exit 1
+      fi
+
+      # Run Pint on the staged files. Use --quiet to reduce noise, but capture output on error.
+      PINT_OUTPUT=$("$PINT_PATH" $STAGED_PHP_FILES 2>&1)
+      PINT_EXIT_CODE=$?
+
+      # Check Pint exit code
+      if [ $PINT_EXIT_CODE -ne 0 ]; then
+        echo >&2 "Pint failed to format PHP files:"
+        echo >&2 "$PINT_OUTPUT"
+        exit 1
+      fi
+
+      # Re-stage the files potentially modified by Pint
+      echo "Staging potentially modified PHP files..."
+      echo "$STAGED_PHP_FILES" | while IFS= read -r file; do
+        # Check if the file still exists (it might have been deleted and staged)
+        if [ -f "$file" ]; then
+            git add "$file"
+        fi
+      done
+      echo "Pint formatting applied and staged for PHP files."
+    fi
+
+    echo "Running Rector on staged PHP files..."
+
+    # We need the list of staged PHP files again, or reuse if available
+    # If Pint didn't run, STAGED_PHP_FILES would be empty, re-fetch it.
+    if [ -z "$STAGED_PHP_FILES" ] && [ -z "$(git diff --cached --name-only --diff-filter=ACM -- '*.php')" ]; then
+       STAGED_PHP_FILES=$(git diff --cached --name-only --diff-filter=ACM -- '*.php')
+    fi
+
+    if [ -z "$STAGED_PHP_FILES" ]; then
+      echo "No staged PHP files found to Rector."
+    else
+      # Check if Rector is installed
+      RECTOR_PATH="./vendor/bin/rector"
+      if [ ! -f "$RECTOR_PATH" ]; then
+          echo >&2 "Error: Rector not found at $RECTOR_PATH. Please run 'composer install'."
+          exit 1
+      fi
+
+      # Run Rector process on the staged files.
+      RECTOR_OUTPUT=$("$RECTOR_PATH" process $STAGED_PHP_FILES --no-progress-bar --no-diffs 2>&1)
+      RECTOR_EXIT_CODE=$?
+
+      # Check Rector exit code
+      # Allow non-zero exit if it just made changes.
+      if [ $RECTOR_EXIT_CODE -ne 0 ]; then
+          if ! echo "$RECTOR_OUTPUT" | grep -q "Rector is done!"; then
+            echo >&2 "Rector failed to process PHP files:"
+            echo >&2 "$RECTOR_OUTPUT"
+            exit 1
+          fi
+          echo "Rector applied changes."
+      fi
+
+      # Re-stage the files potentially modified by Rector
+      echo "Staging potentially modified PHP files after Rector..."
+      echo "$STAGED_PHP_FILES" | while IFS= read -r file; do
+        # Check if the file still exists
+        if [ -f "$file" ]; then
+            git add "$file"
+        fi
+      done
+      echo "Rector changes applied and staged for PHP files."
+    fi
+
+    echo "Checking Blade formatting with Prettier..."
+
+    # Get staged Blade files
+    STAGED_BLADE_FILES=$(git diff --cached --name-only --diff-filter=ACM -- '*.blade.php')
+
+    if [ -z "$STAGED_BLADE_FILES" ]; then
+      echo "No staged Blade files found to check."
+    else
+      # Check if node_modules exists (basic check for npm install)
+      if [ ! -d "node_modules" ]; then
+        echo >&2 "Error: node_modules directory not found. Please run 'npm install'."
+        exit 1
+      fi
+
+      # Run Prettier --write on staged Blade files
+      echo "Running Prettier --write on staged Blade files..."
+      PRETTIER_OUTPUT=$(npx prettier --write $STAGED_BLADE_FILES 2>&1)
+      PRETTIER_EXIT_CODE=$?
+
+      if [ $PRETTIER_EXIT_CODE -ne 0 ]; then
+        echo >&2 "Prettier formatting failed for Blade files:"
+        echo >&2 "$PRETTIER_OUTPUT"
+        exit 1
+      fi
+
+      # Add logic to stage modified Blade files
+      echo "Staging potentially modified Blade files..."
+      echo "$STAGED_BLADE_FILES" | while IFS= read -r file; do
+        # Check if the file still exists
+        if [ -f "$file" ]; then
+            git add "$file"
+        fi
+      done
+      echo "Prettier formatting applied and staged for Blade files."
+    fi
+
+    echo "Checking for leftover debug statements (dd, dump)..."
+
+    # Re-fetch staged PHP files if neither Pint nor Rector block ran
+    if [ -z "$STAGED_PHP_FILES" ] && [ -z "$STAGED_BLADE_FILES" ]; then
+      STAGED_PHP_FILES=$(git diff --cached --name-only --diff-filter=ACM -- '*.php')
+    fi
+
+    if [ -n "$STAGED_PHP_FILES" ]; then
+        # Search for dd( or dump( - ignore case, show line number, only match whole words
+        FORBIDDEN_PATTERN='\b(dd|dump)\('
+        DEBUG_OUTPUT=$(echo "$STAGED_PHP_FILES" | xargs grep -nwEi "$FORBIDDEN_PATTERN")
+
+        if [ -n "$DEBUG_OUTPUT" ]; then
+            echo >&2 "Error: Found forbidden debug statements in staged PHP files:"
+            echo >&2 "$DEBUG_OUTPUT"
+            exit 1
+        fi
+        echo "No leftover PHP debug statements found."
+    else
+        echo "No staged PHP files to check for debug statements."
+    fi
+
+    echo "Pre-commit checks passed."
+    # Exit with 0 to allow the commit
+    exit 0
+    ```
+
+4.  **Save and close** the file.
+
+5.  **Make the hook executable:**
+    ```bash
+    chmod +x .git/hooks/pre-commit
+    ```
+
+**Checks Performed:**
+
+When you run `git commit`, the hook will automatically perform the following actions on your _staged_ files:
+
+1.  **PHP Formatting (Pint):** Runs `vendor/bin/pint` to format staged PHP files according to the project's coding style.
+2.  **PHP Refactoring (Rector):** Runs `vendor/bin/rector process` to apply configured automated refactorings to staged PHP files.
+3.  **Blade Formatting (Prettier):** Runs `npx prettier --write` to format staged `*.blade.php` files.
+4.  **PHP Debug Statement Check:** Scans staged PHP files for leftover debug functions like `dd()` or `dump()` and prevents the commit if found.
+
+Any modifications made by Pint, Rector, or Prettier will be automatically added to your commit.

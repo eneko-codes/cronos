@@ -79,7 +79,7 @@ class SyncOdooCategories extends BaseSyncJob
      */
     private function syncCategories(Collection $mappedCategories): void
     {
-        $mappedCategories->each(function ($cat) {
+        $mappedCategories->each(function ($cat): void {
             Category::updateOrCreate(
                 ['odoo_category_id' => $cat['odoo_category_id']],
                 [
@@ -103,7 +103,7 @@ class SyncOdooCategories extends BaseSyncJob
             return;
         }
 
-        $missingCategories->each(function ($category) {
+        $missingCategories->each(function ($category): void {
             Log::info(
                 class_basename($this).
                     ": Category '{$category->name}' no longer exists in Odoo but preserved for historical integrity",

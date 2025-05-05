@@ -23,7 +23,7 @@ use Illuminate\Support\Facades\Route;
 // Public routes
 // Middleware: 'guest' ensures only unauthenticated users can access these.
 // Middleware: 'throttle:login' applies rate limiting to prevent brute-force attempts.
-Route::middleware(['guest', 'throttle:login'])->group(function () {
+Route::middleware(['guest', 'throttle:login'])->group(function (): void {
     // Route to display the Livewire login form.
     Route::get('/login', Login::class)->name('login');
     // Route to handle the magic link verification clicked from the user's email.
@@ -36,14 +36,14 @@ Route::middleware(['guest', 'throttle:login'])->group(function () {
 // Protected routes for authenticated users
 // Middleware: 'auth' ensures only logged-in users can access these.
 // Middleware: 'throttle:api' applies general API rate limiting.
-Route::middleware(['auth', 'throttle:api'])->group(function () {
+Route::middleware(['auth', 'throttle:api'])->group(function (): void {
     // Route to handle user logout.
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
     Route::get('/', Dashboard::class)->name('dashboard');
 
     // All other routes require admin access
     Route::middleware(['can:viewAny,App\Models\User', 'throttle:admin'])->group(
-        function () {
+        function (): void {
             Route::get('/settings', Settings::class)->name('settings');
             Route::get('/users', UsersList::class)->name('users.list');
             Route::get('/user/{id}', UserDashboard::class)->name('user.dashboard');

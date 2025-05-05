@@ -73,32 +73,32 @@ class ProjectsListView extends Component
     public function render()
     {
         $projects = Project::query()
-            ->when($this->search, function ($query) {
+            ->when($this->search, function ($query): void {
                 $query->whereRaw('LOWER(name) LIKE ?', [
                     '%'.strtolower($this->search).'%',
                 ]);
             })
           // Apply Filters
-            ->when($this->filters['has_tasks'], function ($query) {
+            ->when($this->filters['has_tasks'], function ($query): void {
                 $query->has('tasks');
             })
-            ->when($this->filters['has_time_entries'], function ($query) {
+            ->when($this->filters['has_time_entries'], function ($query): void {
                 $query->has('timeEntries'); // Checks if project has any time entries (direct or via tasks)
             })
-            ->when($this->filters['has_no_tasks'], function ($query) {
+            ->when($this->filters['has_no_tasks'], function ($query): void {
                 $query->doesntHave('tasks');
             })
-            ->when($this->filters['has_no_time_entries'], function ($query) {
+            ->when($this->filters['has_no_time_entries'], function ($query): void {
                 $query->doesntHave('timeEntries');
             })
-            ->when($this->filters['has_direct_time_entries'], function ($query) {
-                $query->whereHas('timeEntries', function ($subQuery) {
+            ->when($this->filters['has_direct_time_entries'], function ($query): void {
+                $query->whereHas('timeEntries', function ($subQuery): void {
                     $subQuery->whereNull('proofhub_task_id');
                 });
             })
             ->withCount('tasks')
             ->withCount([
-                'timeEntries as project_time_entries_count' => function ($query) {
+                'timeEntries as project_time_entries_count' => function ($query): void {
                     $query->whereNull('proofhub_task_id');
                 },
             ])
@@ -106,7 +106,7 @@ class ProjectsListView extends Component
           // Eager load users for the list view badges if needed (REMOVED, using withCount now)
           // ->with('users:id,name') // Only load necessary columns
           // Apply Sorting
-            ->when($this->sortBy, function ($query) {
+            ->when($this->sortBy, function ($query): void {
                 // Changed Builder import requirement
                 match ($this->sortBy) {
                     'name_asc' => $query->orderBy('name', 'asc'),

@@ -54,7 +54,7 @@ class UserDashboardWidgets extends Component
         // 1. Today's Schedule - Simplified Eager Loading
         $activeSchedule = UserSchedule::where('user_id', $user->id)
             ->where('effective_from', '<=', $today)
-            ->where(function ($query) use ($today) {
+            ->where(function ($query) use ($today): void {
                 $query->whereNull('effective_until')
                     ->orWhere('effective_until', '>=', $today);
             })

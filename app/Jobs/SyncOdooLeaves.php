@@ -89,7 +89,7 @@ class SyncOdooLeaves extends BaseSyncJob
 
         // Apply date range filter if provided
         if ($this->startDate && $this->endDate) {
-            $deleteQuery->where(function ($query) {
+            $deleteQuery->where(function ($query): void {
                 $query
                     ->where('start_date', '<=', $this->endDate.' 23:59:59')
                     ->where('end_date', '>=', $this->startDate.' 00:00:00');
@@ -113,7 +113,7 @@ class SyncOdooLeaves extends BaseSyncJob
         Collection $odooLeaves,
         Collection $validLeaveTypeIds
     ): void {
-        $odooLeaves->each(function ($leave) use ($validLeaveTypeIds) {
+        $odooLeaves->each(function ($leave) use ($validLeaveTypeIds): void {
             // Skip leaves with missing required fields
             if (! $this->validateLeaveFields($leave)) {
                 return;

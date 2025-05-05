@@ -62,7 +62,7 @@ class SyncOdooSchedules extends BaseSyncJob
             $odooTimeSlotsGrouped = $odooTimeSlots->groupBy('calendar_id.0');
 
             // Step 2: Create or update local schedules
-            $odooSchedules->each(function ($scheduleData) {
+            $odooSchedules->each(function ($scheduleData): void {
                 Schedule::updateOrCreate(
                     ['odoo_schedule_id' => $scheduleData['id']],
                     [
@@ -80,7 +80,7 @@ class SyncOdooSchedules extends BaseSyncJob
             if ($schedulesToLog->isNotEmpty()) {
                 Schedule::whereIn('odoo_schedule_id', $schedulesToLog)
                     ->get()
-                    ->each(function ($schedule) {
+                    ->each(function ($schedule): void {
                         Log::info(
                             class_basename($this).
                               ': Schedule no longer exists in Odoo but preserved for historical integrity',
@@ -94,7 +94,7 @@ class SyncOdooSchedules extends BaseSyncJob
             }
 
             // Step 4: Synchronize schedule details (time slots)
-            $odooSchedules->each(function ($scheduleData) use ($odooTimeSlotsGrouped) {
+            $odooSchedules->each(function ($scheduleData) use ($odooTimeSlotsGrouped): void {
                 $odooScheduleId = $scheduleData['id'];
                 $timezone = $scheduleData['tz'] ?? 'UTC';
 
@@ -199,7 +199,7 @@ class SyncOdooSchedules extends BaseSyncJob
                     $schedule,
                     $odooScheduleId,
                     $timezone
-                ) {
+                ): void {
                     $detailData = $odooDetailsById[$idToInsert];
                     $schedule->scheduleDetails()->create([
                         'odoo_schedule_id' => $odooScheduleId,
@@ -221,7 +221,7 @@ class SyncOdooSchedules extends BaseSyncJob
                     $odooDetailsById,
                     $existingDetails,
                     $timezone
-                ) {
+                ): void {
                     $detailData = $odooDetailsById[$idToUpdate];
                     $existingDetail = $existingDetails[$idToUpdate];
 
@@ -244,7 +244,7 @@ class SyncOdooSchedules extends BaseSyncJob
 
                 // Delete schedule details that no longer exist in Odoo
                 if ($toDeleteIds->isNotEmpty()) {
-                    $toDeleteIds->each(function ($detailId) use ($existingDetails) {
+                    $toDeleteIds->each(function ($detailId) use ($existingDetails): void {
                         $detail = $existingDetails[$detailId] ?? null;
                         if ($detail) {
                             $detail->delete();

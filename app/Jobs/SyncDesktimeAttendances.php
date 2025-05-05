@@ -70,7 +70,7 @@ class SyncDesktimeAttendances extends BaseSyncJob
         $dateRange = $this->getDatesRange();
 
         // Step 2: Process attendance data for each date
-        collect($dateRange)->each(function ($date) {
+        collect($dateRange)->each(function ($date): void {
             $this->processAttendanceForDate($date->format('Y-m-d'));
         });
     }
@@ -132,7 +132,7 @@ class SyncDesktimeAttendances extends BaseSyncJob
      */
     private function processSingleUserMode(Collection $users, string $date): void
     {
-        $users->each(function ($user) use ($date) {
+        $users->each(function ($user) use ($date): void {
             $attendance = $this->desktime->getSingleEmployee(
                 $user->desktime_id,
                 $date
@@ -154,7 +154,7 @@ class SyncDesktimeAttendances extends BaseSyncJob
         $dateEmployees = collect($employeesData->get($date, []));
 
         // Process ALL users, not just those in the API response
-        $users->each(function ($user) use ($dateEmployees, $date) {
+        $users->each(function ($user) use ($dateEmployees, $date): void {
             $employeeData = collect(
                 $dateEmployees->get((string) $user->desktime_id, [])
             );

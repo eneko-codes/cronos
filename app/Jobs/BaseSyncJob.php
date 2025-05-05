@@ -95,7 +95,7 @@ abstract class BaseSyncJob implements ShouldBeEncrypted, ShouldQueue
 
         try {
             // Wrap the execution logic in a database transaction
-            DB::transaction(function () {
+            DB::transaction(function (): void {
                 $this->execute();
             });
 

@@ -97,7 +97,7 @@ class ScheduleDetailView extends Component
         // Detect and mark duplicates within each day/period group
         foreach ($grouped as $weekday => $weekdayDetails) {
             $periodGroups = $weekdayDetails->groupBy('day_period');
-            foreach ($periodGroups as $period => $periodDetails) {
+            foreach ($periodGroups as $periodDetails) {
                 if ($periodDetails->count() > 1) {
                     // Mark all details in this specific group as having duplicates
                     foreach ($periodDetails as $detail) {

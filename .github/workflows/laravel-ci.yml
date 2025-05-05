@@ -205,6 +205,34 @@ jobs:
       - name: Run PHPStan
         run: ./vendor/bin/phpstan analyse --memory-limit=2G
 
+  check-rector:
+    runs-on: ubuntu-latest
+    needs: setup # Depends on the initial setup job
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2' # Match your project's PHP version
+          coverage: none
+
+      - name: Cache Composer dependencies
+        id: composer-cache
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-
+
+      - name: Install Composer Dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Run Rector (Dry Run)
+        run: ./vendor/bin/rector process --dry-run # Use --dry-run in CI to check for changes
+
   # --- Testing --- #
 
   run-tests:

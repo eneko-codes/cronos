@@ -82,7 +82,7 @@ class SyncButton extends Component
             $batch = Bus::batch($jobs)
                 ->name($batchName)
                 ->allowFailures()
-                ->catch(function (Batch $batch, Throwable $e) use ($batchName) {
+                ->catch(function (Batch $batch, Throwable $e) use ($batchName): void {
                     Log::error("{$batchName} failed.", ['batch_id' => $batch->id, 'error' => $e->getMessage()]);
                     JobBatch::where('id', $batch->id)->update([
                         'failed_jobs' => $batch->failedJobs,
@@ -92,7 +92,7 @@ class SyncButton extends Component
                     $this->isLoading = false;
                     $this->dispatch('add-toast', message: "{$batchName} failed.", variant: 'error');
                 })
-                ->finally(function (Batch $batch) use ($batchName) {
+                ->finally(function (Batch $batch) use ($batchName): void {
                     JobBatch::where('id', $batch->id)->update([
                         'pending_jobs' => $batch->pendingJobs,
                         'finished_at' => $batch->finished() ? now()->timestamp : null,

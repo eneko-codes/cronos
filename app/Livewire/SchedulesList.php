@@ -81,44 +81,44 @@ class SchedulesList extends Component
 
         $schedules = Schedule::query()
             ->withCount([
-                'userSchedules as current_users_count' => function ($query) use ($now) {
-                    $query->where(function ($subQuery) use ($now) {
+                'userSchedules as current_users_count' => function ($query) use ($now): void {
+                    $query->where(function ($subQuery) use ($now): void {
                         $subQuery->whereNull('effective_until')
                             ->orWhere('effective_until', '>=', $now);
                     });
                 },
             ])
-            ->when($this->search, function ($query) {
+            ->when($this->search, function ($query): void {
                 // Search only by schedule description
                 $query->whereRaw('LOWER(description) LIKE ?', [
                     '%'.strtolower($this->search).'%',
                 ]);
             })
             // Apply Filters
-            ->when($this->filters['has_details'], function ($query) {
+            ->when($this->filters['has_details'], function ($query): void {
                 $query->has('scheduleDetails');
             })
-            ->when($this->filters['has_no_details'], function ($query) {
+            ->when($this->filters['has_no_details'], function ($query): void {
                 $query->doesntHave('scheduleDetails');
             })
-            ->when($this->filters['has_assigned_users'], function ($query) use ($now) {
-                $query->whereHas('userSchedules', function ($subQuery) use ($now) {
-                    $subQuery->where(function ($q) use ($now) {
+            ->when($this->filters['has_assigned_users'], function ($query) use ($now): void {
+                $query->whereHas('userSchedules', function ($subQuery) use ($now): void {
+                    $subQuery->where(function ($q) use ($now): void {
                         $q->whereNull('effective_until')
                             ->orWhere('effective_until', '>=', $now);
                     });
                 });
             })
-            ->when($this->filters['has_no_assigned_users'], function ($query) use ($now) {
-                $query->whereDoesntHave('userSchedules', function ($subQuery) use ($now) {
-                    $subQuery->where(function ($q) use ($now) {
+            ->when($this->filters['has_no_assigned_users'], function ($query) use ($now): void {
+                $query->whereDoesntHave('userSchedules', function ($subQuery) use ($now): void {
+                    $subQuery->where(function ($q) use ($now): void {
                         $q->whereNull('effective_until')
                             ->orWhere('effective_until', '>=', $now);
                     });
                 });
             })
             // Apply Sorting
-            ->when($this->sortBy, function ($query) {
+            ->when($this->sortBy, function ($query): void {
                 match ($this->sortBy) {
                     'description_asc' => $query->orderBy('description', 'asc'),
                     'description_desc' => $query->orderBy('description', 'desc'),

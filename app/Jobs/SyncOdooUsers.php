@@ -89,8 +89,8 @@ class SyncOdooUsers extends BaseSyncJob
             ->filter(function ($employee) {
                 return empty($employee['work_email']);
             })
-            ->whenNotEmpty(function ($employeesWithoutEmail) {
-                $employeesWithoutEmail->each(function ($employee) {
+            ->whenNotEmpty(function ($employeesWithoutEmail): void {
+                $employeesWithoutEmail->each(function ($employee): void {
                     Log::warning(
                         class_basename($this).
                           ": Odoo employee '{$employee['name']}' missing work email",
@@ -111,7 +111,7 @@ class SyncOdooUsers extends BaseSyncJob
      */
     private function syncValidEmployees(Collection $validEmployees): void
     {
-        $validEmployees->each(function ($employee) {
+        $validEmployees->each(function ($employee): void {
             $user = User::updateOrCreate(
                 ['odoo_id' => $employee['id']],
                 [
@@ -201,7 +201,7 @@ class SyncOdooUsers extends BaseSyncJob
             ->whereNotIn('odoo_id', $currentOdooIds)
             ->where('is_active', true) // Only deactivate those currently active
             ->get()
-            ->each(function (User $user) {
+            ->each(function (User $user): void {
                 Log::info(class_basename($this).': Deactivating user no longer found in Odoo sync.', [
                     'user_id' => $user->id,
                     'odoo_id' => $user->odoo_id,

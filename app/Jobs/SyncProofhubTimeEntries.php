@@ -205,7 +205,7 @@ class SyncProofhubTimeEntries extends BaseSyncJob
     {
         $syncedIdsOnPage = collect();
 
-        $entriesPage->each(function ($entry) use ($syncedIdsOnPage) {
+        $entriesPage->each(function ($entry) use ($syncedIdsOnPage): void {
             // Reuse the existing single-entry processing logic
             $processedEntryId = $this->processSingleTimeEntry($entry);
             if ($processedEntryId !== null) {
@@ -573,7 +573,7 @@ class SyncProofhubTimeEntries extends BaseSyncJob
         // Fetch and delete each obsolete entry individually to trigger model events
         TimeEntry::whereIn('proofhub_time_entry_id', $idsToDelete)
             ->get()
-            ->each(function (TimeEntry $entry) {
+            ->each(function (TimeEntry $entry): void {
                 try {
                     $entry->delete();
                 } catch (Exception $e) {

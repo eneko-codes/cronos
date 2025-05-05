@@ -82,7 +82,7 @@ class SyncOdooDepartments extends BaseSyncJob
      */
     private function syncDepartments(Collection $mappedDepartments): void
     {
-        $mappedDepartments->each(function ($dept) {
+        $mappedDepartments->each(function ($dept): void {
             Department::updateOrCreate(
                 ['odoo_department_id' => $dept['odoo_department_id']],
                 [
@@ -108,7 +108,7 @@ class SyncOdooDepartments extends BaseSyncJob
             return;
         }
 
-        $missingDepartments->each(function ($department) {
+        $missingDepartments->each(function ($department): void {
             Log::info(
                 class_basename($this).
                     ': Department no longer exists in Odoo but preserved for historical integrity',

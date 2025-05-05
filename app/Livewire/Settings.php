@@ -470,13 +470,13 @@ class Settings extends Component
     {
         $totalUsers = User::count();
         // Count users whose preferences are not muted
-        $activeUsers = User::whereHas('notificationPreferences', function ($query) {
+        $activeUsers = User::whereHas('notificationPreferences', function ($query): void {
             $query->where('mute_all', false);
         })->count();
 
         // Count active admins whose preferences are not muted
         $activeAdmins = User::where('is_admin', true)
-            ->whereHas('notificationPreferences', function ($query) {
+            ->whereHas('notificationPreferences', function ($query): void {
                 $query->where('mute_all', false);
             })
             ->count();

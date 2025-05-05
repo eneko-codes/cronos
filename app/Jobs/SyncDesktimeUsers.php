@@ -89,7 +89,7 @@ class SyncDesktimeUsers extends BaseSyncJob
      */
     private function updateUserDesktimeIds(Collection $validUsers): void
     {
-        $validUsers->each(function ($desktimeUser) {
+        $validUsers->each(function ($desktimeUser): void {
             User::where('email', $desktimeUser['email'])->update([
                 'desktime_id' => $desktimeUser['desktime_id'],
             ]);

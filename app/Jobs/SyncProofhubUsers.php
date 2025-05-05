@@ -143,7 +143,7 @@ class SyncProofhubUsers extends BaseSyncJob
 
         $usersPage
             ->filter(fn ($user) => isset($user['email']) && isset($user['id']))
-            ->each(function ($user) use ($emailsOnPage) {
+            ->each(function ($user) use ($emailsOnPage): void {
                 $email = strtolower($user['email']);
                 $proofhubId = (string) $user['id'];
                 $emailsOnPage->push($email);

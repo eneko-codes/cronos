@@ -72,30 +72,30 @@ class LeaveTypesListView extends Component
     public function render()
     {
         $leaveTypes = LeaveType::query()
-            ->when($this->search, function ($query) {
+            ->when($this->search, function ($query): void {
                 $query->whereRaw('LOWER(name) LIKE ?', [
                     '%'.strtolower($this->search).'%',
                 ]);
             })
           // Apply Filters
-            ->when(! is_null($this->filters['active']), function ($query) {
+            ->when(! is_null($this->filters['active']), function ($query): void {
                 $query->where('active', $this->filters['active']);
             })
-            ->when(! is_null($this->filters['is_unpaid']), function ($query) {
+            ->when(! is_null($this->filters['is_unpaid']), function ($query): void {
                 $query->where('is_unpaid', $this->filters['is_unpaid']);
             })
-            ->when(! is_null($this->filters['requires_allocation']), function ($query) {
+            ->when(! is_null($this->filters['requires_allocation']), function ($query): void {
                 $query->where('requires_allocation', $this->filters['requires_allocation']);
             })
-            ->when($this->filters['has_user_leaves'], function ($query) {
+            ->when($this->filters['has_user_leaves'], function ($query): void {
                 $query->has('leaves');
             })
-            ->when($this->filters['has_no_user_leaves'], function ($query) {
+            ->when($this->filters['has_no_user_leaves'], function ($query): void {
                 $query->doesntHave('leaves');
             })
             ->withCount('leaves') // Add count of associated user leaves
           // Apply Sorting
-            ->when($this->sortBy, function ($query) {
+            ->when($this->sortBy, function ($query): void {
                 match ($this->sortBy) {
                     'name_asc' => $query->orderBy('name', 'asc'),
                     'name_desc' => $query->orderBy('name', 'desc'),

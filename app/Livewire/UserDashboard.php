@@ -537,7 +537,7 @@ class UserDashboard extends Component
             // For each period, select the best entry if there are duplicates
             $selectedDetails = collect();
 
-            foreach ($periodGroups as $period => $periodDetails) {
+            foreach ($periodGroups as $periodDetails) {
                 if ($periodDetails->count() == 1) {
                     // If only one entry for this period, use it
                     $selectedDetails->push($periodDetails->first());

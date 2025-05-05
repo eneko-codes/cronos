@@ -28,7 +28,7 @@ class GetDataForDateRange
         $schedules = $user->userSchedules()
             ->with(['schedule.scheduleDetails'])
             ->where('effective_from', '<=', $endDateObject)
-            ->where(function ($query) use ($startDateObject) {
+            ->where(function ($query) use ($startDateObject): void {
                 $query
                     ->where('effective_until', '>=', $startDateObject)
                     ->orWhereNull('effective_until');
@@ -38,14 +38,14 @@ class GetDataForDateRange
         // Get leaves with eager loading
         $leaves = $user->userLeaves()
             ->with(['leaveType', 'department', 'category'])
-            ->where(function ($query) use ($startDateObject, $endDateObject) {
+            ->where(function ($query) use ($startDateObject, $endDateObject): void {
                 $query
                     ->whereBetween('start_date', [$startDateObject, $endDateObject])
                     ->orWhereBetween('end_date', [$startDateObject, $endDateObject])
                     ->orWhere(function ($innerQuery) use (
                         $startDateObject,
                         $endDateObject
-                    ) {
+                    ): void {
                         $innerQuery
                             ->where('start_date', '<=', $startDateObject)
                             ->where('end_date', '>=', $endDateObject);

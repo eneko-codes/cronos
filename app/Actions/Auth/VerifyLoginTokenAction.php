@@ -68,7 +68,7 @@ class VerifyLoginTokenAction
 
         // If token is valid and not expired, log the user in and delete the token.
         // Use a transaction to ensure both operations succeed or fail together.
-        DB::transaction(function () use ($loginToken, $user, $remember) {
+        DB::transaction(function () use ($loginToken, $user, $remember): void {
             // Log the user in, applying the 'remember' preference stored with the token.
             Auth::login($user, $remember); // Use stored remember value
 

@@ -158,7 +158,7 @@ class PurgeOldTimeData extends Command
 
                 $query->chunkById(
                     1000,
-                    function ($records) use (&$deleted) {
+                    function ($records) use (&$deleted): void {
                         foreach ($records as $record) {
                             $record->delete(); // Using delete() to trigger model events
                             $deleted++;

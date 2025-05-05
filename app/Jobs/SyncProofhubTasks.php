@@ -147,7 +147,7 @@ class SyncProofhubTasks extends BaseSyncJob
 
         $tasksPage
             ->filter(fn ($taskData) => data_get($taskData, 'id'))
-            ->each(function ($taskData) use ($syncedTaskIdsOnPage) {
+            ->each(function ($taskData) use ($syncedTaskIdsOnPage): void {
                 $taskId = data_get($taskData, 'id');
                 $syncedTaskIdsOnPage->push($taskId); // Add main task ID
 
@@ -262,7 +262,7 @@ class SyncProofhubTasks extends BaseSyncJob
 
         $subtasks
             ->filter(fn ($subtask) => data_get($subtask, 'id')) // Ensure subtask has an ID
-            ->each(function ($subtask) use ($syncedSubtaskIds, $projectId) {
+            ->each(function ($subtask) use ($syncedSubtaskIds, $projectId): void {
                 $subtaskId = data_get($subtask, 'id');
                 $syncedSubtaskIds->push($subtaskId);
 

@@ -58,7 +58,7 @@ class LastSynced extends Component
 
         // First check for any currently running jobs
         $runningBatch = JobBatch::whereNull('finished_at')
-            ->where(function ($query) {
+            ->where(function ($query): void {
                 $query->where('name', 'User synchronization')
                     ->orWhere('name', 'User data synchronization');
             })
@@ -77,7 +77,7 @@ class LastSynced extends Component
 
         // Get the most recent completed batch with flexible matching
         $latestBatch = JobBatch::whereNotNull('finished_at')
-            ->where(function ($query) {
+            ->where(function ($query): void {
                 $query->where('name', 'like', '%sync%')
                     ->orWhere('name', 'like', '%Sync%');
             })

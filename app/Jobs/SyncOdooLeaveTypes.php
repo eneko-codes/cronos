@@ -88,7 +88,7 @@ class SyncOdooLeaveTypes extends BaseSyncJob
      */
     private function syncLeaveTypes(Collection $mappedLeaveTypes): void
     {
-        $mappedLeaveTypes->each(function ($leaveType) {
+        $mappedLeaveTypes->each(function ($leaveType): void {
             LeaveType::updateOrCreate(
                 ['odoo_leave_type_id' => $leaveType['odoo_leave_type_id']],
                 [
@@ -117,7 +117,7 @@ class SyncOdooLeaveTypes extends BaseSyncJob
             return;
         }
 
-        $missingLeaveTypes->each(function ($leaveType) {
+        $missingLeaveTypes->each(function ($leaveType): void {
             Log::info(
                 class_basename($this).
                     ': Leave type no longer exists in Odoo but preserved for historical integrity',

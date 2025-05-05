@@ -6,6 +6,8 @@ namespace App\Http\Controllers\Auth;
 
 use App\Actions\Auth\LogoutUserAction;
 use App\Actions\Auth\VerifyLoginTokenAction;
+use App\Exceptions\InvalidLoginTokenException;
+use App\Exceptions\LoginTokenExpiredException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\VerifyLoginTokenRequest;
 use Illuminate\Http\RedirectResponse;
@@ -26,7 +28,10 @@ class LoginController extends Controller
      *
      * @param  VerifyLoginTokenRequest  $request  The validated request containing the token and remember flag.
      * @param  VerifyLoginTokenAction  $verifyLoginTokenAction  The action performing the verification.
-     * @return RedirectResponse A redirection to the dashboard on success, or back to login on failure (handled by exceptions).
+     * @return RedirectResponse A redirection to the dashboard on success, or back to log in on failure (handled by exceptions).
+     *
+     * @throws InvalidLoginTokenException
+     * @throws LoginTokenExpiredException
      */
     public function verify(VerifyLoginTokenRequest $request, VerifyLoginTokenAction $verifyLoginTokenAction): RedirectResponse
     {

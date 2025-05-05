@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Models\LeaveType;
-use App\Services\OdooApiCalls;
+use App\Services\OdooApiService;
 use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -29,9 +29,9 @@ class SyncOdooLeaveTypes extends BaseSyncJob
     /**
      * SyncOdooLeaveTypes constructor.
      *
-     * @param  OdooApiCalls  $odoo  An instance of the OdooApiCalls service.
+     * @param  OdooApiService  $odoo  An instance of the OdooApiService service.
      */
-    public function __construct(OdooApiCalls $odoo)
+    public function __construct(OdooApiService $odoo)
     {
         $this->odoo = $odoo;
     }

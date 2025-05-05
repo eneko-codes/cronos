@@ -4,17 +4,13 @@ declare(strict_types=1);
 
 namespace App\Observers;
 
+use App\Actions\Notification\CheckSpecificNotificationPermission;
 use App\Models\User;
 use App\Notifications\AdminPromotionEmail;
 use App\Notifications\WelcomeEmail;
-use App\Services\NotificationPermissionService;
 
 class UserObserver
 {
-    public function __construct(
-        protected NotificationPermissionService $notificationPermissionService
-    ) {}
-
     /**
      * Handle the User "created" event.
      */
@@ -23,12 +19,12 @@ class UserObserver
         // Create default notification preferences for the new user
         $user->notificationPreferences()->create();
 
-        // Create the notification instance
+        // Create the notification instance (no argument)
         $welcomeNotification = new WelcomeEmail;
 
         // Use the injected service and the created notification instance
-        if ($user->email && $this->notificationPermissionService->canUserReceiveNotification($user, $welcomeNotification)) {
-            // Send the already created instance
+        $action = new CheckSpecificNotificationPermission;
+        if ($user->email && $action->handle($user, $welcomeNotification)) {
             $user->notify($welcomeNotification);
         }
     }
@@ -63,11 +59,15 @@ class UserObserver
 
             // Detach belongsToMany relations individually to emit model events
             foreach ($user->projects as $project) {
-                $user->projects()->detach($project->id);
+                if ($project && $project->id) {
+                    $user->projects()->detach($project->id);
+                }
             }
 
             foreach ($user->categories as $category) {
-                $user->categories()->detach($category->id);
+                if ($category && $category->id) {
+                    $user->categories()->detach($category->id);
+                }
             }
 
             foreach ($user->tasks as $task) {
@@ -95,7 +95,8 @@ class UserObserver
             // Send notification to all other admins who can receive it
             foreach ($adminUsers as $admin) {
                 // Use the injected service
-                if ($this->notificationPermissionService->canUserReceiveNotification($admin, $notification)) {
+                $action = new CheckSpecificNotificationPermission;
+                if ($action->handle($admin, $notification)) {
                     // Use notify to respect the queue
                     $admin->notify($notification);
                 }
@@ -134,11 +135,15 @@ class UserObserver
 
         // Detach belongsToMany relations individually to emit model events
         foreach ($user->projects as $project) {
-            $user->projects()->detach($project->id);
+            if ($project && $project->id) {
+                $user->projects()->detach($project->id);
+            }
         }
 
         foreach ($user->categories as $category) {
-            $user->categories()->detach($category->id);
+            if ($category && $category->id) {
+                $user->categories()->detach($category->id);
+            }
         }
 
         foreach ($user->tasks as $task) {

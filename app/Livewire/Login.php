@@ -4,27 +4,22 @@ declare(strict_types=1);
 
 namespace App\Livewire;
 
-use App\Mail\LoginEmail;
-use App\Models\LoginToken;
-use App\Models\User;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
+use App\Actions\Auth\RequestMagicLinkAction;
 use Illuminate\Support\Facades\Request;
-use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 
 /**
- * Livewire component for handling user login.
+ * Livewire component handling the user login form interaction.
+ * Allows users to enter their email, request a magic link, and choose the "Remember Me" option.
  */
 #[Title('Login')]
 class Login extends Component
 {
     /**
-     * User's email address.
+     * The user's email address, bound to the input field.
      *
      * @var string
      */
@@ -32,7 +27,7 @@ class Login extends Component
     public $email = '';
 
     /**
-     * Remember me option.
+     * The "Remember Me" option, bound to the checkbox.
      *
      * @var bool
      */
@@ -40,94 +35,64 @@ class Login extends Component
     public $remember = false;
 
     /**
-     * Message displayed after sending the magic login link.
+     * A message displayed on the form after a magic link has been successfully sent.
+     * Empty if no message should be shown.
      *
      * @var string
      */
     public $tokenSentMessage = '';
 
-    public $hasUsers;
-
-    public function mount(): void
-    {
-        $this->hasUsers = User::exists();
-    }
-
     /**
-     * Sends a magic login link to the user's email address.
+     * Handles the submission of the login form to send a magic link.
      *
+     * Validates the email and remember flag. Delegates the core logic of finding the user,
+     * generating/storing the token, and queuing the email to the RequestMagicLinkAction.
+     * Updates the component state to show a success message or an error if the email is not found.
+     *
+     * @param  RequestMagicLinkAction  $requestMagicLinkAction  The action responsible for sending the link.
      * @return void
      */
-    public function sendMagicLink()
+    public function sendMagicLink(RequestMagicLinkAction $requestMagicLinkAction)
     {
-        // First validate only required and email format
+        // Validate basic email format and remember flag first.
         $this->validate([
             'email' => 'required|email',
             'remember' => 'boolean',
         ]);
 
-        // Log the login attempt regardless of whether the email exists
+        // Get request details
         $ipAddress = Request::ip();
         $userAgent = Request::header('User-Agent');
 
-        // Check if user exists
-        $user = User::where('email', $this->email)->first();
+        // Execute the action to handle user lookup, token generation/storage, logging, and email queuing.
+        $linkSent = $requestMagicLinkAction->handle(
+            $this->email,
+            $this->remember,
+            $ipAddress,
+            $userAgent
+        );
 
-        // If user doesn't exist, log the invalid email attempt
-        if (! $user) {
-            Log::info(
-                'Magic link requested for non-existent email: '.$this->email,
-                [
-                    'email' => $this->email,
-                    'ip_address' => $ipAddress,
-                    'user_agent' => $userAgent,
-                ]
-            );
-
+        // If the action returns false, it means the user wasn't found.
+        // Add the specific error message to the 'email' field for UI feedback.
+        if (! $linkSent) {
             $this->addError(
                 'email',
                 'The provided email does not match our records.'
             );
 
-            return;
+            return; // Stop execution
         }
 
-        // Log successful magic link request
-        Log::info('Magic link requested for user: '.$user->name, [
-            'email' => $this->email,
-            'name' => $user->name,
-            'user_id' => $user->id,
-            'ip_address' => $ipAddress,
-            'user_agent' => $userAgent,
-        ]);
-
-        // Generate a unique token
-        $token = Str::random(60);
-
-        // Create or update the token in the database
-        LoginToken::updateOrCreate(
-            ['user_id' => $user->id],
-            [
-                'token' => hash('sha256', $token),
-                'expires_at' => Carbon::now()->addMinutes(15),
-                'remember' => $this->remember, // Store remember preference
-            ]
-        );
-
-        // Use queue to send the email with the magic link, including the 'remember' flag
-        Mail::to($user->email)->queue(
-            new LoginEmail($user, $token, $this->remember)
-        );
-
-        // Set a local message
+        // If the action was successful (returned true):
+        // Update the component state to show the confirmation message.
         $this->tokenSentMessage = 'Click on the login link we sent to your email.';
 
-        // Toast message for redirects
+        // Dispatch a browser event for a toast notification.
         $this->dispatch('add-toast', message: 'Login link sent!', variant: 'info');
     }
 
     /**
-     * Renders the login view.
+     * Renders the login view component.
      *
      * @return \Illuminate\View\View
      */

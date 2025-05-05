@@ -14,9 +14,9 @@ use App\Jobs\SyncProofhubTasks;
 use App\Jobs\SyncProofhubTimeEntries;
 use App\Jobs\SyncProofhubUsers;
 use App\Models\JobBatch;
-use App\Services\DesktimeApiCalls;
-use App\Services\OdooApiCalls;
-use App\Services\ProofhubApiCalls;
+use App\Services\DesktimeApiService;
+use App\Services\OdooApiService;
+use App\Services\ProofhubApiService;
 use Illuminate\Bus\Batch;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
@@ -56,9 +56,9 @@ class SyncButton extends Component
             $batchName = $this->syncType === 'users' ? 'User synchronization' : 'User data synchronization';
 
             // Create service instances
-            $odooService = app(OdooApiCalls::class);
-            $desktimeService = app(DesktimeApiCalls::class);
-            $proofhubService = app(ProofhubApiCalls::class);
+            $odooService = app(OdooApiService::class);
+            $desktimeService = app(DesktimeApiService::class);
+            $proofhubService = app(ProofhubApiService::class);
 
             $jobs = $this->syncType === 'users' ? [
                 new SyncOdooUsers($odooService),

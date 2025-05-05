@@ -23,7 +23,7 @@
 
       @if ($unreadCount > 0)
         <span
-          class="absolute -right-0.5 -top-0.5 flex size-2"
+          class="absolute -top-0.5 -right-0.5 flex size-2"
           title="{{ $unreadCount }} unread notification{{ $unreadCount > 1 ? 's' : '' }}"
         >
           <span

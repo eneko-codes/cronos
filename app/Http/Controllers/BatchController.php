@@ -16,9 +16,9 @@ use App\Jobs\SyncProofhubProjects;
 use App\Jobs\SyncProofhubTasks;
 use App\Jobs\SyncProofhubTimeEntries;
 use App\Jobs\SyncProofhubUsers;
-use App\Services\DesktimeApiCalls;
-use App\Services\OdooApiCalls;
-use App\Services\ProofhubApiCalls;
+use App\Services\DesktimeApiService;
+use App\Services\OdooApiService;
+use App\Services\ProofhubApiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Bus;
 
@@ -35,28 +35,28 @@ class BatchController extends Controller
         // Define chains for jobs with dependencies
         $odooChain = [
             // Phase 1: Sync Odoo metadata
-            new SyncOdooDepartments(app(OdooApiCalls::class)),
-            new SyncOdooCategories(app(OdooApiCalls::class)),
-            new SyncOdooLeaveTypes(app(OdooApiCalls::class)),
-            new SyncOdooSchedules(app(OdooApiCalls::class)),
+            new SyncOdooDepartments(app(OdooApiService::class)),
+            new SyncOdooCategories(app(OdooApiService::class)),
+            new SyncOdooLeaveTypes(app(OdooApiService::class)),
+            new SyncOdooSchedules(app(OdooApiService::class)),
             // Phase 2: Sync Odoo Users (depends on metadata)
-            new SyncOdooUsers(app(OdooApiCalls::class)),
+            new SyncOdooUsers(app(OdooApiService::class)),
             // Phase 3: Sync Odoo Leaves (depends on Users and LeaveTypes)
-            new SyncOdooLeaves(app(OdooApiCalls::class), $today, $today),
+            new SyncOdooLeaves(app(OdooApiService::class), $today, $today),
         ];
 
         $proofhubChain = [
-            new SyncProofhubUsers(app(ProofhubApiCalls::class)),
-            new SyncProofhubProjects(app(ProofhubApiCalls::class)),
-            new SyncProofhubTasks(app(ProofhubApiCalls::class)),
+            new SyncProofhubUsers(app(ProofhubApiService::class)),
+            new SyncProofhubProjects(app(ProofhubApiService::class)),
+            new SyncProofhubTasks(app(ProofhubApiService::class)),
             // TimeEntries depends on Users/Projects/Tasks
-            new SyncProofhubTimeEntries(app(ProofhubApiCalls::class), $today, $today),
+            new SyncProofhubTimeEntries(app(ProofhubApiService::class), $today, $today),
         ];
 
         $desktimeChain = [
-            new SyncDesktimeUsers(app(DesktimeApiCalls::class)),
+            new SyncDesktimeUsers(app(DesktimeApiService::class)),
             // Attendances depends on Users
-            new SyncDesktimeAttendances(app(DesktimeApiCalls::class)),
+            new SyncDesktimeAttendances(app(DesktimeApiService::class)),
         ];
 
         $batch = Bus::batch([
@@ -81,14 +81,14 @@ class BatchController extends Controller
 
         $odooChain = [
             // Phase 1: Sync Odoo metadata
-            new SyncOdooDepartments(app(OdooApiCalls::class)),
-            new SyncOdooCategories(app(OdooApiCalls::class)),
-            new SyncOdooLeaveTypes(app(OdooApiCalls::class)),
-            new SyncOdooSchedules(app(OdooApiCalls::class)),
+            new SyncOdooDepartments(app(OdooApiService::class)),
+            new SyncOdooCategories(app(OdooApiService::class)),
+            new SyncOdooLeaveTypes(app(OdooApiService::class)),
+            new SyncOdooSchedules(app(OdooApiService::class)),
             // Phase 2: Sync Odoo Users (depends on metadata)
-            new SyncOdooUsers(app(OdooApiCalls::class)),
+            new SyncOdooUsers(app(OdooApiService::class)),
             // Phase 3: Sync Odoo Leaves (depends on Users and LeaveTypes)
-            new SyncOdooLeaves(app(OdooApiCalls::class), $today, $today),
+            new SyncOdooLeaves(app(OdooApiService::class), $today, $today),
         ];
 
         $batch = Bus::batch([
@@ -110,11 +110,11 @@ class BatchController extends Controller
         $today = now()->format('Y-m-d');
 
         $proofhubChain = [
-            new SyncProofhubUsers(app(ProofhubApiCalls::class)),
-            new SyncProofhubProjects(app(ProofhubApiCalls::class)),
-            new SyncProofhubTasks(app(ProofhubApiCalls::class)),
+            new SyncProofhubUsers(app(ProofhubApiService::class)),
+            new SyncProofhubProjects(app(ProofhubApiService::class)),
+            new SyncProofhubTasks(app(ProofhubApiService::class)),
             // TimeEntries depends on Users/Projects/Tasks
-            new SyncProofhubTimeEntries(app(ProofhubApiCalls::class), $today, $today),
+            new SyncProofhubTimeEntries(app(ProofhubApiService::class), $today, $today),
         ];
 
         $batch = Bus::batch([
@@ -134,9 +134,9 @@ class BatchController extends Controller
     public function dispatchDesktimeBatch(): JsonResponse
     {
         $desktimeChain = [
-            new SyncDesktimeUsers(app(DesktimeApiCalls::class)),
+            new SyncDesktimeUsers(app(DesktimeApiService::class)),
             // Attendances depends on Users
-            new SyncDesktimeAttendances(app(DesktimeApiCalls::class)),
+            new SyncDesktimeAttendances(app(DesktimeApiService::class)),
         ];
 
         $batch = Bus::batch([

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Models\Department;
-use App\Services\OdooApiCalls;
+use App\Services\OdooApiService;
 use Exception;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -30,9 +30,9 @@ class SyncOdooDepartments extends BaseSyncJob
     /**
      * SyncOdooDepartments constructor.
      *
-     * @param  OdooApiCalls  $odoo  An instance of the OdooApiCalls service.
+     * @param  OdooApiService  $odoo  An instance of the OdooApiService service.
      */
-    public function __construct(OdooApiCalls $odoo)
+    public function __construct(OdooApiService $odoo)
     {
         $this->odoo = $odoo;
     }

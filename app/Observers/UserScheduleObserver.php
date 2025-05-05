@@ -4,18 +4,13 @@ declare(strict_types=1);
 
 namespace App\Observers;
 
+use App\Actions\Notification\CheckSpecificNotificationPermission;
 use App\Models\User;
 use App\Models\UserSchedule;
 use App\Notifications\ScheduleChangeNotification;
-use App\Services\NotificationPermissionService;
-use Illuminate\Support\Facades\Log;
 
 class UserScheduleObserver
 {
-    public function __construct(
-        protected NotificationPermissionService $notificationPermissionService
-    ) {}
-
     /**
      * Handle the UserSchedule "created" event.
      */
@@ -31,42 +26,26 @@ class UserScheduleObserver
      */
     public function updated(UserSchedule $userSchedule): void
     {
-        // Check if the schedule assignment just ended
-        if (
-            $userSchedule->wasChanged('effective_until') &&
-            ! is_null($userSchedule->effective_until)
-        ) {
-            // Eager load relationships
-            $userSchedule->load(['user', 'schedule']);
+        // Check if the schedule assignment just ended (effective_until was changed FROM null TO a date)
+        if ($userSchedule->wasChanged('effective_until') && ! is_null($userSchedule->effective_until)) {
+            // Eager load relationships if not already loaded
+            $userSchedule->loadMissing(['user', 'schedule']);
 
             $user = $userSchedule->user;
-            $oldSchedule = $userSchedule->schedule;
+            $endedSchedule = $userSchedule->schedule; // The schedule that just ended
 
-            // Ensure user and schedule exist
-            if (! $user || ! $oldSchedule) {
-                Log::warning(
-                    'UserScheduleObserver: User or Schedule relationship missing for updated UserSchedule',
-                    [
-                        'user_schedule_id' => $userSchedule->id,
-                        'user_exists' => ! is_null($user),
-                        'schedule_exists' => ! is_null($oldSchedule),
-                    ]
-                );
+            // Create the notification: Pass the ended schedule as old, and null as new
+            // Note: We might need more details than just the Schedule model depending on the Notification's needs.
+            // Assuming the notification can handle the Schedule model object or relevant details from it.
+            $notification = new ScheduleChangeNotification($user, $endedSchedule, null);
 
-                return;
-            }
-
-            // Pass the ended schedule as old, and null for new
-            $notification = new ScheduleChangeNotification(
-                $user,
-                $oldSchedule,
-                null
-            );
-
-            if ($this->notificationPermissionService->canUserReceiveNotification($user, $notification)) {
+            // Check permission using the action
+            $action = new CheckSpecificNotificationPermission;
+            if ($action->handle($user, $notification)) {
                 $user->notify($notification);
             }
         }
+
     }
 
     /**

@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Actions\Notification\CheckSpecificNotificationPermission;
 use App\Contracts\Pingable;
 use App\Models\User;
 use App\Notifications\ApiDownWarning;
-use App\Services\DesktimeApiCalls;
-use App\Services\NotificationPermissionService;
-use App\Services\OdooApiCalls;
-use App\Services\ProofhubApiCalls;
+use App\Services\DesktimeApiService;
+use App\Services\OdooApiService;
+use App\Services\ProofhubApiService;
 use Exception;
 use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
@@ -48,11 +48,11 @@ abstract class BaseSyncJob implements ShouldBeEncrypted, ShouldQueue
      * We explicitly declare these properties so referencing them
      * (in checkApisHealth()) won't cause "Undefined property" errors.
      */
-    protected ?OdooApiCalls $odoo = null;
+    protected ?OdooApiService $odoo = null;
 
-    protected ?DesktimeApiCalls $desktime = null;
+    protected ?DesktimeApiService $desktime = null;
 
-    protected ?ProofhubApiCalls $proofhub = null;
+    protected ?ProofhubApiService $proofhub = null;
 
     /**
      * Max job tries.
@@ -148,9 +148,6 @@ abstract class BaseSyncJob implements ShouldBeEncrypted, ShouldQueue
             'ProofHub' => $this->proofhub,
         ];
 
-        // Resolve the service here
-        $notificationPermissionService = resolve(NotificationPermissionService::class);
-
         foreach ($apis as $serviceName => $service) {
             if ($service instanceof Pingable) {
                 try {
@@ -159,36 +156,26 @@ abstract class BaseSyncJob implements ShouldBeEncrypted, ShouldQueue
 
                     if ($isDown) {
                         $errorMessage = $pingResult['message'] ?? 'API health check failed';
-                        // Admins should receive API down warnings unless globally disabled
-                        $adminUsers = User::where('is_admin', true)->get();
-                        $apiDownNotification = new ApiDownWarning(
-                            $serviceName,
-                            $errorMessage
-                        );
-
-                        // Use the resolved service
-                        foreach ($adminUsers as $admin) {
-                            if ($notificationPermissionService->canUserReceiveNotification($admin, $apiDownNotification)) {
-                                $admin->notify($apiDownNotification); // Use notify to respect queue
-                            }
-                        }
+                        $this->sendApiDownNotification($serviceName, $errorMessage);
                     }
                 } catch (Exception $e) {
-                    // Admins should receive API down warnings unless globally disabled
-                    $adminUsers = User::where('is_admin', true)->get();
                     $errorMessage = "Health check failed: {$e->getMessage()}";
-                    $apiDownNotification = new ApiDownWarning(
-                        $serviceName,
-                        $errorMessage
-                    );
-
-                    // Use the resolved service
-                    foreach ($adminUsers as $admin) {
-                        if ($notificationPermissionService->canUserReceiveNotification($admin, $apiDownNotification)) {
-                            $admin->notify($apiDownNotification); // Use notify to respect queue
-                        }
-                    }
+                    $this->sendApiDownNotification($serviceName, $errorMessage);
                 }
+            }
+        }
+    }
+
+    protected function sendApiDownNotification(string $apiName, string $errorMessage): void
+    {
+        $admins = User::where('is_admin', true)->get(); // Consider caching this query
+        $apiDownNotification = new ApiDownWarning($apiName, $errorMessage);
+
+        foreach ($admins as $admin) {
+            // Use the action directly
+            $action = new CheckSpecificNotificationPermission;
+            if ($action->handle($admin, $apiDownNotification)) {
+                $admin->notifyNow($apiDownNotification);
             }
         }
     }

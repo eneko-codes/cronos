@@ -8,7 +8,7 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
-use App\Services\ProofhubApiCalls;
+use App\Services\ProofhubApiService;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Collection;
@@ -39,12 +39,12 @@ class SyncProofhubTimeEntries extends BaseSyncJob
     /**
      * SyncProofhubTimeEntries constructor.
      *
-     * @param  ProofhubApiCalls  $proofhub  An instance of the ProofhubApiCalls service
+     * @param  ProofhubApiService  $proofhub  An instance of the ProofhubApiService service
      * @param  string|null  $startDate  Optional start date in Y-m-d format
      * @param  string|null  $endDate  Optional end date in Y-m-d format
      */
     public function __construct(
-        ProofhubApiCalls $proofhub,
+        ProofhubApiService $proofhub,
         ?string $startDate = null,
         ?string $endDate = null
     ) {

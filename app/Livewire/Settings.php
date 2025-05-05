@@ -6,10 +6,10 @@ namespace App\Livewire;
 
 use App\Models\Setting;
 use App\Models\User;
-use App\Services\DesktimeApiCalls;
-use App\Services\OdooApiCalls;
-use App\Services\ProofhubApiCalls;
-use App\Services\SystemPinApiCalls;
+use App\Services\DesktimeApiService;
+use App\Services\OdooApiService;
+use App\Services\ProofhubApiService;
+use App\Services\SystemPinApiService;
 use Exception;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Telescope\Contracts\EntriesRepository;
@@ -354,7 +354,7 @@ class Settings extends Component
      */
     public function pingOdoo(): void
     {
-        $service = app(OdooApiCalls::class);
+        $service = app(OdooApiService::class);
         $result = $service->ping();
 
         $this->dispatch(
@@ -369,7 +369,7 @@ class Settings extends Component
      */
     public function pingDesktime(): void
     {
-        $service = app(DesktimeApiCalls::class);
+        $service = app(DesktimeApiService::class);
         $success = $service->ping();
 
         $this->dispatch(
@@ -386,7 +386,7 @@ class Settings extends Component
      */
     public function pingProofhub(): void
     {
-        $service = app(ProofhubApiCalls::class);
+        $service = app(ProofhubApiService::class);
         $result = $service->ping();
 
         $this->dispatch(
@@ -401,7 +401,7 @@ class Settings extends Component
      */
     public function pingSystemPin(): void
     {
-        $service = app(SystemPinApiCalls::class);
+        $service = app(SystemPinApiService::class);
         $success = $service->ping();
 
         $this->dispatch(

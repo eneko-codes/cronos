@@ -7,7 +7,7 @@ namespace App\Jobs;
 use App\Models\Category;
 use App\Models\Schedule;
 use App\Models\User;
-use App\Services\OdooApiCalls;
+use App\Services\OdooApiService;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Arr;
@@ -35,11 +35,11 @@ class SyncOdooUsers extends BaseSyncJob
     /**
      * SyncOdooUsers constructor.
      *
-     * @param  OdooApiCalls  $odoo  An instance of the OdooApiCalls service.
+     * @param  OdooApiService  $odoo  An instance of the OdooApiService service.
      */
-    public function __construct(OdooApiCalls $odoo)
+    public function __construct(OdooApiService $odoo)
     {
-        // Assign the parent's protected ?OdooApiCalls $odoo property.
+        // Assign the parent's protected ?OdooApiService $odoo property.
         $this->odoo = $odoo;
     }
 

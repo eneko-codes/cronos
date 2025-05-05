@@ -2,25 +2,23 @@
 
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\Actions\User;
 
 use App\Models\User;
 use Carbon\Carbon;
 
-class UserDataService
+class GetDataForDateRange
 {
     /**
-     * Returns data for the user within a specified date range.
-     *
-     * Collects and organizes all user data (schedules, leaves, attendances, time entries)
-     * within the provided date range for comprehensive reporting.
+     * Get comprehensive user data (schedules, leaves, attendances, time entries)
+     * for a specific user within a given date range.
      *
      * @param  User  $user  The user for whom to fetch data.
      * @param  Carbon  $startDate  Beginning of the date range.
      * @param  Carbon  $endDate  End of the date range.
-     * @return array Associative array of user data organized by date.
+     * @return array Associative array containing 'schedules', 'leaves', 'attendances', 'time_entries'.
      */
-    public function getDataForUserAndDateRange(User $user, Carbon $startDate, Carbon $endDate): array
+    public function handle(User $user, Carbon $startDate, Carbon $endDate): array
     {
         // Ensure we're working with dates at day precision
         $startDateObject = $startDate->copy()->startOfDay();

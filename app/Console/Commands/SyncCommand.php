@@ -17,9 +17,9 @@ use App\Jobs\SyncProofhubProjects;
 use App\Jobs\SyncProofhubTasks;
 use App\Jobs\SyncProofhubTimeEntries;
 use App\Jobs\SyncProofhubUsers;
-use App\Services\DesktimeApiCalls;
-use App\Services\OdooApiCalls;
-use App\Services\ProofhubApiCalls;
+use App\Services\DesktimeApiService;
+use App\Services\OdooApiService;
+use App\Services\ProofhubApiService;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Console\Command;
@@ -260,9 +260,9 @@ class SyncCommand extends Command
         try {
             // Get API service
             $apiService = match ($platform) {
-                'odoo' => app(OdooApiCalls::class),
-                'proofhub' => app(ProofhubApiCalls::class),
-                'desktime' => app(DesktimeApiCalls::class),
+                'odoo' => app(OdooApiService::class),
+                'proofhub' => app(ProofhubApiService::class),
+                'desktime' => app(DesktimeApiService::class),
                 default => throw new \Exception("Unknown platform service: $platform"),
             };
 
@@ -440,9 +440,9 @@ class SyncCommand extends Command
         try {
             // Determine which API service to use based on platform
             $apiService = match ($platform) {
-                'odoo' => app(OdooApiCalls::class),
-                'proofhub' => app(ProofhubApiCalls::class),
-                'desktime' => app(DesktimeApiCalls::class),
+                'odoo' => app(OdooApiService::class),
+                'proofhub' => app(ProofhubApiService::class),
+                'desktime' => app(DesktimeApiService::class),
                 default => throw new Exception("Unknown platform: {$platform}"),
             };
 

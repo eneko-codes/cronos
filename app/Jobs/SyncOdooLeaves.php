@@ -7,7 +7,7 @@ namespace App\Jobs;
 use App\Models\LeaveType;
 use App\Models\User;
 use App\Models\UserLeave;
-use App\Services\OdooApiCalls;
+use App\Services\OdooApiService;
 use Exception;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Log;
  *
  * Synchronizes hr.leave data from Odoo into local user_leaves table.
  * This job ensures local leave records match the current state in Odoo.
- * By default, it fetches validated leaves (via OdooApiCalls->getLeaves()).
+ * By default, it fetches validated leaves (via OdooApiService->getLeaves()).
  * If a date range is passed, it fetches only leaves overlapping that range.
  */
 class SyncOdooLeaves extends BaseSyncJob
@@ -43,7 +43,7 @@ class SyncOdooLeaves extends BaseSyncJob
      * @param  string|null  $endDate  Optional end date (e.g., '2025-01-13')
      */
     public function __construct(
-        OdooApiCalls $odoo,
+        OdooApiService $odoo,
         ?string $startDate = null,
         ?string $endDate = null
     ) {

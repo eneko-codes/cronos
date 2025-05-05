@@ -8,29 +8,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Class LoginToken
+ * Represents a single-use token for passwordless (magic link) authentication.
  *
- * Represents a user's login token.
- *
- * @property string $id
- * @property int $user_id
- * @property string $token
- * @property \Carbon\Carbon $expires_at
- * @property bool $remember
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
- * @property-read \App\Models\User $user
- *
- * @method static \Illuminate\Database\Eloquent\Builder<static>|LoginToken newModelQuery()
- * @method static \Illuminate\Database\Eloquent\Builder<static>|LoginToken newQuery()
- * @method static \Illuminate\Database\Eloquent\Builder<static>|LoginToken query()
- * @method static \Illuminate\Database\Eloquent\Builder<static>|LoginToken whereCreatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|LoginToken whereExpiresAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|LoginToken whereId($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|LoginToken whereRemember($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|LoginToken whereToken($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|LoginToken whereUpdatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|LoginToken whereUserId($value)
+ * @property int $user_id Foreign key linking to the users table.
+ * @property string $token The SHA-256 hash of the actual token sent to the user.
+ * @property \Carbon\Carbon $expires_at The timestamp when this token becomes invalid.
+ * @property bool $remember Indicates if the user requested a persistent session (Remember Me).
+ * @property \Illuminate\Support\Carbon|null $created_at Timestamp of creation.
+ * @property \Illuminate\Support\Carbon|null $updated_at Timestamp of last update.
+ * @property-read User $user The user associated with this token.
  *
  * @mixin \Eloquent
  */
@@ -53,14 +39,14 @@ class LoginToken extends Model
     /**
      * The attributes that are mass assignable.
      *
-     * @var array
+     * @var list<string>
      */
     protected $fillable = ['user_id', 'token', 'expires_at', 'remember'];
 
     /**
      * The attributes that should be cast to native types.
      *
-     * @var array
+     * @var array<string, string>
      */
     protected $casts = [
         'expires_at' => 'datetime',
@@ -68,7 +54,9 @@ class LoginToken extends Model
     ];
 
     /**
-     * Get the user that owns the login token.
+     * Defines the relationship to the User model.
+     *
+     * @return BelongsTo The relationship instance.
      */
     public function user(): BelongsTo
     {

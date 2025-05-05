@@ -71,23 +71,6 @@ return [
             'replace_placeholders' => true,
         ],
 
-        'sync' => [
-            'driver' => 'daily',
-            'path' => storage_path('logs/sync.log'),
-            'level' => env('LOG_LEVEL', 'debug'),
-            'days' => env('LOG_DAILY_DAYS', 14),
-            'replace_placeholders' => true,
-        ],
-
-        'auth' => [
-            'driver' => 'daily',
-            'path' => storage_path('logs/auth.log'),
-            'level' => 'info',
-            'days' => 30, // Keep auth logs for longer retention
-            'replace_placeholders' => true,
-            'permission' => 0644,
-        ],
-
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),

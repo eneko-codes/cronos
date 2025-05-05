@@ -1,6 +1,13 @@
 <?php
 
-use App\Http\Controllers\LoginController;
+/**
+ * Web Routes
+ *
+ * Defines the publicly accessible and authenticated routes for the application,
+ * including login, magic link verification, logout, and dashboard/admin routes.
+ */
+
+use App\Http\Controllers\Auth\LoginController;
 use App\Livewire\Dashboard;
 use App\Livewire\LeaveTypesListView;
 use App\Livewire\Login;
@@ -14,15 +21,23 @@ use App\Livewire\UsersList;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
+// Middleware: 'guest' ensures only unauthenticated users can access these.
+// Middleware: 'throttle:login' applies rate limiting to prevent brute-force attempts.
 Route::middleware(['guest', 'throttle:login'])->group(function () {
+    // Route to display the Livewire login form.
     Route::get('/login', Login::class)->name('login');
-    Route::get('/login/verify', [LoginController::class, 'verify'])->name(
-        'login.verify'
-    );
+    // Route to handle the magic link verification clicked from the user's email.
+    // Uses 'signed' middleware to prevent URL tampering.
+    Route::get('/login/verify', [LoginController::class, 'verify'])
+        ->middleware(['signed'])
+        ->name('login.verify');
 });
 
 // Protected routes for authenticated users
+// Middleware: 'auth' ensures only logged-in users can access these.
+// Middleware: 'throttle:api' applies general API rate limiting.
 Route::middleware(['auth', 'throttle:api'])->group(function () {
+    // Route to handle user logout.
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
     Route::get('/', Dashboard::class)->name('dashboard');
 

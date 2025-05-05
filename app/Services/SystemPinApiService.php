@@ -7,17 +7,24 @@ namespace App\Services;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-class SystemPinApiCalls
+class SystemPinApiService
 {
     protected string $baseUrl;
 
     protected string $apiKey;
 
-    public function __construct()
+    /**
+     * SystemPinApiService constructor.
+     *
+     * Initializes the service with the base URL and API key.
+     *
+     * @param  string|null  $baseUrl  The base URL for the SystemPin API.
+     * @param  string|null  $apiKey  The API key for authenticating with SystemPin.
+     */
+    public function __construct(?string $baseUrl, ?string $apiKey)
     {
-        // TODO: Replace with actual configuration keys if they exist
-        $this->baseUrl = config('services.systempin.url');
-        $this->apiKey = config('services.systempin.key');
+        $this->baseUrl = $baseUrl ?? '';
+        $this->apiKey = $apiKey ?? '';
 
         if (! $this->baseUrl || ! $this->apiKey) {
             Log::warning('SystemPin API URL or Key is not configured.');

@@ -27,14 +27,14 @@ class OdooRequestException extends Exception {}
 class OdooResponseException extends Exception {}
 
 /**
- * Class OdooApiCalls
+ * Class OdooApiService
  *
  * Handles all interactions with the Odoo API, including authentication and data retrieval.
  * This service fetches raw data from Odoo without renaming keys or setting defaults.
  *
  * Odoo 13 note: "date_from" and "date_to" in "hr.leave" are stored as UTC datetime fields.
  */
-class OdooApiCalls implements Pingable
+class OdooApiService implements Pingable
 {
     /**
      * The Odoo base URL (e.g., https://odoo.company.com).
@@ -57,18 +57,27 @@ class OdooApiCalls implements Pingable
     private string $password;
 
     /**
-     * OdooApiCalls constructor.
+     * OdooApiService constructor.
      *
-     * Initializes the service with configuration values.
+     * Initializes the service with configuration values passed as arguments.
      *
-     * @throws Exception If Odoo configuration is incomplete.
+     * @param  string  $baseUrl  The Odoo base URL.
+     * @param  string  $database  The Odoo database name.
+     * @param  string  $username  Odoo username.
+     * @param  string  $password  Odoo password.
+     *
+     * @throws Exception If any configuration argument is empty.
      */
-    public function __construct()
-    {
-        $this->baseUrl = config('services.odoo.base_url');
-        $this->database = config('services.odoo.database');
-        $this->username = config('services.odoo.username');
-        $this->password = config('services.odoo.password');
+    public function __construct(
+        string $baseUrl,
+        string $database,
+        string $username,
+        string $password
+    ) {
+        $this->baseUrl = $baseUrl;
+        $this->database = $database;
+        $this->username = $username;
+        $this->password = $password;
 
         if (
             empty($this->baseUrl) ||

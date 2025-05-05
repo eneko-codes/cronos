@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Livewire;
 
+use App\Actions\User\GetDataForDateRange;
 use App\Models\Setting;
 use App\Models\User;
-use App\Services\UserDataService;
 use Carbon\Carbon;
 use Carbon\CarbonInterval;
 use Illuminate\Support\Collection;
@@ -90,14 +90,6 @@ class UserDashboard extends Component
      * Indicates if notifications are enabled globally.
      */
     public bool $isGloballyEnabled = true;
-
-    // Inject service via constructor
-    protected UserDataService $userDataService;
-
-    public function boot(UserDataService $userDataService): void
-    {
-        $this->userDataService = $userDataService;
-    }
 
     /**
      * Initializes the component, loads the user, sets the initial period, and loads data.
@@ -426,8 +418,9 @@ class UserDashboard extends Component
         $startDate = $this->getPeriodStart();
         $endDate = $this->getPeriodEnd();
 
-        // Get raw data using the service
-        $rawData = $this->userDataService->getDataForUserAndDateRange($this->user, $startDate, $endDate);
+        // Get comprehensive data for the user and date range using the action
+        $action = new GetDataForDateRange;
+        $rawData = $action->handle($this->user, $startDate, $endDate);
 
         // Process the raw data for the view
         $this->periodData = $this->processPeriodData(
@@ -998,20 +991,19 @@ class UserDashboard extends Component
                 // Add leave minutes when a leave exists AND it's validated
                 if (
                     isset($day['leave']) &&
-                    isset($day['leave']['status']) &&
                     $day['leave']['status'] === 'validate'
                 ) {
                     // Use actual_minutes when available, which accounts for schedule
                     if (array_key_exists('actual_minutes', $day['leave'])) {
                         // Only add to total leave if it's NOT the remote work type
-                        if (isset($day['leave']['leave_type']) && ! Str::contains($day['leave']['leave_type'], 'Horas Teletrabajo')) {
+                        if (! Str::contains($day['leave']['leave_type'], 'Horas Teletrabajo')) {
                             $totals['leave'] += $day['leave']['actual_minutes'];
                         }
                     }
                     // Fallback to duration_hours
                     elseif (array_key_exists('duration_hours', $day['leave'])) {
                         // Only add to total leave if it's NOT the remote work type
-                        if (isset($day['leave']['leave_type']) && ! Str::contains($day['leave']['leave_type'], 'Horas Teletrabajo')) {
+                        if (! Str::contains($day['leave']['leave_type'], 'Horas Teletrabajo')) {
                             $totals['leave'] += $this->durationToMinutes(
                                 $day['leave']['duration_hours']
                             );

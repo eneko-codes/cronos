@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Actions\Notification\CheckSpecificNotificationPermission;
 use App\Models\User;
 use App\Notifications\WeeklyUserReportNotification;
-use App\Services\NotificationPermissionService;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -30,7 +30,7 @@ class SendUserWeeklyReport implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(NotificationPermissionService $notificationPermissionService): void
+    public function handle(): void
     {
         Log::info('SendUserWeeklyReport Job started.');
 
@@ -67,9 +67,12 @@ class SendUserWeeklyReport implements ShouldQueue
             ];
             // --- End Placeholder --- //
 
+            // Prepare notification
             $notification = new WeeklyUserReportNotification($user, $reportData);
 
-            if ($notificationPermissionService->canUserReceiveNotification($user, $notification)) {
+            // Check permission using the action
+            $action = new CheckSpecificNotificationPermission;
+            if ($action->handle($user, $notification)) {
                 try {
                     $user->notify($notification);
                     Log::info(

@@ -11,11 +11,11 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 
 /**
- * Class DesktimeApiCalls
+ * Class DesktimeApiService
  *
  * Handles API interactions with DeskTime.
  */
-class DesktimeApiCalls implements Pingable
+class DesktimeApiService implements Pingable
 {
     /**
      * The base URL for the DeskTime API.
@@ -30,16 +30,19 @@ class DesktimeApiCalls implements Pingable
     private ?string $accountTimezone = null;
 
     /**
-     * DesktimeApiCalls constructor.
+     * DesktimeApiService constructor.
      *
-     * Initializes the service with configuration settings.
+     * Initializes the service with the base URL and API key.
      *
-     * @throws Exception If configuration is missing.
+     * @param  string  $baseUrl  The base URL for the DeskTime API.
+     * @param  string  $apiKey  The API key for authenticating with DeskTime.
+     *
+     * @throws Exception If configuration arguments are empty.
      */
-    public function __construct()
+    public function __construct(string $baseUrl, string $apiKey)
     {
-        $this->baseUrl = config('services.desktime.base_url');
-        $this->apiKey = config('services.desktime.api_key');
+        $this->baseUrl = $baseUrl;
+        $this->apiKey = $apiKey;
 
         if (empty($this->baseUrl) || empty($this->apiKey)) {
             throw new Exception('DeskTime API configuration is incomplete.');

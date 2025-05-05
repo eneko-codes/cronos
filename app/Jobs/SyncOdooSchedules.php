@@ -7,7 +7,7 @@ namespace App\Jobs;
 use App\Models\Schedule;
 use App\Models\User;
 use App\Notifications\DuplicateScheduleWarning;
-use App\Services\OdooApiCalls;
+use App\Services\OdooApiService;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Cache;
@@ -32,9 +32,9 @@ class SyncOdooSchedules extends BaseSyncJob
     /**
      * SyncOdooSchedules constructor.
      *
-     * @param  OdooApiCalls  $odoo  An instance of the OdooApiCalls service.
+     * @param  OdooApiService  $odoo  An instance of the OdooApiService service.
      */
-    public function __construct(OdooApiCalls $odoo)
+    public function __construct(OdooApiService $odoo)
     {
         $this->odoo = $odoo;
     }

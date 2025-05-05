@@ -12,14 +12,14 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Class ProofhubApiCalls
+ * Class ProofhubApiService
  *
  * Manages interactions with the ProofHub API by providing methods
  * for fetching data from various endpoints.
  *
  * IMPORTANT: This service only retrieves data; it does not perform calculations.
  */
-class ProofhubApiCalls implements Pingable
+class ProofhubApiService implements Pingable
 {
     /**
      * @var string Base URL of the ProofHub API.
@@ -32,17 +32,19 @@ class ProofhubApiCalls implements Pingable
     private string $apiKey;
 
     /**
-     * ProofhubApiCalls constructor.
+     * ProofhubApiService constructor.
      *
-     * Initializes the service by constructing the base URL using the company URL
+     * Initializes the service by constructing the base URL from the provided company URL
      * and setting up the API key.
+     *
+     * @param  string  $companyUrl  ProofHub company URL part (e.g., 'yourcompany').
+     * @param  string  $apiKey  ProofHub API key.
      *
      * @throws Exception If ProofHub configuration is incomplete.
      */
-    public function __construct()
+    public function __construct(string $companyUrl, string $apiKey)
     {
-        $companyUrl = config('services.proofhub.company_url');
-        $this->apiKey = config('services.proofhub.api_key');
+        $this->apiKey = $apiKey;
 
         if (empty($companyUrl) || empty($this->apiKey)) {
             throw new Exception(
@@ -103,7 +105,7 @@ class ProofhubApiCalls implements Pingable
 
             // Only read pages-count if Link header didn't provide a next URL
             if ($nextPageUrl === null) {
-                $totalPagesHeader = strtolower($response->header('pages-count'));
+                $totalPagesHeader = $response->header('pages-count'); // Let it be null if header missing
                 if ($endpointName === 'alltime') {
                     $totalPages = null; // Signal to the job that fallback count is unreliable
                     Log::warning(
@@ -116,6 +118,7 @@ class ProofhubApiCalls implements Pingable
                     );
                 } else {
                     // For other endpoints, trust pages-count as a fallback
+                    // Check for non-empty string before casting to int
                     $totalPages = ! empty($totalPagesHeader) ? (int) $totalPagesHeader : 1;
                     Log::debug(
                         'ProofHub API Page Response: No Link header found, using fallback.',
@@ -229,7 +232,7 @@ class ProofhubApiCalls implements Pingable
      */
     public function getUsers(): Collection
     {
-        Log::warning('Deprecated method ProofhubApiCalls::getUsers() called.');
+        Log::warning('Deprecated method ProofhubApiService::getUsers() called.');
 
         return $this->fetchAllPages('people');
     }
@@ -248,7 +251,7 @@ class ProofhubApiCalls implements Pingable
      */
     public function getAllTime(array $params = []): Collection
     {
-        Log::warning('Deprecated method ProofhubApiCalls::getAllTime() called.');
+        Log::warning('Deprecated method ProofhubApiService::getAllTime() called.');
 
         return $this->fetchAllPages('alltime', $params);
     }
@@ -266,7 +269,7 @@ class ProofhubApiCalls implements Pingable
      */
     public function getProjects(): Collection
     {
-        Log::warning('Deprecated method ProofhubApiCalls::getProjects() called.');
+        Log::warning('Deprecated method ProofhubApiService::getProjects() called.');
 
         return $this->fetchAllPages('projects');
     }
@@ -284,7 +287,7 @@ class ProofhubApiCalls implements Pingable
      */
     public function getTasks(): Collection
     {
-        Log::warning('Deprecated method ProofhubApiCalls::getTasks() called.');
+        Log::warning('Deprecated method ProofhubApiService::getTasks() called.');
 
         return $this->fetchAllPages('alltodo');
     }

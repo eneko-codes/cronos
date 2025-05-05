@@ -6,7 +6,7 @@ namespace App\Jobs;
 
 use App\Models\User;
 use App\Models\UserAttendance;
-use App\Services\DesktimeApiCalls;
+use App\Services\DesktimeApiService;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Collection;
@@ -38,13 +38,13 @@ class SyncDesktimeAttendances extends BaseSyncJob
     /**
      * SyncDesktimeAttendances constructor.
      *
-     * @param  DesktimeApiCalls  $desktime  An instance of the DesktimeApiCalls service
+     * @param  DesktimeApiService  $desktime  An instance of the DesktimeApiService service
      * @param  int|null  $userId  Optional user ID to sync only one user
      * @param  string|null  $fromDate  Optional start date in Y-m-d format
      * @param  string|null  $toDate  Optional end date in Y-m-d format
      */
     public function __construct(
-        DesktimeApiCalls $desktime,
+        DesktimeApiService $desktime,
         ?int $userId = null,
         ?string $fromDate = null,
         ?string $toDate = null

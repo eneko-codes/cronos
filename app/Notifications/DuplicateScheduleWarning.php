@@ -66,7 +66,7 @@ class DuplicateScheduleWarning extends Notification implements ShouldQueue
         }
 
         // Update the concluding action
-        $mailMessage->action('Open '.config('app.name'), url('/'));
+        $mailMessage->action('View Schedule in '.config('app.name'), route('schedules.show', ['schedule' => $this->odooScheduleId]));
 
         return $mailMessage;
     }

@@ -5,15 +5,17 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Models\User;
-use App\Services\DesktimeApiCalls;
-use App\Services\OdooApiCalls;
-use App\Services\ProofhubApiCalls;
-use App\Services\SystemPinApiCalls;
+use App\Services\DesktimeApiService;
+use App\Services\OdooApiService;
+use App\Services\ProofhubApiService;
+use App\Services\SystemPinApiService;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use InvalidArgumentException;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,24 +24,68 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Register OdooApiCalls as a singleton
-        $this->app->singleton(OdooApiCalls::class, function () {
-            return new OdooApiCalls;
+        // Register OdooApiService as a singleton with constructor injection
+        $this->app->singleton(OdooApiService::class, function ($app) {
+            /** @var ConfigRepository $config */
+            $config = $app['config'];
+            $odooConfig = $config->get('services.odoo');
+
+            if (! isset($odooConfig['base_url'], $odooConfig['database'], $odooConfig['username'], $odooConfig['password'])) {
+                throw new InvalidArgumentException('Odoo service configuration is missing or incomplete.');
+            }
+
+            return new OdooApiService(
+                baseUrl: $odooConfig['base_url'],
+                database: $odooConfig['database'],
+                username: $odooConfig['username'],
+                password: $odooConfig['password']
+            );
         });
 
-        // Register ProofhubApiCalls as a singleton
-        $this->app->singleton(ProofhubApiCalls::class, function () {
-            return new ProofhubApiCalls;
+        // Register ProofhubApiService as a singleton with constructor injection
+        $this->app->singleton(ProofhubApiService::class, function ($app) {
+            /** @var ConfigRepository $config */
+            $config = $app['config'];
+            $proofhubConfig = $config->get('services.proofhub');
+
+            if (! isset($proofhubConfig['company_url'], $proofhubConfig['api_key'])) {
+                throw new InvalidArgumentException('ProofHub service configuration is missing or incomplete.');
+            }
+
+            return new ProofhubApiService(
+                companyUrl: $proofhubConfig['company_url'],
+                apiKey: $proofhubConfig['api_key']
+            );
         });
 
-        // Register DesktimeApiCalls as a singleton
-        $this->app->singleton(DesktimeApiCalls::class, function () {
-            return new DesktimeApiCalls;
+        // Register DesktimeApiService as a singleton with constructor injection
+        $this->app->singleton(DesktimeApiService::class, function ($app) {
+            /** @var ConfigRepository $config */
+            $config = $app['config'];
+            $desktimeConfig = $config->get('services.desktime');
+
+            if (! isset($desktimeConfig['base_url'], $desktimeConfig['api_key'])) {
+                throw new InvalidArgumentException('DeskTime service configuration is missing or incomplete.');
+            }
+
+            return new DesktimeApiService(
+                baseUrl: $desktimeConfig['base_url'],
+                apiKey: $desktimeConfig['api_key']
+            );
         });
 
-        // Register SystemPinApiCalls as a singleton
-        $this->app->singleton(SystemPinApiCalls::class, function () {
-            return new SystemPinApiCalls;
+        // Register SystemPinApiService as a singleton with constructor injection
+        $this->app->singleton(SystemPinApiService::class, function ($app) {
+            /** @var ConfigRepository $config */
+            $config = $app['config'];
+            // Get config values, allowing them to be null
+            $url = $config->get('services.systempin.url');
+            $key = $config->get('services.systempin.key');
+
+            return new SystemPinApiService(
+                baseUrl: $url, // Pass potentially null values
+                apiKey: $key   // The service constructor handles nulls
+            );
         });
 
         // Register TelescopeServiceProvider if the environment is local

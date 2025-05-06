@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read \App\Models\Schedule $schedule
+ * @property bool $has_duplicates Dynamically added in ScheduleDetailView to mark duplicate entries
  *
  * @method static \Database\Factories\ScheduleDetailFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail newModelQuery()
@@ -54,7 +55,7 @@ class ScheduleDetail extends Model
     /**
      * The attributes that are mass assignable.
      *
-     * @var array
+     * @var list<string>
      */
     protected $fillable = [
         'odoo_schedule_id',
@@ -68,7 +69,7 @@ class ScheduleDetail extends Model
     /**
      * The attributes that should be cast to native types.
      *
-     * @var array
+     * @var array<string, string>
      */
     protected $casts = [
         'weekday' => 'integer',

@@ -8,7 +8,6 @@ use App\Clients\DesktimeApiClient;
 use App\Clients\OdooApiClient;
 use App\Clients\ProofhubApiClient;
 use App\Clients\SystemPinApiClient;
-use App\Contracts\Pingable;
 use App\Models\User;
 use App\Services\ApplicationSettingsService;
 use Exception;
@@ -342,26 +341,23 @@ class Settings extends Component
     private function testConnection(string $platform): void
     {
         $this->connectionStatus[$platform] = 'pending';
-        $service = null;
+        $client = null;
         try {
-            $service = match ($platform) {
+            $client = match ($platform) {
                 'odoo' => app(OdooApiClient::class),
                 'desktime' => app(DesktimeApiClient::class),
                 'proofhub' => app(ProofhubApiClient::class),
                 'system-pin' => app(SystemPinApiClient::class),
-                default => throw new Exception('Unknown platform for connection test.'),
+                default => throw new Exception("Unknown platform: {$platform}"),
             };
 
-            if (! $service instanceof Pingable) {
-                throw new Exception("Service for {$platform} is not Pingable.");
-            }
-
-            if ($service->ping()) {
+            $result = $client->ping();
+            if ($result['success']) {
                 $this->connectionStatus[$platform] = 'success';
-                $this->dispatch('add-toast', message: ucfirst($platform).' connection successful.', variant: 'success');
+                $this->dispatch('add-toast', message: "Successfully connected to {$platform}.", variant: 'success');
             } else {
                 $this->connectionStatus[$platform] = 'failed';
-                $this->dispatch('add-toast', message: ucfirst($platform).' connection failed.', variant: 'error');
+                $this->dispatch('add-toast', message: "Failed to connect to {$platform}: {$result['message']}", variant: 'error');
             }
         } catch (Exception $e) {
             $this->connectionStatus[$platform] = 'failed';

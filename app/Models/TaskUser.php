@@ -40,7 +40,7 @@ class TaskUser extends Pivot
     /**
      * The attributes that are mass assignable.
      *
-     * @var array
+     * @var list<string>
      */
     protected $fillable = ['user_id', 'proofhub_task_id'];
 

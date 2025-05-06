@@ -72,14 +72,14 @@ class Session extends Model
     /**
      * The attributes that aren't mass assignable.
      *
-     * @var array
+     * @var list<string>|bool
      */
     protected $guarded = [];
 
     /**
      * The attributes that should be cast to native types.
      *
-     * @var array
+     * @var array<string, string>
      */
     protected $casts = [
         'payload' => 'array',

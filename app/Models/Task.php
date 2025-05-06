@@ -69,7 +69,7 @@ class Task extends Model
     /**
      * The attributes that are mass assignable.
      *
-     * @var array
+     * @var list<string>
      */
     protected $fillable = ['proofhub_task_id', 'proofhub_project_id', 'name'];
 

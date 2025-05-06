@@ -88,16 +88,16 @@ class UserDetailsModal extends Component
         $this->canEnableTracking =
           $user->do_not_track && Gate::allows('enableTracking', $user);
 
-        // Use the new preferences relationship and policies
-        $this->isMuted = $user->notificationPreferences?->mute_all ?? false;
+        // Use  preferences relationship and policies
+        $this->isMuted = (bool) $user->notificationPreferences->mute_all;
         $this->canMuteNotifications = Gate::allows('muteNotifications', $user);
         $this->canUnmuteNotifications = Gate::allows('unmuteNotifications', $user);
     }
 
     protected function prepareDetails($user): void
     {
-        $this->name = $user->name ?? '-';
-        $this->email = $user->email ?? '-';
+        $this->name = $user->name;
+        $this->email = $user->email;
         $this->odooId = $user->odoo_id ?? '-';
         $this->proofhubId = $user->proofhub_id ?? '-';
         $this->desktimeId = $user->desktime_id ?? '-';
@@ -118,7 +118,7 @@ class UserDetailsModal extends Component
         $this->isAdmin = $user->is_admin;
         $this->isDoNotTrack = $user->do_not_track;
         // Use the new preferences relationship
-        $this->isMuted = $user->notificationPreferences?->mute_all ?? false;
+        $this->isMuted = (bool) $user->notificationPreferences->mute_all;
 
         $this->details = [
             'Email' => $this->email,

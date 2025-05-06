@@ -35,6 +35,7 @@ class UpdateIndividualNotificationPreference
             throw new Exception('User not found.');
         }
 
+        /** @var UserNotificationPreference $preferencesModel */
         $preferencesModel = $user->notificationPreferences()->firstOrNew(['user_id' => $userId]);
         $preferencesModel->{$preferenceKey} = $value;
         $preferencesModel->save();

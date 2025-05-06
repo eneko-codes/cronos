@@ -62,7 +62,7 @@ class UserAttendance extends Model
      * All core attendance data can be mass-assigned during synchronization,
      * including user ID, date, duration, remote status, and timestamps.
      *
-     * @var array
+     * @var list<string>
      */
     protected $fillable = [
         'user_id',
@@ -79,7 +79,7 @@ class UserAttendance extends Model
      * Date fields are stored in UTC format for consistency across
      * different time zones and data sources (Desktime and Systempin).
      *
-     * @var array
+     * @var array<string, string>
      */
     protected $casts = [
         'is_remote' => 'boolean',

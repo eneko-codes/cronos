@@ -62,7 +62,7 @@ class CategoryUser extends Pivot
     /**
      * The attributes that are mass assignable.
      *
-     * @var array
+     * @var list<string>
      */
     protected $fillable = ['user_id', 'category_id'];
 }

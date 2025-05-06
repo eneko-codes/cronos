@@ -111,7 +111,7 @@ class ProofhubApiClient implements Pingable
                         [
                             'url' => $url,
                             'params' => $params,
-                            'pages-count_header' => $totalPagesHeader ?? 'N/A',
+                            'pages-count_header' => $totalPagesHeader,
                         ]
                     );
                 } else {
@@ -123,7 +123,7 @@ class ProofhubApiClient implements Pingable
                         [
                             'url' => $url,
                             'endpoint' => $endpointName,
-                            'pages-count' => $totalPagesHeader ?? 'N/A',
+                            'pages-count' => $totalPagesHeader,
                             'total_pages_detected' => $totalPages,
                         ]
                     );

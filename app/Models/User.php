@@ -376,10 +376,13 @@ class User extends Authenticatable
 
     /**
      * Get the user's notification preferences.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne<App\Models\UserNotificationPreference, App\Models\User>
      */
     public function notificationPreferences(): HasOne
     {
-        return $this->hasOne(UserNotificationPreference::class)->withDefault();
+        return $this->hasOne(UserNotificationPreference::class, 'user_id', 'id')
+            ->withDefault();
     }
 
     /**

@@ -31,7 +31,7 @@ class CanUserReceiveAnyNotificationAction
         $preferences = $user->notificationPreferences; // Relies on withDefault()
 
         // If preferences record exists and mute_all is true, user has opted out.
-        if ($preferences && $preferences->mute_all) {
+        if ($preferences->mute_all) {
             return false;
         }
 

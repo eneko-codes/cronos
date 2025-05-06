@@ -25,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\UserSchedule[] $userSchedules User assignments to this schedule
  * @property-read int|null $schedule_details_count
  * @property-read int|null $user_schedules_count
+ * @property-read int|null $current_users_count Number of users currently assigned to this schedule
  *
  * @method static \Database\Factories\ScheduleFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Schedule newModelQuery()
@@ -76,7 +77,7 @@ class Schedule extends Model
     /**
      * The attributes that are mass assignable.
      *
-     * @var array
+     * @var list<string>
      */
     protected $fillable = [
         'odoo_schedule_id',
@@ -87,7 +88,7 @@ class Schedule extends Model
     /**
      * The attributes that should be cast to native types.
      *
-     * @var array
+     * @var array<string, string>
      */
     protected $casts = [
         'average_hours_day' => 'float',

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Livewire;
 
 use App\Models\Schedule;
+use App\Models\UserSchedule;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Collection as SupportCollection;
@@ -38,6 +39,8 @@ class ScheduleDetailView extends Component
 
     /**
      * Get the currently assigned user schedules (unique users).
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, UserSchedule>
      */
     #[Computed]
     public function currentUserSchedules(): Collection
@@ -56,6 +59,8 @@ class ScheduleDetailView extends Component
 
     /**
      * Get the previously assigned user schedules (unique users, not currently assigned).
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, UserSchedule>
      */
     #[Computed]
     public function pastUserSchedules(): Collection

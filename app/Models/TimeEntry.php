@@ -82,7 +82,7 @@ class TimeEntry extends Model
     /**
      * The attributes that are mass assignable.
      *
-     * @var array
+     * @var list<string>
      */
     protected $fillable = [
         'proofhub_time_entry_id',
@@ -102,7 +102,7 @@ class TimeEntry extends Model
      * Note that dates are stored in UTC timezone for consistency
      * across different user timezones and integrations.
      *
-     * @var array
+     * @var array<string, string>
      */
     protected $casts = [
         'date' => 'date',

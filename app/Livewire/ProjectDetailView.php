@@ -7,7 +7,7 @@ namespace App\Livewire;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -17,11 +17,14 @@ class ProjectDetailView extends Component
     public Project $project;
 
     // Properties to hold loaded data
-    public Collection $tasks;
+    /** @var EloquentCollection<int, \App\Models\Task> */
+    public EloquentCollection $tasks;
 
-    public Collection $projectTimeEntries;
+    /** @var EloquentCollection<int, \App\Models\TimeEntry> */
+    public EloquentCollection $projectTimeEntries;
 
-    public Collection $taskTimeEntries;
+    /** @var \Illuminate\Support\Collection<string, \Illuminate\Support\Collection<\App\Models\TimeEntry>> */
+    public \Illuminate\Support\Collection $taskTimeEntries;
 
     public array $expandedTasks = []; // For toggling task time entries
 
@@ -56,8 +59,8 @@ class ProjectDetailView extends Component
         $this->tasks = $project->tasks;
         $this->projectTimeEntries = $project->timeEntries;
 
-        // Initialize with an empty Eloquent Collection to match the type hint
-        $this->taskTimeEntries = new Collection;
+        // Initialize with an empty Support Collection to match the type hint
+        $this->taskTimeEntries = new \Illuminate\Support\Collection;
     }
 
     /**
@@ -77,7 +80,9 @@ class ProjectDetailView extends Component
             ->groupBy('proofhub_task_id'); // Group by task ID for easy access in the view
 
         // Merge new entries with existing ones (if any)
-        $this->taskTimeEntries = $this->taskTimeEntries->merge($newEntries);
+        foreach ($newEntries as $taskId => $entriesForTask) {
+            $this->taskTimeEntries->put($taskId, $entriesForTask);
+        }
     }
 
     /**

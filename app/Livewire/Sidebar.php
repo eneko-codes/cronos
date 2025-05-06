@@ -192,6 +192,7 @@ class Sidebar extends Component
             ['user_id' => $user->id] // Attributes to find existing record by
         );
 
+        /** @var \App\Models\UserNotificationPreference $preferencesModel */
         if (! $preferencesModel->exists) {
             // The model is new and doesn't exist in the database yet.
             // Set our application-defined defaults on the model.

@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace App\Livewire;
 
-use App\Models\Setting;
+use App\Clients\DesktimeApiClient;
+use App\Clients\OdooApiClient;
+use App\Clients\ProofhubApiClient;
+use App\Clients\SystemPinApiClient;
+use App\Contracts\Pingable;
 use App\Models\User;
-use App\Services\DesktimeApiService;
-use App\Services\OdooApiService;
-use App\Services\ProofhubApiService;
-use App\Services\SystemPinApiService;
+use App\Services\ApplicationSettingsService;
 use Exception;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Telescope\Contracts\EntriesRepository;
 use Livewire\Attributes\Title;
@@ -19,57 +21,61 @@ use Livewire\Component;
 #[Title('Settings')]
 class Settings extends Component
 {
-    // Settings properties - using keys from the new Setting model
     public string $syncFrequency = 'everyThirtyMinutes';
 
-    public bool $apiDownWarningMailEnabled = true;
+    public bool $apiDownWarningEnabled = true;
 
     public bool $welcomeEmailEnabled = true;
 
     public bool $dataRetentionEnabled = false;
 
-    public int $dataRetentionGlobalPeriod = 0; // Stores the global retention period in days
+    public int $dataRetentionGlobalPeriod = 0;
 
-    public bool $globalNotificationsEnabled = true; // Added
+    public bool $globalNotificationsEnabled = true;
 
-    public bool $adminPromotionEmailEnabled = true; // Added for admin promotion email
+    public bool $adminPromotionEmailEnabled = true;
+
+    public bool $scheduleChangeEnabled = true;
+
+    public bool $weeklyUserReportEnabled = true;
+
+    public bool $leaveReminderEnabled = true;
+
+    public bool $userPromotionNotificationEnabled = true;
+
+    /** @var array<string, string> Stores the status of recent connection tests ('success', 'failed', 'pending') */
+    public array $connectionStatus = [];
+
+    private ApplicationSettingsService $settingsService;
+
+    // Using boot for service initialization as mount can be re-triggered by Livewire
+    // and we want to ensure the service is resolved once reliably.
+    public function boot(): void
+    {
+        $this->settingsService = App::make(ApplicationSettingsService::class);
+    }
 
     /**
      * Load existing settings from the database when the component mounts.
      */
     public function mount(): void
     {
-        // Load settings from the new Setting model
-        $this->syncFrequency = Setting::getValue(
-            'job_frequency.sync',
-            'everyThirtyMinutes'
-        );
-        $this->apiDownWarningMailEnabled = (bool) Setting::getValue(
-            'notification.api_down_warning_mail.enabled',
-            true
-        );
-        $this->welcomeEmailEnabled = (bool) Setting::getValue(
-            'notification.welcome_email.enabled',
-            true
-        );
-        $this->globalNotificationsEnabled = (bool) Setting::getValue(
-            'notifications.global_enabled',
-            true
-        );
-        $this->dataRetentionEnabled = (bool) Setting::getValue(
-            'data_retention.enabled',
-            false
-        );
-        $this->dataRetentionGlobalPeriod = (int) Setting::getValue(
-            'data_retention.global_period', // New key for global period
-            0
-        );
-        $this->adminPromotionEmailEnabled = (bool) Setting::getValue(
-            'notification.admin_promotion.enabled', // New key
-            true
-        );
+        // $this->settingsService is already initialized by boot()
+        $this->syncFrequency = $this->settingsService->getSyncFrequency();
+        $this->apiDownWarningEnabled = $this->settingsService->getApiDownWarningEnabled();
+        $this->welcomeEmailEnabled = $this->settingsService->getWelcomeEmailEnabled();
+        $this->globalNotificationsEnabled = $this->settingsService->isGlobalNotificationsEnabled();
+        $this->dataRetentionGlobalPeriod = $this->settingsService->getDataRetentionGlobalPeriod();
+        $this->dataRetentionEnabled = $this->settingsService->isDataRetentionEnabled();
+        $this->adminPromotionEmailEnabled = $this->settingsService->getAdminPromotionEmailEnabled();
+        $this->userPromotionNotificationEnabled = $this->settingsService->getUserPromotionNotificationEnabled();
 
-        // Ensure period is 0 if retention is disabled
+        // Load new global toggles using the service
+        $this->scheduleChangeEnabled = $this->settingsService->isNotificationTypeGloballyEnabled('schedule_change');
+        $this->weeklyUserReportEnabled = $this->settingsService->isNotificationTypeGloballyEnabled('weekly_user_report');
+        $this->leaveReminderEnabled = $this->settingsService->isNotificationTypeGloballyEnabled('leave_reminder');
+
+        // Ensure period is 0 if retention is disabled - this logic could also be part of the service setter
         if (! $this->dataRetentionEnabled) {
             $this->dataRetentionGlobalPeriod = 0;
         }
@@ -110,7 +116,7 @@ class Settings extends Component
     public function getDataRetentionOptions(): array
     {
         return [
-            0 => 'Disabled', // Added option for disabled
+            0 => 'Disabled',
             30 => '30 days',
             90 => '3 months',
             180 => '6 months',
@@ -121,98 +127,70 @@ class Settings extends Component
         ];
     }
 
-    // --- Updated Lifecycle Hooks for Immediate Saving --- //
+    // --- Updated Lifecycle Hooks for Immediate Saving using ApplicationSettingsService --- //
 
-    /**
-     * Save sync frequency when the property is updated.
-     * Livewire hook: https://livewire.laravel.com/docs/lifecycle-hooks#updated
-     *
-     * @param  string  $value  The new value for syncFrequency.
-     */
     public function updatedSyncFrequency($value): void
     {
-        $this->saveSetting(
-            'job_frequency.sync',
+        $this->saveSettingViaService(
+            'setSyncFrequency',
             $value,
-            'Synchronization frequency updated.'
+            'Synchronization frequency updated.',
+            'success'
         );
     }
 
-    /**
-     * Save global notification enabled state when the property is updated.
-     *
-     * @param  bool  $value  The new value for globalNotificationsEnabled.
-     */
     public function updatedGlobalNotificationsEnabled($value): void
     {
-        try {
-            Setting::setValue('notifications.global_enabled', $value ? '1' : '0');
-            $this->dispatch(
-                'add-toast',
-                message: 'Global notification setting updated.',
-                variant: 'success'
-            );
-            // Dispatch global event after successful save
-            $this->dispatch('global-notifications-updated', enabled: (bool) $value);
-        } catch (Exception $e) {
-            $this->dispatch(
-                'add-toast',
-                message: 'Failed to update setting: '.$e->getMessage(),
-                variant: 'error'
-            );
-            // Revert the component property by reloading from the database.
-            $this->globalNotificationsEnabled = (bool) Setting::getValue(
-                'notifications.global_enabled',
-                true // Default value for revert
-            );
-        }
-    }
+        $boolValue = (bool) $value;
+        $message = $boolValue ? 'Global notifications enabled.' : 'Global notifications disabled.';
+        $variant = $boolValue ? 'success' : 'info';
 
-    /**
-     * Save API down warning email enabled state when the property is updated.
-     *
-     * @param  bool  $value  The new value for apiDownWarningMailEnabled.
-     */
-    public function updatedApiDownWarningMailEnabled($value): void
-    {
-        $this->saveSetting(
-            'notification.api_down_warning_mail.enabled',
-            $value ? '1' : '0',
-            'API down warning email setting updated.'
+        $this->saveSettingViaService(
+            'setGlobalNotificationsEnabled',
+            $boolValue,
+            $message,
+            $variant,
+            'global-notifications-updated',
+            ['enabled' => $boolValue]
         );
     }
 
-    /**
-     * Save welcome email enabled state when the property is updated.
-     *
-     * @param  bool  $value  The new value for welcomeEmailEnabled.
-     */
+    public function updatedApiDownWarningEnabled($value): void
+    {
+        $boolValue = (bool) $value;
+        $message = $boolValue ? 'Global "API Down Warning" notification enabled.' : 'Global "API Down Warning" notification disabled.';
+        $variant = $boolValue ? 'success' : 'info';
+
+        $this->saveSettingViaService(
+            'setApiDownWarningEnabled',
+            $boolValue,
+            $message,
+            $variant,
+            'api-down-warning-global-setting-updated'
+        );
+    }
+
     public function updatedWelcomeEmailEnabled($value): void
     {
-        $this->saveSetting(
-            'notification.welcome_email.enabled',
-            $value ? '1' : '0',
-            'Welcome email setting updated.'
+        $boolValue = (bool) $value;
+        $message = $boolValue ? 'Welcome email enabled.' : 'Welcome email disabled.';
+        $variant = $boolValue ? 'success' : 'info';
+
+        $this->saveSettingViaService(
+            'setWelcomeEmailEnabled',
+            $boolValue,
+            $message,
+            $variant
         );
     }
 
-    /**
-     * Save data retention period and enabled state when the property is updated.
-     *
-     * @param  int  $value  The new value for dataRetentionGlobalPeriod (in days).
-     */
     public function updatedDataRetentionGlobalPeriod($value): void
     {
-        $period = (int) $value;
-        $isEnabled = $period > 0;
-
         try {
-            // Save both the enabled state and the period value.
-            Setting::setValue('data_retention.enabled', $isEnabled ? '1' : '0');
-            Setting::setValue('data_retention.global_period', $period);
-
-            // Update internal component state for the runDataRetention button.
-            $this->dataRetentionEnabled = $isEnabled;
+            $this->settingsService->setDataRetentionSettings((int) $value);
+            // Update component properties directly after successful save from the service's current state
+            $this->dataRetentionGlobalPeriod = $this->settingsService->getDataRetentionGlobalPeriod();
+            $this->dataRetentionEnabled = $this->settingsService->isDataRetentionEnabled();
 
             $this->dispatch(
                 'add-toast',
@@ -226,194 +204,190 @@ class Settings extends Component
                   $e->getMessage(),
                 variant: 'error'
             );
-            // Revert component state from database if save fails.
-            $this->dataRetentionGlobalPeriod = (int) Setting::getValue(
-                'data_retention.global_period',
-                0
-            );
-            $this->dataRetentionEnabled = (bool) Setting::getValue(
-                'data_retention.enabled',
-                false
-            );
+            // Revert component state by re-fetching from the service
+            $this->dataRetentionGlobalPeriod = $this->settingsService->getDataRetentionGlobalPeriod();
+            $this->dataRetentionEnabled = $this->settingsService->isDataRetentionEnabled();
         }
     }
 
-    /**
-     * Save admin promotion email enabled state when the property is updated.
-     *
-     * @param  bool  $value  The new value for adminPromotionEmailEnabled.
-     */
     public function updatedAdminPromotionEmailEnabled($value): void
     {
-        $this->saveSetting(
-            'notification.admin_promotion.enabled',
-            $value ? '1' : '0',
-            'Admin promotion email setting updated.'
+        $boolValue = (bool) $value;
+        $message = $boolValue ? 'Admin promotion email enabled.' : 'Admin promotion email disabled.';
+        $variant = $boolValue ? 'success' : 'info';
+
+        $this->saveSettingViaService(
+            'setAdminPromotionEmailEnabled',
+            $boolValue,
+            $message,
+            $variant,
+            'admin-promotion-email-global-setting-updated'
+        );
+    }
+
+    public function updatedScheduleChangeEnabled($value): void
+    {
+        $boolValue = (bool) $value;
+        $message = $boolValue ? 'Global "Schedule Change" notification enabled.' : 'Global "Schedule Change" notification disabled.';
+        $variant = $boolValue ? 'success' : 'info';
+
+        $this->saveSettingViaService(
+            'setNotificationTypeGlobalState',
+            ['schedule_change', $boolValue],
+            $message,
+            $variant,
+            'schedule-change-global-setting-updated'
+        );
+    }
+
+    public function updatedWeeklyUserReportEnabled($value): void
+    {
+        $boolValue = (bool) $value;
+        $message = $boolValue ? 'Global "Weekly User Report" notification enabled.' : 'Global "Weekly User Report" notification disabled.';
+        $variant = $boolValue ? 'success' : 'info';
+
+        $this->saveSettingViaService(
+            'setNotificationTypeGlobalState',
+            ['weekly_user_report', $boolValue],
+            $message,
+            $variant,
+            'weekly-user-report-global-setting-updated'
+        );
+    }
+
+    public function updatedLeaveReminderEnabled($value): void
+    {
+        $boolValue = (bool) $value;
+        $message = $boolValue ? 'Global "Leave Reminder" notification enabled.' : 'Global "Leave Reminder" notification disabled.';
+        $variant = $boolValue ? 'success' : 'info';
+
+        $this->saveSettingViaService(
+            'setNotificationTypeGlobalState',
+            ['leave_reminder', $boolValue],
+            $message,
+            $variant,
+            'leave-reminder-global-setting-updated'
+        );
+    }
+
+    // Add new updated hook
+    public function updatedUserPromotionNotificationEnabled($value): void
+    {
+        $boolValue = (bool) $value;
+        $message = $boolValue ? 'User promotion notification enabled.' : 'User promotion notification disabled.';
+        $variant = $boolValue ? 'success' : 'info';
+
+        $this->saveSettingViaService(
+            'setUserPromotionNotificationEnabled',
+            $boolValue,
+            $message,
+            $variant
+            // No specific event dispatch needed for this one unless another component needs it
         );
     }
 
     /**
-     * Helper method to save a single setting value and dispatch feedback.
+     * Helper method to save a single setting value via the service and dispatch feedback.
      *
-     * @param  string  $key  The database setting key.
-     * @param  mixed  $value  The value to save.
-     * @param  string  $successMessage  The message for the success toast.
+     * @param  string  $serviceMethod  The method name on ApplicationSettingsService.
+     * @param  mixed  $valueOrArgs  The value to save, or an array of arguments for the service method.
+     * @param  string  $message  The dynamic message for the success toast.
+     * @param  string  $variant  The dynamic variant for the success toast.
+     * @param  string|null  $specificEventName  Optional specific event to dispatch for other components.
+     * @param  array|null  $specificEventParams  Parameters for the specific event.
      */
-    private function saveSetting(
-        string $key,
-        $value,
-        string $successMessage
+    private function saveSettingViaService(
+        string $serviceMethod,
+        mixed $valueOrArgs,
+        string $message,
+        string $variant,
+        ?string $specificEventName = null,
+        ?array $specificEventParams = null
     ): void {
         try {
-            Setting::setValue($key, $value);
+            if (is_array($valueOrArgs)) {
+                // Use call_user_func_array if the service method expects multiple arguments
+                call_user_func_array([$this->settingsService, $serviceMethod], $valueOrArgs);
+            } else {
+                // Directly call the method if it expects a single argument
+                $this->settingsService->{$serviceMethod}($valueOrArgs);
+            }
+
             $this->dispatch(
                 'add-toast',
-                message: $successMessage,
-                variant: 'success'
+                message: $message,
+                variant: $variant
             );
 
-            // Dispatch event specifically for global notification setting change
-            if ($key === 'notifications.global_enabled') {
-                $this->dispatch('global-notifications-updated', enabled: (bool) $value);
+            if ($specificEventName) {
+                // Determine the value for the event payload
+                $eventValue = $specificEventParams['enabled'] ?? (is_array($valueOrArgs) ? $valueOrArgs[1] : $valueOrArgs);
+                $this->dispatch($specificEventName, enabled: (bool) $eventValue);
             }
+
         } catch (Exception $e) {
             $this->dispatch(
                 'add-toast',
                 message: 'Failed to update setting: '.$e->getMessage(),
                 variant: 'error'
             );
-            // Revert the associated component property by reloading from the database.
-            $propertyName = $this->getPropertyNameFromSettingKey($key);
-            if ($propertyName) {
-                $this->{$propertyName} = Setting::getValue(
-                    $key,
-                    $this->getDefaultValueForKey($key)
-                );
+            // Revert the associated component property by reloading all settings via mount()
+            $this->mount(); // This re-initializes all properties from the service
+        }
+    }
+
+    /**
+     * Test the API connection for a given platform.
+     */
+    private function testConnection(string $platform): void
+    {
+        $this->connectionStatus[$platform] = 'pending';
+        $service = null;
+        try {
+            $service = match ($platform) {
+                'odoo' => app(OdooApiClient::class),
+                'desktime' => app(DesktimeApiClient::class),
+                'proofhub' => app(ProofhubApiClient::class),
+                'system-pin' => app(SystemPinApiClient::class),
+                default => throw new Exception('Unknown platform for connection test.'),
+            };
+
+            if (! $service instanceof Pingable) {
+                throw new Exception("Service for {$platform} is not Pingable.");
             }
+
+            if ($service->ping()) {
+                $this->connectionStatus[$platform] = 'success';
+                $this->dispatch('add-toast', message: ucfirst($platform).' connection successful.', variant: 'success');
+            } else {
+                $this->connectionStatus[$platform] = 'failed';
+                $this->dispatch('add-toast', message: ucfirst($platform).' connection failed.', variant: 'error');
+            }
+        } catch (Exception $e) {
+            $this->connectionStatus[$platform] = 'failed';
+            $this->dispatch('add-toast', message: ucfirst($platform)." connection test failed: {$e->getMessage()}", variant: 'error'); // Improved error message
         }
     }
 
-    /**
-     * Helper to get the component property name mapped from a setting key.
-     * Used for reverting component state on save error.
-     *
-     * @param  string  $key  The database setting key.
-     * @return string|null The corresponding public property name or null if not mapped.
-     */
-    private function getPropertyNameFromSettingKey(string $key): ?string
-    {
-        $map = [
-            'job_frequency.sync' => 'syncFrequency',
-            'notifications.global_enabled' => 'globalNotificationsEnabled',
-            'notification.api_down_warning_mail.enabled' => 'apiDownWarningMailEnabled',
-            'notification.welcome_email.enabled' => 'welcomeEmailEnabled',
-            'data_retention.global_period' => 'dataRetentionGlobalPeriod',
-            'notification.admin_promotion.enabled' => 'adminPromotionEmailEnabled', // Added mapping
-            // 'data_retention.enabled' is handled within updatedDataRetentionGlobalPeriod
-        ];
-
-        return $map[$key] ?? null;
-    }
-
-    /**
-     * Helper to get default values for reverting on error.
-     */
-    private function getDefaultValueForKey(string $key)
-    {
-        $defaults = [
-            'job_frequency.sync' => 'everyThirtyMinutes',
-            'notifications.global_enabled' => true,
-            'notification.api_down_warning_mail.enabled' => true,
-            'notification.welcome_email.enabled' => true,
-            'data_retention.global_period' => 0,
-            'notification.admin_promotion.enabled' => true, // Added default
-        ];
-        // Need to handle boolean conversion for string '1'/'0'
-        $value = $defaults[$key] ?? null;
-        if (
-            in_array($key, [
-                'notifications.global_enabled',
-                'notification.api_down_warning_mail.enabled',
-                'notification.welcome_email.enabled',
-                'notification.admin_promotion.enabled', // Added key
-            ])
-        ) {
-            return (bool) $value;
-        }
-        if ($key === 'data_retention.global_period') {
-            return (int) $value;
-        }
-
-        return $value;
-    }
-
-    // --- Ping methods --- //
-
-    /**
-     * Ping the Odoo API endpoint to check connectivity.
-     */
     public function pingOdoo(): void
     {
-        $service = app(OdooApiService::class);
-        $result = $service->ping();
-
-        $this->dispatch(
-            'add-toast',
-            message: $result['message'],
-            variant: $result['success'] ? 'success' : 'error'
-        );
+        $this->testConnection('odoo');
     }
 
-    /**
-     * Ping the Desktime API endpoint to check connectivity.
-     */
     public function pingDesktime(): void
     {
-        $service = app(DesktimeApiService::class);
-        $success = $service->ping();
-
-        $this->dispatch(
-            'add-toast',
-            message: $success
-              ? 'DeskTime API connection successful'
-              : 'DeskTime API connection failed',
-            variant: $success ? 'success' : 'error'
-        );
+        $this->testConnection('desktime');
     }
 
-    /**
-     * Ping the Proofhub API endpoint to check connectivity.
-     */
     public function pingProofhub(): void
     {
-        $service = app(ProofhubApiService::class);
-        $result = $service->ping();
-
-        $this->dispatch(
-            'add-toast',
-            message: $result['message'],
-            variant: $result['success'] ? 'success' : 'error'
-        );
+        $this->testConnection('proofhub');
     }
 
-    /**
-     * Ping the SystemPin API endpoint to check connectivity.
-     */
     public function pingSystemPin(): void
     {
-        $service = app(SystemPinApiService::class);
-        $success = $service->ping();
-
-        $this->dispatch(
-            'add-toast',
-            message: $success
-              ? 'SystemPin API connection successful'
-              : 'SystemPin API connection failed',
-            variant: $success ? 'success' : 'error'
-        );
+        $this->testConnection('system-pin');
     }
-
-    // --- Manual Action Methods --- //
 
     /**
      * Manually trigger the data retention artisan command.
@@ -487,7 +461,7 @@ class Settings extends Component
           app()->bound(EntriesRepository::class) && config('telescope.enabled');
 
         // Check if Pulse is enabled via its configuration.
-        $pulseEnabled = config('pulse.enabled', false); // Default to false if config is missing
+        $pulseEnabled = config('pulse.enabled', false);
 
         return view('livewire.settings', [
             'syncFrequencyOptions' => $this->getSyncFrequencyOptions(),
@@ -496,7 +470,7 @@ class Settings extends Component
             'activeUsers' => $activeUsers,
             'activeAdmins' => $activeAdmins,
             'telescopeEnabled' => $telescopeEnabled,
-            'pulseEnabled' => $pulseEnabled, // Pass pulse status to the view
+            'pulseEnabled' => $pulseEnabled,
         ]);
     }
 }

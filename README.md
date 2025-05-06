@@ -109,14 +109,24 @@ Manually trigger data synchronization using the `sync` Artisan command.
 **Command Signature:**
 
 ```bash
-php artisan sync {platform?} {type?} [--from=Y-m-d] [--to=Y-m-d] [--user-id=ID]
+php artisan sync [platform] [type] [options]
 ```
 
-- `platform`: `odoo`, `proofhub`, `desktime`, or `all` (required if `type` is specified, otherwise shows help).
-- `type`: Specific data type to sync (e.g., `users`, `leaves`, `projects`, `attendances`). Varies by platform.
-- `--from`: Start date for date-based sync (e.g., `leaves`, `time-entries`, `attendances`).
-- `--to`: End date for date-based sync.
-- `--user-id`: Filter by user ID (currently only for `desktime attendances`).
+**Arguments:**
+
+- `platform` (optional): The platform to interact with (`odoo`, `proofhub`, `desktime`, `all`).
+  - If omitted, displays general help.
+  - If set to `all`, dispatches the full sync batch for all platforms.
+- `type` (optional): The specific data type to sync, or a command.
+  - If omitted (and `platform` is provided), displays platform-specific help.
+  - If set to `all` (and `platform` is provided, e.g., `odoo all`), dispatches the sync batch for that specific platform.
+  - If set to a specific type (e.g., `users`, `leaves`, `projects`), dispatches a single job to sync only that data type for the specified platform.
+
+**Options:**
+
+- `--from=<YYYY-MM-DD>`: Optional start date for date-based sync types (e.g., `leaves`, `time-entries`, `attendances`).
+- `--to=<YYYY-MM-DD>`: Optional end date for date-based sync types.
+- `--user-id=<ID>`: Optional user ID filter for specific sync types (currently only `desktime attendances`).
 
 **Examples:**
 
@@ -127,17 +137,35 @@ php artisan sync
 # Show help for Odoo
 php artisan sync odoo
 
-# Sync all data from all platforms (dispatches a batch job)
-php artisan sync all
-
-# Sync all data for ProofHub (dispatches a batch job)
+# Show help for ProofHub
 php artisan sync proofhub
 
-# Sync only Odoo users
+# Show help for DeskTime
+php artisan sync desktime
+
+# Sync all data from all platforms (dispatches full batch job)
+php artisan sync all
+
+# Sync all data for Odoo (dispatches Odoo batch job)
+php artisan sync odoo all
+
+# Sync all data for ProofHub (dispatches ProofHub batch job)
+php artisan sync proofhub all
+
+# Sync all data for DeskTime (dispatches DeskTime batch job)
+php artisan sync desktime all
+
+# Sync only Odoo users (dispatches single job)
 php artisan sync odoo users
 
-# Sync DeskTime attendances for a specific user and date range
+# Sync only ProofHub tasks (dispatches single job)
+php artisan sync proofhub tasks
+
+# Sync DeskTime attendances for a specific user and date range (dispatches single job)
 php artisan sync desktime attendances --user-id=123 --from=2024-01-01 --to=2024-01-31
+
+# Sync Odoo leaves for a specific date range (dispatches single job)
+php artisan sync odoo leaves --from=2024-05-01 --to=2024-05-06
 ```
 
 Jobs are dispatched to the queue and processed by your queue worker.
@@ -308,14 +336,14 @@ The application provides a unified command to synchronize data from external pla
 ### Sync Command Usage
 
 ```bash
-php artisan sync {platform} {type} [options]
+php artisan sync [platform] [type] [options]
 ```
 
 Where:
 
-- `platform`: The platform to sync (odoo, proofhub, desktime, all)
-- `type`: Optional data type to sync within that platform
-- `options`: Additional parameters like date ranges
+- `platform` (optional): `odoo`, `proofhub`, `desktime`, `all`. See detailed description above.
+- `type` (optional): Specific data type (e.g., `users`, `leaves`), or `all` for platform batch. See detailed description above.
+- `options`: `--from`, `--to`, `--user-id`. See detailed description above.
 
 ### Examples
 
@@ -325,16 +353,16 @@ Where:
 # Sync all data from all platforms
 php artisan sync all
 
-# Sync all data from a specific platform
-php artisan sync odoo
-php artisan sync proofhub
-php artisan sync desktime
+# Sync all data from a specific platform (dispatch platform batch)
+php artisan sync odoo all
+php artisan sync proofhub all
+php artisan sync desktime all
 ```
 
 #### Sync Specific Data Types
 
 ```bash
-# Sync specific Odoo data
+# Sync specific Odoo data (dispatch single job)
 php artisan sync odoo users
 php artisan sync odoo departments
 php artisan sync odoo categories
@@ -342,13 +370,13 @@ php artisan sync odoo schedules
 php artisan sync odoo leave-types
 php artisan sync odoo leaves
 
-# Sync specific ProofHub data
+# Sync specific ProofHub data (dispatch single job)
 php artisan sync proofhub users
 php artisan sync proofhub projects
 php artisan sync proofhub tasks
 php artisan sync proofhub time-entries
 
-# Sync specific DeskTime data
+# Sync specific DeskTime data (dispatch single job)
 php artisan sync desktime users
 php artisan sync desktime attendances
 ```
@@ -356,11 +384,11 @@ php artisan sync desktime attendances
 #### Using Date Ranges and Other Options
 
 ```bash
-# Sync with date range
+# Sync single type with date range
 php artisan sync odoo leaves --from=2023-01-01 --to=2023-12-31
 php artisan sync proofhub time-entries --from=2023-01-01
 
-# Sync with user filter
+# Sync single type with user filter
 php artisan sync desktime attendances --user-id=123 --from=2023-01-01
 ```
 
@@ -372,7 +400,7 @@ To see available options and data types:
 # Show general help
 php artisan sync
 
-# Show platform-specific help
+# Show platform-specific help (omit type argument)
 php artisan sync odoo
 php artisan sync proofhub
 php artisan sync desktime

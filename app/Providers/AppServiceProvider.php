@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Clients\DesktimeApiClient;
+use App\Clients\OdooApiClient;
+use App\Clients\ProofhubApiClient;
+use App\Clients\SystemPinApiClient;
 use App\Models\User;
-use App\Services\DesktimeApiService;
-use App\Services\OdooApiService;
-use App\Services\ProofhubApiService;
-use App\Services\SystemPinApiService;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Http\Request;
@@ -24,8 +24,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Register OdooApiService as a singleton with constructor injection
-        $this->app->singleton(OdooApiService::class, function ($app) {
+        // Register OdooApiClient
+        $this->app->singleton(OdooApiClient::class, function ($app) {
             /** @var ConfigRepository $config */
             $config = $app['config'];
             $odooConfig = $config->get('services.odoo');
@@ -34,7 +34,7 @@ class AppServiceProvider extends ServiceProvider
                 throw new InvalidArgumentException('Odoo service configuration is missing or incomplete.');
             }
 
-            return new OdooApiService(
+            return new OdooApiClient(
                 baseUrl: $odooConfig['base_url'],
                 database: $odooConfig['database'],
                 username: $odooConfig['username'],
@@ -42,24 +42,24 @@ class AppServiceProvider extends ServiceProvider
             );
         });
 
-        // Register ProofhubApiService as a singleton with constructor injection
-        $this->app->singleton(ProofhubApiService::class, function ($app) {
+        // Register ProofhubApiClient
+        $this->app->singleton(ProofhubApiClient::class, function ($app) {
             /** @var ConfigRepository $config */
             $config = $app['config'];
             $proofhubConfig = $config->get('services.proofhub');
 
             if (! isset($proofhubConfig['company_url'], $proofhubConfig['api_key'])) {
-                throw new InvalidArgumentException('ProofHub service configuration is missing or incomplete.');
+                throw new InvalidArgumentException('ProofHub service configuration is missing or incomplete. Requires company_url and api_key.');
             }
 
-            return new ProofhubApiService(
+            return new ProofhubApiClient(
                 companyUrl: $proofhubConfig['company_url'],
                 apiKey: $proofhubConfig['api_key']
             );
         });
 
-        // Register DesktimeApiService as a singleton with constructor injection
-        $this->app->singleton(DesktimeApiService::class, function ($app) {
+        // Register DesktimeApiClient
+        $this->app->singleton(DesktimeApiClient::class, function ($app) {
             /** @var ConfigRepository $config */
             $config = $app['config'];
             $desktimeConfig = $config->get('services.desktime');
@@ -68,23 +68,23 @@ class AppServiceProvider extends ServiceProvider
                 throw new InvalidArgumentException('DeskTime service configuration is missing or incomplete.');
             }
 
-            return new DesktimeApiService(
+            return new DesktimeApiClient(
                 baseUrl: $desktimeConfig['base_url'],
                 apiKey: $desktimeConfig['api_key']
             );
         });
 
-        // Register SystemPinApiService as a singleton with constructor injection
-        $this->app->singleton(SystemPinApiService::class, function ($app) {
+        // Register SystemPinApiClient
+        $this->app->singleton(SystemPinApiClient::class, function ($app) {
             /** @var ConfigRepository $config */
             $config = $app['config'];
-            // Get config values, allowing them to be null
+            // Get config values, allowing them to be null as per original logic
             $url = $config->get('services.systempin.url');
             $key = $config->get('services.systempin.key');
 
-            return new SystemPinApiService(
-                baseUrl: $url, // Pass potentially null values
-                apiKey: $key   // The service constructor handles nulls
+            return new SystemPinApiClient(
+                baseUrl: $url,
+                apiKey: $key
             );
         });
 

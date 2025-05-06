@@ -13,7 +13,7 @@ use App\Notifications\WeeklyUserReportNotification;
 use App\Notifications\WelcomeEmail;
 use Illuminate\Notifications\Notification;
 
-class CheckSpecificNotificationPermission
+class ShouldDeliverNotificationToUserAction
 {
     /**
      * Centralized check to determine if a user should receive a specific notification.
@@ -30,7 +30,7 @@ class CheckSpecificNotificationPermission
     public function handle(User $user, Notification $notification): bool
     {
         // Step 1 & 2: Check global enable and user master mute using the dedicated action.
-        $globalPermissionAction = new CheckGlobalUserPermission;
+        $globalPermissionAction = new CanUserReceiveAnyNotificationAction;
         if (! $globalPermissionAction->handle($user)) {
             return false;
         }
@@ -53,6 +53,10 @@ class CheckSpecificNotificationPermission
             ) {
                 return false; // API down warnings are globally disabled.
             }
+            // Check user's individual preference if they are an admin
+            if ($user->is_admin && ! ($user->notificationPreferences->api_down_warning ?? true)) {
+                return false; // Admin user opted out of this specific notification.
+            }
         }
 
         // Add checks for other system-wide toggles here...
@@ -62,6 +66,11 @@ class CheckSpecificNotificationPermission
 
         // Check for ScheduleChangeNotification preference:
         if ($notification instanceof ScheduleChangeNotification) {
+            // Check system-wide toggle first
+            if (! (bool) Setting::getValue('notification.schedule_change.enabled', true)) {
+                return false; // Globally disabled by admin
+            }
+            // Then check user preference
             if (! $preferences->schedule_change) {
                 return false; // User opted out.
             }
@@ -69,6 +78,11 @@ class CheckSpecificNotificationPermission
 
         // Check for WeeklyUserReportNotification preference:
         if ($notification instanceof WeeklyUserReportNotification) {
+            // Check system-wide toggle first
+            if (! (bool) Setting::getValue('notification.weekly_user_report.enabled', true)) {
+                return false; // Globally disabled by admin
+            }
+            // Then check user preference
             if (! $preferences->weekly_user_report) {
                 return false; // User opted out.
             }
@@ -76,6 +90,11 @@ class CheckSpecificNotificationPermission
 
         // Check for LeaveReminderNotification preference:
         if ($notification instanceof LeaveReminderNotification) {
+            // Check system-wide toggle first
+            if (! (bool) Setting::getValue('notification.leave_reminder.enabled', true)) {
+                return false; // Globally disabled by admin
+            }
+            // Then check user preference
             if (! $preferences->leave_reminder) {
                 return false; // User opted out.
             }

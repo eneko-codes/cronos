@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\Clients;
 
 use App\Contracts\Pingable;
 use Exception;
@@ -27,14 +27,14 @@ class OdooRequestException extends Exception {}
 class OdooResponseException extends Exception {}
 
 /**
- * Class OdooApiService
+ * Class OdooApiClient
  *
  * Handles all interactions with the Odoo API, including authentication and data retrieval.
  * This service fetches raw data from Odoo without renaming keys or setting defaults.
  *
  * Odoo 13 note: "date_from" and "date_to" in "hr.leave" are stored as UTC datetime fields.
  */
-class OdooApiService implements Pingable
+class OdooApiClient implements Pingable
 {
     /**
      * The Odoo base URL (e.g., https://odoo.company.com).
@@ -57,7 +57,7 @@ class OdooApiService implements Pingable
     private string $password;
 
     /**
-     * OdooApiService constructor.
+     * OdooApiClient constructor.
      *
      * Initializes the service with configuration values passed as arguments.
      *
@@ -286,8 +286,8 @@ class OdooApiService implements Pingable
             'number_of_days',
             'state',
             'holiday_status_id',
-            'request_date_from', // Additional field for local date
-            'request_date_to', // Additional field for local date
+            'request_date_from',
+            'request_date_to',
             'request_hour_from', // For half-day morning/afternoon
             'request_hour_to', // For half-day morning/afternoon
         ]);
@@ -315,7 +315,7 @@ class OdooApiService implements Pingable
             'dayofweek',
             'hour_from',
             'hour_to',
-            'day_period', // Ensure this field is fetched if used
+            'day_period',
         ]);
     }
 

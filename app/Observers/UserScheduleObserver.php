@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Observers;
 
-use App\Actions\Notification\CheckSpecificNotificationPermission;
+use App\Actions\Notification\ShouldDeliverNotificationToUserAction;
 use App\Models\User;
 use App\Models\UserSchedule;
 use App\Notifications\ScheduleChangeNotification;
@@ -40,7 +40,7 @@ class UserScheduleObserver
             $notification = new ScheduleChangeNotification($user, $endedSchedule, null);
 
             // Check permission using the action
-            $action = new CheckSpecificNotificationPermission;
+            $action = new ShouldDeliverNotificationToUserAction;
             if ($action->handle($user, $notification)) {
                 $user->notify($notification);
             }

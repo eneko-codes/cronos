@@ -4,26 +4,9 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
-use App\Http\Controllers\BatchController;
-use App\Jobs\SyncDesktimeAttendances;
-use App\Jobs\SyncDesktimeUsers;
-use App\Jobs\SyncOdooCategories;
-use App\Jobs\SyncOdooDepartments;
-use App\Jobs\SyncOdooLeaves;
-use App\Jobs\SyncOdooLeaveTypes;
-use App\Jobs\SyncOdooSchedules;
-use App\Jobs\SyncOdooUsers;
-use App\Jobs\SyncProofhubProjects;
-use App\Jobs\SyncProofhubTasks;
-use App\Jobs\SyncProofhubTimeEntries;
-use App\Jobs\SyncProofhubUsers;
-use App\Services\DesktimeApiService;
-use App\Services\OdooApiService;
-use App\Services\ProofhubApiService;
-use Carbon\Carbon;
-use Exception;
+use App\Services\SyncService;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class SyncCommand extends Command
 {
@@ -43,102 +26,70 @@ class SyncCommand extends Command
     protected $description = 'Synchronize data from external platforms';
 
     /**
-     * Map of platforms and their data types with corresponding job classes
-     */
-    protected array $platformDataMap = [
-        'odoo' => [
-            'users' => SyncOdooUsers::class,
-            'departments' => SyncOdooDepartments::class,
-            'categories' => SyncOdooCategories::class,
-            'leave-types' => SyncOdooLeaveTypes::class,
-            'schedules' => SyncOdooSchedules::class,
-            'leaves' => SyncOdooLeaves::class,
-        ],
-        'proofhub' => [
-            'users' => SyncProofhubUsers::class,
-            'projects' => SyncProofhubProjects::class,
-            'tasks' => SyncProofhubTasks::class,
-            'time-entries' => SyncProofhubTimeEntries::class,
-        ],
-        'desktime' => [
-            'users' => SyncDesktimeUsers::class,
-            'attendances' => SyncDesktimeAttendances::class,
-        ],
-    ];
-
-    /**
-     * Data types that accept date parameters
-     */
-    protected array $dateBasedTypes = [
-        'odoo' => ['leaves'],
-        'proofhub' => ['time-entries'],
-        'desktime' => ['attendances'],
-    ];
-
-    /**
-     * Data types that accept user ID parameter
-     */
-    protected array $userBasedTypes = [
-        'desktime' => ['attendances'],
-    ];
-
-    /**
      * Execute the console command.
      */
-    public function handle(): int
+    public function handle(SyncService $syncService): int
     {
         $platform = $this->argument('platform');
         $type = $this->argument('type');
 
         // If no platform specified, show general help
         if (! $platform) {
-            $this->showGeneralHelp();
+            $this->showGeneralHelp($syncService);
 
             return 0;
         }
 
         // Handle 'all' platform option
         if ($platform === 'all') {
-            return $this->syncAllPlatforms();
+            return $this->syncAllPlatforms($syncService);
         }
 
         // Validate platform
-        if (! isset($this->platformDataMap[$platform])) {
+        if (! isset($syncService->platformDataMap[$platform])) {
             $this->error("Unknown platform: $platform");
-            $this->showGeneralHelp();
+            $this->showGeneralHelp($syncService);
 
             return 1;
         }
 
-        // If no type specified, sync the entire platform
+        // Handle platform-specific batch dispatch if type is 'all'
+        if ($type === 'all') {
+            return $this->syncPlatform($platform, $syncService);
+        }
+
+        // If no type specified, sync the entire platform OR show platform help
         if (! $type) {
-            return $this->syncPlatform($platform);
+            $this->showPlatformHelp($platform, $syncService);
+
+            return 0; // Successful exit after showing help
         }
 
         // Validate data type for platform
-        if (! isset($this->platformDataMap[$platform][$type])) {
+        if (! isset($syncService->platformDataMap[$platform][$type])) {
             $this->error("Unknown data type '$type' for platform '$platform'");
-            $this->showPlatformHelp($platform);
+            $this->showPlatformHelp($platform, $syncService);
 
             return 1;
         }
 
+        // Determine if type accepts date/user parameters based on SyncService info
+        $isDateBased = isset($syncService->dateBasedTypes[$platform]) && in_array($type, $syncService->dateBasedTypes[$platform]);
+        $isUserBased = isset($syncService->userBasedTypes[$platform]) && in_array($type, $syncService->userBasedTypes[$platform]);
+
         // Sync specific data type
-        return $this->syncDataType($platform, $type);
+        return $this->syncDataType($platform, $type, $syncService, $isDateBased, $isUserBased);
     }
 
     /**
      * Sync all platforms.
      */
-    protected function syncAllPlatforms(): int
+    protected function syncAllPlatforms(SyncService $syncService): int
     {
         $this->info('Starting full synchronization...');
 
         try {
-            $controller = new BatchController;
-
-            $result = $controller->dispatchFullSyncBatch();
-            $batchId = $result->getData()->batch_id;
+            $batchId = $syncService->dispatchFullSyncBatch();
 
             $this->info('✓ Full sync batch dispatched successfully');
             $this->line("  <comment>Batch ID:</comment> {$batchId}");
@@ -157,17 +108,20 @@ class SyncCommand extends Command
     /**
      * Sync all data for a specific platform.
      */
-    protected function syncPlatform(string $platform): int
+    protected function syncPlatform(string $platform, SyncService $syncService): int
     {
         $this->info("Syncing all $platform data...");
 
         try {
-            $controller = new BatchController;
-            $methodName = 'dispatch'.ucfirst($platform).'Batch';
+            $methodName = match ($platform) {
+                'odoo' => 'dispatchOdooBatch',
+                'proofhub' => 'dispatchProofhubBatch',
+                'desktime' => 'dispatchDesktimeBatch',
+                default => null,
+            };
 
-            if (method_exists($controller, $methodName)) {
-                $result = $controller->$methodName();
-                $batchId = $result->getData()->batch_id;
+            if ($methodName) {
+                $batchId = $syncService->$methodName();
                 $this->info("✓ $platform sync batch dispatched successfully");
                 $this->line("  <comment>Batch ID:</comment> {$batchId}");
                 $this->line(
@@ -176,13 +130,9 @@ class SyncCommand extends Command
 
                 return 0;
             } else {
-                // Fallback if batch method doesn't exist
-                $dataTypes = array_keys($this->platformDataMap[$platform]);
-                foreach ($dataTypes as $dataType) {
-                    $this->syncDataType($platform, $dataType);
-                }
+                $this->error("No batch dispatch method found for platform: $platform");
 
-                return 0;
+                return 1;
             }
         } catch (\Exception $e) {
             $this->error("Failed to sync $platform: ".$e->getMessage());
@@ -194,18 +144,20 @@ class SyncCommand extends Command
     /**
      * Sync a specific data type from a platform.
      */
-    protected function syncDataType(string $platform, string $type): int
-    {
+    protected function syncDataType(
+        string $platform,
+        string $type,
+        SyncService $syncService,
+        bool $isDateBased,
+        bool $isUserBased
+    ): int {
         $fromDate = $this->option('from');
         $toDate = $this->option('to');
         $userId = $this->option('user-id');
 
         // Use Laravel's validator for date parameters
-        if (
-            isset($this->dateBasedTypes[$platform]) &&
-            in_array($type, $this->dateBasedTypes[$platform])
-        ) {
-            $validator = validator(
+        if ($isDateBased) {
+            $validator = Validator::make(
                 [
                     'from_date' => $fromDate,
                     'to_date' => $toDate,
@@ -225,13 +177,9 @@ class SyncCommand extends Command
             }
         }
 
-        // Check if user ID is applicable and validate it
-        $hasUserIdOption =
-          isset($this->userBasedTypes[$platform]) &&
-          in_array($type, $this->userBasedTypes[$platform]);
-
-        if ($hasUserIdOption && $userId !== null) {
-            $validator = validator(
+        // Validate user ID if applicable and provided
+        if ($isUserBased && $userId !== null) {
+            $validator = Validator::make(
                 [
                     'user_id' => $userId,
                 ],
@@ -249,43 +197,29 @@ class SyncCommand extends Command
             }
         }
 
+        // Prepare info message parts
+        $infoParts = ["Syncing $platform $type"];
+        if ($isUserBased && $userId) {
+            $infoParts[] = "for user $userId";
+        }
+        if ($isDateBased && $fromDate) {
+            $infoParts[] = "from $fromDate";
+        }
+        if ($isDateBased && $toDate) {
+            $infoParts[] = "to $toDate";
+        }
+        $infoParts[] = '...';
+
         $this->info(
-            "Syncing $platform $type".
-              ($hasUserIdOption && $userId ? " for user $userId" : '').
-              ($fromDate ? " from $fromDate" : '').
-              ($toDate ? " to $toDate" : '').
-              '...'
+            implode(' ', $infoParts)
         );
 
         try {
-            // Get API service
-            $apiService = match ($platform) {
-                'odoo' => app(OdooApiService::class),
-                'proofhub' => app(ProofhubApiService::class),
-                'desktime' => app(DesktimeApiService::class),
-                default => throw new \Exception("Unknown platform service: $platform"),
-            };
-
-            // Get job class
-            $jobClass = $this->platformDataMap[$platform][$type];
-
-            // Create job instance with appropriate parameters
-            $job = null;
-            if ($platform === 'odoo' && $type === 'leaves') {
-                $job = new $jobClass($apiService, $fromDate, $toDate);
-            } elseif ($platform === 'proofhub' && $type === 'time-entries') {
-                $job = new $jobClass($apiService, $fromDate, $toDate);
-            } elseif ($platform === 'desktime' && $type === 'attendances') {
-                $job = new $jobClass($apiService, $userId, $fromDate, $toDate);
-            } else {
-                $job = new $jobClass($apiService);
-            }
-
-            // Dispatch job to a platform-specific queue
-            dispatch($job)->delay(now());
+            // Use SyncService to dispatch the single job
+            $syncService->dispatchSingleJob($platform, $type, $userId, $fromDate, $toDate);
 
             $this->info(
-                "Job dispatched successfully to queue: sync-{$platform}. Check the queue for progress."
+                "✓ $platform $type sync job dispatched successfully. Check the queue for progress."
             );
 
             return 0;
@@ -299,8 +233,11 @@ class SyncCommand extends Command
     /**
      * Show general help information.
      */
-    protected function showGeneralHelp(): void
+    protected function showGeneralHelp(?SyncService $syncService = null): void
     {
+        // Fetch service if not provided (e.g., when validation fails early)
+        $syncService = $syncService ?? app(SyncService::class);
+
         $this->info('Sync Command');
         $this->line('Synchronize data from external platforms');
         $this->line('');
@@ -311,9 +248,9 @@ class SyncCommand extends Command
 
         $this->info('Platforms:');
         $this->line('  <info>all</info>       Sync all platforms');
-        $this->line('  <info>odoo</info>      Sync Odoo data');
-        $this->line('  <info>proofhub</info>  Sync ProofHub data');
-        $this->line('  <info>desktime</info>  Sync DeskTime data');
+        foreach (array_keys($syncService->platformDataMap) as $platformKey) {
+            $this->line("  <info>{$platformKey}</info>      Sync ".ucfirst($platformKey).' data');
+        }
         $this->line('');
 
         $this->info('Options:');
@@ -349,26 +286,27 @@ class SyncCommand extends Command
     /**
      * Show platform-specific help information.
      */
-    protected function showPlatformHelp(string $platform): void
+    protected function showPlatformHelp(string $platform, SyncService $syncService): void
     {
-        if (! isset($this->platformDataMap[$platform])) {
+        if (! isset($syncService->platformDataMap[$platform])) {
             $this->error("Unknown platform: $platform");
 
             return;
         }
 
-        $this->info("$platform Sync Options");
+        $this->info(ucfirst($platform).' Sync Options');
         $this->line('');
 
         $this->info('Available data types:');
-        foreach (array_keys($this->platformDataMap[$platform]) as $type) {
+        $this->line('  <info>all</info>       Sync all data types for '.ucfirst($platform));
+        foreach (array_keys($syncService->platformDataMap[$platform]) as $type) {
             $this->line("  <info>$type</info>");
         }
         $this->line('');
 
         $this->info('Date parameters:');
-        if (isset($this->dateBasedTypes[$platform])) {
-            foreach ($this->dateBasedTypes[$platform] as $type) {
+        if (! empty($syncService->dateBasedTypes[$platform])) {
+            foreach ($syncService->dateBasedTypes[$platform] as $type) {
                 $this->line(
                     "  <info>$type</info> accepts --from and --to date parameters"
                 );
@@ -379,8 +317,8 @@ class SyncCommand extends Command
         $this->line('');
 
         $this->info('User ID parameters:');
-        if (isset($this->userBasedTypes[$platform])) {
-            foreach ($this->userBasedTypes[$platform] as $type) {
+        if (! empty($syncService->userBasedTypes[$platform])) {
+            foreach ($syncService->userBasedTypes[$platform] as $type) {
                 $this->line("  <info>$type</info> accepts --user-id parameter");
             }
         } else {
@@ -391,185 +329,26 @@ class SyncCommand extends Command
         $this->info('Examples:');
         switch ($platform) {
             case 'odoo':
+                $this->line('  <info>php artisan sync odoo all</info>');
                 $this->line('  <info>php artisan sync odoo users</info>');
                 $this->line(
                     '  <info>php artisan sync odoo leaves --from=2023-01-01 --to=2023-12-31</info>'
                 );
                 break;
             case 'proofhub':
+                $this->line('  <info>php artisan sync proofhub all</info>');
                 $this->line('  <info>php artisan sync proofhub projects</info>');
                 $this->line(
                     '  <info>php artisan sync proofhub time-entries --from=2023-01-01</info>'
                 );
                 break;
             case 'desktime':
+                $this->line('  <info>php artisan sync desktime all</info>');
                 $this->line('  <info>php artisan sync desktime users</info>');
                 $this->line(
                     '  <info>php artisan sync desktime attendances --user-id=123 --from=2023-01-01</info>'
                 );
                 break;
         }
-    }
-
-    /**
-     * Validate a date string.
-     */
-    protected function isValidDate(?string $date): bool
-    {
-        if (is_null($date)) {
-            return false;
-        }
-
-        try {
-            $parsed = Carbon::createFromFormat('Y-m-d', $date);
-
-            return $parsed->format('Y-m-d') === $date;
-        } catch (\Exception $e) {
-            return false;
-        }
-    }
-
-    /**
-     * Dispatch a job for the specified platform and type
-     */
-    protected function dispatchJob(
-        string $platform,
-        string $type,
-        array $options = []
-    ): int {
-        try {
-            // Determine which API service to use based on platform
-            $apiService = match ($platform) {
-                'odoo' => app(OdooApiService::class),
-                'proofhub' => app(ProofhubApiService::class),
-                'desktime' => app(DesktimeApiService::class),
-                default => throw new Exception("Unknown platform: {$platform}"),
-            };
-
-            // Create job instance based on platform and type
-            $job = match ($platform) {
-                'odoo' => match ($type) {
-                    'all' => $this->dispatchAllOdooJobs(),
-                    'users' => new SyncOdooUsers($apiService),
-                    'leave-types' => new SyncOdooLeaveTypes($apiService),
-                    'leaves' => new SyncOdooLeaves($apiService),
-                    'schedules' => new SyncOdooSchedules($apiService),
-                    default => throw new Exception("Unknown Odoo sync type: {$type}"),
-                },
-                'proofhub' => match ($type) {
-                    'all' => $this->dispatchAllProofhubJobs(),
-                    'users' => new SyncProofhubUsers($apiService),
-                    'projects' => new SyncProofhubProjects($apiService),
-                    'tasks' => new SyncProofhubTasks($apiService),
-                    'time-entries' => new SyncProofhubTimeEntries($apiService),
-                    default => throw new Exception(
-                        "Unknown ProofHub sync type: {$type}"
-                    ),
-                },
-                'desktime' => match ($type) {
-                    'all' => $this->dispatchAllDesktimeJobs(),
-                    'users' => new SyncDesktimeUsers($apiService),
-                    'attendances' => new SyncDesktimeAttendances($apiService),
-                    default => throw new Exception(
-                        "Unknown DeskTime sync type: {$type}"
-                    ),
-                },
-                'all' => match ($type) {
-                    'all' => $this->dispatchAllSyncJobs(),
-                    default => throw new Exception(
-                        "Only 'all' is a valid type when platform is 'all'"
-                    ),
-                },
-                default => throw new Exception("Unknown platform: {$platform}"),
-            };
-
-            // If the job is an integer, it's a count of dispatched jobs
-            if (is_int($job)) {
-                return $job;
-            }
-
-            // Add the job to the queue for the specified platform
-            $job->onQueue($platform);
-            dispatch($job);
-
-            Log::info('Successfully dispatched sync job', [
-                'platform' => $platform,
-                'type' => $type,
-                'job' => get_class($job),
-            ]);
-
-            return 1; // One job dispatched
-        } catch (Exception $e) {
-            Log::error('Failed to dispatch sync job', [
-                'platform' => $platform,
-                'type' => $type,
-                'error' => $e->getMessage(),
-            ]);
-
-            $this->error("Error: {$e->getMessage()}");
-
-            return 0; // No jobs dispatched
-        }
-    }
-
-    /**
-     * Dispatch all Odoo jobs
-     */
-    protected function dispatchAllOdooJobs(): int
-    {
-        Log::info('Dispatching all Odoo sync jobs');
-
-        $count = 0;
-        $count += $this->dispatchJob('odoo', 'users');
-        $count += $this->dispatchJob('odoo', 'leave-types');
-        $count += $this->dispatchJob('odoo', 'leaves');
-        $count += $this->dispatchJob('odoo', 'schedules');
-
-        return $count;
-    }
-
-    /**
-     * Dispatch all ProofHub jobs
-     */
-    protected function dispatchAllProofhubJobs(): int
-    {
-        Log::info('Dispatching all ProofHub sync jobs');
-
-        $count = 0;
-        $count += $this->dispatchJob('proofhub', 'users');
-        $count += $this->dispatchJob('proofhub', 'projects');
-        $count += $this->dispatchJob('proofhub', 'tasks');
-        $count += $this->dispatchJob('proofhub', 'time-entries');
-
-        return $count;
-    }
-
-    /**
-     * Dispatch all DeskTime jobs
-     */
-    protected function dispatchAllDesktimeJobs(): int
-    {
-        Log::info('Dispatching all DeskTime sync jobs');
-
-        $count = 0;
-        $count += $this->dispatchJob('desktime', 'users');
-        $count += $this->dispatchJob('desktime', 'attendances');
-
-        return $count;
-    }
-
-    /**
-     * Dispatch all sync jobs for all platforms
-     */
-    protected function dispatchAllSyncJobs(): int
-    {
-        Log::info('Dispatching all sync jobs for all platforms');
-
-        $count = 0;
-        $count += $this->dispatchAllOdooJobs();
-        $count += $this->dispatchAllProofhubJobs();
-        $count += $this->dispatchAllDesktimeJobs();
-
-        return $count;
     }
 }

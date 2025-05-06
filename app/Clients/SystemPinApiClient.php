@@ -2,19 +2,20 @@
 
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\Clients;
 
+use App\Contracts\Pingable;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-class SystemPinApiService
+class SystemPinApiClient implements Pingable
 {
     protected string $baseUrl;
 
     protected string $apiKey;
 
     /**
-     * SystemPinApiService constructor.
+     * SystemPinApiClient constructor.
      *
      * Initializes the service with the base URL and API key.
      *
@@ -34,12 +35,15 @@ class SystemPinApiService
     /**
      * Ping the SystemPin API endpoint to check connectivity.
      *
-     * @return bool True if the connection is successful, false otherwise.
+     * @return array An array containing the success status and a message.
      */
-    public function ping(): bool
+    public function ping(): array
     {
         if (! $this->baseUrl || ! $this->apiKey) {
-            return false;
+            return [
+                'success' => false,
+                'message' => 'SystemPin API URL or Key is not configured.',
+            ];
         }
 
         try {
@@ -48,13 +52,26 @@ class SystemPinApiService
                 'Authorization' => 'Bearer '.$this->apiKey,
             ])->get($this->baseUrl.'/health'); // Example endpoint
 
-            return $response->successful();
+            if ($response->successful()) {
+                return [
+                    'success' => true,
+                    'message' => 'Successfully connected to SystemPin API.',
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => 'Failed to connect to SystemPin API. Status: '.$response->status(),
+            ];
         } catch (\Exception $e) {
             Log::error('SystemPin API ping failed', [
                 'error' => $e->getMessage(),
             ]);
 
-            return false;
+            return [
+                'success' => false,
+                'message' => 'SystemPin API ping failed: '.$e->getMessage(),
+            ];
         }
     }
 

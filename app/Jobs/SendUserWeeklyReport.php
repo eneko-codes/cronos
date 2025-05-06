@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
-use App\Actions\Notification\CheckSpecificNotificationPermission;
+use App\Actions\Notification\ShouldDeliverNotificationToUserAction;
 use App\Models\User;
 use App\Notifications\WeeklyUserReportNotification;
 use Carbon\Carbon;
@@ -71,7 +71,7 @@ class SendUserWeeklyReport implements ShouldQueue
             $notification = new WeeklyUserReportNotification($user, $reportData);
 
             // Check permission using the action
-            $action = new CheckSpecificNotificationPermission;
+            $action = new ShouldDeliverNotificationToUserAction;
             if ($action->handle($user, $notification)) {
                 try {
                     $user->notify($notification);

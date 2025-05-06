@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\Clients;
 
 use App\Contracts\Pingable;
 use Carbon\Carbon;
@@ -11,11 +11,11 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 
 /**
- * Class DesktimeApiService
+ * Class DesktimeApiClient
  *
  * Handles API interactions with DeskTime.
  */
-class DesktimeApiService implements Pingable
+class DesktimeApiClient implements Pingable
 {
     /**
      * The base URL for the DeskTime API.
@@ -30,7 +30,7 @@ class DesktimeApiService implements Pingable
     private ?string $accountTimezone = null;
 
     /**
-     * DesktimeApiService constructor.
+     * DesktimeApiClient constructor.
      *
      * Initializes the service with the base URL and API key.
      *

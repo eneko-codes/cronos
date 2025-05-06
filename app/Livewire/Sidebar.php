@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Livewire;
 
-use App\Models\Setting;
+use App\Actions\User\UpdateIndividualNotificationPreference;
+use App\Actions\User\UpdateMuteAllPreference;
 use App\Models\User;
+use App\Services\ApplicationSettingsService;
 use Exception;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
@@ -48,31 +51,33 @@ class Sidebar extends Component
      */
     public string $notificationFilter = 'all';
 
-    protected $listeners = [
-        'notification-updated' => 'refreshNotifications',
-    ];
+    /**
+     * Stores the global enabled state for each specific notification type.
+     * Key: preference key, Value: boolean state.
+     */
+    public array $globalPreferenceStates = [];
+
+    private ApplicationSettingsService $settingsService;
+
+    public function boot(): void
+    {
+        $this->settingsService = App::make(ApplicationSettingsService::class);
+    }
+
+    // Using #[On] attributes for listeners below
 
     // Define the available user-specific notification keys and their labels
     #[Computed]
     public function preferenceKeys(): array
     {
-        // Base preferences
-        $keys = [
+        // Defines the known preference keys and their display labels
+        return [
             'schedule_change' => 'Schedule Changes',
             'weekly_user_report' => 'Weekly Personal Report',
             'leave_reminder' => 'Leave Reminders',
-            // Add new keys/labels here
+            'api_down_warning' => 'API Down Warnings',
+            'admin_promotion_email' => 'Admin Promotion Email',
         ];
-
-        // Initialize individualPreferences array with default false values
-        // if it hasn't been populated yet by loadPreferences
-        foreach (array_keys($keys) as $key) {
-            if (! isset($this->individualPreferences[$key])) {
-                $this->individualPreferences[$key] = false;
-            }
-        }
-
-        return $keys;
     }
 
     /**
@@ -139,9 +144,14 @@ class Sidebar extends Component
 
     public function mount(): void
     {
+        // $this->settingsService is available here due to boot()
+        // Initialize individualPreferences with a base state.
+        // loadPreferences will populate them with actual values.
+        foreach (array_keys($this->preferenceKeys()) as $key) {
+            // Default to false initially; loadPreferences will set the true state from DB or defaults for new users.
+            $this->individualPreferences[$key] = false;
+        }
         $this->loadPreferences();
-        // Dispatch initial count when mounted, as sidebar might be open initially
-        // or toggle needs count even if closed.
         $this->dispatchUnreadCountChanged();
     }
 
@@ -152,58 +162,79 @@ class Sidebar extends Component
      */
     public function loadPreferences(): void
     {
-        // Fetch global setting FIRST
-        $this->isGloballyEnabled = (bool) Setting::getValue(
-            'notifications.global_enabled',
-            true
-        ); // Fetch global setting
+        // $this->settingsService is available here
+        $this->isGloballyEnabled = $this->settingsService->isGlobalNotificationsEnabled();
+
+        // Fetch global states for specific notification types
+        $this->globalPreferenceStates = [
+            'schedule_change' => $this->settingsService->isNotificationTypeGloballyEnabled('schedule_change'),
+            'weekly_user_report' => $this->settingsService->isNotificationTypeGloballyEnabled('weekly_user_report'),
+            'leave_reminder' => $this->settingsService->isNotificationTypeGloballyEnabled('leave_reminder'),
+            'api_down_warning' => $this->settingsService->isNotificationTypeGloballyEnabled('api_down_warning'),
+            'admin_promotion_email' => $this->settingsService->isNotificationTypeGloballyEnabled('admin_promotion_email'),
+        ];
 
         /** @var User|null $user */
         $user = Auth::user();
         if (! $user) {
-            $this->muteAll = true; // Default to muted on error
-            $this->individualPreferences = [];
+            $this->muteAll = true;
+            // Ensure individualPreferences are all false if no user
+            foreach (array_keys($this->preferenceKeys()) as $key) {
+                $this->individualPreferences[$key] = false;
+            }
 
             return;
         }
 
-        $preferencesModel = $user->notificationPreferences;
+        // Use firstOrNew to get existing or instantiate a new preferences model.
+        // The first array argument are attributes to find by, the second is for values if creating.
+        $preferencesModel = $user->notificationPreferences()->firstOrNew(
+            ['user_id' => $user->id] // Attributes to find existing record by
+        );
 
-        // Ensure preferences exist in the DB, create if not
-        if (! $preferencesModel) {
-            try {
-                $preferencesModel = $user->notificationPreferences()->create();
-                // Reload the model fresh from the DB after creation
-                $preferencesModel = $preferencesModel->fresh();
-            } catch (Exception $e) {
-                $preferencesModel = null; // Ensure it's null if creation failed
+        if (! $preferencesModel->exists) {
+            // The model is new and doesn't exist in the database yet.
+            // Set our application-defined defaults on the model.
+            $preferencesModel->fill([ // Use fill for mass assignment
+                'user_id' => $user->id,
+                'mute_all' => false, // Default 'mute_all' to false
+            ]);
+
+            foreach (array_keys($this->preferenceKeys()) as $key) {
+                // Default all individual, specific notification types to true (enabled) for new records
+                $preferencesModel->{$key} = true;
             }
 
-            if (! $preferencesModel) {
+            try {
+                $preferencesModel->save(); // Save the new record with these defaults.
+            } catch (Exception $e) {
                 $this->dispatch(
                     'add-toast',
-                    message: 'Error loading notification preferences.',
+                    message: 'Error initializing notification preferences: '.$e->getMessage(),
                     variant: 'error'
                 );
                 $this->muteAll = true; // Default to muted state on error
-                $this->individualPreferences = [];
+                foreach (array_keys($this->preferenceKeys()) as $key) {
+                    $this->individualPreferences[$key] = false; // Fallback component state
+                }
 
                 return;
             }
         }
+        // At this point, $preferencesModel is either an existing record from the DB
+        // or a newly created and saved one. It should accurately reflect the current state.
+        // Populate component properties from this model.
 
-        // Populate public properties from the fetched model
         $this->muteAll = (bool) $preferencesModel->mute_all;
-        $this->individualPreferences = []; // Reset before loading
-        foreach (array_keys($this->preferenceKeys) as $key) {
-            // Ensure the key exists on the model before accessing
-            $this->individualPreferences[$key] = property_exists(
-                $preferencesModel,
-                $key
-            )
-              ? (bool) $preferencesModel->$key
-              : false; // Default to false if key somehow doesn't exist on model
+
+        $loadedIndividualPreferences = [];
+        foreach ($this->preferenceKeys() as $key => $label) {
+            // Get the value from the model; Eloquent's $casts should handle boolean conversion.
+            // If a preference key exists in our code but not as an attribute on the model
+            // (e.g., new preference added, old user record), default it to true (enabled).
+            $loadedIndividualPreferences[$key] = $preferencesModel->{$key} ?? true;
         }
+        $this->individualPreferences = $loadedIndividualPreferences;
     }
 
     /**
@@ -247,41 +278,21 @@ class Sidebar extends Component
             return; // Prevent saving
         }
 
-        /** @var User|null $user */
-        $user = Auth::user();
-        if (! $user) {
+        /** @var User|null $currentUser */
+        $currentUser = Auth::user();
+        if (! $currentUser) {
             $this->dispatch(
                 'add-toast',
                 message: 'Error saving preference (not authenticated).',
                 variant: 'error'
             );
-
-            return;
-        }
-
-        // Fetch the model *within* the update method
-        $preferencesModel = $user->notificationPreferences;
-
-        if (! $preferencesModel) {
-            // This case should ideally not happen if loadPreferences worked,
-            // but handle it defensively.
-            $this->dispatch(
-                'add-toast',
-                message: 'Error saving preference (model not found).',
-                variant: 'error'
-            );
-            // Revert public property by reloading
-            $this->loadPreferences();
+            $this->loadPreferences(); // Revert UI
 
             return;
         }
 
         try {
-            // Update the model attribute
-            $preferencesModel->mute_all = $value;
-            $preferencesModel->save();
-
-            // Public property $this->muteAll is already updated by Livewire binding
+            app(UpdateMuteAllPreference::class)->execute($currentUser->id, $value);
 
             $this->dispatch(
                 'add-toast',
@@ -290,10 +301,11 @@ class Sidebar extends Component
                   : 'Personal notifications enabled.',
                 variant: 'success'
             );
+            // $this->muteAll is already updated by Livewire
         } catch (Exception $e) {
             $this->dispatch(
                 'add-toast',
-                message: 'Failed to update preference.',
+                message: 'Failed to update preference: '.$e->getMessage(),
                 variant: 'error'
             );
             // Reload to revert UI if save fails
@@ -309,7 +321,7 @@ class Sidebar extends Component
      */
     public function updatedIndividualPreferences(bool $value, string $key): void
     {
-        // Check if globally disabled
+        // Check if globally disabled by master switch
         if (! $this->isGloballyEnabled) {
             $this->dispatch(
                 'add-toast',
@@ -321,63 +333,61 @@ class Sidebar extends Component
             return; // Prevent saving
         }
 
-        /** @var User|null $user */
-        $user = Auth::user();
-        if (! $user) {
+        // Check if this specific notification type is globally disabled
+        if (isset($this->globalPreferenceStates[$key]) && $this->globalPreferenceStates[$key] === false) {
+            $preferenceLabel = $this->preferenceKeys()[$key] ?? 'This notification type';
+            $this->dispatch(
+                'add-toast',
+                message: "{$preferenceLabel} notifications are currently disabled by an administrator.",
+                variant: 'warning'
+            );
+            $this->loadPreferences(); // Revert UI
+
+            return; // Prevent saving
+        }
+
+        /** @var User|null $currentUser */
+        $currentUser = Auth::user();
+        if (! $currentUser) {
             $this->dispatch(
                 'add-toast',
                 message: 'Error saving preference (not authenticated).',
                 variant: 'error'
             );
+            $this->loadPreferences(); // Revert UI
 
             return;
         }
 
-        // Fetch the model *within* the update method
-        $preferencesModel = $user->notificationPreferences;
-
-        if (! $preferencesModel) {
-            $this->dispatch(
-                'add-toast',
-                message: 'Error saving preference (model not found).',
-                variant: 'error'
-            );
-            $this->loadPreferences(); // Revert public property
-
-            return;
-        }
-
-        // Check if the updated key is valid according to our computed property
-        if (! array_key_exists($key, $this->preferenceKeys)) {
+        // Validate the key against known preferenceKeys to prevent arbitrary updates
+        if (! array_key_exists($key, $this->preferenceKeys())) {
             $this->dispatch(
                 'add-toast',
                 message: 'Invalid preference key.',
                 variant: 'warning'
             );
-            // Revert the specific key in the public property by reloading all preferences
-            $this->loadPreferences();
+            $this->loadPreferences(); // Revert UI
 
             return;
         }
 
         try {
-            // Update the corresponding model attribute
-            $preferencesModel->{$key} = $value;
-            $preferencesModel->save();
+            app(UpdateIndividualNotificationPreference::class)->execute($currentUser->id, $key, $value);
 
-            // Public property $this->individualPreferences[$key] is already updated by Livewire binding
+            $action = $value ? 'enabled' : 'disabled';
+            $variant = $value ? 'success' : 'info'; // Or 'warning' if you prefer for disabled
 
             $this->dispatch(
                 'add-toast',
-                message: $this->preferenceKeys[$key].' preference updated.',
-                variant: 'success'
+                message: ($this->preferenceKeys()[$key] ?? $key)." {$action}.",
+                variant: $variant
             );
+            // $this->individualPreferences[$key] is already updated by Livewire
         } catch (Exception $e) {
             $this->dispatch(
                 'add-toast',
                 message: 'Failed to update '.
-                  ($this->preferenceKeys[$key] ?? $key).
-                  '.',
+                  ($this->preferenceKeys()[$key] ?? $key).': '.$e->getMessage(),
                 variant: 'error'
             );
             // Reload to revert UI if save fails
@@ -391,12 +401,9 @@ class Sidebar extends Component
     #[On('global-notifications-updated')]
     public function handleGlobalNotificationUpdate(bool $enabled): void
     {
-        if ($this->isGloballyEnabled !== $enabled) {
-            $this->isGloballyEnabled = $enabled;
-            // Reload preferences to ensure UI consistency,
-            // especially if a user interacted while globally disabled.
-            $this->loadPreferences();
-        }
+        // Reload all preferences and global states from service to ensure UI consistency
+        // This ensures $this->isGloballyEnabled and $this->globalPreferenceStates are fresh
+        $this->loadPreferences();
     }
 
     /**
@@ -546,6 +553,42 @@ class Sidebar extends Component
         $this->dispatchUnreadCountChanged(); // Refresh count as well
     }
 
+    // Specific handlers for global preference updates, will also trigger loadPreferences
+    // to refresh all global states from the service.
+    #[On('schedule-change-global-setting-updated')]
+    public function handleScheduleChangeGlobalUpdate(bool $enabled): void
+    {
+        // $this->globalPreferenceStates['schedule_change'] = $enabled; // Direct update
+        $this->loadPreferences(); // Reload to get all states from service
+    }
+
+    #[On('weekly-user-report-global-setting-updated')]
+    public function handleWeeklyUserReportGlobalUpdate(bool $enabled): void
+    {
+        // $this->globalPreferenceStates['weekly_user_report'] = $enabled;
+        $this->loadPreferences();
+    }
+
+    #[On('leave-reminder-global-setting-updated')]
+    public function handleLeaveReminderGlobalUpdate(bool $enabled): void
+    {
+        // $this->globalPreferenceStates['leave_reminder'] = $enabled;
+        $this->loadPreferences();
+    }
+
+    #[On('api-down-warning-global-setting-updated')]
+    public function handleApiDownWarningGlobalUpdate(bool $enabled): void
+    {
+        // $this->globalPreferenceStates['api_down_warning'] = $enabled;
+        $this->loadPreferences();
+    }
+
+    #[On('admin-promotion-email-global-setting-updated')]
+    public function handleAdminPromotionEmailGlobalUpdate(bool $enabled): void
+    {
+        $this->loadPreferences(); // Reload to get all states from service
+    }
+
     /**
      * Render the component.
      *
@@ -554,10 +597,11 @@ class Sidebar extends Component
     public function render()
     {
         // Pass the preference keys for the view loop,
-        // the view will use the public $muteAll, $individualPreferences, and $isGloballyEnabled properties
-        // The `notifications` computed property will be available automatically
+        // the view will use the public $muteAll, $individualPreferences, $isGloballyEnabled
+        // and the new $globalPreferenceStates properties
         return view('livewire.sidebar', [
-            'preferenceKeys' => $this->preferenceKeys,
+            'preferenceKeys' => $this->preferenceKeys(),
+            'globalPreferenceStates' => $this->globalPreferenceStates, // Pass global states to view
         ]);
     }
 }

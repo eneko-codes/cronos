@@ -285,7 +285,7 @@
               wire:model.change="globalNotificationsEnabled"
             />
             <div
-              class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-disabled:opacity-50 dark:bg-gray-700 dark:after:bg-gray-500"
+              class="peer h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-600 peer-disabled:opacity-50 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full dark:bg-gray-700 dark:after:bg-gray-500"
             ></div>
           </label>
         </div>
@@ -328,7 +328,7 @@
                 @disabled(! $globalNotificationsEnabled)
               />
               <div
-                class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:opacity-50 dark:bg-gray-700 dark:after:bg-gray-500"
+                class="peer h-6 w-11 rounded-full bg-gray-200 peer-disabled:opacity-50 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700 dark:after:bg-gray-500"
                 @if ($globalNotificationsEnabled)
                     :class="{ 'peer-checked:bg-blue-600': {{ $welcomeEmailEnabled ? "true" : "false" }} }"
                 @endif
@@ -342,7 +342,7 @@
             <label
               class="{{ ! $globalNotificationsEnabled ? "text-gray-400 dark:text-gray-500" : "text-gray-600 dark:text-gray-300" }} inline-flex items-center gap-1 text-sm font-medium"
             >
-              API Down Email
+              API Down Warning
               <x-tooltip>
                 <x-slot name="text">
                   Notification sent to administrators when an API connection
@@ -372,13 +372,13 @@
                 id="apiDownWarningEmailToggle"
                 type="checkbox"
                 class="peer sr-only"
-                wire:model.change="apiDownWarningMailEnabled"
+                wire:model.change="apiDownWarningEnabled"
                 @disabled(! $globalNotificationsEnabled)
               />
               <div
-                class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:opacity-50 dark:bg-gray-700 dark:after:bg-gray-500"
+                class="peer h-6 w-11 rounded-full bg-gray-200 peer-disabled:opacity-50 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700 dark:after:bg-gray-500"
                 @if ($globalNotificationsEnabled)
-                    :class="{ 'peer-checked:bg-blue-600': {{ $apiDownWarningMailEnabled ? "true" : "false" }} }"
+                    :class="{ 'peer-checked:bg-blue-600': {{ $apiDownWarningEnabled ? "true" : "false" }} }"
                 @endif
               ></div>
             </label>
@@ -393,8 +393,57 @@
               Admin Promotion Email
               <x-tooltip>
                 <x-slot name="text">
-                  Notification sent to a user when they are promoted to an
-                  administrator role.
+                  Notification sent to administrators when a user is promoted to
+                  an admin role.
+                </x-slot>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                  class="size-3"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+                  />
+                </svg>
+              </x-tooltip>
+              <x-badge variant="primary" size="sm" class="ml-2">Admins</x-badge>
+            </label>
+            <label
+              class="{{ ! $globalNotificationsEnabled ? "cursor-not-allowed" : "cursor-pointer" }} relative inline-flex items-center"
+            >
+              <input
+                id="adminPromotionEmailToggle"
+                type="checkbox"
+                class="peer sr-only"
+                wire:model.change="adminPromotionEmailEnabled"
+                @disabled(! $globalNotificationsEnabled)
+              />
+              <div
+                class="peer h-6 w-11 rounded-full bg-gray-200 peer-disabled:opacity-50 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700 dark:after:bg-gray-500"
+                @if ($globalNotificationsEnabled)
+                    :class="{ 'peer-checked:bg-blue-600': {{ $adminPromotionEmailEnabled ? "true" : "false" }} }"
+                @endif
+              ></div>
+            </label>
+          </div>
+
+          {{-- Schedule Change Global Toggle --}}
+          <div
+            class="{{ ! $globalNotificationsEnabled ? "opacity-50" : "" }} flex items-center justify-between"
+          >
+            <label
+              class="{{ ! $globalNotificationsEnabled ? "text-gray-400 dark:text-gray-500" : "text-gray-600 dark:text-gray-300" }} inline-flex items-center gap-1 text-sm font-medium"
+            >
+              Schedule Change Notifications
+              <x-tooltip>
+                <x-slot name="text">
+                  Globally enable or disable notifications sent to users when
+                  their schedule assignments change.
                 </x-slot>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -416,16 +465,160 @@
               class="{{ ! $globalNotificationsEnabled ? "cursor-not-allowed" : "cursor-pointer" }} relative inline-flex items-center"
             >
               <input
-                id="adminPromotionEmailToggle"
+                id="scheduleChangeToggle"
                 type="checkbox"
                 class="peer sr-only"
-                wire:model.change="adminPromotionEmailEnabled"
+                wire:model.change="scheduleChangeEnabled"
                 @disabled(! $globalNotificationsEnabled)
               />
               <div
-                class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white peer-disabled:opacity-50 dark:bg-gray-700 dark:after:bg-gray-500"
+                class="peer h-6 w-11 rounded-full bg-gray-200 peer-disabled:opacity-50 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700 dark:after:bg-gray-500"
                 @if ($globalNotificationsEnabled)
-                    :class="{ 'peer-checked:bg-blue-600': {{ $adminPromotionEmailEnabled ? "true" : "false" }} }"
+                    :class="{ 'peer-checked:bg-blue-600': {{ $scheduleChangeEnabled ? "true" : "false" }} }"
+                @endif
+              ></div>
+            </label>
+          </div>
+
+          {{-- Weekly User Report Global Toggle --}}
+          <div
+            class="{{ ! $globalNotificationsEnabled ? "opacity-50" : "" }} flex items-center justify-between"
+          >
+            <label
+              class="{{ ! $globalNotificationsEnabled ? "text-gray-400 dark:text-gray-500" : "text-gray-600 dark:text-gray-300" }} inline-flex items-center gap-1 text-sm font-medium"
+            >
+              Weekly User Report Notifications
+              <x-tooltip>
+                <x-slot name="text">
+                  Globally enable or disable the weekly activity report sent to
+                  users.
+                </x-slot>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                  class="size-3"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+                  />
+                </svg>
+              </x-tooltip>
+            </label>
+            <label
+              class="{{ ! $globalNotificationsEnabled ? "cursor-not-allowed" : "cursor-pointer" }} relative inline-flex items-center"
+            >
+              <input
+                id="weeklyUserReportToggle"
+                type="checkbox"
+                class="peer sr-only"
+                wire:model.change="weeklyUserReportEnabled"
+                @disabled(! $globalNotificationsEnabled)
+              />
+              <div
+                class="peer h-6 w-11 rounded-full bg-gray-200 peer-disabled:opacity-50 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700 dark:after:bg-gray-500"
+                @if ($globalNotificationsEnabled)
+                    :class="{ 'peer-checked:bg-blue-600': {{ $weeklyUserReportEnabled ? "true" : "false" }} }"
+                @endif
+              ></div>
+            </label>
+          </div>
+
+          {{-- Leave Reminder Global Toggle --}}
+          <div
+            class="{{ ! $globalNotificationsEnabled ? "opacity-50" : "" }} flex items-center justify-between"
+          >
+            <label
+              class="{{ ! $globalNotificationsEnabled ? "text-gray-400 dark:text-gray-500" : "text-gray-600 dark:text-gray-300" }} inline-flex items-center gap-1 text-sm font-medium"
+            >
+              Leave Reminder Notifications
+              <x-tooltip>
+                <x-slot name="text">
+                  Globally enable or disable reminders sent to users before
+                  their approved leave starts.
+                </x-slot>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                  class="size-3"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+                  />
+                </svg>
+              </x-tooltip>
+            </label>
+            <label
+              class="{{ ! $globalNotificationsEnabled ? "cursor-not-allowed" : "cursor-pointer" }} relative inline-flex items-center"
+            >
+              <input
+                id="leaveReminderToggle"
+                type="checkbox"
+                class="peer sr-only"
+                wire:model.change="leaveReminderEnabled"
+                @disabled(! $globalNotificationsEnabled)
+              />
+              <div
+                class="peer h-6 w-11 rounded-full bg-gray-200 peer-disabled:opacity-50 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700 dark:after:bg-gray-500"
+                @if ($globalNotificationsEnabled)
+                    :class="{ 'peer-checked:bg-blue-600': {{ $leaveReminderEnabled ? "true" : "false" }} }"
+                @endif
+              ></div>
+            </label>
+          </div>
+
+          {{-- User Promotion Notification Global Toggle --}}
+          <div
+            class="{{ ! $globalNotificationsEnabled ? "opacity-50" : "" }} flex items-center justify-between"
+          >
+            <label
+              class="{{ ! $globalNotificationsEnabled ? "text-gray-400 dark:text-gray-500" : "text-gray-600 dark:text-gray-300" }} inline-flex items-center gap-1 text-sm font-medium"
+            >
+              User Promotion Notification
+              <x-tooltip>
+                <x-slot name="text">
+                  Globally enable or disable the notification sent TO a user
+                  when their account is promoted to an admin role.
+                </x-slot>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                  class="size-3"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+                  />
+                </svg>
+              </x-tooltip>
+            </label>
+            <label
+              class="{{ ! $globalNotificationsEnabled ? "cursor-not-allowed" : "cursor-pointer" }} relative inline-flex items-center"
+            >
+              <input
+                id="userPromotionNotificationToggle"
+                type="checkbox"
+                class="peer sr-only"
+                wire:model.change="userPromotionNotificationEnabled"
+                @disabled(! $globalNotificationsEnabled)
+              />
+              <div
+                class="peer h-6 w-11 rounded-full bg-gray-200 peer-disabled:opacity-50 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700 dark:after:bg-gray-500"
+                @if ($globalNotificationsEnabled)
+                    :class="{ 'peer-checked:bg-blue-600': {{ $userPromotionNotificationEnabled ? "true" : "false" }} }"
                 @endif
               ></div>
             </label>

@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace App\Jobs;
+namespace App\Jobs\Sync;
 
+use App\Clients\DesktimeApiClient;
 use App\Models\User;
 use App\Models\UserAttendance;
-use App\Services\DesktimeApiService;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Collection;
 
 /**
- * Class SyncDesktimeAttendances
+ * Synchronizes DeskTime attendance records.
  *
- * Synchronizes attendance data from DeskTime into the local database.
+ * Fetches attendance data from the DeskTime API and updates the local database.
  * Can synchronize all users or just a specific user, and can be limited
  * to a specific date range.
  */
@@ -38,13 +38,13 @@ class SyncDesktimeAttendances extends BaseSyncJob
     /**
      * SyncDesktimeAttendances constructor.
      *
-     * @param  DesktimeApiService  $desktime  An instance of the DesktimeApiService service
+     * @param  DesktimeApiClient  $desktime  An instance of the DesktimeApiClient service
      * @param  int|null  $userId  Optional user ID to sync only one user
      * @param  string|null  $fromDate  Optional start date in Y-m-d format
      * @param  string|null  $toDate  Optional end date in Y-m-d format
      */
     public function __construct(
-        DesktimeApiService $desktime,
+        DesktimeApiClient $desktime,
         ?int $userId = null,
         ?string $fromDate = null,
         ?string $toDate = null

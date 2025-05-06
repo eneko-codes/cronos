@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Jobs;
+namespace App\Jobs\Sync;
 
-use App\Actions\Notification\CheckSpecificNotificationPermission;
+use App\Actions\Notification\ShouldDeliverNotificationToUserAction;
+use App\Clients\DesktimeApiClient;
+use App\Clients\OdooApiClient;
+use App\Clients\ProofhubApiClient;
 use App\Contracts\Pingable;
 use App\Models\User;
 use App\Notifications\ApiDownWarning;
-use App\Services\DesktimeApiService;
-use App\Services\OdooApiService;
-use App\Services\ProofhubApiService;
 use Exception;
 use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
@@ -48,11 +48,11 @@ abstract class BaseSyncJob implements ShouldBeEncrypted, ShouldQueue
      * We explicitly declare these properties so referencing them
      * (in checkApisHealth()) won't cause "Undefined property" errors.
      */
-    protected ?OdooApiService $odoo = null;
+    protected ?OdooApiClient $odoo = null;
 
-    protected ?DesktimeApiService $desktime = null;
+    protected ?DesktimeApiClient $desktime = null;
 
-    protected ?ProofhubApiService $proofhub = null;
+    protected ?ProofhubApiClient $proofhub = null;
 
     /**
      * Max job tries.
@@ -173,7 +173,7 @@ abstract class BaseSyncJob implements ShouldBeEncrypted, ShouldQueue
 
         foreach ($admins as $admin) {
             // Use the action directly
-            $action = new CheckSpecificNotificationPermission;
+            $action = new ShouldDeliverNotificationToUserAction;
             if ($action->handle($admin, $apiDownNotification)) {
                 $admin->notifyNow($apiDownNotification);
             }

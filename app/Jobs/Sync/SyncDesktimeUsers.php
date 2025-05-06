@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Jobs;
+namespace App\Jobs\Sync;
 
+use App\Clients\DesktimeApiClient;
 use App\Models\User;
-use App\Services\DesktimeApiService;
 use Illuminate\Support\Collection;
 
 /**
@@ -26,9 +26,9 @@ class SyncDesktimeUsers extends BaseSyncJob
     /**
      * SyncDesktimeUsers constructor.
      *
-     * @param  DesktimeApiService  $desktime  An instance of the DesktimeApiService service.
+     * @param  DesktimeApiClient  $desktime  An instance of the DesktimeApiClient service.
      */
-    public function __construct(DesktimeApiService $desktime)
+    public function __construct(DesktimeApiClient $desktime)
     {
         // Assign to parent's protected $desktime
         $this->desktime = $desktime;

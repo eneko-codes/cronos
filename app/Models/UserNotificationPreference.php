@@ -15,6 +15,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property bool $schedule_change
  * @property bool $weekly_user_report
  * @property bool $leave_reminder
+ * @property bool $api_down_warning
+ * @property bool $admin_promotion_email
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read \App\Models\User $user
@@ -48,6 +50,8 @@ class UserNotificationPreference extends Model
         'schedule_change',
         'weekly_user_report',
         'leave_reminder',
+        'api_down_warning',
+        'admin_promotion_email',
         // Add new preference keys here when needed
     ];
 
@@ -61,6 +65,8 @@ class UserNotificationPreference extends Model
         'schedule_change' => 'boolean',
         'weekly_user_report' => 'boolean',
         'leave_reminder' => 'boolean',
+        'api_down_warning' => 'boolean',
+        'admin_promotion_email' => 'boolean',
     ];
 
     /**

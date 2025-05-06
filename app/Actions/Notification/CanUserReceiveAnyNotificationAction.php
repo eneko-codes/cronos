@@ -7,7 +7,7 @@ namespace App\Actions\Notification;
 use App\Models\Setting;
 use App\Models\User;
 
-class CheckGlobalUserPermission
+class CanUserReceiveAnyNotificationAction
 {
     /**
      * Check if notifications are generally enabled for the user.

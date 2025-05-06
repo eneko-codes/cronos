@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Jobs;
+namespace App\Jobs\Sync;
 
+use App\Clients\OdooApiClient;
 use App\Models\LeaveType;
 use App\Models\User;
 use App\Models\UserLeave;
-use App\Services\OdooApiService;
 use Exception;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -43,7 +43,7 @@ class SyncOdooLeaves extends BaseSyncJob
      * @param  string|null  $endDate  Optional end date (e.g., '2025-01-13')
      */
     public function __construct(
-        OdooApiService $odoo,
+        OdooApiClient $odoo,
         ?string $startDate = null,
         ?string $endDate = null
     ) {

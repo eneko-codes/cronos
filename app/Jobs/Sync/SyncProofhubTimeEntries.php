@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Jobs;
+namespace App\Jobs\Sync;
 
+use App\Clients\ProofhubApiClient;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
-use App\Services\ProofhubApiService;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Collection;
@@ -39,12 +39,12 @@ class SyncProofhubTimeEntries extends BaseSyncJob
     /**
      * SyncProofhubTimeEntries constructor.
      *
-     * @param  ProofhubApiService  $proofhub  An instance of the ProofhubApiService service
+     * @param  ProofhubApiClient  $proofhub  An instance of the ProofhubApiClient service
      * @param  string|null  $startDate  Optional start date in Y-m-d format
      * @param  string|null  $endDate  Optional end date in Y-m-d format
      */
     public function __construct(
-        ProofhubApiService $proofhub,
+        ProofhubApiClient $proofhub,
         ?string $startDate = null,
         ?string $endDate = null
     ) {

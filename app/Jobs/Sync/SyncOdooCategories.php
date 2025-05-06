@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Jobs;
+namespace App\Jobs\Sync;
 
+use App\Clients\OdooApiClient;
 use App\Models\Category;
-use App\Services\OdooApiService;
 use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -29,9 +29,9 @@ class SyncOdooCategories extends BaseSyncJob
     /**
      * SyncOdooCategories constructor.
      *
-     * @param  OdooApiService  $odoo  An instance of the OdooApiService service.
+     * @param  OdooApiClient  $odoo  An instance of the OdooApiClient service.
      */
-    public function __construct(OdooApiService $odoo)
+    public function __construct(OdooApiClient $odoo)
     {
         // Assign to parent's $odoo
         $this->odoo = $odoo;

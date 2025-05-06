@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\Clients;
 
 use App\Contracts\Pingable;
 use Exception;
@@ -12,14 +12,12 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Class ProofhubApiService
- *
  * Manages interactions with the ProofHub API by providing methods
  * for fetching data from various endpoints.
  *
- * IMPORTANT: This service only retrieves data; it does not perform calculations.
+ * IMPORTANT: This client only retrieves data; it does not perform calculations.
  */
-class ProofhubApiService implements Pingable
+class ProofhubApiClient implements Pingable
 {
     /**
      * @var string Base URL of the ProofHub API.
@@ -32,7 +30,7 @@ class ProofhubApiService implements Pingable
     private string $apiKey;
 
     /**
-     * ProofhubApiService constructor.
+     * ProofhubApiClient constructor.
      *
      * Initializes the service by constructing the base URL from the provided company URL
      * and setting up the API key.
@@ -52,7 +50,7 @@ class ProofhubApiService implements Pingable
             );
         }
 
-        // Construct the base URL using the company URL
+        // Construct the base URL using the company URL and API v3
         $this->baseUrl = "https://{$companyUrl}.proofhub.com/api/v3/";
     }
 
@@ -212,7 +210,7 @@ class ProofhubApiService implements Pingable
             for ($i = 1; $i < count($segments); $i++) {
                 $param = trim($segments[$i]);
                 // Look for rel="next" (case-insensitive check for 'next')
-                if (preg_match('/rel\s*=\s*"?next"?/i', $param)) {
+                if (preg_match('/rel\s*=\s*" ?next" ?/i', $param)) {
                     return $url; // Found the next link
                 }
             }
@@ -232,7 +230,7 @@ class ProofhubApiService implements Pingable
      */
     public function getUsers(): Collection
     {
-        Log::warning('Deprecated method ProofhubApiService::getUsers() called.');
+        Log::warning('Deprecated method ProofhubApiClient::getUsers() called.');
 
         return $this->fetchAllPages('people');
     }
@@ -251,7 +249,7 @@ class ProofhubApiService implements Pingable
      */
     public function getAllTime(array $params = []): Collection
     {
-        Log::warning('Deprecated method ProofhubApiService::getAllTime() called.');
+        Log::warning('Deprecated method ProofhubApiClient::getAllTime() called.');
 
         return $this->fetchAllPages('alltime', $params);
     }
@@ -269,7 +267,7 @@ class ProofhubApiService implements Pingable
      */
     public function getProjects(): Collection
     {
-        Log::warning('Deprecated method ProofhubApiService::getProjects() called.');
+        Log::warning('Deprecated method ProofhubApiClient::getProjects() called.');
 
         return $this->fetchAllPages('projects');
     }
@@ -287,7 +285,7 @@ class ProofhubApiService implements Pingable
      */
     public function getTasks(): Collection
     {
-        Log::warning('Deprecated method ProofhubApiService::getTasks() called.');
+        Log::warning('Deprecated method ProofhubApiClient::getTasks() called.');
 
         return $this->fetchAllPages('alltodo');
     }

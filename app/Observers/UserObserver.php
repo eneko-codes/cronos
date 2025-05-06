@@ -4,13 +4,22 @@ declare(strict_types=1);
 
 namespace App\Observers;
 
-use App\Actions\Notification\CheckSpecificNotificationPermission;
+use App\Actions\Notification\ShouldDeliverNotificationToUserAction;
 use App\Models\User;
 use App\Notifications\AdminPromotionEmail;
+use App\Notifications\UserPromotedToAdminNotification;
 use App\Notifications\WelcomeEmail;
+use App\Services\ApplicationSettingsService;
 
 class UserObserver
 {
+    private ApplicationSettingsService $settingsService;
+
+    public function __construct(ApplicationSettingsService $settingsService)
+    {
+        $this->settingsService = $settingsService;
+    }
+
     /**
      * Handle the User "created" event.
      */
@@ -23,8 +32,8 @@ class UserObserver
         $welcomeNotification = new WelcomeEmail;
 
         // Use the injected service and the created notification instance
-        $action = new CheckSpecificNotificationPermission;
-        if ($user->email && $action->handle($user, $welcomeNotification)) {
+        $action = new ShouldDeliverNotificationToUserAction;
+        if ($this->settingsService->getWelcomeEmailEnabled() && $user->email && $action->handle($user, $welcomeNotification)) {
             $user->notify($welcomeNotification);
         }
     }
@@ -84,22 +93,30 @@ class UserObserver
     {
         // Check if the user was just promoted to admin
         if ($user->wasChanged('is_admin') && $user->is_admin) {
-            // Fetch all other admin users (excluding the promoted user)
-            $adminUsers = User::where('is_admin', true)
-                ->where('id', '!=', $user->id)
-                ->get();
 
-            // Create the notification instance
-            $notification = new AdminPromotionEmail($user);
+            // --- Notify other admins ---
+            $adminNotifyAction = new ShouldDeliverNotificationToUserAction;
+            $adminNotification = new AdminPromotionEmail($user);
 
-            // Send notification to all other admins who can receive it
-            foreach ($adminUsers as $admin) {
-                // Use the injected service
-                $action = new CheckSpecificNotificationPermission;
-                if ($action->handle($admin, $notification)) {
-                    // Use notify to respect the queue
-                    $admin->notify($notification);
+            // Check global setting for notifying other admins
+            if ($this->settingsService->getAdminPromotionEmailEnabled()) {
+                $adminUsers = User::where('is_admin', true)
+                    ->where('id', '!=', $user->id)
+                    ->get();
+
+                foreach ($adminUsers as $admin) {
+                    // Check if this specific admin should receive the notification
+                    if ($adminNotifyAction->handle($admin, $adminNotification)) {
+                        $admin->notify($adminNotification);
+                    }
                 }
+            }
+
+            // --- Notify the promoted user ---
+            // Check global setting for notifying the promoted user
+            if ($this->settingsService->getUserPromotionNotificationEnabled()) {
+                // User's own preference doesn't apply here, only global setting matters
+                $user->notify(new UserPromotedToAdminNotification($user));
             }
         }
     }

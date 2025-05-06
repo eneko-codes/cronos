@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Jobs;
+namespace App\Jobs\Sync;
 
+use App\Clients\ProofhubApiClient;
 use App\Models\Project;
 use App\Models\User;
-use App\Services\ProofhubApiService;
 use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -28,9 +28,9 @@ class SyncProofhubProjects extends BaseSyncJob
     /**
      * SyncProofhubProjects constructor.
      *
-     * @param  ProofhubApiService  $proofhub  An instance of the ProofhubApiService service.
+     * @param  ProofhubApiClient  $proofhub  An instance of the ProofhubApiClient service.
      */
-    public function __construct(ProofhubApiService $proofhub)
+    public function __construct(ProofhubApiClient $proofhub)
     {
         $this->proofhub = $proofhub;
     }

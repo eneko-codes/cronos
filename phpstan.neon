@@ -3,7 +3,6 @@ includes:
     - ./vendor/calebdw/larastan-livewire/extension.neon
     - ./vendor/nesbot/carbon/extension.neon
     - vendor/phpstan/phpstan-deprecation-rules/rules.neon
-    - ./vendor/tomasvotruba/bladestan/config/extension.neon
 
 
 parameters:

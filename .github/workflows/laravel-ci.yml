@@ -19,7 +19,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: '8.4'
           extensions: mbstring, xml, sqlite, pdo_sqlite, bcmath, gd
           coverage: none
 
@@ -72,7 +72,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: '8.4'
           coverage: none
 
       - name: Cache Composer dependencies
@@ -129,7 +129,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: '8.4'
           coverage: none
 
       - name: Cache Composer dependencies
@@ -186,7 +186,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: '8.4'
           extensions: mbstring, xml, sqlite, pdo_sqlite, bcmath, gd
           coverage: none
 
@@ -215,7 +215,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2' # Match your project's PHP version
+          php-version: '8.4' # Match your project's PHP version
           coverage: none
 
       - name: Cache Composer dependencies
@@ -246,7 +246,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: '8.4'
           extensions: mbstring, xml, sqlite, pdo_sqlite, bcmath, gd
           coverage: none # Adjust if generating coverage report
 

@@ -7,6 +7,7 @@ namespace App\Livewire;
 use App\Actions\User\GetDataForDateRange;
 use App\Models\Setting;
 use App\Models\User;
+use App\Traits\FormatsDurationsTrait;
 use Carbon\Carbon;
 use Carbon\CarbonInterval;
 use Illuminate\Support\Collection;
@@ -21,6 +22,8 @@ use Livewire\Component;
 #[Title('User Dashboard')]
 class UserDashboard extends Component
 {
+    use FormatsDurationsTrait;
+
     /**
      * The user model instance.
      */
@@ -91,6 +94,13 @@ class UserDashboard extends Component
      */
     public bool $isGloballyEnabled = true;
 
+    protected $listeners = [
+        'timeSheetPreviousPeriod' => 'previousPeriod',
+        'timeSheetNextPeriod' => 'nextPeriod',
+        'timeSheetToggleDeviations' => 'toggleDeviations',
+        'timeSheetChangeViewMode' => 'changeViewMode',
+    ];
+
     /**
      * Initializes the component, loads the user, sets the initial period, and loads data.
      *
@@ -101,6 +111,18 @@ class UserDashboard extends Component
         $this->isViewingSpecificUser = $id !== null;
 
         if ($id !== null) {
+            $authenticatedUser = Auth::user();
+            if (! $authenticatedUser || ! $authenticatedUser->isAdmin()) {
+                // If not an admin, redirect to their own dashboard or an error page
+                // This prevents non-admins from viewing other users by URL manipulation
+                // Assuming a route 'dashboard' exists for the user's own view.
+                // If $id is current user's id, allow, otherwise redirect.
+                if ($authenticatedUser && $authenticatedUser->id != $id) {
+                    $this->redirect(route('dashboard'), navigate: true);
+
+                    return;
+                }
+            }
             $this->user = User::with([
                 'userSchedules.schedule.scheduleDetails',
                 'userLeaves.leaveType',
@@ -109,6 +131,8 @@ class UserDashboard extends Component
                 'userAttendances',
                 'timeEntries.project',
                 'timeEntries.task',
+                'userSchedules.schedule',
+                'userLeaves.leaveType',
             ])->findOrFail($id);
         } else {
             $this->user = Auth::user()->load([
@@ -119,24 +143,19 @@ class UserDashboard extends Component
                 'userAttendances',
                 'timeEntries.project',
                 'timeEntries.task',
+                'userSchedules.schedule',
+                'userLeaves.leaveType',
             ]);
         }
 
-        // Check if the authenticated user is an admin
         $this->isAdmin = Auth::check() && Auth::user()->isAdmin();
 
-        // Always start with the current period based on view mode
         $this->setPeriodStart(
             $this->viewMode === 'weekly'
               ? now()->startOfWeek()
               : now()->startOfMonth()
         );
-
-        // Load cache data for the current period
-        // TODO: Implement caching strategy if performance becomes an issue.
         $this->loadPeriodDataAndTotals();
-
-        // Load global notification setting
         $this->loadGlobalNotificationSetting();
     }
 
@@ -372,12 +391,14 @@ class UserDashboard extends Component
         $totalDeviationsDetails = $this->showDeviations
           ? $this->totalDeviations
           : null;
+        $isNextPeriodDisabled = $this->isNextPeriodDisabled; // This is a computed property call
 
         // Pass data explicitly to the view
         return view('livewire.user-dashboard', [
-            'dashboardTotals' => $dashboardTotals,
-            'totalDeviationsDetails' => $totalDeviationsDetails,
-            'isGloballyEnabled' => $this->isGloballyEnabled,
+            'dashboardTotals' => $dashboardTotals, // For the new child component
+            'totalDeviationsDetailsForTable' => $totalDeviationsDetails, // For the new child component
+            'isNextPeriodDisabledForTable' => $isNextPeriodDisabled, // For the new child component
+            'isGloballyEnabled' => $this->isGloballyEnabled, // For the parent view
         ]);
     }
 
@@ -725,7 +746,7 @@ class UserDashboard extends Component
             'context' => $contextInfo,
             'leave_type' => $leave->leaveType->name ?? '[No Type Set]',
             'duration' => $durationText,
-            'duration_hours' => $durationFormatted,
+            'duration_hours' => $this->formatMinutesToHoursMinutes($durationMinutes),
             'duration_days' => $leave->duration_days,
             'status' => $leave->status ?? 'validate',
             'is_half_day' => $leave->isHalfDay(),
@@ -1019,57 +1040,6 @@ class UserDashboard extends Component
             },
             ['scheduled' => 0, 'attendance' => 0, 'worked' => 0, 'leave' => 0] // Initial value for accumulator
         );
-    }
-
-    /**
-     * Utility function to convert a duration string ("Xh Ym") into total minutes.
-     *
-     * @param  string  $duration  The duration string (e.g., "8h 15m", "30m", "2h").
-     * @return int Total minutes.
-     */
-    protected function durationToMinutes(string $duration): int
-    {
-        // Default values
-        $hours = 0;
-        $minutes = 0;
-
-        // Try to parse using sscanf
-        sscanf($duration, '%dh %dm', $hours, $minutes);
-
-        // Ensure values are integers, default to 0 if parsing failed or yielded null
-        $hours = (int) $hours;
-        $minutes = (int) $minutes;
-
-        return $hours * 60 + $minutes;
-    }
-
-    /**
-     * Utility function to format total minutes into a human-readable "Xh Ym" string.
-     *
-     * @param  float  $minutes  Total minutes.
-     * @return string Formatted duration string.
-     */
-    public function formatMinutesToHoursMinutes(float $minutes): string
-    {
-        if ($minutes < 0) {
-            // Handle negative minutes if necessary
-            $minutes = 0;
-        }
-
-        // Calculate total hours and remaining minutes manually
-        $totalHours = floor($minutes / 60);
-        $remainingMinutes = $minutes % 60;
-
-        // Format the string manually
-        return sprintf('%dh %dm', $totalHours, $remainingMinutes);
-    }
-
-    /**
-     * Alias for formatMinutesToHoursMinutes, potentially used internally.
-     */
-    protected function formatDuration(float $minutes): string
-    {
-        return $this->formatMinutesToHoursMinutes($minutes);
     }
 
     /**

@@ -8,7 +8,6 @@
  */
 
 use App\Http\Controllers\Auth\LoginController;
-use App\Livewire\Dashboard;
 use App\Livewire\LeaveTypesListView;
 use App\Livewire\Login;
 use App\Livewire\ProjectDetailView;
@@ -39,7 +38,7 @@ Route::middleware(['guest', 'throttle:login'])->group(function (): void {
 Route::middleware(['auth', 'throttle:api'])->group(function (): void {
     // Route to handle user logout.
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
-    Route::get('/', Dashboard::class)->name('dashboard');
+    Route::get('/', UserDashboard::class)->name('dashboard');
 
     // All other routes require admin access
     Route::middleware(['can:viewAny,App\Models\User', 'throttle:admin'])->group(

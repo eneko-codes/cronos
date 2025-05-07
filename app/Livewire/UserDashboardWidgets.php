@@ -5,15 +5,20 @@ declare(strict_types=1);
 namespace App\Livewire;
 
 use App\Models\TimeEntry;
+use App\Models\User;
 use App\Models\UserAttendance;
 use App\Models\UserLeave;
 use App\Models\UserSchedule;
+use App\Traits\FormatsDurationsTrait;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 class UserDashboardWidgets extends Component
 {
+    use FormatsDurationsTrait;
+
+    public User $user;
+
     public ?array $todaysSchedule = null;
 
     public ?array $todaysAttendance = null;
@@ -22,37 +27,14 @@ class UserDashboardWidgets extends Component
 
     public ?UserLeave $upcomingLeave = null;
 
-    // Reusable helper from UserDashboard, consider refactoring to a Trait or Service if used more widely
-    protected function formatMinutesToHoursMinutes(float $minutes): string
+    public function mount(User $user)
     {
-        if ($minutes <= 0) { // Handle zero or negative explicitly
-            return '0h 0m';
-        }
-        $totalHours = floor($minutes / 60);
-        $remainingMinutes = $minutes % 60;
-
-        return sprintf('%dh %dm', $totalHours, $remainingMinutes);
-    }
-
-    protected function durationToMinutes(string $duration): int
-    {
-        $hours = 0;
-        $minutes = 0;
-        sscanf($duration, '%dh %dm', $hours, $minutes);
-        $hours = (int) $hours;
-        $minutes = (int) $minutes;
-
-        return $hours * 60 + $minutes;
-    }
-
-    public function mount()
-    {
-        $user = Auth::user();
+        $this->user = $user;
         $today = Carbon::today();
         $weekday = ($today->dayOfWeek + 6) % 7; // 0=Monday, ..., 6=Sunday
 
         // 1. Today's Schedule - Simplified Eager Loading
-        $activeSchedule = UserSchedule::where('user_id', $user->id)
+        $activeSchedule = UserSchedule::where('user_id', $this->user->id)
             ->where('effective_from', '<=', $today)
             ->where(function ($query) use ($today): void {
                 $query->whereNull('effective_until')
@@ -62,7 +44,7 @@ class UserDashboardWidgets extends Component
             ->first();
 
         // Check if schedule loaded (Linter fix: simplified condition)
-        if ($activeSchedule) {
+        if ($activeSchedule && $activeSchedule->schedule) {
             // Since we eager-loaded schedule, we can assume it exists if $activeSchedule exists
             $schedule = $activeSchedule->schedule; // Get the loaded schedule
 
@@ -85,11 +67,14 @@ class UserDashboardWidgets extends Component
                 'duration' => $this->formatMinutesToHoursMinutes($totalMinutes),
                 'name' => $schedule->description ?? 'Default Schedule',
             ];
+        } else {
+            $this->todaysSchedule = null; // Explicitly set to null if no active schedule
         }
         // If no active schedule or schedule relationship found, $this->todaysSchedule remains null
 
         // 2. Today's Attendance
-        $attendance = UserAttendance::where('user_id', $user->id)
+        /** @var UserAttendance|null $attendance */
+        $attendance = UserAttendance::where('user_id', $this->user->id)
             ->whereDate('date', $today)
             ->first();
 
@@ -132,20 +117,22 @@ class UserDashboardWidgets extends Component
         }
 
         // 3. Today's Logged Time
-        $totalSecondsToday = TimeEntry::where('user_id', $user->id)
+        $totalSecondsToday = TimeEntry::where('user_id', $this->user->id)
             ->whereDate('date', $today)
             ->sum('duration_seconds');
         $loggedMinutes = $totalSecondsToday / 60;
         $this->todaysLoggedTime = $this->formatMinutesToHoursMinutes($loggedMinutes);
 
         // 4. Upcoming Leave (Next 30 days)
-        $this->upcomingLeave = UserLeave::where('user_id', $user->id)
+        /** @var UserLeave|null $upcomingLeaveModel */
+        $upcomingLeaveModel = UserLeave::where('user_id', $this->user->id)
             ->where('status', 'validate') // Only approved leave
             ->where('end_date', '>=', $today) // End date is today or later
             ->where('start_date', '<=', $today->copy()->addDays(30)) // Start date within the next 30 days
             ->orderBy('start_date', 'asc')
             ->with('leaveType')
             ->first();
+        $this->upcomingLeave = $upcomingLeaveModel;
     }
 
     public function render()

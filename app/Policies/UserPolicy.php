@@ -108,9 +108,9 @@ class UserPolicy
     public function muteNotifications(User $authUser, User $userToMute): bool
     {
         // Only admins can mute notifications for users that are not already muted
-        // Use optional chaining and null coalescing in case preferences don't exist yet
+        // UserNotificationPreferences uses withDefault(), so it's never null.
         return $authUser->is_admin &&
-          ! ($userToMute->notificationPreferences?->mute_all ?? false);
+          ! $userToMute->notificationPreferences->mute_all;
     }
 
     /**
@@ -119,7 +119,8 @@ class UserPolicy
     public function unmuteNotifications(User $authUser, User $userToUnmute): bool
     {
         // Only admins can unmute notifications for users that are currently muted
+        // UserNotificationPreferences uses withDefault(), so it's never null.
         return $authUser->is_admin &&
-          ($userToUnmute->notificationPreferences?->mute_all ?? false);
+          $userToUnmute->notificationPreferences->mute_all;
     }
 }

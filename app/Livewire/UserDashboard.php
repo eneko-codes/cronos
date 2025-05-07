@@ -74,7 +74,7 @@ class UserDashboard extends Component
      *   }
      * }>
      */
-    protected array $periodData = [];
+    public array $periodData = [];
 
     /**
      * Flag indicating if the authenticated user has admin privileges.
@@ -123,7 +123,7 @@ class UserDashboard extends Component
         }
 
         // Check if the authenticated user is an admin
-        $this->isAdmin = Auth::check() && Auth::user()->is_admin;
+        $this->isAdmin = Auth::check() && Auth::user()->isAdmin();
 
         // Always start with the current period based on view mode
         $this->setPeriodStart(
@@ -323,7 +323,6 @@ class UserDashboard extends Component
                 'attendance_vs_scheduled' => 'attendance than scheduled',
                 'worked_vs_scheduled' => 'worked than scheduled',
                 'worked_vs_attendance' => 'worked than attendance',
-                default => 'difference',
             };
 
             $details['tooltip'] = 'No difference'; // Default tooltip
@@ -378,11 +377,7 @@ class UserDashboard extends Component
         return view('livewire.user-dashboard', [
             'dashboardTotals' => $dashboardTotals,
             'totalDeviationsDetails' => $totalDeviationsDetails,
-            // Note: $periodData is implicitly available in the view
-            // because it's a protected property iterated on in the Blade file
-            // If issues persist, we could pass it explicitly too:
-            // 'periodDataForView' => $this->periodData
-            'isGloballyEnabled' => $this->isGloballyEnabled, // Pass global status
+            'isGloballyEnabled' => $this->isGloballyEnabled,
         ]);
     }
 
@@ -621,7 +616,7 @@ class UserDashboard extends Component
         $contextInfo = match ($leave->type) {
             'department' => $leave->department->name ?? '',
             'category' => $leave->category->name ?? '',
-            default => '',
+            default => '', // Handle other cases or log an error if unexpected
         };
 
         // Format the time information using start_date and end_date
@@ -635,70 +630,75 @@ class UserDashboard extends Component
         // Calculate duration in minutes for display based on user's scheduled hours
         $durationMinutes = 0;
         $dateCarbon = Carbon::parse($dateString);
-        $isMultiDayLeave = $leave->duration_days > 1;
+        $isMultiDayLeave = ! $leave->start_date->isSameDay($leave->end_date) || $leave->duration_days > 1;
         $isWeekend = $dateCarbon->isWeekend();
 
-        // For full-day leaves, we need to look at the employee's schedule for that day
-        if ($leave->duration_days > 0) {
-            if ($leave->isHalfDay()) {
-                // For half-day leaves, use the exact hours from request_hour fields if available
-                if (
-                    $leave->request_hour_from !== null &&
-                    $leave->request_hour_to !== null
-                ) {
-                    // Convert decimal hours to minutes
-                    $durationMinutes =
-                      ($leave->request_hour_to - $leave->request_hour_from) * 60;
-                } else {
-                    // Try to get scheduled duration for a proper half-day calculation
-                    if ($schedules !== null) {
-                        $scheduledMinutes = $this->getScheduledDurationForDate(
-                            $schedules,
-                            $dateString
-                        );
-                        $durationMinutes = $scheduledMinutes / 2; // Half of scheduled time
-                    } else {
-                        // Fallback - half day is typically 4 hours (240 minutes)
-                        $durationMinutes = 240;
-                    }
-                }
-            } else {
-                // For full-day leaves, determine scheduled hours for this day
+        if ($leave->start_date->isSameDay($leave->end_date) && $leave->duration_days < 1) {
+            // This is a partial-day leave (including half-days defined by duration_days < 1)
+            // Calculate duration directly from start and end times for precision.
+            $durationMinutes = $leave->start_date->diffInMinutes($leave->end_date);
+
+            // Sanity check: if calculated minutes are 0 for a validated leave with duration, use Odoo's duration_days.
+            // This might happen if start/end times are identical but duration_days suggests a period.
+            if ($durationMinutes == 0 && $leave->duration_days > 0 && $leave->status === 'validate') {
                 if ($schedules !== null) {
-                    $scheduledMinutes = $this->getScheduledDurationForDate(
-                        $schedules,
-                        $dateString
-                    );
-
-                    // If scheduled minutes is 0, use standard workday as fallback (except for weekends)
-                    if ($scheduledMinutes == 0) {
-                        if (! $isWeekend) {
-                            $scheduledMinutes = 8 * 60; // 8 hours = 480 minutes standard workday
-                        }
+                    $scheduledMinutesForDay = $this->getScheduledDurationForDate($schedules, $dateString);
+                    if ($scheduledMinutesForDay > 0) {
+                        $durationMinutes = (int) round($leave->duration_days * $scheduledMinutesForDay);
+                    } elseif (! $isWeekend) {
+                        // Fallback to standard day proportion if no schedule found for that day
+                        $durationMinutes = (int) round($leave->duration_days * 8 * 60);
                     }
-
-                    // For this specific day, we only want the hours for THIS day, not multiplied by multi-day count
-                    $durationMinutes = $scheduledMinutes;
+                } elseif (! $isWeekend) {
+                    // Fallback if no schedules collection is passed at all
+                    $durationMinutes = (int) round($leave->duration_days * 8 * 60);
+                }
+            }
+        } else {
+            // This is a full-day leave (duration_days >= 1) or part of a multi-day leave.
+            // Use the scheduled duration for the specific day.
+            if ($schedules !== null) {
+                $scheduledMinutes = $this->getScheduledDurationForDate(
+                    $schedules,
+                    $dateString
+                );
+                // If scheduled minutes is 0 for a workday, use standard workday as fallback
+                if ($scheduledMinutes == 0 && ! $isWeekend) {
+                    $scheduledMinutes = 8 * 60; // 8 hours = 480 minutes standard workday
+                }
+                $durationMinutes = $scheduledMinutes;
+            } else {
+                // Fallback if no schedules collection is passed: standard work day for weekdays
+                if (! $isWeekend) {
+                    $durationMinutes = 8 * 60;
                 } else {
-                    // Fallback - standard work day (8 hours = 480 minutes) for weekdays only
-                    if (! $isWeekend) {
-                        $durationMinutes = 8 * 60; // Standard workday
-                    } else {
-                        $durationMinutes = 0; // No hours for weekend unless scheduled
-                    }
+                    $durationMinutes = 0; // No hours for weekend unless scheduled
                 }
             }
         }
 
-        // Ensure we always have a minimum duration for approved leaves on weekdays
-        if ($leave->status === 'validate' && $durationMinutes == 0 && ! $isWeekend) {
-            // Use a full standard day as fallback (8 hours) for weekdays
-            $durationMinutes = 8 * 60;
+        // Ensure we always have a minimum duration for approved leaves on weekdays if somehow still 0
+        if ($leave->status === 'validate' && $durationMinutes == 0 && ! $isWeekend && $leave->duration_days > 0) {
+            // Check if it was a full day leave type that resulted in 0 scheduled minutes (e.g. non-working day in schedule)
+            if ($leave->duration_days >= 1) {
+                $durationMinutes = 8 * 60; // Assign full day if it was meant to be a full day leave
+            }
+            // For partial days that still ended up as 0 (e.g. duration_days > 0 but start/end times were same)
+            // and previous specific partial day logic didn't assign, use proportion of standard day.
+            elseif ($leave->duration_days > 0 && $leave->duration_days < 1) {
+                $durationMinutes = (int) round($leave->duration_days * 8 * 60);
+            }
         }
 
-        // For weekend validated leaves, ensure we have a standard duration if requested
-        if ($leave->status === 'validate' && $isWeekend && $durationMinutes == 0) {
-            $durationMinutes = 8 * 60; // Standard 8 hours for weekend leaves
+        // For weekend validated leaves, ensure we have a standard duration if requested and still 0
+        // This is particularly for leaves that are explicitly for a weekend day.
+        if ($leave->status === 'validate' && $isWeekend && $durationMinutes == 0 && $leave->duration_days > 0) {
+            if ($leave->duration_days >= 1) {
+                $durationMinutes = 8 * 60; // Standard 8 hours for full-day weekend leaves
+            } else {
+                // For partial weekend leaves, use proportion of standard day
+                $durationMinutes = (int) round($leave->duration_days * 8 * 60);
+            }
         }
 
         $durationFormatted = $this->formatMinutesToHoursMinutes($durationMinutes);
@@ -946,11 +946,15 @@ class UserDashboard extends Component
         Collection $leaves,
         string $dateString
     ): ?object {
-        $dayCarbon = Carbon::parse($dateString);
+        $dayCarbon = Carbon::parse($dateString)->startOfDay(); // Ensure $dayCarbon is also at start of day
 
         return $leaves->first(function ($leave) use ($dayCarbon) {
-            return $leave->start_date->lte($dayCarbon) &&
-              $leave->end_date->gte($dayCarbon);
+            // Compare date parts only by setting both to the start of their respective days
+            $leaveStartDate = $leave->start_date->copy()->startOfDay();
+            $leaveEndDate = $leave->end_date->copy()->startOfDay();
+
+            return $leaveStartDate->lte($dayCarbon) &&
+              $leaveEndDate->gte($dayCarbon);
         });
     }
 
@@ -996,14 +1000,14 @@ class UserDashboard extends Component
                     // Use actual_minutes when available, which accounts for schedule
                     if (array_key_exists('actual_minutes', $day['leave'])) {
                         // Only add to total leave if it's NOT the remote work type
-                        if (! Str::contains($day['leave']['leave_type'], 'Horas Teletrabajo')) {
+                        if (! Str::contains($day['leave']['type'], 'Horas Teletrabajo')) {
                             $totals['leave'] += $day['leave']['actual_minutes'];
                         }
                     }
                     // Fallback to duration_hours
                     elseif (array_key_exists('duration_hours', $day['leave'])) {
                         // Only add to total leave if it's NOT the remote work type
-                        if (! Str::contains($day['leave']['leave_type'], 'Horas Teletrabajo')) {
+                        if (! Str::contains($day['leave']['type'], 'Horas Teletrabajo')) {
                             $totals['leave'] += $this->durationToMinutes(
                                 $day['leave']['duration_hours']
                             );
@@ -1143,10 +1147,16 @@ class UserDashboard extends Component
             : 0;
 
         // Determine leave minutes to subtract, ignoring the remote work leave type
-        $isRemoteWorkLeave = Str::contains(
-            $dayData['leave']['leave_type'] ?? '',
-            'Horas Teletrabajo'
-        );
+        $isRemoteWorkLeave = false; // Default to false
+
+        // Check if $dayData['leave'] is an array and the 'type' key exists
+        if (is_array($dayData['leave']) && isset($dayData['leave']['type'])) {
+            $isRemoteWorkLeave = Str::contains(
+                $dayData['leave']['type'],
+                'Horas Teletrabajo'
+            );
+        }
+
         $leaveMinutesToSubtract =
           $leaveMinutes > 0 && ! $isRemoteWorkLeave ? $leaveMinutes : 0;
 
@@ -1231,7 +1241,6 @@ class UserDashboard extends Component
                 'attendance_vs_scheduled' => 'attendance than scheduled',
                 'worked_vs_scheduled' => 'worked than scheduled',
                 'worked_vs_attendance' => 'worked than attendance',
-                default => 'difference',
             };
 
             $details['tooltip'] = 'No difference'; // Default tooltip
@@ -1248,7 +1257,19 @@ class UserDashboard extends Component
             $deviationDetails[$deviation] = $details;
         }
 
-        return $deviationDetails;
+        // Assign the calculated details if showDeviations is true,
+        // otherwise assign a default structure.
+        if ($this->showDeviations) {
+            $dayData['deviation_details'] = $deviationDetails;
+        } else {
+            $dayData['deviation_details'] = [
+                'attendance_vs_scheduled' => ['percentage' => 0, 'difference_minutes' => 0, 'tooltip' => 'Deviations hidden', 'class' => '', 'should_display' => false],
+                'worked_vs_scheduled' => ['percentage' => 0, 'difference_minutes' => 0, 'tooltip' => 'Deviations hidden', 'class' => '', 'should_display' => false],
+                'worked_vs_attendance' => ['percentage' => 0, 'difference_minutes' => 0, 'tooltip' => 'Deviations hidden', 'class' => '', 'should_display' => false],
+            ];
+        }
+
+        return $dayData;
     }
 
     /**

@@ -68,14 +68,14 @@ class UserObserver
 
             // Detach belongsToMany relations individually to emit model events
             foreach ($user->projects as $project) {
-                if ($project && $project->id) {
-                    $user->projects()->detach($project->id);
+                if ($project->proofhub_project_id) {
+                    $user->projects()->detach($project->proofhub_project_id);
                 }
             }
 
             foreach ($user->categories as $category) {
-                if ($category && $category->id) {
-                    $user->categories()->detach($category->id);
+                if ($category->odoo_category_id) {
+                    $user->categories()->detach($category->odoo_category_id);
                 }
             }
 
@@ -116,7 +116,7 @@ class UserObserver
             // Check global setting for notifying the promoted user
             if ($this->settingsService->getUserPromotionNotificationEnabled()) {
                 // User's own preference doesn't apply here, only global setting matters
-                $user->notify(new UserPromotedToAdminNotification($user));
+                $user->notify(new UserPromotedToAdminNotification);
             }
         }
     }
@@ -152,14 +152,14 @@ class UserObserver
 
         // Detach belongsToMany relations individually to emit model events
         foreach ($user->projects as $project) {
-            if ($project && $project->id) {
-                $user->projects()->detach($project->id);
+            if ($project->proofhub_project_id) {
+                $user->projects()->detach($project->proofhub_project_id);
             }
         }
 
         foreach ($user->categories as $category) {
-            if ($category && $category->id) {
-                $user->categories()->detach($category->id);
+            if ($category->odoo_category_id) {
+                $user->categories()->detach($category->odoo_category_id);
             }
         }
 

@@ -31,15 +31,11 @@ class EventServiceProvider extends ServiceProvider
 {
     /**
      * The event listener mappings for the application.
-     *
-     * @var array
      */
     protected $listen = [];
 
     /**
      * The model observers for your application.
-     *
-     * @var array
      */
     protected $observers = [
         User::class => [UserObserver::class],

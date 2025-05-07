@@ -47,7 +47,7 @@ class LeaveReminderNotification extends Notification implements ShouldQueue
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $leaveType = $this->leave->leaveType?->name ?? 'Time Off';
+        $leaveType = $this->leave->leaveType->name ?? 'Time Off';
         $startDate = $this->leave->start_date->format('F j, Y');
         $endDate = $this->leave->end_date->format('F j, Y');
         $duration = $this->leave->duration_days;
@@ -59,7 +59,6 @@ class LeaveReminderNotification extends Notification implements ShouldQueue
             ->line("Start Date: {$startDate}")
             ->line("End Date: {$endDate}")
             ->line("Duration: {$duration} day(s)")
-            ->line("Description: {$this->leave->description}")
             ->action('Open '.config('app.name'), url('/'));
     }
 
@@ -68,21 +67,14 @@ class LeaveReminderNotification extends Notification implements ShouldQueue
      */
     public function toArray(object $notifiable): array
     {
-        $leaveType = $this->leave->leaveType?->name ?? 'Time Off';
-        $startDate = $this->leave->start_date->format('F j, Y');
-        $endDate = $this->leave->end_date->format('F j, Y');
-        $duration = $this->leave->duration_days;
+        $leaveType = $this->leave->leaveType->name ?? 'Time Off';
+        $startDate = $this->leave->start_date->format('M d');
+        $endDate = $this->leave->end_date->format('M d, Y');
+        $fullStartDate = $this->leave->start_date->format('F j, Y ');
+        $fullEndDate = $this->leave->end_date->format('F j, Y ');
 
-        $subject = "Upcoming Leave Reminder: {$leaveType}";
-
-        $messageLines = [
-            "This is a reminder about your upcoming {$leaveType}.",
-            "Start Date: {$startDate}",
-            "End Date: {$endDate}",
-            "Duration: {$duration} day(s)",
-            "Description: {$this->leave->description}",
-        ];
-        $message = implode("\n", $messageLines);
+        $subject = "Upcoming Leave Reminder: {$leaveType} starting {$startDate}";
+        $message = "This is a reminder for your upcoming {$leaveType} from {$fullStartDate} to {$fullEndDate}.";
 
         return [
             'subject' => $subject,

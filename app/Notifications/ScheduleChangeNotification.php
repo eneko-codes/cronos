@@ -64,12 +64,11 @@ class ScheduleChangeNotification extends Notification implements ShouldQueue
         if ($this->newSchedule) {
             $mailMessage->line("**New Schedule:** {$this->newSchedule->description}")
                 ->line($this->formatScheduleDetails($this->newSchedule));
-        } elseif (! $this->oldSchedule) {
-            // Case where both are null somehow (shouldn't happen but good to handle)
+        } else {
+            // This branch is taken if $this->newSchedule is null.
+            // PHPStan indicates that in this case, $this->oldSchedule is also null,
+            // making '!$this->oldSchedule' always true and the subsequent elseif unreachable.
             $mailMessage->line('No schedule information available for this update.');
-        } elseif ($this->oldSchedule && ! $this->newSchedule) {
-            // Case where the schedule was removed
-            $mailMessage->line('Your previous schedule has now ended.');
         }
 
         // Add the standard action
@@ -136,10 +135,10 @@ class ScheduleChangeNotification extends Notification implements ShouldQueue
         if ($this->newSchedule) {
             $messageLines[] = "\n**New Schedule:** {$this->newSchedule->description}";
             $messageLines[] = $this->formatScheduleDetails($this->newSchedule);
-        } elseif (! $this->oldSchedule) {
+        } else {
+            // This branch is taken if $this->newSchedule is null.
+            // PHPStan indicates that in this case, $this->oldSchedule is also null.
             $messageLines[] = 'No schedule information available for this update.';
-        } elseif ($this->oldSchedule && ! $this->newSchedule) {
-            $messageLines[] = 'Your previous schedule has now ended.';
         }
 
         $message = implode("\n", $messageLines);
@@ -147,9 +146,9 @@ class ScheduleChangeNotification extends Notification implements ShouldQueue
         return [
             'subject' => $subject,
             'message' => $message,
-            'old_schedule_id' => $this->oldSchedule?->id,
+            'old_schedule_id' => $this->oldSchedule?->odoo_schedule_id,
             'old_schedule_description' => $this->oldSchedule?->description,
-            'new_schedule_id' => $this->newSchedule?->id,
+            'new_schedule_id' => $this->newSchedule?->odoo_schedule_id,
             'new_schedule_description' => $this->newSchedule?->description,
             'level' => 'info',
         ];

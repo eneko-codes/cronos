@@ -82,7 +82,7 @@ class UserDetailsModal extends Component
         // Check permissions for actions
         $this->canPromoteToAdmin = Gate::allows('promoteToAdmin', $user);
         $this->canDemoteAdmin =
-          $user->is_admin && Gate::allows('demoteAdmin', $user);
+          $user->isAdmin() && Gate::allows('demoteAdmin', $user);
         $this->canNotTrack =
           ! $user->do_not_track && Gate::allows('disableTracking', $user);
         $this->canEnableTracking =
@@ -103,7 +103,7 @@ class UserDetailsModal extends Component
         $this->desktimeId = $user->desktime_id ?? '-';
         $this->systempinId = $user->systempin_id ?? '-';
         $this->jobTitle = $user->job_title ?? '-'; // Populate job title
-        $this->managerName = $user->manager?->name ?? '-'; // Populate manager name
+        $this->managerName = $user->manager->name ?? '-'; // Populate manager name
         // Populate subordinates names
         $this->subordinateNames = $user->subordinates->isNotEmpty() ? $user->subordinates->pluck('name')->implode(', ') : '-';
 
@@ -115,7 +115,7 @@ class UserDetailsModal extends Component
         $this->updatedAtDiff = $user->updated_at ? $user->updated_at->diffForHumans() : '-';
         $this->updatedAtFormatted = $user->updated_at ? $user->updated_at->format('M d, Y H:i:s T') : '-';
 
-        $this->isAdmin = $user->is_admin;
+        $this->isAdmin = $user->isAdmin();
         $this->isDoNotTrack = $user->do_not_track;
         // Use the new preferences relationship
         $this->isMuted = (bool) $user->notificationPreferences->mute_all;
@@ -139,7 +139,7 @@ class UserDetailsModal extends Component
         $user = User::findOrFail($this->userId);
         $this->authorize('promoteToAdmin', $user);
 
-        if (! $user->is_admin) {
+        if (! $user->isAdmin()) {
             $user->is_admin = true;
             $user->save();
 
@@ -159,7 +159,7 @@ class UserDetailsModal extends Component
         $user = User::findOrFail($this->userId);
         $this->authorize('demoteAdmin', $user);
 
-        if ($user->is_admin) {
+        if ($user->isAdmin()) {
             $user->is_admin = false;
             $user->save();
 

@@ -85,8 +85,8 @@ class UserSchedule extends Model
      */
     public function getDurationAttribute(): ?string
     {
-        if ($this->effective_from && $this->effective_until) {
-            return $this->effective_from->diffForHumans($this->effective_until, true);
+        if ($this->effective_until) {
+            return $this->effective_from->diffForHumans($this->effective_until, \Carbon\CarbonInterface::DIFF_ABSOLUTE);
         }
 
         return null;

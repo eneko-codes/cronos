@@ -317,7 +317,7 @@ class DatabaseSeeder extends Seeder
             // Create tasks for this project
             foreach ($data['tasks'] as $i => $taskName) {
                 // Use project's integer ID and task index for a more robust Task ID generation
-                $taskId = (int) ($project->id * 100 + $i + 1);
+                $taskId = (int) ($project->getKey() * 100 + $i + 1);
                 $task = Task::factory()->create([
                     'proofhub_task_id' => $taskId, // Assign the generated integer ID
                     'proofhub_project_id' => $project->proofhub_project_id, // Keep original proofhub ID relationship
@@ -669,7 +669,7 @@ class DatabaseSeeder extends Seeder
 
         // Track progress counters
         $daysProcessed = 0;
-        $totalDays = $from->diffInDays($to) + 1;
+        $totalDays = (int) ($from->diffInDays($to) + 1);
         $attendanceRecords = 0;
         $timeEntryRecords = 0;
         $leaveRecords = 0;
@@ -811,10 +811,21 @@ class DatabaseSeeder extends Seeder
             }
 
             // Show progress every 25% of days processed
-            if (
-                $daysProcessed % max(1, intval($totalDays / 4)) === 0 ||
-                $daysProcessed === $totalDays
-            ) {
+            $progressDivisor = max(1, intval($totalDays / 4));
+            $isProgressTick = false; // Initialize
+
+            if ($progressDivisor === 1) {
+                // If divisor is 1, any integer % 1 is 0. So, it's always a progress tick.
+                $isProgressTick = true;
+            } else {
+                // For divisors >= 2, check if $daysProcessed is an exact multiple.
+                $remainder = $daysProcessed % $progressDivisor; // $remainder is an int
+                if ($remainder === (int) 0) { // Strictly compare the integer remainder to integer 0
+                    $isProgressTick = true;
+                }
+            }
+
+            if ($isProgressTick || ($daysProcessed === $totalDays)) {
                 $percentage = round(($daysProcessed / $totalDays) * 100);
                 echo "    ↳ {$percentage}% complete: processed ".
                   $daysProcessed.
@@ -1061,7 +1072,6 @@ class DatabaseSeeder extends Seeder
                 'confirm' => 'pending',
                 'draft' => 'draft',
                 'cancel' => 'cancelled',
-                default => 'approved',
             };
 
             // 25% chance of half-day for variety

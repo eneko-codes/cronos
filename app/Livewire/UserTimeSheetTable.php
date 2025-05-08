@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace App\Livewire;
 
+use App\DataTransferObjects\DashboardTotals;
+use App\DataTransferObjects\OverallDeviationDetails;
+use App\DataTransferObjects\PeriodDayData;
 use App\Models\User;
 use App\Traits\FormatsDurationsTrait;
+use Illuminate\Support\Collection;
 use Livewire\Component;
 
 class UserTimeSheetTable extends Component
@@ -20,22 +24,23 @@ class UserTimeSheetTable extends Component
 
     public bool $showDeviations;
 
-    public array $periodData;
+    /** @var Collection<string, PeriodDayData> */
+    public Collection $periodData;
 
-    public array $dashboardTotals;
+    public DashboardTotals $dashboardTotals;
 
-    public ?array $totalDeviationsDetails; // Renamed from totalDeviationsForTable for consistency
+    public ?OverallDeviationDetails $totalDeviationsDetails;
 
-    public bool $isNextPeriodDisabled;    // Renamed from isNextPeriodDisabledForTable
+    public bool $isNextPeriodDisabled;
 
     public function mount(
         User $user,
         string $currentDate,
         string $viewMode,
         bool $showDeviations,
-        array $periodData,
-        array $dashboardTotals,
-        ?array $totalDeviationsDetails,
+        Collection $periodData,
+        DashboardTotals $dashboardTotals,
+        ?OverallDeviationDetails $totalDeviationsDetails,
         bool $isNextPeriodDisabled
     ): void {
         $this->user = $user;

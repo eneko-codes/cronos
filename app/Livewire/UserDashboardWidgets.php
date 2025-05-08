@@ -44,7 +44,7 @@ class UserDashboardWidgets extends Component
             ->first();
 
         // Check if schedule loaded (Linter fix: simplified condition)
-        if ($activeSchedule && $activeSchedule->schedule) {
+        if ($activeSchedule !== null && $activeSchedule->schedule !== null) {
             // Since we eager-loaded schedule, we can assume it exists if $activeSchedule exists
             $schedule = $activeSchedule->schedule; // Get the loaded schedule
 

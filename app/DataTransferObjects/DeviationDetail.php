@@ -4,11 +4,21 @@ declare(strict_types=1);
 
 namespace App\DataTransferObjects;
 
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use Livewire\Wireable;
-use Webmozart\Assert\Assert;
 
+/**
+ * Represents the details of a deviation between two time values.
+ */
 final readonly class DeviationDetail implements Wireable
 {
+    /**
+     * @param  int  $percentage  The deviation percentage.
+     * @param  int  $differenceMinutes  The difference in minutes.
+     * @param  string  $tooltip  A tooltip providing more information about the deviation.
+     * @param  bool  $shouldDisplay  Whether this deviation detail should be displayed.
+     */
     public function __construct(
         public int $percentage,
         public int $differenceMinutes,
@@ -28,15 +38,28 @@ final readonly class DeviationDetail implements Wireable
 
     public static function fromLivewire(mixed $value): static
     {
-        Assert::isArray($value);
-        Assert::keyExists($value, 'percentage');
-        // Add other assertions as needed
+        if (! is_array($value)) {
+            throw ValidationException::withMessages(['input' => 'Input data must be an array.']);
+        }
+
+        $validator = Validator::make($value, [
+            'percentage' => 'required|integer',
+            'differenceMinutes' => 'required|integer',
+            'tooltip' => 'required|string',
+            'shouldDisplay' => 'required|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        $validatedData = $validator->validated();
 
         return new self(
-            $value['percentage'],
-            $value['differenceMinutes'],
-            $value['tooltip'],
-            $value['shouldDisplay']
+            $validatedData['percentage'],
+            $validatedData['differenceMinutes'],
+            $validatedData['tooltip'],
+            $validatedData['shouldDisplay']
         );
     }
 }

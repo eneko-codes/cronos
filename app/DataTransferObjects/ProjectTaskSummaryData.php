@@ -4,34 +4,54 @@ declare(strict_types=1);
 
 namespace App\DataTransferObjects;
 
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use Livewire\Wireable;
-use Webmozart\Assert\Assert;
 
+/**
+ * Represents a summary of tasks for a specific project.
+ */
 final readonly class ProjectTaskSummaryData implements Wireable
 {
+    /**
+     * @param  string  $name  The name of the project.
+     * @param  Collection<int, string>  $tasks  A collection of task names associated with the project.
+     */
     public function __construct(
         public string $name,
-        /** @var array<string> */
-        public array $tasks
+        public Collection $tasks
     ) {}
 
     public function toLivewire(): array
     {
         return [
             'name' => $this->name,
-            'tasks' => $this->tasks,
+            'tasks' => $this->tasks->all(),
         ];
     }
 
     public static function fromLivewire(mixed $value): static
     {
-        Assert::isArray($value);
-        Assert::keyExists($value, 'name');
-        Assert::keyExists($value, 'tasks');
+        if (! is_array($value)) {
+            throw ValidationException::withMessages(['input' => 'Input data must be an array.']);
+        }
+
+        $validator = Validator::make($value, [
+            'name' => 'required|string',
+            'tasks' => 'present|array',
+            'tasks.*' => 'string',
+        ]);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        $validatedData = $validator->validated();
 
         return new self(
-            $value['name'],
-            $value['tasks']
+            $validatedData['name'],
+            collect($validatedData['tasks'])
         );
     }
 }

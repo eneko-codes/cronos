@@ -260,7 +260,7 @@ class UserDashboardDataProcessorService
             halfDayTime: $halfDayTime,
             startTime: $startTime,
             endTime: $endTime,
-            actualMinutes: $durationMinutes,
+            actualMinutes: (int) $durationMinutes,
             leaveTypeDescription: $leave->leaveType?->description,
         );
     }
@@ -339,7 +339,7 @@ class UserDashboardDataProcessorService
                 ->map(function ($group, $projectName) {
                     return new ProjectTaskSummaryData(
                         name: $projectName,
-                        tasks: $group->pluck('task.name')->filter()->unique()->values()->all(),
+                        tasks: $group->pluck('task.name')->filter()->unique()->values(),
                     );
                 })
                 ->values()->all();

@@ -439,7 +439,7 @@
             @if ($showDeviations)
               <!-- Attendance vs Scheduled -->
               @php
-                $attVsSchDetail = $day->deviations ? $day->deviations->attendanceVsScheduled : null;
+                $attVsSchDetail = $day->deviationDetails ? $day->deviationDetails->attendanceVsScheduled : null;
                 $attVsSchPercentage = $attVsSchDetail ? $attVsSchDetail->percentage : 0;
                 $attVsSchShouldDisplay = ! $isFutureDate && $showDeviations && ($attVsSchDetail ? $attVsSchDetail->shouldDisplay : false);
                 $attVsSchBgClass = '';
@@ -472,7 +472,7 @@
 
               <!-- Worked vs Scheduled -->
               @php
-                $workVsSchDetail = $day->deviations ? $day->deviations->workedVsScheduled : null;
+                $workVsSchDetail = $day->deviationDetails ? $day->deviationDetails->workedVsScheduled : null;
                 $workVsSchPercentage = $workVsSchDetail ? $workVsSchDetail->percentage : 0;
                 $workVsSchShouldDisplay = ! $isFutureDate && $showDeviations && ($workVsSchDetail ? $workVsSchDetail->shouldDisplay : false);
                 $workVsSchBgClass = '';
@@ -505,7 +505,7 @@
 
               <!-- Worked vs Attendance -->
               @php
-                $workVsAttDetail = $day->deviations ? $day->deviations->workedVsAttendance : null;
+                $workVsAttDetail = $day->deviationDetails ? $day->deviationDetails->workedVsAttendance : null;
                 $workVsAttPercentage = $workVsAttDetail ? $workVsAttDetail->percentage : 0;
                 $workVsAttShouldDisplay = ! $isFutureDate && $showDeviations && ($workVsAttDetail ? $workVsAttDetail->shouldDisplay : false);
                 $workVsAttBgClass = '';
@@ -596,8 +596,8 @@
           @if ($showDeviations && $totalDeviationsDetails)
             @foreach ($totalDeviationsDetails as $deviationType => $details)
               @php
-                $percentage = $details['percentage'] ?? 0;
-                $totalShouldDisplay = $showDeviations && ($details['should_display'] ?? false) && isset($details['tooltip']);
+                $percentage = $details->percentage ?? 0;
+                $totalShouldDisplay = $showDeviations && ($details->shouldDisplay ?? false) && isset($details->tooltip);
                 $totalBgClass = '';
                 $totalTextClass = '';
                 if ($totalShouldDisplay) {
@@ -620,7 +620,7 @@
                 class="{{ $totalBgClass }} {{ ! $totalShouldDisplay ? 'text-transparent' : '' }} border border-gray-300 p-2 whitespace-nowrap dark:border-gray-800"
               >
                 @if ($totalShouldDisplay)
-                  <x-tooltip :text="$details['tooltip']">
+                  <x-tooltip :text="$details->tooltip">
                     <span class="{{ $totalTextClass }}">
                       {{ $percentage > 0 ? '+' : '' }}{{ $percentage }}%
                     </span>

@@ -7,7 +7,6 @@ namespace App\Livewire;
 use App\DataTransferObjects\DashboardTotals;
 use App\DataTransferObjects\OverallDeviationDetails;
 use App\DataTransferObjects\PeriodDayData;
-use App\Models\Setting;
 use App\Models\User;
 use App\Services\UserDashboardDataProcessorService;
 use Carbon\Carbon;
@@ -63,11 +62,6 @@ class UserDashboard extends Component
      */
     public bool $isViewingSpecificUser = false;
 
-    /**
-     * Indicates if notifications are enabled globally.
-     */
-    public bool $isGloballyEnabled = true;
-
     protected $listeners = [
         'timeSheetPreviousPeriod' => 'previousPeriod',
         'timeSheetNextPeriod' => 'nextPeriod',
@@ -109,7 +103,6 @@ class UserDashboard extends Component
               : now()->startOfMonth()
         );
         $this->loadPeriodDataAndTotals(); // This will now use the service
-        $this->loadGlobalNotificationSetting();
     }
 
     /**
@@ -199,7 +192,6 @@ class UserDashboard extends Component
             'dashboardTotals' => $this->dashboardTotals,
             'totalDeviationsDetailsForTable' => $this->totalDeviationsDetails,
             'isNextPeriodDisabledForTable' => $isNextPeriodDisabled,
-            'isGloballyEnabled' => $this->isGloballyEnabled,
         ]);
     }
 
@@ -251,23 +243,12 @@ class UserDashboard extends Component
     }
 
     /**
-     * Updates the component's current date property.
+     * Sets the start date of the current period from a Carbon instance.
      *
-     * @param  Carbon  $date  The new start date.
+     * @param  Carbon  $date  The Carbon date object to set as the start of the period.
      */
     protected function setPeriodStart(Carbon $date): void
     {
-        $this->currentDate = $date->toDateString();
-    }
-
-    /**
-     * Load global notification setting.
-     */
-    protected function loadGlobalNotificationSetting(): void
-    {
-        $this->isGloballyEnabled = (bool) Setting::getValue(
-            'notifications.global_enabled',
-            true
-        );
+        $this->currentDate = $date->format('Y-m-d');
     }
 }

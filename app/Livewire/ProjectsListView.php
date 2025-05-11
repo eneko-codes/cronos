@@ -6,11 +6,13 @@ namespace App\Livewire;
 
 use App\Models\Project;
 use Illuminate\Database\Eloquent\Builder;
+use Livewire\Attributes\Lazy;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 #[Title('Projects')]
+#[Lazy]
 class ProjectsListView extends Component
 {
     use WithPagination;
@@ -134,4 +136,16 @@ class ProjectsListView extends Component
             'projects' => $projects,
         ]);
     }
+
+    /**
+     * Render a skeleton placeholder while the projects list is loading.
+     * This provides a visual indication that the projects data is being fetched.
+     *
+     * @return \Illuminate\View\View
+     */
+    /*
+    public function placeholder()
+    {
+        return view('livewire.placeholders.projects-list-view');
+    }*/
 }

@@ -8,21 +8,25 @@ use App\DataTransferObjects\DashboardTotals;
 use App\DataTransferObjects\OverallDeviationDetails;
 use App\DataTransferObjects\PeriodDayData;
 use App\Models\User;
-use App\Services\UserDashboardDataProcessorService;
+use App\Services\Dashboard\DashboardDataAggregatorService;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Lazy;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
 #[Title('User Dashboard')]
+#[Lazy]
 class UserDashboard extends Component
 {
     /**
      * The user model instance.
      */
+    #[Locked]
     public User $user;
 
     /**
@@ -76,33 +80,17 @@ class UserDashboard extends Component
      */
     public function mount($id = null): void
     {
+        $this->currentDate = now()->toDateString();
+        $this->isAdmin = Auth::user()->isAdmin();
         $this->isViewingSpecificUser = $id !== null;
 
-        if ($id !== null) {
-            $authenticatedUser = Auth::user();
-            if (! $authenticatedUser || ! $authenticatedUser->isAdmin()) {
-                if ($authenticatedUser && $authenticatedUser->id != $id) {
-                    $this->redirect(route('dashboard'), navigate: true);
-
-                    return;
-                }
-            }
-            // Simplified eager loading for mount, specific data is fetched by the service
+        if ($this->isViewingSpecificUser) {
             $this->user = User::findOrFail($id);
         } else {
             $this->user = Auth::user();
         }
 
-        $this->isAdmin = Auth::check() && Auth::user()->isAdmin();
-        $this->periodData = new Collection;
-        $this->dashboardTotals = new DashboardTotals(scheduled: 0, attendance: 0, worked: 0, leave: 0);
-
-        $this->setPeriodStart(
-            $this->viewMode === 'weekly'
-              ? now()->startOfWeek()
-              : now()->startOfMonth()
-        );
-        $this->loadPeriodDataAndTotals(); // This will now use the service
+        $this->loadPeriodDataAndTotals();
     }
 
     /**
@@ -111,7 +99,7 @@ class UserDashboard extends Component
     public function toggleDeviations(): void
     {
         $this->showDeviations = ! $this->showDeviations;
-        $this->loadPeriodDataAndTotals(); // Reload data with new deviation visibility
+        $this->loadPeriodDataAndTotals();
     }
 
     /**
@@ -121,18 +109,7 @@ class UserDashboard extends Component
      */
     public function changeViewMode(string $mode): void
     {
-        if (! in_array($mode, ['weekly', 'monthly'])) {
-            $this->viewMode = 'weekly';
-
-            return;
-        }
         $this->viewMode = $mode;
-
-        $this->setPeriodStart(
-            $this->viewMode === 'weekly'
-              ? now()->startOfWeek()
-              : now()->startOfMonth()
-        );
         $this->loadPeriodDataAndTotals();
     }
 
@@ -218,28 +195,28 @@ class UserDashboard extends Component
     }
 
     /**
-     * Fetches and processes user data for the current period using UserDashboardDataProcessorService.
+     * Fetches and processes user data for the current period using DashboardDataAggregatorService.
      */
     protected function loadPeriodDataAndTotals(): void
     {
-        $startDate = $this->getPeriodStart();
-        $endDate = $this->getPeriodEnd();
+        $startDate = $this->viewMode === 'weekly'
+            ? Carbon::parse($this->currentDate)->startOfWeek()
+            : Carbon::parse($this->currentDate)->startOfMonth();
 
-        // Resolve the service from the container
-        $processor = app(UserDashboardDataProcessorService::class);
+        $endDate = $this->viewMode === 'weekly'
+            ? Carbon::parse($this->currentDate)->endOfWeek()
+            : Carbon::parse($this->currentDate)->endOfMonth();
 
-        // The user model is already loaded in $this->user during mount.
-        // The service's GetDataForDateRange action will handle specific data needed.
-        $processedOutput = $processor->generateProcessedData(
+        $data = app(DashboardDataAggregatorService::class)->aggregatePeriodData(
             $this->user,
             $startDate,
             $endDate,
             $this->showDeviations
         );
 
-        $this->periodData = $processedOutput['periodData'];
-        $this->dashboardTotals = $processedOutput['dashboardTotals'];
-        $this->totalDeviationsDetails = $processedOutput['totalDeviationsDetails'];
+        $this->periodData = $data['periodData'];
+        $this->dashboardTotals = $data['dashboardTotals'];
+        $this->totalDeviationsDetails = $data['totalDeviationsDetails'];
     }
 
     /**
@@ -250,5 +227,38 @@ class UserDashboard extends Component
     protected function setPeriodStart(Carbon $date): void
     {
         $this->currentDate = $date->format('Y-m-d');
+    }
+
+    /**
+     * Render a skeleton placeholder while the user dashboard is loading.
+     * This provides a visual indication that the dashboard data is being fetched and processed.
+     *
+     * @param  array  $params  Parameters passed to the component, potentially including route parameters like 'id'.
+     * @return \Illuminate\View\View
+     */
+    public function placeholder(array $params = [])
+    {
+        // Determine if viewing a specific user based on 'id' passed via route/params
+        $isViewingSpecificUserPlaceholder = isset($params['id']);
+
+        // Determine if the current authenticated user is an admin
+        $isAdminPlaceholder = Auth::check() && Auth::user()->isAdmin();
+
+        // Determine if the "Missing Account Links" alert placeholder should be shown
+        $showMissingLinksAlertPlaceholder = false;
+        $targetUserId = $params['id'] ?? Auth::id();
+
+        if ($targetUserId) {
+            $viewedUser = User::query()->find($targetUserId, ['id', 'do_not_track']);
+            if ($viewedUser && ! $viewedUser->do_not_track) {
+                $showMissingLinksAlertPlaceholder = true;
+            }
+        }
+
+        return view('livewire.placeholders.user-dashboard', [
+            'isViewingSpecificUserPlaceholder' => $isViewingSpecificUserPlaceholder,
+            'isAdminPlaceholder' => $isAdminPlaceholder,
+            'showMissingLinksAlertPlaceholder' => $showMissingLinksAlertPlaceholder,
+        ]);
     }
 }

@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Livewire;
 
 use App\Models\LeaveType;
+use Livewire\Attributes\Lazy;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
 
+#[Lazy]
 #[Title('Leave Types')]
 class LeaveTypesListView extends Component
 {
@@ -114,4 +116,16 @@ class LeaveTypesListView extends Component
             'leaveTypes' => $leaveTypes,
         ]);
     }
+
+    /**
+     * Render a skeleton placeholder while the leave types list is loading.
+     * This provides a visual indication that the leave types data is being fetched.
+     *
+     * @return \Illuminate\View\View
+     */
+    /*
+    public function placeholder()
+    {
+        return view('livewire.placeholders.leave-types-list-view');
+    }*/
 }

@@ -6,11 +6,13 @@ namespace App\Livewire;
 
 use App\Models\Setting;
 use App\Models\User;
+use Livewire\Attributes\Lazy;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
 
+#[Lazy]
 #[Title('Users')]
 class UsersList extends Component
 {
@@ -49,6 +51,16 @@ class UsersList extends Component
     {
         return redirect()->route('user.dashboard', ['id' => $userId]);
     }
+
+    /**
+     * Render a skeleton placeholder while the users list is loading.
+     * This provides a visual indication that the users data is being fetched and processed.
+     */
+    /*
+    public function placeholder()
+    {
+        return view('livewire.placeholders.users-list');
+    }*/
 
     public function render()
     {

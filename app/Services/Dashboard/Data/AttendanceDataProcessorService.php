@@ -1,0 +1,145 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services\Dashboard\Data;
+
+use App\DataTransferObjects\DailyAttendanceData;
+use App\Exceptions\DataTransferObjectException;
+use App\Models\UserAttendance;
+use Carbon\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
+
+/**
+ * Service responsible for processing attendance data for the dashboard.
+ * This service handles the transformation of raw attendance data into DailyAttendanceData DTOs.
+ */
+class AttendanceDataProcessorService
+{
+    /**
+     * Process attendance data for a specific date.
+     *
+     * @param  Collection  $attendances  Collection of UserAttendance models
+     * @param  string  $dateString  The date to process attendance for (Y-m-d)
+     * @return DailyAttendanceData The processed attendance data
+     *
+     * @throws DataTransferObjectException If there's an error processing the attendance data
+     */
+    public function processAttendanceData(Collection $attendances, string $dateString): DailyAttendanceData
+    {
+        try {
+            $attendance = $this->findAttendanceForDate($attendances, $dateString);
+
+            if (! $attendance) {
+                return new DailyAttendanceData(
+                    duration: '0h 0m',
+                    isRemote: false,
+                    times: []
+                );
+            }
+
+            $durationInfo = $this->calculateDurationInfo($attendance);
+            $times = $this->getAttendanceTimes($attendance);
+
+            return new DailyAttendanceData(
+                duration: $durationInfo['formatted'],
+                isRemote: $attendance->is_remote,
+                times: $times
+            );
+        } catch (\Exception $e) {
+            Log::error('Error processing attendance data', [
+                'date' => $dateString,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            throw new DataTransferObjectException(
+                "Failed to process attendance data for date {$dateString}: {$e->getMessage()}",
+                0,
+                $e
+            );
+        }
+    }
+
+    /**
+     * Find attendance record for a specific date.
+     *
+     * @param  Collection  $attendances  Collection of UserAttendance models
+     * @param  string  $dateString  The date to find attendance for
+     * @return UserAttendance|null The attendance record or null if none exists
+     */
+    protected function findAttendanceForDate(Collection $attendances, string $dateString): ?UserAttendance
+    {
+        $targetDate = Carbon::parse($dateString)->startOfDay();
+
+        return $attendances->first(function ($record) use ($targetDate) {
+            if (! $record->date) {
+                return false;
+            }
+            $recordDate = $record->date instanceof Carbon ? $record->date : Carbon::parse($record->date);
+
+            return $recordDate->startOfDay()->equalTo($targetDate);
+        });
+    }
+
+    /**
+     * Calculate duration information for an attendance record.
+     *
+     * @param  UserAttendance  $attendance  The attendance record
+     * @return array{minutes: int, formatted: string} Duration information
+     */
+    protected function calculateDurationInfo(UserAttendance $attendance): array
+    {
+        $durationMinutes = 0;
+
+        if ($attendance->is_remote) {
+            $durationMinutes = (int) ($attendance->presence_seconds / 60);
+        } else {
+            if ($attendance->start && $attendance->end) {
+                $start = Carbon::parse($attendance->start);
+                $end = Carbon::parse($attendance->end);
+                $durationMinutes = $start->diffInMinutes($end);
+            } else {
+                $durationMinutes = (int) ($attendance->presence_seconds / 60);
+            }
+        }
+
+        return [
+            'minutes' => $durationMinutes,
+            'formatted' => $this->formatMinutesToHoursMinutes($durationMinutes),
+        ];
+    }
+
+    /**
+     * Get attendance times for an attendance record.
+     *
+     * @param  UserAttendance  $attendance  The attendance record
+     * @return array<string> Array of attendance times
+     */
+    protected function getAttendanceTimes(UserAttendance $attendance): array
+    {
+        if ($attendance->start && $attendance->end) {
+            return [
+                Carbon::parse($attendance->start)->format('H:i'),
+                Carbon::parse($attendance->end)->format('H:i'),
+            ];
+        }
+
+        return [];
+    }
+
+    /**
+     * Format minutes to hours and minutes string.
+     *
+     * @param  int  $minutes  The minutes to format
+     * @return string The formatted duration string
+     */
+    protected function formatMinutesToHoursMinutes(int $minutes): string
+    {
+        $hours = floor($minutes / 60);
+        $remainingMinutes = $minutes % 60;
+
+        return "{$hours}h {$remainingMinutes}m";
+    }
+}

@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Livewire;
 
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Lazy;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
+#[Lazy]
 class SidebarToggle extends Component
 {
     public int $unreadCount = 0;
@@ -51,4 +53,14 @@ class SidebarToggle extends Component
     {
         return view('livewire.sidebar-toggle');
     }
+
+    /**
+     * Render a skeleton placeholder while the component is loading.
+     * This provides a visual indication that the sidebar toggle is being loaded.
+     */
+    /*
+    public function placeholder()
+    {
+        return view('livewire.placeholders.sidebar-toggle');
+    }*/
 }

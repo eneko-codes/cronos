@@ -93,6 +93,16 @@ class LastSynced extends Component
         }
     }
 
+    /**
+     * Render a skeleton placeholder while the last sync information is loading.
+     * This provides a visual indication that the sync status data is being fetched.
+     */
+    /*
+    public function placeholder()
+    {
+        return view('livewire.placeholders.last-synced');
+    }*/
+
     public function render()
     {
         return view('livewire.last-synced');

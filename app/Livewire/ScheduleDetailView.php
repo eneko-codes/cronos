@@ -10,9 +10,11 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Collection as SupportCollection;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Lazy;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
+#[Lazy]
 #[Title('Schedule Details')]
 class ScheduleDetailView extends Component
 {
@@ -186,6 +188,18 @@ class ScheduleDetailView extends Component
     {
         $this->showPreviouslyAssigned = ! $this->showPreviouslyAssigned;
     }
+
+    /**
+     * Render a skeleton placeholder while the schedule details are loading.
+     * This provides a visual indication that the schedule data is being fetched.
+     *
+     * @return \Illuminate\View\View
+     */
+    /*
+    public function placeholder()
+    {
+        return view('livewire.placeholders.schedule-detail-view');
+    }*/
 
     /**
      * Render the component view.

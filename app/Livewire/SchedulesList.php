@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Livewire;
 
 use App\Models\Schedule;
+use Livewire\Attributes\Lazy;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 #[Title('Schedules')]
+#[Lazy]
 class SchedulesList extends Component
 {
     use WithPagination;
@@ -137,4 +139,16 @@ class SchedulesList extends Component
             'schedules' => $schedules,
         ]);
     }
+
+    /**
+     * Render a skeleton placeholder while the schedules list is loading.
+     * This provides a visual indication that the schedules data is being fetched.
+     *
+     * @return \Illuminate\View\View
+     */
+    /*
+    public function placeholder()
+    {
+        return view('livewire.placeholders.schedules-list');
+    }*/
 }

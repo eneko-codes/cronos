@@ -9,9 +9,11 @@ use App\Services\SyncService;
 use Illuminate\Bus\Batch;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
+use Livewire\Attributes\Lazy;
 use Livewire\Component;
 use Throwable;
 
+#[Lazy]
 class SyncButton extends Component
 {
     public string $syncType;
@@ -96,6 +98,18 @@ class SyncButton extends Component
             $this->dispatch('add-toast', message: $toastMessage, variant: 'error');
         }
     }
+
+    /**
+     * Render a skeleton placeholder while the sync button component is loading.
+     * This provides a visual indication that the sync status is being fetched.
+     *
+     * @return \Illuminate\View\View
+     */
+    /*
+    public function placeholder()
+    {
+        return view('livewire.placeholders.sync-button');
+    }*/
 
     public function render()
     {

@@ -8,10 +8,12 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Livewire\Attributes\Lazy;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
 #[Title('Project Details')]
+#[Lazy]
 class ProjectDetailView extends Component
 {
     public Project $project;
@@ -137,4 +139,16 @@ class ProjectDetailView extends Component
     {
         return 'Project: '.$this->project->name;
     }
+
+    /**
+     * Render a skeleton placeholder while the project detail view is loading.
+     * This provides a visual indication that the project detail data is being fetched.
+     *
+     * @return \Illuminate\View\View
+     */
+    /*
+    public function placeholder()
+    {
+        return view('livewire.placeholders.project-detail-view');
+    }*/
 }

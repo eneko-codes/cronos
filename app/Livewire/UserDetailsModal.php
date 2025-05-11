@@ -6,10 +6,12 @@ namespace App\Livewire;
 
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
+use Livewire\Attributes\Lazy;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
+#[Lazy]
 class UserDetailsModal extends Component
 {
     public $isOpen = false; // Modal open state
@@ -261,6 +263,18 @@ class UserDetailsModal extends Component
             $this->dispatch('user-preferences-updated', $user->id);
         }
     }
+
+    /**
+     * Render a skeleton placeholder while the user details modal is loading.
+     * This provides a visual indication that the user's information is being fetched.
+     *
+     * @return \Illuminate\View\View
+     */
+    /*
+    public function placeholder()
+    {
+        return view('livewire.placeholders.user-details-modal');
+    }*/
 
     public function render(): \Illuminate\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\View\View
     {

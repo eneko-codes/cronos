@@ -12,10 +12,12 @@ use Exception;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Lazy;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
 
+#[Lazy]
 class Sidebar extends Component
 {
     use WithPagination;
@@ -605,4 +607,16 @@ class Sidebar extends Component
             'globalPreferenceStates' => $this->globalPreferenceStates, // Pass global states to view
         ]);
     }
+
+    /**
+     * Render a skeleton placeholder while the sidebar component is loading.
+     * This provides a visual indication that the notification preferences and user data are being fetched.
+     *
+     * @return \Illuminate\View\View
+     */
+    /*
+    public function placeholder()
+    {
+        return view('livewire.placeholders.sidebar');
+    }*/
 }

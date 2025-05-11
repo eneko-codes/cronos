@@ -22,7 +22,7 @@
   >
     <!-- Navigation Header -->
     <header
-      class="fixed inset-x-0 top-0 z-40 h-14 border-b bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900"
+      class="fixed inset-x-0 top-0 z-40 h-14 border-b border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900"
     >
       <div class="mx-auto h-full max-w-screen-2xl px-4">
         <div class="flex h-full items-center justify-between">
@@ -210,7 +210,7 @@
 
     <noscript>
       <div
-        class="fixed bottom-0 left-0 right-0 top-0 z-50 block h-screen w-screen bg-red-400/50 text-center backdrop-blur dark:bg-red-600/50"
+        class="fixed top-0 right-0 bottom-0 left-0 z-50 block h-screen w-screen bg-red-400/50 text-center backdrop-blur dark:bg-red-600/50"
       >
         <div
           class="fixed inset-0 m-auto flex h-fit w-fit flex-col items-center gap-4 rounded-lg bg-red-900 p-8 text-white shadow-xl dark:bg-red-800"

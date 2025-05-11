@@ -14,10 +14,12 @@ use Exception;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Artisan;
 use Laravel\Telescope\Contracts\EntriesRepository;
+use Livewire\Attributes\Lazy;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
 #[Title('Settings')]
+#[Lazy]
 class Settings extends Component
 {
     public string $syncFrequency = 'everyThirtyMinutes';
@@ -429,6 +431,16 @@ class Settings extends Component
             );
         }
     }
+
+    /**
+     * Render a skeleton placeholder while the settings component is loading.
+     * This provides a visual indication that the application settings are being fetched.
+     */
+    /*
+    public function placeholder()
+    {
+        return view('livewire.placeholders.settings');
+    }*/
 
     /**
      * Render the settings component view.

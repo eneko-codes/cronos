@@ -7,5 +7,6 @@
     <div class="h-5 w-16 rounded-md bg-gray-300 dark:bg-gray-600"></div>
     <div class="h-5 w-12 rounded-md bg-gray-300 dark:bg-gray-600"></div>
     <div class="h-5 w-14 rounded-md bg-gray-300 dark:bg-gray-600"></div>
+    <div class="h-5 w-14 rounded-md bg-gray-300 dark:bg-gray-600"></div>
   </div>
 </div>

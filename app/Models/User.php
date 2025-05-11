@@ -423,4 +423,105 @@ class User extends Authenticatable
     {
         return $this->hasMany(User::class, 'odoo_manager_id', 'odoo_id');
     }
+
+    /**
+     * Generate an array of badges for the user, to be displayed in the UI.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getDisplayBadges(): array
+    {
+        $platformBadges = [];
+        $specialBadges = [];
+
+        // Odoo Badge
+        if ($this->odoo_id) {
+            $platformBadges[] = [
+                'text' => 'Odoo',
+                'variant' => 'info',
+                'tooltip' => 'User has an Odoo account linked',
+                'isMissing' => false,
+            ];
+        } else {
+            $platformBadges[] = [
+                'text' => 'Odoo',
+                'variant' => 'alert',
+                'tooltip' => 'User is not linked with Odoo.',
+                'isMissing' => true,
+            ];
+        }
+
+        // Desktime Badge
+        if ($this->desktime_id) {
+            $platformBadges[] = [
+                'text' => 'Desktime',
+                'variant' => 'info',
+                'tooltip' => 'User has a Desktime account linked',
+                'isMissing' => false,
+            ];
+        } else {
+            $platformBadges[] = [
+                'text' => 'DeskTime',
+                'variant' => 'alert',
+                'tooltip' => 'User is not linked with DeskTime.',
+                'isMissing' => true,
+            ];
+        }
+
+        // Proofhub Badge
+        if ($this->proofhub_id) {
+            $platformBadges[] = [
+                'text' => 'Proofhub',
+                'variant' => 'info',
+                'tooltip' => 'User has a Proofhub account linked',
+                'isMissing' => false,
+            ];
+        } else {
+            $platformBadges[] = [
+                'text' => 'ProofHub',
+                'variant' => 'alert',
+                'tooltip' => 'User is not linked with ProofHub.',
+                'isMissing' => true,
+            ];
+        }
+
+        // SystemPin Badge
+        if ($this->systempin_id) {
+            $platformBadges[] = [
+                'text' => 'SystemPin',
+                'variant' => 'info',
+                'tooltip' => 'User has a System PIN configured',
+                'isMissing' => false,
+            ];
+        } else {
+            $platformBadges[] = [
+                'text' => 'SystemPin',
+                'variant' => 'alert',
+                'tooltip' => 'User does not have a System PIN.',
+                'isMissing' => true,
+            ];
+        }
+
+        // Admin Badge
+        if ($this->is_admin) {
+            $specialBadges[] = [
+                'text' => 'Admin',
+                'variant' => 'primary',
+                'tooltip' => 'User can see all employee data',
+                'isMissing' => false,
+            ];
+        }
+
+        // Not Tracking Badge
+        if ($this->do_not_track) {
+            $specialBadges[] = [
+                'text' => 'Not tracking',
+                'variant' => 'warning',
+                'tooltip' => 'The data of this user will not be fetched',
+                'isMissing' => false,
+            ];
+        }
+
+        return array_merge($platformBadges, $specialBadges);
+    }
 }

@@ -1,4 +1,6 @@
-<div class="flex flex-col gap-4">
+<div
+  class="flex flex-col gap-4 rounded-lg bg-white p-4 shadow-md dark:bg-gray-800"
+>
   <!-- Period Controls -->
   <div
     class="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center"

@@ -93,43 +93,7 @@
               </div>
 
               <!-- User Badges for Roles and Linked Accounts -->
-              <div class="flex flex-wrap gap-1">
-                @if ($user->is_admin)
-                  <x-tooltip text="User can see all employee data">
-                    <x-badge size="sm" variant="primary">Admin</x-badge>
-                  </x-tooltip>
-                @endif
-
-                @if ($user->do_not_track)
-                  <x-tooltip text="The data of this user will not be fetched">
-                    <x-badge size="sm" variant="alert">Not tracking</x-badge>
-                  </x-tooltip>
-                @endif
-
-                @if ($user->odoo_id)
-                  <x-tooltip text="User has an Odoo account linked">
-                    <x-badge size="sm" variant="info">Odoo</x-badge>
-                  </x-tooltip>
-                @endif
-
-                @if ($user->proofhub_id)
-                  <x-tooltip text="User has a Proofhub account linked">
-                    <x-badge size="sm" variant="info">ProofHub</x-badge>
-                  </x-tooltip>
-                @endif
-
-                @if ($user->desktime_id)
-                  <x-tooltip text="User has a Desktime account linked">
-                    <x-badge size="sm" variant="info">Desktime</x-badge>
-                  </x-tooltip>
-                @endif
-
-                @if ($user->systempin_id)
-                  <x-tooltip text="User has a SystemPin account linked">
-                    <x-badge size="sm" variant="info">SystemPin</x-badge>
-                  </x-tooltip>
-                @endif
-              </div>
+              <x-user-badges :badges="$user->getDisplayBadges()" />
             </td>
 
             <!-- Action Column: Details Button -->

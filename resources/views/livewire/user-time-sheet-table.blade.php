@@ -9,7 +9,7 @@
       <!-- Navigation for Previous/Next Period -->
       <div class="flex items-center gap-2">
         <button
-          class="inline-flex h-fit w-fit flex-row items-center justify-center gap-2 rounded-lg bg-gray-200/75 px-1.5 py-1 text-xs font-semibold text-gray-800 shadow-sm hover:bg-gray-200 dark:bg-gray-200 dark:hover:bg-gray-100"
+          class="inline-flex h-fit w-fit flex-row items-center justify-center gap-2 rounded-lg bg-slate-100 px-1.5 py-1 text-xs font-semibold text-gray-800 shadow-sm hover:bg-slate-200 dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500"
           wire:click="dispatchPreviousPeriod"
         >
           ←
@@ -21,7 +21,7 @@
         </h2>
 
         <button
-          class="inline-flex h-fit w-fit flex-row items-center justify-center gap-2 rounded-lg bg-gray-200/75 px-1.5 py-1 text-xs font-semibold text-gray-800 shadow-sm hover:bg-gray-200 disabled:opacity-50 dark:bg-gray-200 dark:hover:bg-gray-100"
+          class="inline-flex h-fit w-fit flex-row items-center justify-center gap-2 rounded-lg bg-slate-100 px-1.5 py-1 text-xs font-semibold text-gray-800 shadow-sm hover:bg-slate-200 disabled:opacity-50 dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500"
           wire:click="dispatchNextPeriod"
           @disabled($isNextPeriodDisabled)
         >
@@ -68,14 +68,14 @@
   </div>
 
   <!-- Data Table -->
-  <div class="scrollbar-thin overflow-x-auto shadow-xl">
+  <div class="scrollbar-thin overflow-x-auto rounded-lg shadow-lg">
     <table class="w-full table-auto border-collapse text-sm">
       <thead
-        class="bg-gray-200 text-left font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-100"
+        class="bg-gray-50 text-left font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-100"
       >
         <tr>
           <th
-            class="border border-gray-300 p-2 whitespace-nowrap dark:border-gray-800"
+            class="border border-gray-200 p-2 whitespace-nowrap dark:border-gray-600"
           >
             Day
           </th>
@@ -87,7 +87,7 @@
             ])
             as $name => $tooltip)
             <th
-              class="border border-gray-300 p-2 whitespace-nowrap dark:border-gray-800"
+              class="border border-gray-200 p-2 whitespace-nowrap dark:border-gray-600"
             >
               <div class="inline-flex flex-row items-center gap-1">
                 {{ $name }}
@@ -125,7 +125,7 @@
               ])
               as $name => $tooltip)
               <th
-                class="border border-gray-300 p-2 whitespace-nowrap dark:border-gray-800"
+                class="border border-gray-200 p-2 whitespace-nowrap dark:border-gray-600"
               >
                 <div class="inline-flex flex-row items-center gap-1">
                   {{ $name }}
@@ -157,30 +157,47 @@
       <tbody>
         @foreach ($periodData as $day)
           @php
-            $dayDate = Illuminate\Support\Carbon::parse($day->date);
-            $isFutureDate = $dayDate->isFuture();
-            $isWeekend = $dayDate->isWeekend();
-            $isPastOrToday = ! $isFutureDate;
+            $isTotalRow = $day->isTotalRow ?? false;
+            $dayDate = $isTotalRow ? null : Illuminate\Support\Carbon::parse($day->date);
+            $isFutureDate = ! $isTotalRow && $dayDate->isFuture();
+            $isWeekend = ! $isTotalRow && $dayDate->isWeekend();
+            $isPastOrToday = ! $isTotalRow && ! $isFutureDate;
+
+            // CSS classes for cell backgrounds
+            $dateCellClasses = 'border border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-700'; // For Day column & Totals label cell
+            $dataCellBgLight = $isFutureDate ? 'bg-gray-50' : 'bg-white';
+            $dataCellBgDark = $isFutureDate ? 'dark:bg-gray-700' : 'dark:bg-gray-800';
+            $dataCellClasses = $dataCellBgLight . ' ' . $dataCellBgDark . ' border border-gray-100 dark:border-gray-600';
+
+            // Text color for future dates
+            $futureTextClass = $isFutureDate ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300';
+            $dateColumnTextClass = $isFutureDate ? 'text-gray-400 dark:text-gray-300' : ($isTotalRow ? 'text-gray-700 dark:text-gray-100' : 'text-gray-700 dark:text-gray-100');
           @endphp
 
           <tr
-            class="{{ $isFutureDate ? 'bg-gray-100 dark:bg-slate-800' : 'bg-gray-50 dark:bg-gray-800' }} border border-gray-200 dark:border-gray-700"
+            class="{{ $isTotalRow ? 'border-t-2 border-gray-200 dark:border-t-2 dark:border-gray-500' : 'border-b border-gray-100 dark:border-b-gray-600' }}"
           >
             <!-- Date Column -->
             <td
-              class="{{ $isFutureDate ? 'text-gray-500 dark:text-gray-400' : '' }} border border-gray-300 bg-gray-200 p-2 font-semibold whitespace-nowrap dark:border-gray-800 dark:bg-gray-700"
+              class="{{ $dateCellClasses }} {{ $dateColumnTextClass }} p-2 font-semibold whitespace-nowrap"
             >
-              <div class="flex items-center gap-2">
-                {{ $dayDate->translatedFormat('l d') }}
+              @if ($isTotalRow)
+                Totals
+              @else
+                <div class="flex items-center gap-2">
+                  {{ $dayDate->translatedFormat('l d') }}
 
-                @if ($dayDate->isToday())
-                  <x-badge size="sm" variant="primary">Today</x-badge>
-                @endif
-              </div>
+                  @if ($dayDate->isToday())
+                    <x-badge size="sm" variant="primary">Today</x-badge>
+                  @endif
+                </div>
+              @endif
             </td>
 
             <!-- Scheduled -->
-            <td class="border p-2 whitespace-nowrap dark:border-gray-700">
+            <td
+              class="{{ $dataCellClasses }} {{ $futureTextClass }} p-2 whitespace-nowrap"
+            >
               <div class="flex flex-col gap-1">
                 <x-tooltip>
                   <x-slot name="text">
@@ -208,9 +225,7 @@
                       @endif
                     </div>
                   </x-slot>
-                  <span
-                    class="{{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300' }}"
-                  >
+                  <span class="{{ $futureTextClass }}">
                     {{ $day->scheduled->duration !== '0h 0m' ? $day->scheduled->duration : '' }}
                   </span>
                 </x-tooltip>
@@ -218,7 +233,9 @@
             </td>
 
             <!-- Leave -->
-            <td class="border p-2 whitespace-nowrap dark:border-gray-700">
+            <td
+              class="{{ $dataCellClasses }} {{ $futureTextClass }} p-2 whitespace-nowrap"
+            >
               @if ($day->leave)
                 <div
                   class="{{ $day->leave->status !== 'validate' ? 'opacity-60' : '' }} flex items-center gap-2"
@@ -275,9 +292,7 @@
                         </span>
                       </div>
                     </x-slot>
-                    <span
-                      class="{{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300' }}"
-                    >
+                    <span class="{{ $futureTextClass }}">
                       {{ $day->leave->durationHours !== '0h 0m' ? $day->leave->durationHours : '' }}
                     </span>
                   </x-tooltip>
@@ -328,7 +343,9 @@
             </td>
 
             <!-- Attendance -->
-            <td class="border p-2 whitespace-nowrap dark:border-gray-700">
+            <td
+              class="{{ $dataCellClasses }} {{ $futureTextClass }} p-2 whitespace-nowrap"
+            >
               <x-tooltip>
                 <x-slot name="text">
                   <div class="flex flex-col gap-1">
@@ -341,9 +358,7 @@
                 </x-slot>
                 <div class="flex flex-row items-center gap-2">
                   @if ($day->attendance)
-                    <span
-                      class="{{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300' }}"
-                    >
+                    <span class="{{ $futureTextClass }}">
                       {{ $day->attendance->duration !== '0h 0m' ? $day->attendance->duration : '' }}
                     </span>
                     @if ($day->attendance->isRemote)
@@ -352,18 +367,16 @@
                       <x-badge variant="success" size="sm">In Office</x-badge>
                     @endif
                   @else
-                    <span
-                      class="{{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300' }}"
-                    >
-                      &nbsp;
-                    </span>
+                    <span class="{{ $futureTextClass }}">&nbsp;</span>
                   @endif
                 </div>
               </x-tooltip>
             </td>
 
             <!-- Worked -->
-            <td class="border p-2 whitespace-nowrap dark:border-gray-700">
+            <td
+              class="{{ $dataCellClasses }} {{ $futureTextClass }} p-2 whitespace-nowrap"
+            >
               <div class="flex flex-col gap-1">
                 <x-tooltip>
                   <x-slot name="text">
@@ -428,9 +441,7 @@
                       @endif
                     </div>
                   </x-slot>
-                  <span
-                    class="{{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300' }}"
-                  >
+                  <span class="{{ $futureTextClass }}">
                     {{ $day->worked && $day->worked->duration !== '0h 0m' ? $day->worked->duration : '' }}
                   </span>
                 </x-tooltip>
@@ -460,8 +471,15 @@
                 }
               @endphp
 
+              @php
+                $deviationCellSpecificBgClass = '';
+                if ($attVsSchShouldDisplay) {
+                  $deviationCellSpecificBgClass = $attVsSchBgClass;
+                }
+              @endphp
+
               <td
-                class="{{ $attVsSchBgClass }} {{ ! $attVsSchShouldDisplay ? 'text-transparent' : '' }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-400' : '' }} border p-2 whitespace-nowrap dark:border-gray-700"
+                class="{{ $deviationCellSpecificBgClass ?: ($isFutureDate ? 'bg-gray-50 dark:bg-gray-700' : 'bg-white dark:bg-gray-800') }} {{ ! $attVsSchShouldDisplay ? 'text-transparent' : '' }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : '' }} border border-gray-100 p-2 whitespace-nowrap dark:border-gray-600"
               >
                 @if ($attVsSchShouldDisplay && $attVsSchDetail)
                   <x-tooltip :text="$attVsSchDetail->tooltip">
@@ -493,8 +511,15 @@
                 }
               @endphp
 
+              @php
+                $deviationCellSpecificBgClass = '';
+                if ($workVsSchShouldDisplay) {
+                  $deviationCellSpecificBgClass = $workVsSchBgClass;
+                }
+              @endphp
+
               <td
-                class="{{ $workVsSchBgClass }} {{ ! $workVsSchShouldDisplay ? 'text-transparent' : '' }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-400' : '' }} border p-2 whitespace-nowrap dark:border-gray-700"
+                class="{{ $deviationCellSpecificBgClass ?: ($isFutureDate ? 'bg-gray-50 dark:bg-gray-700' : 'bg-white dark:bg-gray-800') }} {{ ! $workVsSchShouldDisplay ? 'text-transparent' : '' }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : '' }} border border-gray-100 p-2 whitespace-nowrap dark:border-gray-600"
               >
                 @if ($workVsSchShouldDisplay && $workVsSchDetail)
                   <x-tooltip :text="$workVsSchDetail->tooltip">
@@ -526,8 +551,15 @@
                 }
               @endphp
 
+              @php
+                $deviationCellSpecificBgClass = '';
+                if ($workVsAttShouldDisplay) {
+                  $deviationCellSpecificBgClass = $workVsAttBgClass;
+                }
+              @endphp
+
               <td
-                class="{{ $workVsAttBgClass }} {{ ! $workVsAttShouldDisplay ? 'text-transparent' : '' }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-400' : '' }} border p-2 whitespace-nowrap dark:border-gray-700"
+                class="{{ $deviationCellSpecificBgClass ?: ($isFutureDate ? 'bg-gray-50 dark:bg-gray-700' : 'bg-white dark:bg-gray-800') }} {{ ! $workVsAttShouldDisplay ? 'text-transparent' : '' }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : '' }} border border-gray-100 p-2 whitespace-nowrap dark:border-gray-600"
               >
                 @if ($workVsAttShouldDisplay && $workVsAttDetail)
                   <x-tooltip :text="$workVsAttDetail->tooltip">
@@ -540,11 +572,14 @@
             @endif
           </tr>
         @endforeach
-
+      </tbody>
+      <tfoot class="text-sm">
         <!-- Totals Row -->
-        <tr class="bg-gray-200 font-bold dark:bg-gray-700">
+        <tr
+          class="border-t-2 border-gray-200 bg-gray-50 font-bold dark:border-t-2 dark:border-gray-600 dark:bg-gray-700"
+        >
           <td
-            class="border border-gray-300 p-2 whitespace-nowrap dark:border-gray-800"
+            class="border border-gray-200 p-2 whitespace-nowrap text-gray-800 dark:border-gray-600 dark:text-gray-100"
           >
             <x-tooltip
               text="Totals only include past dates and today. Future dates are not counted in calculations."
@@ -571,7 +606,7 @@
 
           @foreach (collect(['scheduled', 'leave', 'attendance', 'worked']) as $type)
             <td
-              class="border border-gray-300 p-2 whitespace-nowrap dark:border-gray-800"
+              class="border border-gray-200 p-2 whitespace-nowrap text-gray-800 dark:border-gray-600 dark:text-gray-100"
             >
               @php
                 $value = 0;
@@ -618,8 +653,13 @@
                 }
               @endphp
 
+              @php
+                $footerCellBaseClasses = 'border border-gray-200 dark:border-gray-600';
+                $footerTextClasses = 'text-gray-800 dark:text-gray-100';
+              @endphp
+
               <td
-                class="{{ $totalBgClass }} {{ ! $totalShouldDisplay ? 'text-transparent' : '' }} border border-gray-300 p-2 whitespace-nowrap dark:border-gray-800"
+                class="{{ $totalBgClass ?: 'bg-gray-50 dark:bg-gray-700' }} {{ $footerCellBaseClasses }} {{ ! $totalShouldDisplay ? 'text-transparent' : '' }} {{ $totalTextClass ?: $footerTextClasses }} p-2 whitespace-nowrap"
               >
                 @if ($totalShouldDisplay)
                   <x-tooltip :text="$details->tooltip">
@@ -634,7 +674,7 @@
             @endforeach
           @endif
         </tr>
-      </tbody>
+      </tfoot>
     </table>
   </div>
 </div>

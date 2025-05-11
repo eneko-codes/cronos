@@ -4,7 +4,7 @@
 
 @php
   $variantClasses = [
-    'default' => 'bg-gray-200/75 text-gray-800 hover:bg-gray-200 dark:bg-gray-200 dark:hover:bg-gray-100',
+    'default' => 'bg-white text-gray-800 hover:bg-gray-50 dark:bg-gray-200 dark:text-gray-800 dark:hover:bg-gray-100',
     'primary' => 'bg-purple-200/75 text-purple-800 hover:bg-purple-200 dark:bg-purple-200 dark:hover:bg-purple-100',
     'alert' => 'bg-red-200/75 text-red-800 hover:bg-red-200 dark:bg-red-200 dark:hover:bg-red-100',
     'success' => 'bg-green-200/75 text-green-800 hover:bg-green-200 dark:bg-green-200 dark:hover:bg-green-100',

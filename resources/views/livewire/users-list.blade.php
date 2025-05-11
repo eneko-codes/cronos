@@ -1,9 +1,9 @@
 <div class="flex w-full flex-col gap-5 overflow-hidden">
   <!-- Header Section: Filters and Search -->
   <div
-    class="flex flex-col items-start justify-start gap-4 border-b-2 pb-3 md:flex-row md:items-stretch dark:border-gray-800"
+    class="flex flex-col items-start justify-start gap-4 rounded-lg bg-white p-3 shadow-sm md:flex-row md:items-stretch dark:bg-gray-800"
   >
-    <div class="flex flex-1 flex-col items-start gap-4 md:flex-row">
+    <div class="flex flex-1 flex-col items-center gap-4 md:flex-row">
       <!-- Search Input -->
       <input
         type="text"
@@ -41,96 +41,98 @@
   </div>
 
   <!-- Users Table -->
-  @if ($users->isNotEmpty())
-    <table class="w-full border-collapse">
-      <tbody class="text-sm" wire:poll.5s>
-        @foreach ($users as $user)
-          <tr
-            wire:key="user-{{ $user->id }}"
-            class="flex flex-row items-center justify-between gap-4 border-b border-gray-200 p-2 text-gray-800 hover:cursor-pointer hover:bg-gray-100 dark:border-gray-800 dark:text-gray-200 dark:hover:bg-gray-800/50"
-          >
-            <!-- User Info Column -->
-            <td
-              wire:click="redirectToUserDashboard({{ $user->id }})"
-              class="flex w-full flex-1 flex-col gap-1 md:w-auto md:flex-row md:items-center"
+  <div class="rounded-lg bg-white p-3 shadow-sm dark:bg-gray-800">
+    @if ($users->isNotEmpty())
+      <table class="w-full border-collapse">
+        <tbody class="text-sm" wire:poll.10s>
+          @foreach ($users as $user)
+            <tr
+              wire:key="user-{{ $user->id }}"
+              class="flex flex-row items-center justify-between gap-4 border-b border-gray-200 p-2 text-gray-800 hover:cursor-pointer hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700/50"
             >
-              <div class="flex items-center gap-2">
-                <!-- Online Status Indicator with Tooltip -->
-                @if (! is_null($user->is_online))
-                  <x-tooltip
-                    text="{{ $user->is_online ? 'Online' : 'Offline' }}"
-                  >
-                    <div
-                      class="{{ $user->is_online ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-700' }} h-2 w-2 rounded-full"
-                    ></div>
-                  </x-tooltip>
-                @endif
-
-                <!-- User Name -->
-                <p class="text-md font-bold capitalize">
-                  {{ $user->name }}
-                </p>
-
-                {{-- Muted icon --}}
-                @if (! $globalNotificationsEnabled || $user->notificationPreferences?->mute_all)
-                  <x-tooltip
-                    text="{{ !$globalNotificationsEnabled ? 'Global notifications disabled' : 'User notifications muted' }}"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      fill="currentColor"
-                      class="bi bi-bell-slash-fill text-red-500 dark:text-red-600"
-                      viewBox="0 0 16 16"
-                    >
-                      <path
-                        d="M5.164 14H15c-1.5-1-2-5.902-2-7q0-.396-.06-.776zm6.288-10.617A5 5 0 0 0 8.995 2.1a1 1 0 1 0-1.99 0A5 5 0 0 0 3 7c0 .898-.335 4.342-1.278 6.113zM10 15a2 2 0 1 1-4 0zm-9.375.625a.53.53 0 0 0 .75.75l14.75-14.75a.53.53 0 0 0-.75-.75z"
-                      />
-                    </svg>
-                  </x-tooltip>
-                @endif
-              </div>
-
-              <!-- User Badges for Roles and Linked Accounts -->
-              <x-user-badges :badges="$user->getDisplayBadges()" />
-            </td>
-
-            <!-- Action Column: Details Button -->
-            <td
-              class="flex-none items-center justify-center gap-2 whitespace-nowrap"
-            >
-              <x-button
-                wire:click="$dispatch('openUserDetailsModal', { userId: {{ $user->id }} })"
-                variant="default"
-                size="xs"
+              <!-- User Info Column -->
+              <td
+                wire:click="redirectToUserDashboard({{ $user->id }})"
+                class="flex w-full flex-1 flex-col gap-1 md:w-auto md:flex-row md:items-center"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  class="size-4"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.253a.25.25 0 0 1 .244.304l-.459 2.066A1.75 1.75 0 0 0 10.747 15H11a.75.75 0 0 0 0-1.5h-.253a.25.25 0 0 1-.244-.304l.459-2.066A1.75 1.75 0 0 0 9.253 9H9Z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
-                Details
-              </x-button>
-            </td>
-          </tr>
-        @endforeach
-      </tbody>
-    </table>
+                <div class="flex items-center gap-2">
+                  <!-- Online Status Indicator with Tooltip -->
+                  @if (! is_null($user->is_online))
+                    <x-tooltip
+                      text="{{ $user->is_online ? 'Online' : 'Offline' }}"
+                    >
+                      <div
+                        class="{{ $user->is_online ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-700' }} h-2 w-2 rounded-full"
+                      ></div>
+                    </x-tooltip>
+                  @endif
 
-    <!-- Pagination Links -->
-    <div class="w-full">
-      {{ $users->links() }}
-    </div>
-  @else
-    <!-- No Users Found Message -->
-    <span class="text-sm font-semibold">No users found!</span>
-  @endif
+                  <!-- User Name -->
+                  <p class="text-md font-bold capitalize">
+                    {{ $user->name }}
+                  </p>
+
+                  {{-- Muted icon --}}
+                  @if (! $globalNotificationsEnabled || $user->notificationPreferences?->mute_all)
+                    <x-tooltip
+                      text="{{ !$globalNotificationsEnabled ? 'Global notifications disabled' : 'User notifications muted' }}"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        fill="currentColor"
+                        class="bi bi-bell-slash-fill text-red-500 dark:text-red-600"
+                        viewBox="0 0 16 16"
+                      >
+                        <path
+                          d="M5.164 14H15c-1.5-1-2-5.902-2-7q0-.396-.06-.776zm6.288-10.617A5 5 0 0 0 8.995 2.1a1 1 0 1 0-1.99 0A5 5 0 0 0 3 7c0 .898-.335 4.342-1.278 6.113zM10 15a2 2 0 1 1-4 0zm-9.375.625a.53.53 0 0 0 .75.75l14.75-14.75a.53.53 0 0 0-.75-.75z"
+                        />
+                      </svg>
+                    </x-tooltip>
+                  @endif
+                </div>
+
+                <!-- User Badges for Roles and Linked Accounts -->
+                <x-user-badges :badges="$user->getDisplayBadges()" />
+              </td>
+
+              <!-- Action Column: Details Button -->
+              <td
+                class="flex-none items-center justify-center gap-2 whitespace-nowrap"
+              >
+                <x-button
+                  wire:click="$dispatch('openUserDetailsModal', { userId: {{ $user->id }} })"
+                  variant="default"
+                  size="xs"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    class="size-4"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.253a.25.25 0 0 1 .244.304l-.459 2.066A1.75 1.75 0 0 0 10.747 15H11a.75.75 0 0 0 0-1.5h-.253a.25.25 0 0 1-.244-.304l.459-2.066A1.75 1.75 0 0 0 9.253 9H9Z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                  Details
+                </x-button>
+              </td>
+            </tr>
+          @endforeach
+        </tbody>
+      </table>
+
+      <!-- Pagination Links -->
+      <div class="mt-4 w-full">
+        {{ $users->links() }}
+      </div>
+    @else
+      <!-- No Users Found Message -->
+      <span class="text-sm font-semibold">No users found!</span>
+    @endif
+  </div>
 </div>

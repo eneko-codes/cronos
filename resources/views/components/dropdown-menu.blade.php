@@ -28,7 +28,7 @@
     x-transition:leave="transition duration-75 ease-in"
     x-transition:leave-start="scale-100 opacity-100"
     x-transition:leave-end="scale-95 opacity-0"
-    class="absolute right-0 z-50 mt-1 w-auto min-w-[12rem] max-w-sm rounded-md border bg-white p-2 shadow-lg dark:border-gray-700 dark:bg-gray-800"
+    class="absolute right-0 z-50 mt-1 w-auto max-w-sm min-w-[12rem] rounded-md border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-700 dark:bg-gray-800"
   >
     {{ $slot }}
   </div>

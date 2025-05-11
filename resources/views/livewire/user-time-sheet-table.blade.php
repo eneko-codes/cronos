@@ -68,7 +68,7 @@
   </div>
 
   <!-- Data Table -->
-  <div class="scrollbar-thin overflow-x-auto rounded-lg shadow-lg">
+  <div class="scrollbar-thin overflow-x-auto rounded-lg">
     <table class="w-full table-auto border-collapse text-sm">
       <thead
         class="bg-gray-50 text-left font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-100"

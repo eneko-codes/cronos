@@ -384,7 +384,7 @@
                       @if ($day->worked && collect($day->worked->detailedEntries)->isNotEmpty())
                         @foreach (collect($day->worked->detailedEntries) as $entry)
                           <div
-                            class="{{ ! $loop->last ? 'mb-1 border-b border-gray-200 pb-1 dark:border-gray-700' : '' }} flex flex-col"
+                            class="{{ ! $loop->last ? 'mb-1 ' : '' }} flex flex-col"
                           >
                             <div class="mb-1 flex items-center justify-between">
                               <span

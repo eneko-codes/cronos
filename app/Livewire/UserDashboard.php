@@ -228,37 +228,4 @@ class UserDashboard extends Component
     {
         $this->currentDate = $date->format('Y-m-d');
     }
-
-    /**
-     * Render a skeleton placeholder while the user dashboard is loading.
-     * This provides a visual indication that the dashboard data is being fetched and processed.
-     *
-     * @param  array  $params  Parameters passed to the component, potentially including route parameters like 'id'.
-     * @return \Illuminate\View\View
-     */
-    public function placeholder(array $params = [])
-    {
-        // Determine if viewing a specific user based on 'id' passed via route/params
-        $isViewingSpecificUserPlaceholder = isset($params['id']);
-
-        // Determine if the current authenticated user is an admin
-        $isAdminPlaceholder = Auth::check() && Auth::user()->isAdmin();
-
-        // Determine if the "Missing Account Links" alert placeholder should be shown
-        $showMissingLinksAlertPlaceholder = false;
-        $targetUserId = $params['id'] ?? Auth::id();
-
-        if ($targetUserId) {
-            $viewedUser = User::query()->find($targetUserId, ['id', 'do_not_track']);
-            if ($viewedUser && ! $viewedUser->do_not_track) {
-                $showMissingLinksAlertPlaceholder = true;
-            }
-        }
-
-        return view('livewire.placeholders.user-dashboard', [
-            'isViewingSpecificUserPlaceholder' => $isViewingSpecificUserPlaceholder,
-            'isAdminPlaceholder' => $isAdminPlaceholder,
-            'showMissingLinksAlertPlaceholder' => $showMissingLinksAlertPlaceholder,
-        ]);
-    }
 }

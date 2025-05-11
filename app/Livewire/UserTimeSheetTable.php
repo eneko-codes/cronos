@@ -10,8 +10,10 @@ use App\DataTransferObjects\PeriodDayData;
 use App\Models\User;
 use App\Traits\FormatsDurationsTrait;
 use Illuminate\Support\Collection;
+use Livewire\Attributes\Lazy;
 use Livewire\Component;
 
+#[Lazy]
 class UserTimeSheetTable extends Component
 {
     use FormatsDurationsTrait;
@@ -71,6 +73,13 @@ class UserTimeSheetTable extends Component
     public function dispatchChangeViewMode(string $mode): void
     {
         $this->dispatch('timeSheetChangeViewMode', mode: $mode);
+    }
+
+    public function placeholder(array $params = [])
+    {
+        // The placeholder view can use $params['viewMode'] if needed to adjust skeleton rows/cols
+        // For now, a generic table skeleton.
+        return view('livewire.placeholders.user-time-sheet-table-skeleton', $params);
     }
 
     public function render()

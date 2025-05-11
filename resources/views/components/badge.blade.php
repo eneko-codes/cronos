@@ -18,7 +18,7 @@
     'lg' => 'px-2.5 py-1.5 text-base',
   };
 
-  $globalClass = 'inline-flex whitespace-nowrap h-fit w-fit items-center rounded-xl border font-semibold leading-none';
+  $globalClass = 'inline-flex h-fit w-fit items-center rounded-xl border leading-none font-semibold whitespace-nowrap';
 @endphp
 
 <span

@@ -56,11 +56,10 @@ class UsersList extends Component
      * Render a skeleton placeholder while the users list is loading.
      * This provides a visual indication that the users data is being fetched and processed.
      */
-    /*
     public function placeholder()
     {
-        return view('livewire.placeholders.users-list');
-    }*/
+        return view('livewire.placeholders.users-list-skeleton');
+    }
 
     public function render()
     {

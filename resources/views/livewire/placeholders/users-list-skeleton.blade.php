@@ -70,11 +70,6 @@
     <!-- Pagination Links Placeholder -->
     <div class="mt-4 flex w-full justify-between">
       <div class="h-8 w-24 rounded-md bg-gray-200 dark:bg-gray-700"></div>
-      <div class="flex gap-2">
-        <div class="h-8 w-8 rounded-md bg-gray-200 dark:bg-gray-700"></div>
-        <div class="h-8 w-8 rounded-md bg-gray-200 dark:bg-gray-700"></div>
-        <div class="h-8 w-8 rounded-md bg-gray-200 dark:bg-gray-700"></div>
-      </div>
       <div class="h-8 w-24 rounded-md bg-gray-200 dark:bg-gray-700"></div>
     </div>
   </div>

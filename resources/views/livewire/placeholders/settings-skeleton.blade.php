@@ -63,7 +63,7 @@
         <div class="h-6 w-1/3 rounded bg-gray-300 dark:bg-gray-600"></div>
       </div>
       <div class="mb-4 h-4 w-2/3 rounded bg-gray-200 dark:bg-gray-700"></div>
-      <div class="mt-2 flex flex-col gap-4">
+      <div class="mt-2 flex flex-col gap-2">
         <div
           class="mb-2 flex items-center justify-between rounded-md bg-gray-50 p-3 dark:bg-gray-700"
         >
@@ -71,21 +71,7 @@
           <div class="h-6 w-20 rounded-full bg-gray-200 dark:bg-gray-700"></div>
         </div>
         @for ($i = 0; $i < 7; $i++)
-          <div
-            class="mb-2 flex items-center justify-between rounded-md bg-gray-50 p-3 dark:bg-gray-700"
-          >
-            <div class="flex items-center gap-2">
-              <div class="h-4 w-32 rounded bg-gray-200 dark:bg-gray-700"></div>
-              @if ($i == 1 || $i == 2)
-                <div
-                  class="h-5 w-14 rounded bg-purple-300 dark:bg-purple-700"
-                ></div>
-              @endif
-            </div>
-            <div
-              class="h-6 w-11 rounded-full bg-gray-200 dark:bg-gray-700"
-            ></div>
-          </div>
+          <div class="h-6 w-full rounded-md bg-gray-200 dark:bg-gray-700"></div>
         @endfor
       </div>
     </div>

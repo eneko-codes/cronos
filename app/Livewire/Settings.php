@@ -436,11 +436,10 @@ class Settings extends Component
      * Render a skeleton placeholder while the settings component is loading.
      * This provides a visual indication that the application settings are being fetched.
      */
-    /*
-    public function placeholder()
+    public function placeholder(array $params = [])
     {
-        return view('livewire.placeholders.settings');
-    }*/
+        return view('livewire.placeholders.settings-skeleton', $params);
+    }
 
     /**
      * Render the settings component view.

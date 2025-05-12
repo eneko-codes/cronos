@@ -143,9 +143,8 @@ class ProjectsListView extends Component
      *
      * @return \Illuminate\View\View
      */
-    /*
-    public function placeholder()
+    public function placeholder(array $params = [])
     {
-        return view('livewire.placeholders.projects-list-view');
-    }*/
+        return view('livewire.placeholders.projects-list-view-skeleton', $params);
+    }
 }

@@ -123,9 +123,8 @@ class LeaveTypesListView extends Component
      *
      * @return \Illuminate\View\View
      */
-    /*
-    public function placeholder()
+    public function placeholder(array $params = [])
     {
-        return view('livewire.placeholders.leave-types-list-view');
-    }*/
+        return view('livewire.placeholders.leave-types-list-view-skeleton', $params);
+    }
 }

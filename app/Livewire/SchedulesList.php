@@ -146,9 +146,8 @@ class SchedulesList extends Component
      *
      * @return \Illuminate\View\View
      */
-    /*
-    public function placeholder()
+    public function placeholder(array $params = [])
     {
-        return view('livewire.placeholders.schedules-list');
-    }*/
+        return view('livewire.placeholders.schedules-list-skeleton', $params);
+    }
 }

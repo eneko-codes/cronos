@@ -118,60 +118,65 @@
   <div
     class="flex flex-col gap-2 rounded-lg bg-white p-3 shadow-sm dark:bg-gray-800"
   >
-    @forelse ($schedules as $schedule)
-      <!-- Schedule List Item -->
-      <a
-        wire:key="schedule-{{ $schedule->odoo_schedule_id }}"
-        {{-- Link to the detail route (will be defined next) --}}
-        href="{{ route('schedules.show', ['schedule' => $schedule->odoo_schedule_id]) }}"
-        wire:navigate
-        class="block rounded-md border border-gray-300 bg-gray-100 p-3 transition-colors duration-150 hover:bg-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:hover:bg-gray-700/80"
-      >
-        <div class="flex flex-row items-center justify-between gap-4">
-          <!-- Schedule Info -->
-          <div class="flex flex-1 flex-col gap-1">
-            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100">
-              {{ $schedule->description ?? 'No Description' }}
-            </p>
-            <div
-              class="flex flex-row gap-4 text-xs text-gray-500 dark:text-gray-400"
-            >
-              <span>Assigned Users: {{ $schedule->current_users_count }}</span>
-              <span>
-                Average hours per day:
-                {{ $schedule->average_hours_day ?? 'N/A' }}
-              </span>
+    @if ($loading ?? false)
+      @include('livewire.placeholders.schedules-list-skeleton')
+    @else
+      @forelse ($schedules as $schedule)
+        <!-- Schedule List Item -->
+        <a
+          wire:key="schedule-{{ $schedule->odoo_schedule_id }}"
+          href="{{ route('schedules.show', ['schedule' => $schedule->odoo_schedule_id]) }}"
+          wire:navigate
+          class="block rounded-md border border-gray-300 bg-gray-100 p-3 transition-colors duration-150 hover:bg-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:hover:bg-gray-700/80"
+        >
+          <div class="flex flex-row items-center justify-between gap-4">
+            <!-- Schedule Info -->
+            <div class="flex flex-1 flex-col gap-1">
+              <p class="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                {{ $schedule->description ?? 'No Description' }}
+              </p>
+              <div
+                class="flex flex-row gap-4 text-xs text-gray-500 dark:text-gray-400"
+              >
+                <span>
+                  Assigned Users: {{ $schedule->current_users_count }}
+                </span>
+                <span>
+                  Average hours per day:
+                  {{ $schedule->average_hours_day ?? 'N/A' }}
+                </span>
+              </div>
+            </div>
+            <!-- Right Arrow Icon -->
+            <div class="flex-none">
+              <svg
+                class="size-5 text-gray-400 dark:text-gray-500"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
+                  clip-rule="evenodd"
+                />
+              </svg>
             </div>
           </div>
-          <!-- Right Arrow Icon -->
-          <div class="flex-none">
-            <svg
-              class="size-5 text-gray-400 dark:text-gray-500"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path
-                fill-rule="evenodd"
-                d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
-                clip-rule="evenodd"
-              />
-            </svg>
-          </div>
+        </a>
+      @empty
+        <div
+          class="rounded-md border border-gray-300 bg-white p-4 text-center text-gray-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400"
+        >
+          No schedules found matching your filters.
         </div>
-      </a>
-    @empty
-      <div
-        class="rounded-md border border-gray-300 bg-white p-4 text-center text-gray-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400"
-      >
-        No schedules found matching your filters.
-      </div>
-    @endforelse
-    <!-- Pagination Links -->
-    @if ($schedules->hasPages())
-      <div class="mt-4">
-        {{ $schedules->links() }}
-      </div>
+      @endforelse
+      <!-- Pagination Links -->
+      @if ($schedules->hasPages())
+        <div class="mt-4">
+          {{ $schedules->links() }}
+        </div>
+      @endif
     @endif
   </div>
 </div>

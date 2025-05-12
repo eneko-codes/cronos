@@ -146,9 +146,8 @@ class ProjectDetailView extends Component
      *
      * @return \Illuminate\View\View
      */
-    /*
-    public function placeholder()
+    public function placeholder(array $params = [])
     {
-        return view('livewire.placeholders.project-detail-view');
-    }*/
+        return view('livewire.placeholders.project-detail-view-skeleton', $params);
+    }
 }

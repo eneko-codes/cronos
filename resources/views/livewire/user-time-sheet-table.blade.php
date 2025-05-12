@@ -165,8 +165,8 @@
 
             // CSS classes for cell backgrounds
             $dateCellClasses = 'border border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-700'; // For Day column & Totals label cell
-            $dataCellBgLight = $isFutureDate ? 'bg-gray-50' : 'bg-white';
-            $dataCellBgDark = $isFutureDate ? 'dark:bg-gray-700' : 'dark:bg-gray-800';
+            $dataCellBgLight = 'bg-white';
+            $dataCellBgDark = 'dark:bg-gray-800';
             $dataCellClasses = $dataCellBgLight . ' ' . $dataCellBgDark . ' border border-gray-100 dark:border-gray-600';
 
             // Text color for future dates
@@ -479,7 +479,7 @@
               @endphp
 
               <td
-                class="{{ $deviationCellSpecificBgClass ?: ($isFutureDate ? 'bg-gray-50 dark:bg-gray-700' : 'bg-white dark:bg-gray-800') }} {{ ! $attVsSchShouldDisplay ? 'text-transparent' : '' }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : '' }} border border-gray-100 p-2 whitespace-nowrap dark:border-gray-600"
+                class="{{ $deviationCellSpecificBgClass ?: 'bg-white dark:bg-gray-800' }} {{ ! $attVsSchShouldDisplay ? 'text-transparent' : '' }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : '' }} border border-gray-100 p-2 whitespace-nowrap dark:border-gray-600"
               >
                 @if ($attVsSchShouldDisplay && $attVsSchDetail)
                   <x-tooltip :text="$attVsSchDetail->tooltip">
@@ -519,7 +519,7 @@
               @endphp
 
               <td
-                class="{{ $deviationCellSpecificBgClass ?: ($isFutureDate ? 'bg-gray-50 dark:bg-gray-700' : 'bg-white dark:bg-gray-800') }} {{ ! $workVsSchShouldDisplay ? 'text-transparent' : '' }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : '' }} border border-gray-100 p-2 whitespace-nowrap dark:border-gray-600"
+                class="{{ $deviationCellSpecificBgClass ?: 'bg-white dark:bg-gray-800' }} {{ ! $workVsSchShouldDisplay ? 'text-transparent' : '' }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : '' }} border border-gray-100 p-2 whitespace-nowrap dark:border-gray-600"
               >
                 @if ($workVsSchShouldDisplay && $workVsSchDetail)
                   <x-tooltip :text="$workVsSchDetail->tooltip">
@@ -559,7 +559,7 @@
               @endphp
 
               <td
-                class="{{ $deviationCellSpecificBgClass ?: ($isFutureDate ? 'bg-gray-50 dark:bg-gray-700' : 'bg-white dark:bg-gray-800') }} {{ ! $workVsAttShouldDisplay ? 'text-transparent' : '' }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : '' }} border border-gray-100 p-2 whitespace-nowrap dark:border-gray-600"
+                class="{{ $deviationCellSpecificBgClass ?: 'bg-white dark:bg-gray-800' }} {{ ! $workVsAttShouldDisplay ? 'text-transparent' : '' }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : '' }} border border-gray-100 p-2 whitespace-nowrap dark:border-gray-600"
               >
                 @if ($workVsAttShouldDisplay && $workVsAttDetail)
                   <x-tooltip :text="$workVsAttDetail->tooltip">
@@ -667,8 +667,6 @@
                       {{ $percentage > 0 ? '+' : '' }}{{ $percentage }}%
                     </span>
                   </x-tooltip>
-                @else
-                  {{-- Intentionally empty if not $totalShouldDisplay to maintain table structure --}}
                 @endif
               </td>
             @endforeach

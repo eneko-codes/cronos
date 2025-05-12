@@ -3,7 +3,7 @@
   @if ($telescopeEnabled || $pulseEnabled)
     <section class="relative lg:col-span-1">
       <div
-        class="flex h-full flex-col gap-4 rounded-xl border border-gray-200 bg-white p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
+        class="flex h-full flex-col gap-4 rounded-xl bg-white p-6 shadow-md dark:bg-gray-800"
       >
         <div class="flex flex-col items-start gap-1 text-lg font-bold">
           <div class="inline-flex flex-row items-center gap-2">
@@ -78,7 +78,7 @@
   <!-- API Health Check -->
   <section class="relative lg:col-span-1">
     <div
-      class="flex h-full flex-col gap-4 rounded-xl border border-gray-200 bg-white p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
+      class="flex h-full flex-col gap-4 rounded-xl bg-white p-6 shadow-md dark:bg-gray-800"
     >
       <div class="flex flex-col items-start gap-1 text-lg font-bold">
         <div class="inline-flex flex-row items-center gap-2">
@@ -156,7 +156,7 @@
   <!-- Data Synchronization Settings -->
   <section class="relative sm:col-span-2 lg:col-span-2">
     <div
-      class="flex h-full flex-col gap-4 rounded-xl border border-gray-200 bg-white p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
+      class="flex h-full flex-col gap-4 rounded-xl bg-white p-6 shadow-md dark:bg-gray-800"
     >
       <div class="flex flex-col items-start gap-1 text-lg font-bold">
         <div class="inline-flex flex-row items-center gap-2">
@@ -214,7 +214,7 @@
           <select
             id="syncFrequencySelect"
             wire:model.change="syncFrequency"
-            class="block w-48 rounded-md border border-gray-300 bg-gray-200 px-2 text-sm dark:border-gray-700 dark:bg-gray-700"
+            class="block w-48 rounded-md bg-gray-200 px-2 text-sm dark:bg-gray-700"
           >
             @foreach ($syncFrequencyOptions as $value => $label)
               <option value="{{ $value }}">{{ $label }}</option>
@@ -228,7 +228,7 @@
   <!-- Notification Settings Section -->
   <section class="relative sm:col-span-2 lg:col-span-2">
     <div
-      class="flex h-full flex-col gap-4 rounded-xl border border-gray-200 bg-white p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
+      class="flex h-full flex-col gap-4 rounded-xl bg-white p-6 shadow-md dark:bg-gray-800"
     >
       <div class="flex flex-col items-start gap-1 text-lg font-bold">
         <div class="inline-flex flex-row items-center gap-2">
@@ -631,7 +631,7 @@
   <!-- Data Retention Settings Section -->
   <section class="relative sm:col-span-2 lg:col-span-2">
     <div
-      class="flex h-full flex-col gap-4 rounded-xl border border-gray-200 bg-white p-6 shadow-md dark:border-gray-700 dark:bg-gray-800"
+      class="flex h-full flex-col gap-4 rounded-xl bg-white p-6 shadow-md dark:bg-gray-800"
     >
       <div class="flex flex-col items-start gap-1 text-lg font-bold">
         <div class="inline-flex flex-row items-center gap-2">

@@ -1,7 +1,7 @@
 <div class="flex w-full flex-col gap-4">
   <!-- Header Section: Search and Filters -->
   <div
-    class="flex flex-col items-start justify-start gap-4 border-b-2 pb-3 md:flex-row md:items-stretch dark:border-gray-800"
+    class="flex flex-col items-start justify-start gap-4 rounded-lg bg-white p-3 shadow-sm md:flex-row md:items-stretch dark:bg-gray-800"
   >
     <div class="flex flex-1 flex-col items-start gap-4 md:flex-row">
       <div
@@ -114,15 +114,10 @@
     </div>
   </div>
 
-  <!-- Schedule Count -->
-  @if ($schedules->total() > 0)
-    <div class="text-sm text-gray-600 dark:text-gray-400">
-      Showing {{ $schedules->total() }} schedules
-    </div>
-  @endif
-
   <!-- Schedule List Container -->
-  <div class="flex flex-col gap-2">
+  <div
+    class="flex flex-col gap-2 rounded-lg bg-white p-3 shadow-sm dark:bg-gray-800"
+  >
     @forelse ($schedules as $schedule)
       <!-- Schedule List Item -->
       <a
@@ -130,7 +125,7 @@
         {{-- Link to the detail route (will be defined next) --}}
         href="{{ route('schedules.show', ['schedule' => $schedule->odoo_schedule_id]) }}"
         wire:navigate
-        class="block rounded-md border border-gray-300 bg-white p-3 transition-colors duration-150 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700/80"
+        class="block rounded-md border border-gray-300 bg-gray-100 p-3 transition-colors duration-150 hover:bg-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:hover:bg-gray-700/80"
       >
         <div class="flex flex-row items-center justify-between gap-4">
           <!-- Schedule Info -->
@@ -172,12 +167,11 @@
         No schedules found matching your filters.
       </div>
     @endforelse
+    <!-- Pagination Links -->
+    @if ($schedules->hasPages())
+      <div class="mt-4">
+        {{ $schedules->links() }}
+      </div>
+    @endif
   </div>
-
-  <!-- Pagination Links -->
-  @if ($schedules->hasPages())
-    <div class="mt-4">
-      {{ $schedules->links() }}
-    </div>
-  @endif
 </div>

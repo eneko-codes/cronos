@@ -1,7 +1,7 @@
 <div class="flex flex-col gap-4">
   <!-- Header Section -->
   <div
-    class="flex flex-col items-start justify-start gap-4 border-b-2 pb-3 md:flex-row md:items-stretch dark:border-gray-800"
+    class="fflex flex-col items-start justify-start gap-4 rounded-lg bg-white p-3 shadow-sm md:flex-row md:items-stretch dark:bg-gray-800"
   >
     <div class="flex flex-1 flex-col items-start gap-4 md:flex-row">
       <div
@@ -138,22 +138,17 @@
     </div>
   </div>
 
-  <!-- Project Count -->
-  @if ($projects->total() > 0)
-    <div class="text-sm text-gray-600 dark:text-gray-400">
-      Showing {{ $projects->total() }} projects
-    </div>
-  @endif
-
   <!-- Project List Container -->
-  <div class="flex flex-col gap-2">
+  <div
+    class="flex flex-col gap-2 rounded-lg bg-white p-3 shadow-sm dark:bg-gray-800"
+  >
     @forelse ($projects as $project)
       <!-- Project List Item -->
       <a
         wire:key="project-{{ $project->proofhub_project_id }}"
         href="{{ route('projects.show', ['project' => $project->proofhub_project_id]) }}"
         wire:navigate
-        class="block rounded-md border border-gray-300 bg-white p-3 transition-colors duration-150 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700/80"
+        class="block rounded-md border border-gray-300 bg-gray-100 p-3 transition-colors duration-150 hover:bg-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:hover:bg-gray-700/80"
       >
         <div class="flex flex-row items-center justify-between gap-4">
           <!-- Project Info -->
@@ -195,10 +190,9 @@
         No projects found matching your search.
       </div>
     @endforelse
-  </div>
-
-  <!-- Pagination Links -->
-  <div class="mt-4">
-    {{ $projects->links() }}
+    <!-- Pagination Links -->
+    <div class="mt-4">
+      {{ $projects->links() }}
+    </div>
   </div>
 </div>

@@ -1,7 +1,7 @@
 <div class="flex flex-col gap-4">
   <!-- Header Section -->
   <div
-    class="flex flex-col items-start justify-start gap-4 border-b-2 pb-3 md:flex-row md:items-stretch dark:border-gray-800"
+    class="flex flex-col items-start justify-start gap-4 rounded-lg bg-white p-3 shadow-sm md:flex-row md:items-stretch dark:bg-gray-800"
   >
     <div class="flex flex-1 flex-col items-start gap-4 md:flex-row">
       <div
@@ -231,20 +231,15 @@
     </div>
   </div>
 
-  <!-- Leave Type Count -->
-  @if ($leaveTypes->total() > 0)
-    <div class="text-sm text-gray-600 dark:text-gray-400">
-      Showing {{ $leaveTypes->total() }} leave types
-    </div>
-  @endif
-
   <!-- Leave Type List Container -->
-  <div class="flex flex-col gap-2">
+  <div
+    class="flex flex-col gap-2 rounded-lg bg-white p-3 shadow-sm dark:bg-gray-800"
+  >
     @forelse ($leaveTypes as $leaveType)
       <!-- Leave Type List Item -->
       <div
         wire:key="leave-type-{{ $leaveType->odoo_leave_type_id }}"
-        class="block rounded-md border border-gray-300 bg-white p-3 dark:border-gray-600 dark:bg-gray-800"
+        class="block border-b border-gray-300 bg-white p-2 dark:border-gray-600 dark:bg-gray-800"
       >
         <div
           class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between"
@@ -302,12 +297,12 @@
         No leave types found matching your search or filters.
       </div>
     @endforelse
-  </div>
 
-  <!-- Pagination Links -->
-  @if ($leaveTypes->hasPages())
-    <div class="mt-4">
-      {{ $leaveTypes->links() }}
-    </div>
-  @endif
+    <!-- Pagination Links -->
+    @if ($leaveTypes->hasPages())
+      <div class="mt-4">
+        {{ $leaveTypes->links() }}
+      </div>
+    @endif
+  </div>
 </div>

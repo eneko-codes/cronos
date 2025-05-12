@@ -3,7 +3,7 @@
   <div
     class="flex flex-col items-start justify-start gap-4 rounded-lg bg-white p-3 shadow-sm md:flex-row md:items-stretch dark:bg-gray-800"
   >
-    <div class="flex flex-1 flex-col items-center gap-4 md:flex-row">
+    <div class="flex flex-1 flex-col items-start gap-4 md:flex-row">
       <!-- Search Input -->
       <input
         type="text"

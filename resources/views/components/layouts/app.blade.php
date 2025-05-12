@@ -10,9 +10,9 @@
   <body
     x-data="{
       navOpen: false,
-      isMobile: window.innerWidth < 768,
+      isMobile: window.innerWidth < 1024,
       handleResize() {
-        this.isMobile = window.innerWidth < 768
+        this.isMobile = window.innerWidth < 1024
         if (! this.isMobile) this.navOpen = false
       },
     }"
@@ -28,17 +28,19 @@
         <div class="flex h-full items-center justify-between">
           <div class="flex h-full items-center gap-8">
             <x-logo size="md" />
-            <div class="hidden h-full md:block">
+            <!-- Navigation links: hidden below 1000px (lg) -->
+            <div class="hidden h-full lg:block">
               <x-navigation-links />
             </div>
           </div>
 
           @auth
-            <div class="flex items-center gap-3">
+            <div class="flex flex-shrink-0 items-center gap-3">
               <!-- Settings button (visible to all logged in users) -->
               <livewire:sidebar-toggle />
 
-              <div x-show="!isMobile" x-cloak class="hidden md:block">
+              <!-- User dropdown: hidden below 1000px (lg) -->
+              <div x-show="!isMobile" x-cloak class="hidden lg:block">
                 <x-dropdown-menu>
                   <x-slot:trigger>
                     <div class="flex items-center gap-3">
@@ -82,10 +84,11 @@
                 </x-dropdown-menu>
               </div>
 
+              <!-- Burger menu: visible below 1000px (lg) -->
               <button
                 @click="navOpen = !navOpen"
                 x-show="isMobile"
-                class="md:hidden"
+                class="lg:hidden"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"

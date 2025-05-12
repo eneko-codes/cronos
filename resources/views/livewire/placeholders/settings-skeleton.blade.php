@@ -2,11 +2,14 @@
   <!-- Monitoring Section -->
   <section class="relative lg:col-span-1">
     <div
-      class="flex h-full flex-col gap-4 rounded-xl bg-white p-6 shadow-md dark:bg-gray-800"
+      class="flex h-full min-h-[210px] flex-col gap-4 rounded-xl bg-white p-6 shadow-md dark:bg-gray-800"
     >
-      <div class="mb-2 h-6 w-1/3 rounded bg-gray-300 dark:bg-gray-600"></div>
+      <div class="mb-2 flex items-center gap-2">
+        <div class="h-6 w-6 rounded bg-gray-300 dark:bg-gray-600"></div>
+        <div class="h-6 w-1/3 rounded bg-gray-300 dark:bg-gray-600"></div>
+      </div>
       <div class="mb-4 h-4 w-2/3 rounded bg-gray-200 dark:bg-gray-700"></div>
-      <div class="mt-2 flex flex-col gap-2">
+      <div class="mt-2 flex flex-col gap-3">
         <div class="h-8 w-full rounded bg-gray-200 dark:bg-gray-700"></div>
         <div class="h-8 w-full rounded bg-gray-200 dark:bg-gray-700"></div>
       </div>
@@ -15,11 +18,14 @@
   <!-- API Health Check -->
   <section class="relative lg:col-span-1">
     <div
-      class="flex h-full flex-col gap-4 rounded-xl bg-white p-6 shadow-md dark:bg-gray-800"
+      class="flex h-full min-h-[260px] flex-col gap-4 rounded-xl bg-white p-6 shadow-md dark:bg-gray-800"
     >
-      <div class="mb-2 h-6 w-1/2 rounded bg-gray-300 dark:bg-gray-600"></div>
+      <div class="mb-2 flex items-center gap-2">
+        <div class="h-6 w-6 rounded bg-gray-300 dark:bg-gray-600"></div>
+        <div class="h-6 w-1/2 rounded bg-gray-300 dark:bg-gray-600"></div>
+      </div>
       <div class="mb-4 h-4 w-2/3 rounded bg-gray-200 dark:bg-gray-700"></div>
-      <div class="mt-2 flex flex-col gap-2">
+      <div class="mt-2 flex flex-col gap-3">
         <div class="h-8 w-full rounded bg-gray-200 dark:bg-gray-700"></div>
         <div class="h-8 w-full rounded bg-gray-200 dark:bg-gray-700"></div>
         <div class="h-8 w-full rounded bg-gray-200 dark:bg-gray-700"></div>
@@ -30,9 +36,12 @@
   <!-- Data Synchronization Settings -->
   <section class="relative sm:col-span-2 lg:col-span-2">
     <div
-      class="flex h-full flex-col gap-4 rounded-xl bg-white p-6 shadow-md dark:bg-gray-800"
+      class="flex h-full min-h-[140px] flex-col gap-4 rounded-xl bg-white p-6 shadow-md dark:bg-gray-800"
     >
-      <div class="mb-2 h-6 w-1/3 rounded bg-gray-300 dark:bg-gray-600"></div>
+      <div class="mb-2 flex items-center gap-2">
+        <div class="h-6 w-6 rounded bg-gray-300 dark:bg-gray-600"></div>
+        <div class="h-6 w-1/3 rounded bg-gray-300 dark:bg-gray-600"></div>
+      </div>
       <div class="mb-4 h-4 w-2/3 rounded bg-gray-200 dark:bg-gray-700"></div>
       <div class="mt-2 flex flex-col gap-4">
         <div
@@ -47,18 +56,34 @@
   <!-- Notification Settings -->
   <section class="relative sm:col-span-2 lg:col-span-2">
     <div
-      class="flex h-full flex-col gap-4 rounded-xl bg-white p-6 shadow-md dark:bg-gray-800"
+      class="flex h-full min-h-[340px] flex-col gap-4 rounded-xl bg-white p-6 shadow-md dark:bg-gray-800"
     >
-      <div class="mb-2 h-6 w-1/3 rounded bg-gray-300 dark:bg-gray-600"></div>
+      <div class="mb-2 flex items-center gap-2">
+        <div class="h-6 w-6 rounded bg-gray-300 dark:bg-gray-600"></div>
+        <div class="h-6 w-1/3 rounded bg-gray-300 dark:bg-gray-600"></div>
+      </div>
       <div class="mb-4 h-4 w-2/3 rounded bg-gray-200 dark:bg-gray-700"></div>
       <div class="mt-2 flex flex-col gap-4">
-        @for ($i = 0; $i < 6; $i++)
+        <div
+          class="mb-2 flex items-center justify-between rounded-md bg-gray-50 p-3 dark:bg-gray-700"
+        >
+          <div class="h-4 w-2/3 rounded bg-gray-200 dark:bg-gray-700"></div>
+          <div class="h-6 w-20 rounded-full bg-gray-200 dark:bg-gray-700"></div>
+        </div>
+        @for ($i = 0; $i < 7; $i++)
           <div
             class="mb-2 flex items-center justify-between rounded-md bg-gray-50 p-3 dark:bg-gray-700"
           >
-            <div class="h-4 w-1/2 rounded bg-gray-200 dark:bg-gray-700"></div>
+            <div class="flex items-center gap-2">
+              <div class="h-4 w-32 rounded bg-gray-200 dark:bg-gray-700"></div>
+              @if ($i == 1 || $i == 2)
+                <div
+                  class="h-5 w-14 rounded bg-purple-300 dark:bg-purple-700"
+                ></div>
+              @endif
+            </div>
             <div
-              class="h-6 w-20 rounded-full bg-gray-200 dark:bg-gray-700"
+              class="h-6 w-11 rounded-full bg-gray-200 dark:bg-gray-700"
             ></div>
           </div>
         @endfor
@@ -68,9 +93,12 @@
   <!-- Data Retention Settings -->
   <section class="relative sm:col-span-2 lg:col-span-2">
     <div
-      class="flex h-full flex-col gap-4 rounded-xl bg-white p-6 shadow-md dark:bg-gray-800"
+      class="flex h-full min-h-[180px] flex-col gap-4 rounded-xl bg-white p-6 shadow-md dark:bg-gray-800"
     >
-      <div class="mb-2 h-6 w-1/3 rounded bg-gray-300 dark:bg-gray-600"></div>
+      <div class="mb-2 flex items-center gap-2">
+        <div class="h-6 w-6 rounded bg-gray-300 dark:bg-gray-600"></div>
+        <div class="h-6 w-1/3 rounded bg-gray-300 dark:bg-gray-600"></div>
+      </div>
       <div class="mb-4 h-4 w-2/3 rounded bg-gray-200 dark:bg-gray-700"></div>
       <div class="mt-2 flex flex-col gap-4">
         <div

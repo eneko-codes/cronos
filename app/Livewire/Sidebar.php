@@ -9,7 +9,6 @@ use App\Actions\User\UpdateMuteAllPreference;
 use App\Models\User;
 use App\Services\ApplicationSettingsService;
 use Exception;
-use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Lazy;
@@ -59,11 +58,16 @@ class Sidebar extends Component
      */
     public array $globalPreferenceStates = [];
 
-    private ApplicationSettingsService $settingsService;
-
-    public function boot(): void
+    public function mount(): void
     {
-        $this->settingsService = App::make(ApplicationSettingsService::class);
+        // Initialize individualPreferences with a base state.
+        // loadPreferences will populate them with actual values.
+        foreach (array_keys($this->preferenceKeys()) as $key) {
+            // Default to false initially; loadPreferences will set the true state from DB or defaults for new users.
+            $this->individualPreferences[$key] = false;
+        }
+        $this->loadPreferences();
+        $this->dispatchUnreadCountChanged();
     }
 
     // Using #[On] attributes for listeners below
@@ -144,19 +148,6 @@ class Sidebar extends Component
         $this->dispatch('unread-count-changed', count: $count);
     }
 
-    public function mount(): void
-    {
-        // $this->settingsService is available here due to boot()
-        // Initialize individualPreferences with a base state.
-        // loadPreferences will populate them with actual values.
-        foreach (array_keys($this->preferenceKeys()) as $key) {
-            // Default to false initially; loadPreferences will set the true state from DB or defaults for new users.
-            $this->individualPreferences[$key] = false;
-        }
-        $this->loadPreferences();
-        $this->dispatchUnreadCountChanged();
-    }
-
     /**
      * Load the user's notification preferences from the database
      * and populate the component's public properties.
@@ -164,16 +155,18 @@ class Sidebar extends Component
      */
     public function loadPreferences(): void
     {
-        // $this->settingsService is available here
-        $this->isGloballyEnabled = $this->settingsService->isGlobalNotificationsEnabled();
+        // Resolve service directly inside the method
+        $settingsService = app(ApplicationSettingsService::class);
+
+        $this->isGloballyEnabled = $settingsService->isGlobalNotificationsEnabled();
 
         // Fetch global states for specific notification types
         $this->globalPreferenceStates = [
-            'schedule_change' => $this->settingsService->isNotificationTypeGloballyEnabled('schedule_change'),
-            'weekly_user_report' => $this->settingsService->isNotificationTypeGloballyEnabled('weekly_user_report'),
-            'leave_reminder' => $this->settingsService->isNotificationTypeGloballyEnabled('leave_reminder'),
-            'api_down_warning' => $this->settingsService->isNotificationTypeGloballyEnabled('api_down_warning'),
-            'admin_promotion_email' => $this->settingsService->isNotificationTypeGloballyEnabled('admin_promotion_email'),
+            'schedule_change' => $settingsService->isNotificationTypeGloballyEnabled('schedule_change'),
+            'weekly_user_report' => $settingsService->isNotificationTypeGloballyEnabled('weekly_user_report'),
+            'leave_reminder' => $settingsService->isNotificationTypeGloballyEnabled('leave_reminder'),
+            'api_down_warning' => $settingsService->isNotificationTypeGloballyEnabled('api_down_warning'),
+            'admin_promotion_email' => $settingsService->isNotificationTypeGloballyEnabled('admin_promotion_email'),
         ];
 
         /** @var User|null $user */

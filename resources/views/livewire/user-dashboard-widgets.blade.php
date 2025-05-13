@@ -24,13 +24,13 @@
     </div>
     @if ($todaysSchedule)
       <div class="flex flex-col">
-        @if ($todaysSchedule['duration'] !== '0h 0m')
+        @if ($todaysSchedule->duration !== '0h 0m')
           {{-- Display Duration and Name for working days --}}
           <span class="text-lg font-bold text-gray-800 dark:text-gray-100">
-            {{ $todaysSchedule['duration'] }}
+            {{ $todaysSchedule->duration }}
           </span>
           <span class="text-xs text-gray-500 dark:text-gray-400">
-            {{ $todaysSchedule['name'] }}
+            {{ $todaysSchedule->name }}
           </span>
         @else
           {{-- Display Day Off Message --}}
@@ -38,7 +38,7 @@
             Scheduled Day Off
           </span>
           <span class="text-xs text-gray-500 dark:text-gray-400">
-            ({{ $todaysSchedule['name'] }})
+            ({{ $todaysSchedule->name }})
           </span>
         @endif
       </div>
@@ -76,18 +76,18 @@
     @if ($todaysAttendance)
       <div class="flex flex-col">
         <span class="text-lg font-bold text-gray-800 dark:text-gray-100">
-          {{ $todaysAttendance['status'] }}
+          {{ $todaysAttendance->status }}
         </span>
-        @if ($todaysAttendance['time_info'])
+        @if ($todaysAttendance->timeInfo)
           <span class="text-xs text-gray-500 dark:text-gray-400">
-            {{ $todaysAttendance['time_info'] }}
+            {{ $todaysAttendance->timeInfo }}
           </span>
         @endif
 
         <span class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          Duration: {{ $todaysAttendance['duration'] }}
+          Duration: {{ $todaysAttendance->duration }}
         </span>
-        @if ($todaysAttendance['clocked_in'])
+        @if ($todaysAttendance->clockedIn)
           <span
             class="mt-1 text-xs font-medium text-green-600 dark:text-green-500"
           >

@@ -4,140 +4,59 @@ declare(strict_types=1);
 
 namespace App\Livewire;
 
-use App\Models\TimeEntry;
+use App\Actions\User\GetTodaysAttendanceAction;
+use App\Actions\User\GetTodaysLoggedTimeAction;
+use App\Actions\User\GetTodaysScheduleAction;
+use App\Actions\User\GetUpcomingLeaveAction;
+use App\DataTransferObjects\TodaysAttendanceData;
+use App\DataTransferObjects\TodaysScheduleData;
 use App\Models\User;
-use App\Models\UserAttendance;
 use App\Models\UserLeave;
-use App\Models\UserSchedule;
-use App\Traits\FormatsDurationsTrait;
-use Carbon\Carbon;
 use Livewire\Attributes\Lazy;
 use Livewire\Component;
 
 #[Lazy]
 class UserDashboardWidgets extends Component
 {
-    use FormatsDurationsTrait;
-
     public User $user;
 
-    public ?array $todaysSchedule = null;
+    public ?TodaysScheduleData $todaysSchedule = null;
 
-    public ?array $todaysAttendance = null;
+    public ?TodaysAttendanceData $todaysAttendance = null;
 
-    public ?string $todaysLoggedTime = '0h 0m';
+    public string $todaysLoggedTime = '0h 0m'; // Default value
 
     public ?UserLeave $upcomingLeave = null;
 
-    public function mount(User $user)
-    {
+    public function mount(
+        User $user,
+        GetTodaysScheduleAction $getTodaysScheduleAction,
+        GetTodaysAttendanceAction $getTodaysAttendanceAction,
+        GetTodaysLoggedTimeAction $getTodaysLoggedTimeAction,
+        GetUpcomingLeaveAction $getUpcomingLeaveAction
+    ): void {
         $this->user = $user;
 
         if (! $this->user->do_not_track) {
-            $today = Carbon::today();
-            $weekday = ($today->dayOfWeek + 6) % 7; // 0=Monday, ..., 6=Sunday
-
-            // 1. Today's Schedule - Simplified Eager Loading
-            $activeSchedule = UserSchedule::where('user_id', $this->user->id)
-                ->where('effective_from', '<=', $today)
-                ->where(function ($query) use ($today): void {
-                    $query->whereNull('effective_until')
-                        ->orWhere('effective_until', '>=', $today);
-                })
-                ->with('schedule:odoo_schedule_id,description')
-                ->first();
-
-            if ($activeSchedule !== null && $activeSchedule->schedule !== null) {
-                $schedule = $activeSchedule->schedule;
-                $details = $schedule->scheduleDetails()->where('weekday', $weekday)->get();
-                $totalMinutes = 0;
-                if ($details->isNotEmpty()) {
-                    /** @var \App\Models\ScheduleDetail $detail */
-                    foreach ($details->sortBy('start') as $detail) {
-                        $start = Carbon::parse($detail->start)->setTimezone('UTC');
-                        $end = Carbon::parse($detail->end)->setTimezone('UTC');
-                        $minutesForSlot = $start->diffInMinutes($end);
-                        $totalMinutes += $minutesForSlot;
-                    }
-                }
-                $this->todaysSchedule = [
-                    'duration' => $this->formatMinutesToHoursMinutes($totalMinutes),
-                    'name' => $schedule->description ?? 'Default Schedule',
-                ];
-            } else {
-                $this->todaysSchedule = null;
-            }
-
-            // 2. Today's Attendance
-            $attendance = UserAttendance::where('user_id', $this->user->id)
-                ->whereDate('date', $today)
-                ->first();
-
-            if ($attendance) {
-                $status = 'Unknown';
-                $timeInfo = null;
-                $durationMinutes = 0;
-
-                if ($attendance->is_remote) {
-                    $status = 'Remote';
-                    $durationMinutes = (int) (($attendance->presence_seconds ?? 0) / 60);
-                } elseif ($attendance->start && $attendance->end) {
-                    $status = 'In Office - Clocked Out';
-                    $start = Carbon::parse($attendance->start);
-                    $end = Carbon::parse($attendance->end);
-                    $timeInfo = $start->format('H:i').' - '.$end->format('H:i');
-                    $durationMinutes = $start->diffInMinutes($end);
-                } elseif ($attendance->start && ! $attendance->end) {
-                    $status = 'In Office - Clocked In';
-                    $start = Carbon::parse($attendance->start);
-                    $timeInfo = 'Since '.$start->format('H:i');
-                    $durationMinutes = (int) (($attendance->presence_seconds ?? 0) / 60);
-                } elseif (! $attendance->start && ! $attendance->end && isset($attendance->presence_seconds) && $attendance->presence_seconds > 0) {
-                    $status = 'Present (System)';
-                    $durationMinutes = (int) ($attendance->presence_seconds / 60);
-                } else {
-                    $status = 'No Activity Recorded';
-                }
-
-                $this->todaysAttendance = [
-                    'status' => $status,
-                    'time_info' => $timeInfo,
-                    'duration' => $this->formatMinutesToHoursMinutes($durationMinutes),
-                    'is_remote' => $attendance->is_remote,
-                    'clocked_in' => $attendance->start && ! $attendance->end,
-                ];
-            } else {
-                $this->todaysAttendance = ['status' => 'Not Clocked In', 'time_info' => null, 'duration' => '0h 0m', 'is_remote' => false, 'clocked_in' => false];
-            }
-
-            // 3. Today's Logged Time
-            $totalSecondsToday = TimeEntry::where('user_id', $this->user->id)
-                ->whereDate('date', $today)
-                ->sum('duration_seconds');
-            $loggedMinutes = $totalSecondsToday / 60;
-            $this->todaysLoggedTime = $this->formatMinutesToHoursMinutes($loggedMinutes);
-
-            // 4. Upcoming Leave (Next 30 days)
-            $upcomingLeaveModel = UserLeave::where('user_id', $this->user->id)
-                ->where('status', 'validate')
-                ->where('end_date', '>=', $today)
-                ->where('start_date', '<=', $today->copy()->addDays(30))
-                ->orderBy('start_date', 'asc')
-                ->with('leaveType')
-                ->first();
-            $this->upcomingLeave = $upcomingLeaveModel;
+            $this->todaysSchedule = $getTodaysScheduleAction->execute($this->user);
+            $this->todaysAttendance = $getTodaysAttendanceAction->execute($this->user);
+            $this->todaysLoggedTime = $getTodaysLoggedTimeAction->execute($this->user);
+            $this->upcomingLeave = $getUpcomingLeaveAction->execute($this->user);
         } else {
-            // User is set to do_not_track. Properties will retain their default null/0h 0m values.
-            // The view should handle rendering the default "no data" states.
+            // Set defaults for do_not_track users, TodaysAttendanceAction already returns a default DTO
+            $this->todaysSchedule = null; // Or a default DTO if preferred
+            $this->todaysAttendance = $getTodaysAttendanceAction->execute($this->user); // Will return 'Not Tracked' DTO
+            $this->todaysLoggedTime = '0h 0m';
+            $this->upcomingLeave = null;
         }
     }
 
-    public function placeholder(array $params = [])
+    public function placeholder(array $params = []): \Illuminate\Contracts\View\View
     {
         return view('livewire.placeholders.user-dashboard-widgets-skeleton');
     }
 
-    public function render()
+    public function render(): \Illuminate\Contracts\View\View
     {
         return view('livewire.user-dashboard-widgets');
     }

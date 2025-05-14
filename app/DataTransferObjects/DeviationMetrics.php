@@ -9,9 +9,9 @@ use Illuminate\Validation\ValidationException;
 use Livewire\Wireable;
 
 /**
- * Represents overall deviation details comparing different time metrics.
+ * Represents a set of deviation details comparing different time metrics.
  */
-final readonly class OverallDeviationDetails implements Wireable
+final readonly class DeviationMetrics implements Wireable
 {
     /**
      * @param  DeviationDetail  $attendanceVsScheduled  Deviation between attendance and scheduled time.

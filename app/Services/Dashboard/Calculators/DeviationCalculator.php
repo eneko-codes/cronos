@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Services\Dashboard\Calculators;
 
 use App\DataTransferObjects\DailyAttendanceData;
-use App\DataTransferObjects\DailyDeviationDetails;
 use App\DataTransferObjects\DailyLeaveData;
 use App\DataTransferObjects\DailyScheduleData;
 use App\DataTransferObjects\DailyWorkedData;
 use App\DataTransferObjects\DashboardTotals;
 use App\DataTransferObjects\DeviationDetail;
-use App\DataTransferObjects\OverallDeviationDetails;
+use App\DataTransferObjects\DeviationMetrics;
+use Carbon\CarbonInterval;
 
 /**
  * Service responsible for calculating deviations between different time metrics.
@@ -31,7 +31,7 @@ class DeviationCalculator
         DailyAttendanceData $attendance,
         DailyWorkedData $worked,
         DailyLeaveData $leave
-    ): DailyDeviationDetails {
+    ): DeviationMetrics {
         $attendanceVsSchedule = $this->calculateDeviation(
             $attendance->duration,
             $schedule->duration,
@@ -50,7 +50,7 @@ class DeviationCalculator
             $leave->isHalfDay
         );
 
-        return new DailyDeviationDetails(
+        return new DeviationMetrics(
             attendanceVsScheduled: $attendanceVsSchedule,
             workedVsScheduled: $workedVsSchedule,
             workedVsAttendance: $workedVsAttendance
@@ -61,29 +61,29 @@ class DeviationCalculator
      * Calculate overall deviations for a period.
      *
      * @param  DashboardTotals  $totals  The totals for the period
-     * @return OverallDeviationDetails The calculated overall deviations
+     * @return DeviationMetrics The calculated overall deviations
      */
-    public function calculateOverallDeviations(DashboardTotals $totals): OverallDeviationDetails
+    public function calculateOverallDeviations(DashboardTotals $totals): DeviationMetrics
     {
         $attendanceVsSchedule = $this->calculateDeviation(
-            $this->formatMinutesToHoursMinutes($totals->attendance),
-            $this->formatMinutesToHoursMinutes($totals->scheduled),
+            CarbonInterval::minutes($totals->attendance)->cascade()->format('%hh %dm'),
+            CarbonInterval::minutes($totals->scheduled)->cascade()->format('%hh %dm'),
             false
         );
 
         $workedVsSchedule = $this->calculateDeviation(
-            $this->formatMinutesToHoursMinutes($totals->worked),
-            $this->formatMinutesToHoursMinutes($totals->scheduled),
+            CarbonInterval::minutes($totals->worked)->cascade()->format('%hh %dm'),
+            CarbonInterval::minutes($totals->scheduled)->cascade()->format('%hh %dm'),
             false
         );
 
         $workedVsAttendance = $this->calculateDeviation(
-            $this->formatMinutesToHoursMinutes($totals->worked),
-            $this->formatMinutesToHoursMinutes($totals->attendance),
+            CarbonInterval::minutes($totals->worked)->cascade()->format('%hh %dm'),
+            CarbonInterval::minutes($totals->attendance)->cascade()->format('%hh %dm'),
             false
         );
 
-        return new OverallDeviationDetails(
+        return new DeviationMetrics(
             attendanceVsScheduled: $attendanceVsSchedule,
             workedVsScheduled: $workedVsSchedule,
             workedVsAttendance: $workedVsAttendance
@@ -93,21 +93,21 @@ class DeviationCalculator
     /**
      * Calculate deviation between two time values.
      *
-     * @param  string  $actual  The actual time value
-     * @param  string  $expected  The expected time value
+     * @param  string  $actual  The actual time value (e.g., "Xh Ym")
+     * @param  string  $expected  The expected time value (e.g., "Xh Ym")
      * @param  bool  $isHalfDay  Whether the day is a half day
      * @return DeviationDetail The calculated deviation details
      */
     protected function calculateDeviation(string $actual, string $expected, bool $isHalfDay): DeviationDetail
     {
-        $actualMinutes = $this->timeToMinutes($actual);
-        $expectedMinutes = $this->timeToMinutes($expected);
+        $actualMinutes = CarbonInterval::fromString($actual)->totalMinutes;
+        $expectedMinutes = CarbonInterval::fromString($expected)->totalMinutes;
 
         if ($isHalfDay) {
             $expectedMinutes = (int) round($expectedMinutes / 2);
         }
 
-        $difference = $actualMinutes - $expectedMinutes;
+        $difference = (int) ($actualMinutes - $expectedMinutes);
         $percentage = $expectedMinutes > 0 ? ($difference / $expectedMinutes) * 100 : 0;
 
         return new DeviationDetail(
@@ -119,47 +119,6 @@ class DeviationCalculator
     }
 
     /**
-     * Convert time string to minutes.
-     *
-     * @param  string  $time  Time string in format "Xh Ym"
-     * @return int The time in minutes
-     */
-    protected function timeToMinutes(string $time): int
-    {
-        if (empty($time)) {
-            return 0;
-        }
-
-        $parts = explode(' ', $time);
-        $hours = 0;
-        $minutes = 0;
-
-        foreach ($parts as $part) {
-            if (str_ends_with($part, 'h')) {
-                $hours = (int) rtrim($part, 'h');
-            } elseif (str_ends_with($part, 'm')) {
-                $minutes = (int) rtrim($part, 'm');
-            }
-        }
-
-        return ($hours * 60) + $minutes;
-    }
-
-    /**
-     * Format minutes to hours and minutes string.
-     *
-     * @param  int  $minutes  The minutes to format
-     * @return string The formatted time string
-     */
-    protected function formatMinutesToHoursMinutes(int $minutes): string
-    {
-        $hours = floor($minutes / 60);
-        $remainingMinutes = abs($minutes % 60);
-
-        return sprintf('%dh %dm', $hours, $remainingMinutes);
-    }
-
-    /**
      * Format deviation tooltip.
      *
      * @param  int  $difference  The difference in minutes
@@ -168,7 +127,7 @@ class DeviationCalculator
     protected function formatDeviationTooltip(int $difference): string
     {
         $isPositive = $difference >= 0;
-        $formattedTime = $this->formatMinutesToHoursMinutes(abs($difference));
+        $formattedTime = CarbonInterval::minutes(abs($difference))->cascade()->format('%hh %dm');
 
         return sprintf(
             '%s%s',

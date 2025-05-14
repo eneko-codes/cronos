@@ -8,6 +8,7 @@ use App\DataTransferObjects\DailyAttendanceData;
 use App\Exceptions\DataTransferObjectException;
 use App\Models\UserAttendance;
 use Carbon\Carbon;
+use Carbon\CarbonInterval;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
@@ -107,7 +108,7 @@ class AttendanceDataProcessorService
 
         return [
             'minutes' => $durationMinutes,
-            'formatted' => $this->formatMinutesToHoursMinutes($durationMinutes),
+            'formatted' => CarbonInterval::minutes($durationMinutes)->cascade()->format('%hh %dm'),
         ];
     }
 
@@ -127,19 +128,5 @@ class AttendanceDataProcessorService
         }
 
         return [];
-    }
-
-    /**
-     * Format minutes to hours and minutes string.
-     *
-     * @param  int  $minutes  The minutes to format
-     * @return string The formatted duration string
-     */
-    protected function formatMinutesToHoursMinutes(int $minutes): string
-    {
-        $hours = floor($minutes / 60);
-        $remainingMinutes = $minutes % 60;
-
-        return "{$hours}h {$remainingMinutes}m";
     }
 }

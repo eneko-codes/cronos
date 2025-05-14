@@ -7,13 +7,11 @@ namespace App\Actions\User;
 use App\DataTransferObjects\TodaysScheduleData;
 use App\Models\User;
 use App\Models\UserSchedule;
-use App\Traits\FormatsDurationsTrait;
 use Carbon\Carbon;
+use Carbon\CarbonInterval;
 
 class GetTodaysScheduleAction
 {
-    use FormatsDurationsTrait;
-
     public function execute(User $user): ?TodaysScheduleData
     {
         if ($user->do_not_track) {
@@ -49,7 +47,7 @@ class GetTodaysScheduleAction
             }
 
             return new TodaysScheduleData(
-                duration: $this->formatMinutesToHoursMinutes($totalMinutes),
+                duration: CarbonInterval::minutes((int) round($totalMinutes))->cascade()->format('%hh %dm'),
                 name: $scheduleModel->description ?? 'Default Schedule',
             );
         }

@@ -8,6 +8,7 @@ use App\DataTransferObjects\DailyScheduleData;
 use App\Exceptions\DataTransferObjectException;
 use App\Models\UserSchedule;
 use Carbon\Carbon;
+use Carbon\CarbonInterval;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
@@ -41,8 +42,6 @@ class ScheduleDataProcessorService
 
             $weekday = (Carbon::parse($dateString)->dayOfWeek + 6) % 7;
             $details = $schedule->schedule->scheduleDetails->where('weekday', $weekday);
-            $targetHours = $schedule->schedule->average_hours_day ?? 8.0;
-            $targetMinutes = $targetHours * 60;
 
             if ($details->count() > 0) {
                 $periodGroups = $details->groupBy('day_period');
@@ -80,7 +79,7 @@ class ScheduleDataProcessorService
             }
 
             return new DailyScheduleData(
-                duration: $this->formatMinutesToHoursMinutes((int) $totalMinutes),
+                duration: CarbonInterval::minutes((int) round($totalMinutes))->cascade()->format('%hh %dm'),
                 slots: $slots,
                 scheduleName: $schedule->schedule->description ?? null
             );
@@ -119,19 +118,5 @@ class ScheduleDataProcessorService
 
             return $from->lte($targetDate) && (! $until || $until->gte($targetDate));
         });
-    }
-
-    /**
-     * Format minutes to hours and minutes string.
-     *
-     * @param  int  $minutes  The minutes to format
-     * @return string The formatted duration string
-     */
-    protected function formatMinutesToHoursMinutes(int $minutes): string
-    {
-        $hours = floor($minutes / 60);
-        $remainingMinutes = $minutes % 60;
-
-        return "{$hours}h {$remainingMinutes}m";
     }
 }

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Livewire;
 
 use App\DataTransferObjects\DashboardTotals;
-use App\DataTransferObjects\OverallDeviationDetails;
+use App\DataTransferObjects\DeviationMetrics;
 use App\DataTransferObjects\PeriodDayData;
 use App\Models\User;
 use App\Services\Dashboard\DashboardDataAggregatorService;
@@ -48,15 +48,6 @@ class UserDashboard extends Component
     public bool $showDeviations = false;
 
     /**
-     * @var Collection<string, PeriodDayData>
-     */
-    public Collection $periodData;
-
-    public ?DashboardTotals $dashboardTotals = null;
-
-    public ?OverallDeviationDetails $totalDeviationsDetails = null;
-
-    /**
      * Flag indicating if the authenticated user has admin privileges.
      */
     public bool $isAdmin = false;
@@ -65,6 +56,15 @@ class UserDashboard extends Component
      * Flag indicating if we are viewing a specific user via ID, not the authenticated user's own dashboard.
      */
     public bool $isViewingSpecificUser = false;
+
+    /**
+     * @var Collection<string, PeriodDayData>
+     */
+    public Collection $periodData;
+
+    public ?DashboardTotals $dashboardTotals = null;
+
+    public ?DeviationMetrics $totalDeviationsDetails = null;
 
     protected $listeners = [
         'timeSheetPreviousPeriod' => 'previousPeriod',
@@ -157,22 +157,6 @@ class UserDashboard extends Component
     }
 
     /**
-     * Renders the component's Blade view.
-     */
-    public function render()
-    {
-        // $dashboardTotals and $totalDeviationsDetails are now direct public properties
-        // set by loadPeriodDataAndTotals via the service.
-        $isNextPeriodDisabled = $this->isNextPeriodDisabled; // This is a computed property call
-
-        return view('livewire.user-dashboard', [
-            'dashboardTotals' => $this->dashboardTotals,
-            'totalDeviationsDetailsForTable' => $this->totalDeviationsDetails,
-            'isNextPeriodDisabledForTable' => $isNextPeriodDisabled,
-        ]);
-    }
-
-    /**
      * Gets the start date of the current period as a Carbon instance (UTC).
      */
     protected function getPeriodStart(): Carbon
@@ -227,5 +211,20 @@ class UserDashboard extends Component
     protected function setPeriodStart(Carbon $date): void
     {
         $this->currentDate = $date->format('Y-m-d');
+    }
+
+    /**
+     * Renders the component's Blade view.
+     */
+    public function render()
+    {
+
+        $isNextPeriodDisabled = $this->isNextPeriodDisabled; // This is a computed property call
+
+        return view('livewire.user-dashboard', [
+            'dashboardTotals' => $this->dashboardTotals,
+            'totalDeviationsDetailsForTable' => $this->totalDeviationsDetails,
+            'isNextPeriodDisabledForTable' => $isNextPeriodDisabled,
+        ]);
     }
 }

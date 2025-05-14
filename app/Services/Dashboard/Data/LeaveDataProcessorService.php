@@ -142,7 +142,7 @@ class LeaveDataProcessorService
 
         return [
             'text' => $durationText,
-            'hours' => $this->formatMinutesToHoursMinutes($durationMinutes),
+            'hours' => CarbonInterval::minutes($durationMinutes)->cascade()->format('%hh %dm'),
             'minutes' => $durationMinutes,
         ];
     }
@@ -180,20 +180,6 @@ class LeaveDataProcessorService
         }
 
         return CarbonInterval::days($durationDays)->cascade()->forHumans(['parts' => 2]);
-    }
-
-    /**
-     * Format minutes to hours and minutes string.
-     *
-     * @param  int  $minutes  The minutes to format
-     * @return string The formatted duration string
-     */
-    protected function formatMinutesToHoursMinutes(int $minutes): string
-    {
-        $hours = floor($minutes / 60);
-        $remainingMinutes = $minutes % 60;
-
-        return "{$hours}h {$remainingMinutes}m";
     }
 
     /**

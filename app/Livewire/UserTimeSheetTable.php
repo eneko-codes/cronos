@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Livewire;
 
 use App\DataTransferObjects\DashboardTotals;
-use App\DataTransferObjects\OverallDeviationDetails;
+use App\DataTransferObjects\DeviationMetrics;
 use App\DataTransferObjects\PeriodDayData;
 use App\Models\User;
-use App\Traits\FormatsDurationsTrait;
+use Carbon\CarbonInterval;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Lazy;
 use Livewire\Component;
@@ -16,8 +16,6 @@ use Livewire\Component;
 #[Lazy]
 class UserTimeSheetTable extends Component
 {
-    use FormatsDurationsTrait;
-
     public User $user;
 
     public string $currentDate;
@@ -31,7 +29,7 @@ class UserTimeSheetTable extends Component
 
     public DashboardTotals $dashboardTotals;
 
-    public ?OverallDeviationDetails $totalDeviationsDetails;
+    public ?DeviationMetrics $totalDeviationsDetails;
 
     public bool $isNextPeriodDisabled;
 
@@ -42,7 +40,7 @@ class UserTimeSheetTable extends Component
         bool $showDeviations,
         Collection $periodData,
         DashboardTotals $dashboardTotals,
-        ?OverallDeviationDetails $totalDeviationsDetails,
+        ?DeviationMetrics $totalDeviationsDetails,
         bool $isNextPeriodDisabled
     ): void {
         $this->user = $user;
@@ -53,6 +51,15 @@ class UserTimeSheetTable extends Component
         $this->dashboardTotals = $dashboardTotals;
         $this->totalDeviationsDetails = $totalDeviationsDetails;
         $this->isNextPeriodDisabled = $isNextPeriodDisabled;
+    }
+
+    public function getFormattedTotalDuration(int $minutes): string
+    {
+        if ($minutes <= 0) {
+            return '';
+        }
+
+        return CarbonInterval::minutes($minutes)->cascade()->format('%hh %dm');
     }
 
     public function dispatchPreviousPeriod(): void

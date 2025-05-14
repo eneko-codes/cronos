@@ -7,13 +7,11 @@ namespace App\Actions\User;
 use App\DataTransferObjects\TodaysAttendanceData;
 use App\Models\User;
 use App\Models\UserAttendance;
-use App\Traits\FormatsDurationsTrait;
 use Carbon\Carbon;
+use Carbon\CarbonInterval;
 
 class GetTodaysAttendanceAction
 {
-    use FormatsDurationsTrait;
-
     public function execute(User $user): TodaysAttendanceData // Return non-nullable, provide default
     {
         if ($user->do_not_track) {
@@ -63,7 +61,7 @@ class GetTodaysAttendanceAction
             return new TodaysAttendanceData(
                 status: $status,
                 timeInfo: $timeInfo,
-                duration: $this->formatMinutesToHoursMinutes($durationMinutes),
+                duration: CarbonInterval::minutes((int) round($durationMinutes))->cascade()->format('%hh %dm'),
                 isRemote: $isRemote,
                 clockedIn: $clockedIn
             );

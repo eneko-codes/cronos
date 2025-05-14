@@ -19,7 +19,7 @@ final readonly class PeriodDayData implements Wireable
      * @param  DailyLeaveData|null  $leave  The leave data for the day, if any.
      * @param  DailyAttendanceData  $attendance  The attendance data for the day.
      * @param  DailyWorkedData  $worked  The worked time data for the day.
-     * @param  DailyDeviationDetails|null  $deviationDetails  The deviation details for the day, if applicable.
+     * @param  DeviationMetrics|null  $deviationDetails  The deviation details for the day, if applicable.
      */
     public function __construct(
         public string $date,
@@ -27,7 +27,7 @@ final readonly class PeriodDayData implements Wireable
         public ?DailyLeaveData $leave,
         public DailyAttendanceData $attendance,
         public DailyWorkedData $worked,
-        public ?DailyDeviationDetails $deviationDetails
+        public ?DeviationMetrics $deviationDetails
     ) {}
 
     public function toLivewire(): array
@@ -69,7 +69,7 @@ final readonly class PeriodDayData implements Wireable
             isset($validatedData['leave']) ? DailyLeaveData::fromLivewire($validatedData['leave']) : null,
             DailyAttendanceData::fromLivewire($validatedData['attendance']),
             DailyWorkedData::fromLivewire($validatedData['worked']),
-            isset($validatedData['deviationDetails']) ? DailyDeviationDetails::fromLivewire($validatedData['deviationDetails']) : null
+            isset($validatedData['deviationDetails']) ? DeviationMetrics::fromLivewire($validatedData['deviationDetails']) : null
         );
     }
 }

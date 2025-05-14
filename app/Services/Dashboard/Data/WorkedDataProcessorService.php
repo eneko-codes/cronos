@@ -7,8 +7,11 @@ namespace App\Services\Dashboard\Data;
 use App\DataTransferObjects\DailyWorkedData;
 use App\DataTransferObjects\ProjectTaskSummaryData;
 use App\DataTransferObjects\WorkedTimeEntry;
+use App\Exceptions\DataTransferObjectException;
 use App\Models\TimeEntry;
+use Carbon\CarbonInterval;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Service responsible for processing worked time data for the dashboard.
@@ -21,24 +24,41 @@ class WorkedDataProcessorService
      * @param  string  $date  The date to process data for
      * @param  int  $userId  The user ID to process data for
      * @return DailyWorkedData The processed worked time data
+     *
+     * @throws DataTransferObjectException If there's an error processing the worked data
      */
     public function processWorkedData(string $date, int $userId): DailyWorkedData
     {
-        $entries = $this->findEntriesForDate($date, $userId);
-        $durationInfo = $this->calculateDurationInfo($entries);
-        $projectSummaries = $this->generateProjectSummaries($entries);
+        try {
+            $entries = $this->findEntriesForDate($date, $userId);
+            $durationInfo = $this->calculateDurationInfo($entries);
+            $projectSummaries = $this->generateProjectSummaries($entries);
 
-        return new DailyWorkedData(
-            duration: $durationInfo['formatted'],
-            projects: collect($projectSummaries),
-            detailedEntries: $entries->map(fn (TimeEntry $entry) => new WorkedTimeEntry(
-                project: $entry->project->name,
-                task: $entry->task?->name,
-                description: $entry->description ?? '',
-                duration: $this->formatMinutesToHoursMinutes((int) ($entry->duration_seconds / 60)),
-                status: $entry->status
-            ))
-        );
+            return new DailyWorkedData(
+                duration: $durationInfo['formatted'],
+                projects: collect($projectSummaries),
+                detailedEntries: $entries->map(fn (TimeEntry $entry) => new WorkedTimeEntry(
+                    project: $entry->project->name,
+                    task: $entry->task?->name,
+                    description: $entry->description ?? '',
+                    duration: CarbonInterval::minutes((int) round($entry->duration_seconds / 60))->cascade()->format('%hh %dm'),
+                    status: $entry->status
+                ))
+            );
+        } catch (\Exception $e) {
+            Log::error('Error processing worked data', [
+                'date' => $date,
+                'user_id' => $userId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            throw new DataTransferObjectException(
+                "Failed to process worked data for date {$date} and user {$userId}: {$e->getMessage()}",
+                0,
+                $e
+            );
+        }
     }
 
     /**
@@ -65,7 +85,7 @@ class WorkedDataProcessorService
     protected function calculateDurationInfo(Collection $entries): array
     {
         $totalMinutes = $entries->sum(fn (TimeEntry $entry) => $entry->duration_seconds / 60);
-        $formatted = $this->formatMinutesToHoursMinutes((int) $totalMinutes);
+        $formatted = CarbonInterval::minutes((int) round($totalMinutes))->cascade()->format('%hh %dm');
 
         return [
             'minutes' => (int) $totalMinutes,
@@ -85,7 +105,6 @@ class WorkedDataProcessorService
 
         foreach ($entries->groupBy('proofhub_project_id') as $projectEntries) {
             $project = $projectEntries->first()->project;
-            $totalMinutes = $projectEntries->sum(fn (TimeEntry $entry) => $entry->duration_seconds / 60);
             $uniqueTaskNames = $projectEntries
                 ->pluck('task.name')
                 ->filter()
@@ -100,19 +119,5 @@ class WorkedDataProcessorService
         }
 
         return $summaries;
-    }
-
-    /**
-     * Format minutes to hours and minutes string.
-     *
-     * @param  int  $minutes  The minutes to format
-     * @return string The formatted time string
-     */
-    protected function formatMinutesToHoursMinutes(int $minutes): string
-    {
-        $hours = floor($minutes / 60);
-        $remainingMinutes = abs($minutes % 60);
-
-        return sprintf('%dh %dm', $hours, $remainingMinutes);
     }
 }

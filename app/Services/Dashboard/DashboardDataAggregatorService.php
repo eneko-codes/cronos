@@ -7,6 +7,7 @@ namespace App\Services\Dashboard;
 use App\Actions\User\GetDataForDateRange;
 use App\DataTransferObjects\DailyLeaveData;
 use App\DataTransferObjects\DashboardTotals;
+use App\DataTransferObjects\DeviationMetrics;
 use App\DataTransferObjects\PeriodDayData;
 use App\Models\User;
 use App\Services\Dashboard\Calculators\DeviationCalculator;
@@ -38,7 +39,7 @@ class DashboardDataAggregatorService
      * @param  Carbon  $startDate  The start date of the period.
      * @param  Carbon  $endDate  The end date of the period.
      * @param  bool  $showDeviations  Flag to indicate if deviation details should be calculated.
-     * @return array{periodData: Collection<string, PeriodDayData>, dashboardTotals: DashboardTotals, totalDeviationsDetails: \App\DataTransferObjects\OverallDeviationDetails|null}
+     * @return array{periodData: Collection<string, PeriodDayData>, dashboardTotals: DashboardTotals, totalDeviationsDetails: DeviationMetrics|null}
      */
     public function aggregatePeriodData(
         User $user,
@@ -52,15 +53,21 @@ class DashboardDataAggregatorService
         $periodData = $this->processPeriodData($rawData, $startDate, $endDate, $showDeviations, $user);
         /** @var DashboardTotals */
         $totals = $this->totalsCalculator->calculateTotals($periodData);
-        /** @var \App\DataTransferObjects\OverallDeviationDetails|null */
+        /** @var DeviationMetrics|null */
         $deviations = $showDeviations ? $this->deviationCalculator->calculateOverallDeviations($totals) : null;
 
-        /** @var array{periodData: Collection<string, PeriodDayData>, dashboardTotals: DashboardTotals, totalDeviationsDetails: \App\DataTransferObjects\OverallDeviationDetails|null} */
+        /** @var array{periodData: Collection<string, PeriodDayData>, dashboardTotals: DashboardTotals, totalDeviationsDetails: DeviationMetrics|null} */
         $result = [
             'periodData' => $periodData,
             'dashboardTotals' => $totals,
             'totalDeviationsDetails' => $deviations,
         ];
+
+        $newTotals = $this->totalsCalculator->calculateTotals($result['periodData']);
+        $result['dashboardTotals'] = $newTotals;
+        if ($showDeviations) {
+            $result['totalDeviationsDetails'] = $this->deviationCalculator->calculateOverallDeviations($newTotals);
+        }
 
         return $result;
     }

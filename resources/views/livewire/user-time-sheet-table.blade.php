@@ -626,7 +626,7 @@
                 }
               @endphp
 
-              {{ $value > 0 ? $this->formatMinutesToHoursMinutes($value) : '' }}
+              {{ $this->getFormattedTotalDuration($value) }}
             </td>
           @endforeach
 

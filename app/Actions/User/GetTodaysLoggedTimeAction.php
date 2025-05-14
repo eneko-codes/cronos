@@ -6,13 +6,11 @@ namespace App\Actions\User;
 
 use App\Models\TimeEntry;
 use App\Models\User;
-use App\Traits\FormatsDurationsTrait;
 use Carbon\Carbon;
+use Carbon\CarbonInterval;
 
 class GetTodaysLoggedTimeAction
 {
-    use FormatsDurationsTrait;
-
     public function execute(User $user): string
     {
         if ($user->do_not_track) {
@@ -26,6 +24,6 @@ class GetTodaysLoggedTimeAction
 
         $loggedMinutes = $totalSecondsToday / 60;
 
-        return $this->formatMinutesToHoursMinutes($loggedMinutes);
+        return CarbonInterval::minutes((int) round($loggedMinutes))->cascade()->format('%hh %dm');
     }
 }

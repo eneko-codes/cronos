@@ -67,7 +67,7 @@ class LoginController extends Controller
             request()->header('User-Agent')
         );
 
-        request()->session()->regenerate();
+        // request()->session()->regenerate();
 
         return redirect()->intended('/dashboard');
     }

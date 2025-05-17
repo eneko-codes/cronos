@@ -179,6 +179,10 @@ jobs:
   analyze-php:
     runs-on: ubuntu-latest
     needs: setup
+    env:
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ':memory:'
+      APP_URL: http://localhost
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4

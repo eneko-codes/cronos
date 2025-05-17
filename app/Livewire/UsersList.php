@@ -49,7 +49,7 @@ class UsersList extends Component
 
     public function redirectToUserDashboard(int $userId)
     {
-        return redirect()->route('user.dashboard', ['id' => $userId]);
+        return redirect()->route('user.dashboard', ['user' => $userId]);
     }
 
     /**

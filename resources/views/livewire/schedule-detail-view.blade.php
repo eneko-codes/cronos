@@ -3,7 +3,7 @@
   <a
     href="{{ route('schedules.list') }}"
     wire:navigate
-    class="inline-flex h-fit w-fit flex-row items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-gray-200/75 px-2 py-1 text-xs font-semibold text-gray-800 shadow-sm hover:bg-gray-200 dark:bg-gray-200 dark:text-gray-800 dark:hover:bg-gray-100"
+    class="inline-flex h-fit w-fit flex-row items-center justify-center gap-2 rounded-lg bg-gray-200/75 px-2 py-1 text-xs font-semibold whitespace-nowrap text-gray-800 shadow-sm hover:bg-gray-200 dark:bg-gray-200 dark:text-gray-800 dark:hover:bg-gray-100"
   >
     <svg
       class="size-4"

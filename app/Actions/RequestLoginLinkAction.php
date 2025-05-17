@@ -2,20 +2,21 @@
 
 declare(strict_types=1);
 
-namespace App\Actions\Auth;
+namespace App\Actions;
 
-use App\Jobs\Auth\SendLoginEmailJob;
+use App\Mail\LoginEmail;
 use App\Models\LoginToken;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
 /**
  * Action class responsible for handling the request for a magic login link.
  */
-class RequestMagicLinkAction
+class RequestLoginLinkAction
 {
     /**
      * Handles the request to generate and send a magic login link.
@@ -32,7 +33,7 @@ class RequestMagicLinkAction
     public function handle(string $email, bool $remember, string $ipAddress, ?string $userAgent): bool
     {
         // Define token validity duration in minutes
-        $tokenValidityMinutes = 15;
+        $tokenValidityMinutes = config('auth.login_token.expire_minutes', 15);
 
         // Check if user exists.
         $user = User::where('email', $email)->first();
@@ -85,7 +86,7 @@ class RequestMagicLinkAction
         );
 
         // Dispatch the job to send the email in the background.
-        SendLoginEmailJob::dispatch($user, $url);
+        Mail::to($user->email)->queue(new LoginEmail($user, $url));
 
         // Return true to indicate the email job was dispatched successfully.
         return true;

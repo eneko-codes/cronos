@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Auth;
+namespace App\Http\Requests;
 
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -32,10 +32,8 @@ class VerifyLoginTokenRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Ensure the token exists, is a string, and has the expected length.
             'token' => 'required|string|size:60',
-            // Remember flag is optional but must be boolean if present.
-            'remember' => 'nullable|boolean',
+            'remember' => 'boolean',
         ];
     }
 

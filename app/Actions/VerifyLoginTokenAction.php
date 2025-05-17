@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Actions\Auth;
+namespace App\Actions;
 
 use App\Exceptions\InvalidLoginTokenException;
 use App\Exceptions\LoginTokenExpiredException;

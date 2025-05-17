@@ -2,8 +2,6 @@
 
 use App\Jobs\SendUserLeaveReminder;
 use App\Jobs\SendUserWeeklyReport;
-use App\Models\Setting;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schedule;
 
 /*
@@ -66,55 +64,12 @@ Schedule::command('queue:prune-failed --hours=48')
     ->withoutOverlapping();
 
 /**
- * Schedule the `sync all` command based on the 'job_frequency.sync' setting
- * (default: everyThirtyMinutes).
- * Skips scheduling if the frequency is 'never'. Runs the command in the background,
- * prevents overlaps, logs errors, and throws for invalid frequency.
+ * Schedule the `sync:dispatch-scheduled` command to run every minute.
+ * This dispatcher command will then check the database settings and actual
+ * last run time to determine if 'sync all' should be executed.
  */
-try {
-    $syncFrequency = Setting::getValue(
-        'job_frequency.sync',
-        'everyThirtyMinutes'
-    );
-
-    if ($syncFrequency !== 'never') {
-        $scheduleSyncJobs = Schedule::command('sync all')
-            ->name('Data Synchronization Scheduler')
-            ->onOneServer()
-            ->withoutOverlapping();
-
-        match ($syncFrequency) {
-            'everyMinute' => $scheduleSyncJobs->everyMinute(),
-            'everyFiveMinutes' => $scheduleSyncJobs->everyFiveMinutes(),
-            'everyFifteenMinutes' => $scheduleSyncJobs->everyFifteenMinutes(),
-            'everyThirtyMinutes' => $scheduleSyncJobs->everyThirtyMinutes(),
-            'hourly' => $scheduleSyncJobs->hourly(),
-            'everyTwoHours' => $scheduleSyncJobs->everyTwoHours(),
-            'everyThreeHours' => $scheduleSyncJobs->everyThreeHours(),
-            'everyFourHours' => $scheduleSyncJobs->everyFourHours(),
-            'everySixHours' => $scheduleSyncJobs->everySixHours(),
-            'dailyAt_9' => $scheduleSyncJobs->dailyAt('09:00'),
-            'daily' => $scheduleSyncJobs->daily(),
-            'weekly' => $scheduleSyncJobs->weeklyOn(7),
-            'twiceMonthly' => $scheduleSyncJobs->twiceMonthly(1, 15),
-            'monthly' => $scheduleSyncJobs->monthly(),
-            default => throw new InvalidArgumentException(
-                'Invalid sync frequency configured in settings: '.$syncFrequency
-            ),
-        };
-    }
-} catch (InvalidArgumentException $e) {
-    Log::error('Invalid sync frequency configuration: '.$e->getMessage(), [
-        'frequency' => $syncFrequency ?? 'not fetched',
-        'exception' => $e,
-        'trace' => $e->getTraceAsString(),
-    ]);
-    throw $e; // Rethrow to make the configuration error visible.
-} catch (Exception $e) {
-    // Log other scheduling errors but allow later schedules to run.
-    Log::error('Failed to schedule sync jobs: '.$e->getMessage(), [
-        'frequency' => $syncFrequency ?? 'not fetched',
-        'exception' => $e,
-        'trace' => $e->getTraceAsString(),
-    ]);
-}
+Schedule::command('sync:dispatch-scheduled')
+    ->everyMinute()
+    ->name('Scheduled Data Synchronization Dispatcher')
+    ->onOneServer()
+    ->withoutOverlapping();

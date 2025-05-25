@@ -4,20 +4,26 @@ declare(strict_types=1);
 
 namespace App\Observers;
 
-use App\Actions\Notification\ShouldDeliverNotificationToUserAction;
+use App\Actions\CheckNotificationEligibilityAction;
+use App\Enums\RoleType;
 use App\Models\User;
 use App\Notifications\AdminPromotionEmail;
 use App\Notifications\UserPromotedToAdminNotification;
 use App\Notifications\WelcomeEmail;
-use App\Services\ApplicationSettingsService;
+use App\Services\NotificationPreferenceService;
 
 class UserObserver
 {
-    private ApplicationSettingsService $settingsService;
+    private CheckNotificationEligibilityAction $eligibilityAction;
 
-    public function __construct(ApplicationSettingsService $settingsService)
-    {
-        $this->settingsService = $settingsService;
+    private NotificationPreferenceService $notificationPreferenceService;
+
+    public function __construct(
+        CheckNotificationEligibilityAction $eligibilityAction,
+        NotificationPreferenceService $notificationPreferenceService
+    ) {
+        $this->eligibilityAction = $eligibilityAction;
+        $this->notificationPreferenceService = $notificationPreferenceService;
     }
 
     /**
@@ -25,15 +31,12 @@ class UserObserver
      */
     public function created(User $user): void
     {
-        // Create default notification preferences for the new user
-        $user->notificationPreferences()->create();
+        // Initialize default notification preferences for the new user
+        $this->notificationPreferenceService->initializeUserPreferences($user);
 
-        // Create the notification instance (no argument)
         $welcomeNotification = new WelcomeEmail;
 
-        // Use the injected service and the created notification instance
-        $action = new ShouldDeliverNotificationToUserAction;
-        if ($this->settingsService->getWelcomeEmailEnabled() && $user->email && $action->handle($user, $welcomeNotification)) {
+        if ($user->email && $this->eligibilityAction->execute($welcomeNotification->type(), $user)) {
             $user->notify($welcomeNotification);
         }
     }
@@ -92,31 +95,25 @@ class UserObserver
     public function updated(User $user): void
     {
         // Check if the user was just promoted to admin
-        if ($user->wasChanged('is_admin') && $user->is_admin) {
+        if ($user->wasChanged('user_type') && $user->isAdmin()) {
 
             // --- Notify other admins ---
-            $adminNotifyAction = new ShouldDeliverNotificationToUserAction;
-            $adminNotification = new AdminPromotionEmail($user);
+            $adminPromotionEmail = new AdminPromotionEmail($user);
 
-            // Check global setting for notifying other admins
-            if ($this->settingsService->getAdminPromotionEmailEnabled()) {
-                $adminUsers = User::where('is_admin', true)
-                    ->where('id', '!=', $user->id)
-                    ->get();
+            $adminUsers = User::where('user_type', RoleType::Admin)
+                ->where('id', '!=', $user->id)
+                ->get();
 
-                foreach ($adminUsers as $admin) {
-                    // Check if this specific admin should receive the notification
-                    if ($adminNotifyAction->handle($admin, $adminNotification)) {
-                        $admin->notify($adminNotification);
-                    }
+            foreach ($adminUsers as $admin) {
+                if ($this->eligibilityAction->execute($adminPromotionEmail->type(), $admin)) {
+                    $admin->notify($adminPromotionEmail);
                 }
             }
 
             // --- Notify the promoted user ---
-            // Check global setting for notifying the promoted user
-            if ($this->settingsService->getUserPromotionNotificationEnabled()) {
-                // User's own preference doesn't apply here, only global setting matters
-                $user->notify(new UserPromotedToAdminNotification);
+            $userPromotionNotification = new UserPromotedToAdminNotification;
+            if ($this->eligibilityAction->execute($userPromotionNotification->type(), $user)) {
+                $user->notify($userPromotionNotification);
             }
         }
     }
@@ -147,7 +144,7 @@ class UserObserver
             $timeEntry->delete();
         }
 
-        // Delete the related notification preferences record
+        // Delete the related notification preferences records
         $user->notificationPreferences()->delete();
 
         // Detach belongsToMany relations individually to emit model events

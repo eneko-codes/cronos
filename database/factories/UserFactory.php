@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Enums\RoleType;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -32,7 +33,7 @@ class UserFactory extends Factory
             'desktime_id' => fake()->unique()->numberBetween(1000, 9999),
             'proofhub_id' => fake()->unique()->uuid(),
             'systempin_id' => fake()->unique()->numberBetween(100, 999),
-            'is_admin' => false,
+            'user_type' => RoleType::User,
             'do_not_track' => false,
             'remember_token' => Str::random(10),
         ];
@@ -47,7 +48,7 @@ class UserFactory extends Factory
     {
         return $this->state(
             fn (array $attributes) => [
-                'is_admin' => true,
+                'user_type' => RoleType::Admin,
             ]
         );
     }

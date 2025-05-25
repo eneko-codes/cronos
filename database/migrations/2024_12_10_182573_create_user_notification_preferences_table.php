@@ -11,26 +11,21 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('user_notification_preferences', function (
-            Blueprint $table
-        ) {
-            $table->id();
-            $table
-                ->foreignId('user_id')
-                ->constrained()
-                ->onDelete('cascade');
-            $table->unique('user_id');
-            $table->boolean('mute_all')->default(false);
-            $table->boolean('schedule_change')->default(true);
-            $table->boolean('weekly_user_report')->default(true);
-            $table->boolean('leave_reminder')->default(true);
-            $table->timestamps();
+        // Add muted_notifications column to users table
+        Schema::table('users', function (Blueprint $table): void {
+            if (! Schema::hasColumn('users', 'muted_notifications')) {
+                $table->boolean('muted_notifications')->default(false)->after('remember_token');
+            }
         });
 
-        Schema::table('users', function (Blueprint $table) {
-            if (Schema::hasColumn('users', 'muted_notifications')) {
-                $table->dropColumn('muted_notifications');
-            }
+        // Create user notification preferences table with key-value structure
+        Schema::create('user_notification_preferences', function (Blueprint $table): void {
+            $table->id();
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->string('notification_type');
+            $table->boolean('enabled')->default(true);
+            $table->timestamps();
+            $table->unique(['user_id', 'notification_type']);
         });
     }
 
@@ -39,15 +34,12 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            if (! Schema::hasColumn('users', 'muted_notifications')) {
-                $table
-                    ->boolean('muted_notifications')
-                    ->default(false)
-                    ->after('remember_token');
+        Schema::dropIfExists('user_notification_preferences');
+
+        Schema::table('users', function (Blueprint $table): void {
+            if (Schema::hasColumn('users', 'muted_notifications')) {
+                $table->dropColumn('muted_notifications');
             }
         });
-
-        Schema::dropIfExists('user_notification_preferences');
     }
 };

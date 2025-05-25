@@ -13,7 +13,7 @@ class UserPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->is_admin;
+        return $user->isAdmin();
     }
 
     /**
@@ -21,7 +21,7 @@ class UserPolicy
      */
     public function view(User $user, User $model): bool
     {
-        return $user->is_admin || $user->id === $model->id;
+        return $user->isAdmin() || $user->id === $model->id;
     }
 
     /**
@@ -29,7 +29,7 @@ class UserPolicy
      */
     public function create(User $user): bool
     {
-        return $user->is_admin;
+        return $user->isAdmin();
     }
 
     /**
@@ -37,7 +37,7 @@ class UserPolicy
      */
     public function update(User $user, User $model): bool
     {
-        return $user->is_admin || $user->id === $model->id;
+        return $user->isAdmin() || $user->id === $model->id;
     }
 
     /**
@@ -45,7 +45,7 @@ class UserPolicy
      */
     public function delete(User $user, User $model): bool
     {
-        return $user->is_admin;
+        return $user->isAdmin();
     }
 
     /**
@@ -53,7 +53,7 @@ class UserPolicy
      */
     public function restore(User $user, User $model): bool
     {
-        return $user->is_admin;
+        return $user->isAdmin();
     }
 
     /**
@@ -61,7 +61,7 @@ class UserPolicy
      */
     public function forceDelete(User $user, User $model): bool
     {
-        return $user->is_admin;
+        return $user->isAdmin();
     }
 
     /**
@@ -70,7 +70,7 @@ class UserPolicy
     public function promoteToAdmin(User $authUser, User $userToPromote): bool
     {
         // Only admins can promote other users that are not already admin
-        return $authUser->is_admin && ! $userToPromote->is_admin;
+        return $authUser->isAdmin() && ! $userToPromote->isAdmin();
     }
 
     /**
@@ -79,7 +79,7 @@ class UserPolicy
     public function disableTracking(User $authUser, User $userToNotTrack): bool
     {
         // Only admins can add other users to not track that are not already "do not track"
-        return $authUser->is_admin && ! $userToNotTrack->do_not_track;
+        return $authUser->isAdmin() && ! $userToNotTrack->do_not_track;
     }
 
     /**
@@ -88,7 +88,7 @@ class UserPolicy
     public function enableTracking(User $authUser, User $userToTrack): bool
     {
         // Only admins can enable tracking for users that are currently "do not track"
-        return $authUser->is_admin && $userToTrack->do_not_track;
+        return $authUser->isAdmin() && $userToTrack->do_not_track;
     }
 
     /**
@@ -97,8 +97,8 @@ class UserPolicy
     public function demoteAdmin(User $authUser, User $userToDemote): bool
     {
         // Only admins can demote other admins, and they can't demote themselves
-        return $authUser->is_admin &&
-          $userToDemote->is_admin &&
+        return $authUser->isAdmin() &&
+          $userToDemote->isAdmin() &&
           $authUser->id !== $userToDemote->id;
     }
 
@@ -108,9 +108,7 @@ class UserPolicy
     public function muteNotifications(User $authUser, User $userToMute): bool
     {
         // Only admins can mute notifications for users that are not already muted
-        // UserNotificationPreferences uses withDefault(), so it's never null.
-        return $authUser->is_admin &&
-          ! $userToMute->notificationPreferences->mute_all;
+        return $authUser->isAdmin() && ! $userToMute->muted_notifications;
     }
 
     /**
@@ -119,8 +117,6 @@ class UserPolicy
     public function unmuteNotifications(User $authUser, User $userToUnmute): bool
     {
         // Only admins can unmute notifications for users that are currently muted
-        // UserNotificationPreferences uses withDefault(), so it's never null.
-        return $authUser->is_admin &&
-          $userToUnmute->notificationPreferences->mute_all;
+        return $authUser->isAdmin() && $userToUnmute->muted_notifications;
     }
 }

@@ -92,13 +92,13 @@
                 administrator.
               </x-alert>
             @else
-              {{-- User Mute Status Indicator --}}
-              @if ($muteAll)
+              {{-- User Notifications Status Indicator --}}
+              @if ($userNotificationsMuted)
                 <x-alert wire:key="user-muted-msg-notifications" variant="info">
                   <x-slot:title>
-                    Personal Notifications Muted
+                    Personal Notifications Disabled
                   </x-slot>
-                  You have currently muted all your personal email
+                  You have currently disabled all your personal email
                   notifications.
                 </x-alert>
               @endif
@@ -307,7 +307,10 @@
 
             {{-- User Master Mute Toggle --}}
             <div
-              class="{{ ! $isGloballyEnabled ? "opacity-50" : "" }} flex items-center justify-between rounded-md bg-gray-50 p-3 dark:bg-gray-700"
+              @class([
+                  "flex items-center justify-between rounded-md bg-gray-50 p-3 dark:bg-gray-700",
+                  "opacity-50" => ! $isGloballyEnabled,
+              ])
             >
               <div class="flex items-center gap-3">
                 <svg
@@ -316,14 +319,18 @@
                   viewBox="0 0 24 24"
                   stroke-width="1.5"
                   stroke="currentColor"
-                  class="{{ ! $isGloballyEnabled ? "text-gray-400 dark:text-gray-600" : "text-gray-600 dark:text-gray-400" }} size-5"
+                  @class([
+                      "size-5",
+                      "text-gray-600 dark:text-gray-400" => $isGloballyEnabled,
+                      "text-gray-400 dark:text-gray-600" => ! $isGloballyEnabled,
+                  ])
                 >
                   <path
                     stroke-linecap="round"
                     stroke-linejoin="round"
                     d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"
                   />
-                  @if ($muteAll)
+                  @if ($userNotificationsMuted)
                     <path
                       stroke-linecap="round"
                       stroke-linejoin="round"
@@ -332,129 +339,91 @@
                   @endif
                 </svg>
                 <div>
-                  <p
-                    class="{{ ! $isGloballyEnabled ? "text-gray-400 dark:text-gray-600" : "text-sm font-medium text-gray-900 dark:text-white" }}"
+                  <label
+                    @class([
+                        "inline-flex items-center gap-1 text-sm font-medium",
+                        "text-gray-900 dark:text-white" => $isGloballyEnabled,
+                        "text-gray-400 dark:text-gray-600" => ! $isGloballyEnabled,
+                    ])
                   >
-                    Mute All Personal Notifications
-                  </p>
-                  <p
-                    class="{{ ! $isGloballyEnabled ? "text-gray-400 dark:text-gray-600" : "text-gray-500 dark:text-gray-400" }} text-xs"
-                  >
-                    {{ $muteAll ? "Currently muted" : "Currently active" }}
-                  </p>
+                    Mute Personal Notifications
+                    <x-tooltip>
+                      <x-slot name="text">
+                        Personal switch for your email notifications. This
+                        allows you to control your own notification preferences
+                        independently of the global settings.
+                      </x-slot>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="1.5"
+                        stroke="currentColor"
+                        class="size-3"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+                        />
+                      </svg>
+                    </x-tooltip>
+                  </label>
                 </div>
               </div>
-              <label
-                class="{{ ! $isGloballyEnabled ? "cursor-not-allowed" : "cursor-pointer" }} relative inline-flex items-center"
-              >
-                <input
-                  type="checkbox"
-                  class="peer sr-only"
-                  wire:model.change="muteAll"
-                  @disabled(! $isGloballyEnabled)
-                />
-                <div
-                  class="peer h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-600 peer-disabled:opacity-50 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white dark:bg-gray-700"
-                ></div>
-              </label>
+              <x-toggle-switch
+                id="user-notifications-toggle"
+                :model="'wire:model.change=userNotificationsMuted'"
+                :checked="(bool)$userNotificationsMuted"
+                :disabled="!$isGloballyEnabled"
+              />
             </div>
 
             {{-- Individual Preference Toggles --}}
             <div class="ml-2 space-y-3">
-              {{-- Loop through preference keys passed from component --}}
-              @foreach ($this->preferenceKeys as $key => $label)
-                {{-- Conditionally skip non-admin toggles for non-admins --}}
-                @if (($key === "api_down_warning" || $key === "admin_promotion_email") && ! (Auth::user() && Auth::user()->is_admin))
-                  @continue
-                @endif
-
-                {{-- Determine disabled state based on global master, user mute, and specific global toggle --}}
-                @php
-                  // Check if the specific notification type is globally disabled by an admin setting
-                  // $isTypeGloballyDisabled = $isGloballyEnabled && isset($globalPreferenceStates[$key]) ? ! $globalPreferenceStates[$key] : false;
-                  // Determine the final disabled state for the UI toggle
-                  // $isDisabled = ! $isGloballyEnabled || $muteAll || $isTypeGloballyDisabled;
-
-                  // Revised logic for clarity and correctness
-                  $isSpecificTypeGloballyOff = isset($globalPreferenceStates[$key]) && $globalPreferenceStates[$key] === false;
-
-                  if (! $isGloballyEnabled) {
-                      // If master global is OFF, everything is effectively disabled regardless of specific type state or user mute
-                      $isTypeGloballyDisabled = true; // Indicates a global reason for disablement
-                      $isDisabled = true;
-                  } elseif ($isSpecificTypeGloballyOff) {
-                      // If master global is ON, but this specific type is globally OFF
-                      $isTypeGloballyDisabled = true; // Indicates a global reason for disablement (type-specific)
-                      $isDisabled = true;
-                  } elseif ($muteAll) {
-                      // If master global is ON, and specific type is globally ON (or not set, defaulting to ON), but user has muted all
-                      $isTypeGloballyDisabled = false; // Not disabled due to a global admin setting
-                      $isDisabled = true; // Disabled due to user's muteAll
-                  } else {
-                      // Master global ON, specific type ON (or default ON), user muteAll OFF
-                      $isTypeGloballyDisabled = false;
-                      $isDisabled = false;
-                  }
-                @endphp
-
-                {{-- Row for the toggle --}}
+              @foreach ($this->preferenceKeys as $key => $preference)
                 <div
                   wire:key="preference-toggle-{{ $key }}"
-                  class="@if($isDisabled) opacity-50 @endif flex items-center justify-between"
+                  class="flex items-center justify-between"
                 >
-                  {{-- Label and Badges/Tooltips --}}
                   <span class="flex items-center">
                     <label
                       for="preference-{{ $key }}"
-                      class="{{ $isDisabled ? "text-gray-400 dark:text-gray-600" : "text-gray-900 dark:text-white" }} text-sm font-medium"
+                      class="inline-flex items-center gap-1 text-sm font-medium text-gray-900 dark:text-white"
                     >
-                      {{ $label }}
+                      {{ $preference["label"] }}
+                      <x-tooltip>
+                        <x-slot name="text">
+                          {{ $preference["tooltipText"] }}
+                        </x-slot>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke-width="1.5"
+                          stroke="currentColor"
+                          class="size-3"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+                          />
+                        </svg>
+                      </x-tooltip>
                     </label>
-
-                    {{-- Admin Only Badge --}}
-                    @if ($key === "api_down_warning" || $key === "admin_promotion_email")
+                    @if ($preference["isAdminOnly"])
                       <x-badge variant="primary" size="sm" class="ml-1">
                         Admin
                       </x-badge>
                     @endif
-
-                    {{-- Globally Disabled Warning Tooltip --}}
-                    {{-- Show if the reason for disablement is global (either master OR type-specific) AND the specific type toggle is indeed off globally --}}
-                    @if ($isTypeGloballyDisabled && $isSpecificTypeGloballyOff && $isGloballyEnabled)
-                      <x-tooltip
-                        text="This notification type is currently disabled by an administrator."
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                          class="ml-1 size-4 text-yellow-500"
-                        >
-                          <path
-                            fill-rule="evenodd"
-                            d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.253a.25.25 0 0 1 .244.304l-.459 2.066A1.75 1.75 0 0 0 10.747 15H11a.75.75 0 0 0 0-1.5h-.253a.25.25 0 0 1-.244-.304l.459-2.066A1.75 1.75 0 0 0 9.253 9H9Z"
-                            clip-rule="evenodd"
-                          />
-                        </svg>
-                      </x-tooltip>
-                    @endif
                   </span>
-
-                  {{-- Toggle Switch --}}
-                  <label
-                    class="{{ $isDisabled ? "cursor-not-allowed" : "cursor-pointer" }} relative inline-flex items-center"
-                  >
-                    <input
-                      type="checkbox"
-                      id="preference-{{ $key }}"
-                      class="peer sr-only"
-                      wire:model.change="individualPreferences.{{ $key }}"
-                      @disabled($isDisabled)
-                    />
-                    <div
-                      class="peer h-6 w-11 rounded-full bg-gray-200 peer-checked:bg-blue-600 peer-focus:ring-4 peer-focus:ring-blue-300 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white dark:border-gray-600 dark:bg-gray-700 dark:peer-focus:ring-blue-800"
-                    ></div>
-                  </label>
+                  <x-toggle-switch
+                    :id="'preference-' . $key"
+                    :model="'wire:model.change=userNotificationStates.' . $key"
+                    :checked="(bool)($userNotificationStates[$key] ?? false)"
+                    :disabled="$preference['isDisabled']"
+                  />
                 </div>
               @endforeach
             </div>

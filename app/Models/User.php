@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\RoleType;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -34,7 +35,7 @@ use Illuminate\Notifications\Notification;
  * @property int|null $proofhub_id ID of the user in Proofhub
  * @property int|null $systempin_id ID of the user in Systempin
  * @property int|null $department_id Foreign key to departments table
- * @property bool $is_admin Whether the user has admin privileges
+ * @property RoleType $user_type Type of the user (e.g., Admin, User)
  * @property bool $do_not_track Whether the user's data should be excluded from tracking operations
  * @property \Carbon\Carbon|null $email_verified_at When email was verified
  * @property \Carbon\Carbon|null $created_at When record was created
@@ -86,7 +87,7 @@ use Illuminate\Notifications\Notification;
  * @method static Builder<static>|User whereEmail($value)
  * @method static Builder<static>|User whereId($value)
  * @method static Builder<static>|User whereIsActive($value)
- * @method static Builder<static>|User whereIsAdmin($value)
+ * @method static Builder<static>|User whereRoleType($value)
  * @method static Builder<static>|User whereJobTitle($value)
  * @method static Builder<static>|User whereName($value)
  * @method static Builder<static>|User whereOdooId($value)
@@ -147,7 +148,7 @@ class User extends Authenticatable
         'department_id',
         'job_title',
         'odoo_manager_id',
-        'is_admin',
+        'user_type',
         'do_not_track',
         'muted_notifications',
         'remember_token',
@@ -159,7 +160,7 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
-    protected $guarded = ['is_admin'];
+    protected $guarded = [];
 
     /**
      * The attributes that should be hidden for arrays.
@@ -167,7 +168,6 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $hidden = [
-        'is_admin',
         'remember_token',
         'odoo_id',
         'desktime_id',
@@ -181,7 +181,7 @@ class User extends Authenticatable
      * @var array<string, string>
      */
     protected $casts = [
-        'is_admin' => 'boolean',
+        'user_type' => RoleType::class,
         'do_not_track' => 'boolean',
         'muted_notifications' => 'boolean',
         'is_active' => 'boolean',
@@ -371,18 +371,17 @@ class User extends Authenticatable
      */
     public function isAdmin(): bool
     {
-        return (bool) $this->is_admin;
+        return $this->user_type === RoleType::Admin;
     }
 
     /**
      * Get the user's notification preferences.
      *
-     * @return \Illuminate\Database\Eloquent\Relations\HasOne<\App\Models\UserNotificationPreference, $this>
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\UserNotificationPreference, $this>
      */
-    public function notificationPreferences(): HasOne
+    public function notificationPreferences(): HasMany
     {
-        return $this->hasOne(UserNotificationPreference::class, 'user_id', 'id')
-            ->withDefault();
+        return $this->hasMany(UserNotificationPreference::class, 'user_id', 'id');
     }
 
     /**
@@ -503,7 +502,7 @@ class User extends Authenticatable
         }
 
         // Admin Badge
-        if ($this->is_admin) {
+        if ($this->isAdmin()) {
             $specialBadges[] = [
                 'text' => 'Admin',
                 'variant' => 'primary',

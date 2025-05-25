@@ -43,15 +43,15 @@ class ProjectDetailView extends Component
     {
         // Eager load project with users, tasks (incl. relations/counts), and project-level time entries
         $project->load([
-            'users:id,name,is_admin',
+            'users:id,name,user_type',
             'tasks' => function ($query): void {
-                $query->with('users:id,name,is_admin') // Load task users
+                $query->with('users:id,name,user_type') // Load task users
                     ->withCount('timeEntries')       // Count task time entries
                     ->orderBy('name');               // Order tasks
             },
             'timeEntries' => function ($query): void {
                 $query->whereNull('proofhub_task_id') // Only project-level entries
-                    ->with('user:id,name,is_admin') // Load entry user
+                    ->with('user:id,name,user_type') // Load entry user
                     ->orderBy('date', 'desc')
                     ->orderBy('created_at', 'desc');
             },
@@ -75,7 +75,7 @@ class ProjectDetailView extends Component
         }
 
         $newEntries = TimeEntry::whereIn('proofhub_task_id', $taskIds)
-            ->with('user:id,name,is_admin')
+            ->with('user:id,name,user_type')
             ->orderBy('date', 'desc')
             ->orderBy('created_at', 'desc')
             ->get()

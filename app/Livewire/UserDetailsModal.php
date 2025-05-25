@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire;
 
+use App\Enums\RoleType;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Lazy;
@@ -76,7 +77,7 @@ class UserDetailsModal extends Component
     public function loadUserDetails(): void
     {
         // Fetch user details with manager and subordinates relationships
-        $user = User::with('manager', 'subordinates', 'notificationPreferences')->findOrFail($this->userId);
+        $user = User::with('manager', 'subordinates')->findOrFail($this->userId);
 
         // Prepare user details for display
         $this->prepareDetails($user);
@@ -90,8 +91,8 @@ class UserDetailsModal extends Component
         $this->canEnableTracking =
           $user->do_not_track && Gate::allows('enableTracking', $user);
 
-        // Use  preferences relationship and policies
-        $this->isMuted = (bool) $user->notificationPreferences->mute_all;
+        // Use the muted_notifications column from users table
+        $this->isMuted = (bool) $user->muted_notifications;
         $this->canMuteNotifications = Gate::allows('muteNotifications', $user);
         $this->canUnmuteNotifications = Gate::allows('unmuteNotifications', $user);
     }
@@ -119,8 +120,8 @@ class UserDetailsModal extends Component
 
         $this->isAdmin = $user->isAdmin();
         $this->isDoNotTrack = $user->do_not_track;
-        // Use the new preferences relationship
-        $this->isMuted = (bool) $user->notificationPreferences->mute_all;
+        // Use the muted_notifications column from users table
+        $this->isMuted = (bool) $user->muted_notifications;
 
         $this->details = [
             'Email' => $this->email,
@@ -142,17 +143,13 @@ class UserDetailsModal extends Component
         $this->authorize('promoteToAdmin', $user);
 
         if (! $user->isAdmin()) {
-            $user->is_admin = true;
+            $user->user_type = RoleType::Admin;
             $user->save();
+            $this->dispatch('user-updated', $user->id);
+            $this->dispatch('add-toast', message: 'User promoted to admin.', variant: 'success');
 
             // Update local state and permissions by reloading all details
             $this->loadUserDetails();
-
-            $this->dispatch(
-                'add-toast',
-                message: 'User '.$this->name.' promoted to admin successfully.',
-                variant: 'success'
-            );
         }
     }
 
@@ -162,17 +159,13 @@ class UserDetailsModal extends Component
         $this->authorize('demoteAdmin', $user);
 
         if ($user->isAdmin()) {
-            $user->is_admin = false;
+            $user->user_type = RoleType::User;
             $user->save();
+            $this->dispatch('user-updated', $user->id);
+            $this->dispatch('add-toast', message: 'User demoted to regular user.', variant: 'success');
 
             // Update local state and permissions by reloading all details
             $this->loadUserDetails();
-
-            $this->dispatch(
-                'add-toast',
-                message: 'Admin rights removed from '.$this->name.' successfully.',
-                variant: 'success'
-            );
         }
     }
 
@@ -223,10 +216,9 @@ class UserDetailsModal extends Component
         $user = User::findOrFail($this->userId);
         $this->authorize('muteNotifications', $user);
 
-        // Update the preference record
-        $preferences = $user->notificationPreferences()->firstOrCreate(); // Ensure record exists
-        if (! $preferences->mute_all) {
-            $preferences->update(['mute_all' => true]);
+        // Update the muted_notifications column in users table
+        if (! $user->muted_notifications) {
+            $user->update(['muted_notifications' => true]);
 
             // Reload details and permissions to reflect the change immediately
             $this->loadUserDetails();
@@ -246,10 +238,9 @@ class UserDetailsModal extends Component
         $user = User::findOrFail($this->userId);
         $this->authorize('unmuteNotifications', $user);
 
-        // Update the preference record
-        $preferences = $user->notificationPreferences()->firstOrCreate(); // Ensure record exists
-        if ($preferences->mute_all) {
-            $preferences->update(['mute_all' => false]);
+        // Update the muted_notifications column in users table
+        if ($user->muted_notifications) {
+            $user->update(['muted_notifications' => false]);
 
             // Reload details and permissions to reflect the change immediately
             $this->loadUserDetails();

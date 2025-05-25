@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Enums\RoleType;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Validator;
@@ -51,13 +52,13 @@ class PromoteUserToAdmin extends Command
 
         $user = User::where('email', $email)->first();
 
-        if ($user->is_admin) {
+        if ($user->isAdmin()) {
             $this->warn("User '{$email}' is already an admin.");
 
             return Command::SUCCESS;
         }
 
-        $user->is_admin = true;
+        $user->user_type = RoleType::Admin;
         $user->save();
 
         $this->info("User '{$email}' has been successfully promoted to admin.");

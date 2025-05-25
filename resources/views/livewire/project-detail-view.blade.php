@@ -3,7 +3,7 @@
   <a
     href="{{ route('projects.list') }}"
     wire:navigate
-    class="inline-flex h-fit w-fit flex-row items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-gray-200/75 px-2 py-1 text-xs font-semibold text-gray-800 shadow-sm hover:bg-gray-200 dark:bg-gray-200 dark:text-gray-800 dark:hover:bg-gray-100"
+    class="inline-flex h-fit w-fit flex-row items-center justify-center gap-2 rounded-lg bg-gray-200/75 px-2 py-1 text-xs font-semibold whitespace-nowrap text-gray-800 shadow-sm hover:bg-gray-200 dark:bg-gray-200 dark:text-gray-800 dark:hover:bg-gray-100"
   >
     <svg
       class="size-4"
@@ -41,7 +41,7 @@
         @foreach ($project->users as $user)
           <x-badge
             size="sm"
-            variant="{{ $user->is_admin ? 'primary' : 'info' }}"
+            variant="{{ $user->isAdmin() ? 'primary' : 'info' }}"
           >
             {{ $user->name }}
           </x-badge>
@@ -103,7 +103,7 @@
                       @foreach ($task->users as $user)
                         <x-badge
                           size="sm"
-                          variant="{{ $user->is_admin ? 'primary' : 'default' }}"
+                          variant="{{ $user->isAdmin() ? 'primary' : 'default' }}"
                         >
                           {{ $user->name }}
                         </x-badge>
@@ -145,7 +145,7 @@
                         <div class="flex justify-between">
                           <x-badge
                             size="sm"
-                            variant="{{ $entry->user?->is_admin ? 'primary' : 'default' }}"
+                            variant="{{ $entry->user?->isAdmin() ? 'primary' : 'default' }}"
                           >
                             {{ $entry->user->name ?? 'N/A' }}
                           </x-badge>
@@ -160,21 +160,21 @@
                           </span>
                         </div>
                         @if ($entry->description)
-                          <p class="italic text-gray-600 dark:text-gray-400">
+                          <p class="text-gray-600 italic dark:text-gray-400">
                             {{ Str::limit($entry->description, 150) }}
                           </p>
                         @endif
                       </div>
                     @empty
                       <p
-                        class="text-xs italic text-gray-500 dark:text-gray-400"
+                        class="text-xs text-gray-500 italic dark:text-gray-400"
                       >
                         No time entries loaded for this task.
                       </p>
                     @endforelse
                   @else
                     {{-- Should not happen if toggle logic is correct, but good fallback --}}
-                    <p class="text-xs italic text-gray-500 dark:text-gray-400">
+                    <p class="text-xs text-gray-500 italic dark:text-gray-400">
                       Loading time entries...
                     </p>
                   @endisset
@@ -185,7 +185,7 @@
             <div
               class="rounded-md border border-dashed border-gray-300 bg-white p-4 text-center dark:border-gray-500 dark:bg-gray-700"
             >
-              <p class="text-sm italic text-gray-500 dark:text-gray-400">
+              <p class="text-sm text-gray-500 italic dark:text-gray-400">
                 This project has no associated tasks.
               </p>
             </div>
@@ -245,7 +245,7 @@
                   </span>
                   <x-badge
                     size="sm"
-                    variant="{{ $entry->user?->is_admin ? 'primary' : 'default' }}"
+                    variant="{{ $entry->user?->isAdmin() ? 'primary' : 'default' }}"
                   >
                     {{ $entry->user->name ?? 'N/A' }}
                   </x-badge>
@@ -256,7 +256,7 @@
             <div
               class="rounded-md border border-dashed border-gray-300 bg-white p-4 text-center dark:border-gray-500 dark:bg-gray-700"
             >
-              <p class="text-sm italic text-gray-500 dark:text-gray-400">
+              <p class="text-sm text-gray-500 italic dark:text-gray-400">
                 No time entries directly associated with this project.
               </p>
             </div>

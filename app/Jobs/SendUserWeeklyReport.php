@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
-use App\Actions\Notification\ShouldDeliverNotificationToUserAction;
+use App\Actions\CheckNotificationEligibilityAction;
 use App\Models\User;
 use App\Notifications\WeeklyUserReportNotification;
 use Carbon\Carbon;
@@ -54,6 +54,8 @@ class SendUserWeeklyReport implements ShouldQueue
             "SendUserWeeklyReport Job: Found {$users->count()} trackable users to process."
         );
 
+        $eligibilityAction = app(CheckNotificationEligibilityAction::class);
+
         foreach ($users as $user) {
             Log::info("SendUserWeeklyReport Job: Processing user {$user->id}");
 
@@ -71,8 +73,7 @@ class SendUserWeeklyReport implements ShouldQueue
             $notification = new WeeklyUserReportNotification($user, $reportData);
 
             // Check permission using the action
-            $action = new ShouldDeliverNotificationToUserAction;
-            if ($action->handle($user, $notification)) {
+            if ($eligibilityAction->execute($notification->type(), $user)) {
                 try {
                     $user->notify($notification);
                     Log::info(

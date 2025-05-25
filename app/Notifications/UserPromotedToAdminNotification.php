@@ -51,4 +51,9 @@ class UserPromotedToAdminNotification extends Notification implements ShouldQueu
             //
         ];
     }
+
+    public function type(): \App\Enums\NotificationType
+    {
+        return \App\Enums\NotificationType::UserPromotedToAdmin;
+    }
 }

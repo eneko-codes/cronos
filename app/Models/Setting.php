@@ -6,7 +6,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Log;
 
 /**
  * @property int $id
@@ -88,8 +87,6 @@ class Setting extends Model
                 'value' => is_array($value) || is_object($value) ? json_encode($value) : $value,
             ]
         );
-
-        Log::info("Setting '{$key}' updated.");
 
         return $setting;
     }

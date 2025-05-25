@@ -4,13 +4,20 @@ declare(strict_types=1);
 
 namespace App\Observers;
 
-use App\Actions\Notification\ShouldDeliverNotificationToUserAction;
+use App\Actions\CheckNotificationEligibilityAction;
 use App\Models\User;
 use App\Models\UserSchedule;
 use App\Notifications\ScheduleChangeNotification;
 
 class UserScheduleObserver
 {
+    private CheckNotificationEligibilityAction $eligibilityAction;
+
+    public function __construct(CheckNotificationEligibilityAction $eligibilityAction)
+    {
+        $this->eligibilityAction = $eligibilityAction;
+    }
+
     /**
      * Handle the UserSchedule "created" event.
      */
@@ -40,8 +47,7 @@ class UserScheduleObserver
             $notification = new ScheduleChangeNotification($user, $endedSchedule, null);
 
             // Check permission using the action
-            $action = new ShouldDeliverNotificationToUserAction;
-            if ($action->handle($user, $notification)) {
+            if ($this->eligibilityAction->execute($notification->type(), $user)) {
                 $user->notify($notification);
             }
         }

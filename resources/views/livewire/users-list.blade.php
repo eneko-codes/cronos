@@ -73,7 +73,7 @@
                   </p>
 
                   {{-- Muted icon --}}
-                  @if (! $globalNotificationsEnabled || $user->notificationPreferences?->mute_all)
+                  @if (! $globalNotificationsEnabled || $user->muted_notifications)
                     <x-tooltip
                       text="{{ !$globalNotificationsEnabled ? 'Global notifications disabled' : 'User notifications muted' }}"
                     >

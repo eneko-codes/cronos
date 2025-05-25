@@ -4,18 +4,26 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Enums\NotificationType;
+use App\Enums\RoleType;
 use App\Models\Category;
 use App\Models\Department;
+use App\Models\GlobalNotificationPreference;
 use App\Models\LeaveType;
 use App\Models\Project;
 use App\Models\Schedule;
 use App\Models\ScheduleDetail;
+use App\Models\Setting;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
 use App\Models\UserAttendance;
 use App\Models\UserLeave;
+use App\Models\UserNotificationPreference;
 use App\Models\UserSchedule;
+use App\Notifications\ScheduleChangeNotification;
+use App\Notifications\WeeklyUserReportNotification;
+use App\Notifications\WelcomeEmail;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -67,10 +75,21 @@ class DatabaseSeeder extends Seeder
         $this->createCoreData();
         echo "✅ Core data created successfully!\n\n";
 
+        // Create global notification preferences and settings
+        echo "⚙️ Creating global notification preferences and settings...\n";
+        $this->createGlobalNotificationPreferences();
+        $this->createSettings();
+        echo "✅ Global preferences and settings created successfully!\n\n";
+
         // Create users and assign core data
         echo "👥 Creating users with predefined roles...\n";
         $users = $this->createUsers();
         echo '✅ Created '.count($users)." users successfully!\n\n";
+
+        // Create user notification preferences
+        echo "🔔 Creating user notification preferences...\n";
+        $this->createUserNotificationPreferences($users);
+        echo "✅ User notification preferences created successfully!\n\n";
 
         // Create and assign 8-hour work schedule data (full-time)
         echo "⏰ Creating full-time (8h) schedules and data for users...\n";
@@ -91,11 +110,18 @@ class DatabaseSeeder extends Seeder
         $this->createGuaranteedLeaves($users, $from, $to);
         echo "✅ Leave records created successfully!\n\n";
 
+        // Create sample notifications for demo purposes
+        echo "📧 Creating sample notifications for demo...\n";
+        $this->createSampleNotifications($users);
+        echo "✅ Sample notifications created successfully!\n\n";
+
         echo "╔═══════════════════════════════════════════════════════════╗\n";
         echo "║            CRONOS DEMO DATABASE SEEDER COMPLETED          ║\n";
         echo "╚═══════════════════════════════════════════════════════════╝\n\n";
         echo "🎉 Seeding completed successfully! The database now contains demo data for testing.\n";
         echo "🔍 Login with any user: john@example.com, jane@example.com, etc. (go to https://url.com/telescope Mail tab to see the emails)\n";
+        echo "📧 Check the notifications tab to see sample notifications\n";
+        echo "⚙️ Visit settings to see notification preferences in action\n";
     }
 
     /**
@@ -122,6 +148,10 @@ class DatabaseSeeder extends Seeder
             'user_attendances',
             'user_leaves',
             'user_schedules',
+            'user_notification_preferences',
+            'global_notification_preferences',
+            'settings',
+            'notifications',
         ];
 
         // First drop everything
@@ -344,34 +374,34 @@ class DatabaseSeeder extends Seeder
                 'name' => 'John Developer',
                 'email' => 'john@example.com',
                 'department_id' => $this->departments[0]->odoo_department_id, // Engineering
-                'is_admin' => true, // Admin user
+                'user_type' => RoleType::Admin,
             ],
             [
                 'name' => 'Jane Designer',
                 'email' => 'jane@example.com',
                 'department_id' => $this->departments[1]->odoo_department_id, // Design
-                'is_admin' => false,
+                'user_type' => RoleType::User,
                 'muted_notifications' => true, // Muted user
             ],
             [
                 'name' => 'Sarah Engineer',
                 'email' => 'sarah@example.com',
                 'department_id' => $this->departments[0]->odoo_department_id, // Engineering
-                'is_admin' => false,
+                'user_type' => RoleType::User,
                 'muted_notifications' => false,
             ],
             [
                 'name' => 'Michael Tester',
                 'email' => 'michael@example.com',
                 'department_id' => $this->departments[0]->odoo_department_id, // Engineering
-                'is_admin' => false,
+                'user_type' => RoleType::User,
                 'muted_notifications' => false,
             ],
             [
                 'name' => 'Emily Manager',
                 'email' => 'emily@example.com',
                 'department_id' => $this->departments[2]->odoo_department_id, // Product
-                'is_admin' => false,
+                'user_type' => RoleType::Admin,
                 'muted_notifications' => false,
             ],
         ];
@@ -874,8 +904,8 @@ class DatabaseSeeder extends Seeder
 
             // For more accurate time calculations
             $totalMinutes = $hours * 60;
-            $endHour = $startHour + floor($totalMinutes / 60);
-            $endMinute = $startMinute + ($totalMinutes % 60);
+            $endHour = (int) ($startHour + floor($totalMinutes / 60));
+            $endMinute = (int) ($startMinute + ($totalMinutes % 60));
 
             // Adjust if minutes overflow
             if ($endMinute >= 60) {
@@ -1132,5 +1162,156 @@ class DatabaseSeeder extends Seeder
         } while (TimeEntry::where('proofhub_time_entry_id', $id)->exists());
 
         return $id;
+    }
+
+    /**
+     * Create global notification preferences with realistic settings
+     */
+    private function createGlobalNotificationPreferences(): void
+    {
+        echo "  🔔 Creating global notification preferences...\n";
+
+        foreach (NotificationType::cases() as $type) {
+            GlobalNotificationPreference::create([
+                'notification_type' => $type->value,
+                'enabled' => $type->defaultEnabled(),
+            ]);
+        }
+
+        echo '    ✓ Created '.count(NotificationType::cases())." global notification preferences\n";
+    }
+
+    /**
+     * Create application settings for demo purposes
+     */
+    private function createSettings(): void
+    {
+        echo "  ⚙️ Creating application settings...\n";
+
+        $settings = [
+            [
+                'key' => 'app_name',
+                'value' => 'Cronos Demo',
+            ],
+            [
+                'key' => 'company_name',
+                'value' => 'Demo Company Inc.',
+            ],
+            [
+                'key' => 'timezone',
+                'value' => 'UTC',
+            ],
+            [
+                'key' => 'working_hours_per_day',
+                'value' => '8',
+            ],
+            [
+                'key' => 'notification_email_from',
+                'value' => 'noreply@cronos-demo.com',
+            ],
+            [
+                'key' => 'leave_approval_required',
+                'value' => 'true',
+            ],
+            [
+                'key' => 'max_leave_days_per_year',
+                'value' => '25',
+            ],
+        ];
+
+        foreach ($settings as $setting) {
+            Setting::create($setting);
+        }
+
+        echo '    ✓ Created '.count($settings)." application settings\n";
+    }
+
+    /**
+     * Create user notification preferences with varied settings for demo
+     */
+    private function createUserNotificationPreferences($users): void
+    {
+        echo "  👤 Creating user notification preferences...\n";
+        $preferencesCount = 0;
+
+        foreach ($users as $user) {
+            foreach (NotificationType::availableForUser($user) as $type) {
+                // Create varied preferences for demo purposes
+                $enabled = match ($user->name) {
+                    'John Developer' => true, // Admin gets all notifications
+                    'Jane Designer' => $type !== NotificationType::WeeklyUserReport, // Designer opts out of weekly reports
+                    'Sarah Engineer' => $type !== NotificationType::LeaveReminder, // Engineer opts out of leave reminders
+                    'Michael Tester' => in_array($type, [NotificationType::ScheduleChange, NotificationType::WelcomeEmail]), // Tester only wants critical ones
+                    'Emily Manager' => true, // Manager gets all notifications
+                    default => $type->defaultEnabled(),
+                };
+
+                UserNotificationPreference::updateOrCreate(
+                    [
+                        'user_id' => $user->id,
+                        'notification_type' => $type->value,
+                    ],
+                    [
+                        'enabled' => $enabled,
+                    ]
+                );
+
+                $preferencesCount++;
+            }
+        }
+
+        echo "    ✓ Created {$preferencesCount} user notification preferences\n";
+    }
+
+    /**
+     * Create sample notifications for demo purposes
+     */
+    private function createSampleNotifications($users): void
+    {
+        echo "  📧 Creating sample notifications...\n";
+        $notificationCount = 0;
+
+        // Create welcome notifications for all users (as if they just joined)
+        foreach ($users as $user) {
+            $user->notify(new WelcomeEmail);
+            $notificationCount++;
+        }
+
+        // Create some schedule change notifications for a few users
+        $scheduleChangeUsers = array_slice($users, 0, 3);
+        foreach ($scheduleChangeUsers as $user) {
+            // Get the user's current schedule and create a fake old schedule
+            $currentSchedule = $this->schedules['full_time'];
+            $oldSchedule = $this->schedules['part_time']; // Simulate they were moved from part-time to full-time
+
+            $user->notify(new ScheduleChangeNotification(
+                $user,
+                $oldSchedule,
+                $currentSchedule
+            ));
+            $notificationCount++;
+        }
+
+        // Create weekly report notifications for active users
+        $reportUsers = array_slice($users, 0, 4);
+        foreach ($reportUsers as $user) {
+            $weekStart = Carbon::now()->subWeek()->startOfWeek();
+            $weekEnd = Carbon::now()->subWeek()->endOfWeek();
+
+            $reportData = [
+                'week_start' => $weekStart->format('Y-m-d'),
+                'week_end' => $weekEnd->format('Y-m-d'),
+                'hours_worked' => rand(35, 45),
+                'projects_count' => rand(2, 5),
+                'tasks_completed' => rand(8, 15),
+                'attendance_days' => rand(4, 5),
+            ];
+
+            $user->notify(new WeeklyUserReportNotification($user, $reportData));
+            $notificationCount++;
+        }
+
+        echo "    ✓ Created {$notificationCount} sample notifications\n";
+        echo "    ✓ Types: Welcome emails, Schedule changes, Weekly reports\n";
     }
 }

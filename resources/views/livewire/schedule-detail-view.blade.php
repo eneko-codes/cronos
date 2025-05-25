@@ -180,7 +180,7 @@
                     text="Assigned from {{ $userSchedule->effective_from->format('Y-m-d') }} {{ $userSchedule->effective_until ? 'to ' . $userSchedule->effective_until->format('Y-m-d') : 'indefinitely' }}"
                   >
                     <a
-                      href="{{ route('user.dashboard', ['id' => $userSchedule->user->id]) }}"
+                      href="{{ route('user.dashboard', ['user' => $userSchedule->user->id]) }}"
                       wire:navigate
                       class="inline-block"
                     >
@@ -240,7 +240,7 @@
                     text="Assigned from {{ $userSchedule->effective_from->format('Y-m-d') }} to {{ $userSchedule->effective_until ? $userSchedule->effective_until->format('Y-m-d') : 'Error: No end date?' }}"
                   >
                     <a
-                      href="{{ route('user.dashboard', ['id' => $userSchedule->user->id]) }}"
+                      href="{{ route('user.dashboard', ['user' => $userSchedule->user->id]) }}"
                       wire:navigate
                       class="inline-block"
                     >

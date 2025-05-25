@@ -60,4 +60,9 @@ class WelcomeEmail extends Notification implements ShouldQueue
             'level' => 'info',
         ];
     }
+
+    public function type(): \App\Enums\NotificationType
+    {
+        return \App\Enums\NotificationType::WelcomeEmail;
+    }
 }

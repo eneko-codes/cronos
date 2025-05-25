@@ -69,4 +69,9 @@ class ApiDownWarning extends Notification implements ShouldQueue
             'level' => 'error',
         ];
     }
+
+    public function type(): \App\Enums\NotificationType
+    {
+        return \App\Enums\NotificationType::ApiDownWarning;
+    }
 }

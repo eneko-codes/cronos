@@ -34,7 +34,7 @@
     Dashboard
   </a>
 
-  @if (Auth::user()->is_admin)
+  @if (Auth::user()->isAdmin())
     <a
       wire:navigate
       href="{{ route('users.list') }}"

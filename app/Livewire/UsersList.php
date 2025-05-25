@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Livewire;
 
+use App\Enums\RoleType;
 use App\Models\Setting;
 use App\Models\User;
+use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Lazy;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
@@ -61,7 +63,7 @@ class UsersList extends Component
         return view('livewire.placeholders.users-list-skeleton');
     }
 
-    public function render()
+    public function render(): View
     {
         $globalNotificationsEnabled = (bool) Setting::getValue(
             'notifications.global_enabled',
@@ -69,7 +71,6 @@ class UsersList extends Component
         );
 
         $users = User::query()
-            ->with('notificationPreferences')
             ->when($this->search, function ($query): void {
                 $query->whereRaw('LOWER(name) LIKE ?', [
                     '%'.strtolower($this->search).'%',
@@ -77,7 +78,7 @@ class UsersList extends Component
             })
             ->when(
                 $this->filter === 'admins',
-                fn ($query) => $query->where('is_admin', true)
+                fn ($query) => $query->where('user_type', RoleType::Admin)
             )
             ->when(
                 $this->filter === 'not_tracked',
@@ -85,22 +86,16 @@ class UsersList extends Component
             )
             ->when(
                 $this->filter === 'muted',
-                fn ($query) => $query->whereHas(
-                    'notificationPreferences',
-                    fn ($prefQuery) => $prefQuery->where('mute_all', true)
-                )
+                fn ($query) => $query->where('muted_notifications', true)
             )
             ->orderBy('name')
             ->paginate($this->itemsPerPage);
 
         $counts = [
             'all' => User::count(),
-            'admins' => User::where('is_admin', true)->count(),
+            'admins' => User::where('user_type', RoleType::Admin)->count(),
             'not_tracked' => User::notTrackable()->count(),
-            'muted' => User::whereHas(
-                'notificationPreferences',
-                fn ($query) => $query->where('mute_all', true)
-            )->count(),
+            'muted' => User::where('muted_notifications', true)->count(),
         ];
 
         return view('livewire.users-list', [

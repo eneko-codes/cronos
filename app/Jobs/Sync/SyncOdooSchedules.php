@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Jobs\Sync;
 
 use App\Clients\OdooApiClient;
+use App\Enums\RoleType;
 use App\Models\Schedule;
 use App\Models\User;
 use App\Notifications\DuplicateScheduleWarning;
@@ -159,7 +160,7 @@ class SyncOdooSchedules extends BaseSyncJob
                     // Send notification to admins, avoiding duplicates using cache
                     $cacheKey = 'duplicate_schedule_warning_'.$odooScheduleId;
                     if (! Cache::has($cacheKey)) {
-                        $admins = User::where('is_admin', true)->get();
+                        $admins = User::where('user_type', RoleType::Admin)->get();
                         if ($admins->isNotEmpty()) {
                             try {
                                 $notification = (new DuplicateScheduleWarning(

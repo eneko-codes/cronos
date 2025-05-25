@@ -8,6 +8,7 @@ use App\Enums\NotificationType;
 use App\Models\GlobalNotificationPreference;
 use App\Models\User;
 use App\Models\UserNotificationPreference;
+use Illuminate\Support\Facades\Gate;
 
 class NotificationPreferenceService
 {
@@ -77,10 +78,12 @@ class NotificationPreferenceService
     }
 
     /**
-     * Toggle global notifications master switch
+     * Toggle global notifications master switch (admin only)
      */
-    public function toggleGlobalNotifications(bool $enabled): void
+    public function toggleGlobalNotifications(User $user, bool $enabled): void
     {
+        Gate::forUser($user)->authorize('manageGlobalSettings');
+
         GlobalNotificationPreference::updateOrCreate(
             ['notification_type' => 'global_master'],
             ['enabled' => $enabled]
@@ -88,10 +91,12 @@ class NotificationPreferenceService
     }
 
     /**
-     * Toggle a specific notification type globally
+     * Toggle a specific notification type globally (admin only)
      */
-    public function toggleGlobalNotificationType(NotificationType $type, bool $enabled): void
+    public function toggleGlobalNotificationType(User $user, NotificationType $type, bool $enabled): void
     {
+        Gate::forUser($user)->authorize('manageGlobalSettings');
+
         GlobalNotificationPreference::updateOrCreate(
             ['notification_type' => $type->value],
             ['enabled' => $enabled]
@@ -101,16 +106,22 @@ class NotificationPreferenceService
     /**
      * Toggle user's mute all notifications setting
      */
-    public function toggleUserMuteAll(User $user, bool $muteAll): void
+    public function toggleUserMuteAll(User $currentUser, int $userId, bool $muteAll): void
     {
+        $user = User::findOrFail($userId);
+        Gate::forUser($currentUser)->authorize('updateUserPreferences', $user);
+
         $user->update(['muted_notifications' => $muteAll]);
     }
 
     /**
      * Toggle user's individual notification preference
      */
-    public function toggleUserNotificationType(User $user, NotificationType $type, bool $enabled): void
+    public function toggleUserNotificationType(User $currentUser, int $userId, NotificationType $type, bool $enabled): void
     {
+        $user = User::findOrFail($userId);
+        Gate::forUser($currentUser)->authorize('updateUserPreferences', $user);
+
         UserNotificationPreference::updateOrCreate(
             [
                 'user_id' => $user->id,
@@ -118,6 +129,40 @@ class NotificationPreferenceService
             ],
             ['enabled' => $enabled]
         );
+    }
+
+    /**
+     * Get formatted notification preferences for a user
+     */
+    public function getFormattedUserPreferences(User $currentUser, int $userId): array
+    {
+        $user = User::findOrFail($userId);
+        Gate::forUser($currentUser)->authorize('viewUserPreferences', $user);
+
+        $preferences = $this->getUserNotificationPreferences($user);
+
+        return [
+            'user_notifications_muted' => $preferences['user_mute_all'],
+            'user_notification_states' => $preferences['user_individual'],
+            'global_notifications_enabled' => $preferences['global_enabled'],
+            'global_notification_type_states' => $preferences['global_types'],
+            'available_notification_types' => $preferences['available_types'],
+        ];
+    }
+
+    /**
+     * Get global notification settings (admin only)
+     */
+    public function getGlobalSettings(User $user): array
+    {
+        Gate::forUser($user)->authorize('viewGlobalSettings');
+
+        $preferences = $this->getUserNotificationPreferences();
+
+        return [
+            'global_enabled' => $preferences['global_enabled'],
+            'global_types' => $preferences['global_types'],
+        ];
     }
 
     /**

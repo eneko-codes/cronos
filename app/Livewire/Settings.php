@@ -9,16 +9,13 @@
  * - Data retention settings
  * - API health checks
  *
- * Notification toggles are handled via ToggleGlobalNotificationsAction and ToggleNotificationTypeGlobalStateAction.
+ * Notification toggles are handled directly via the NotificationPreferenceService.
  */
 
 declare(strict_types=1);
 
 namespace App\Livewire;
 
-use App\Actions\LoadGlobalNotificationSettingsAction;
-use App\Actions\ToggleGlobalNotificationsAction;
-use App\Actions\ToggleNotificationTypeGlobalStateAction;
 use App\Clients\DesktimeApiClient;
 use App\Clients\OdooApiClient;
 use App\Clients\ProofhubApiClient;
@@ -26,6 +23,7 @@ use App\Clients\SystemPinApiClient;
 use App\Enums\NotificationType;
 use App\Enums\RoleType;
 use App\Models\User;
+use App\Services\NotificationPreferenceService;
 use Exception;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Artisan;
@@ -57,21 +55,12 @@ class Settings extends Component
     /** @var array<string, string> Stores the status of recent connection tests ('success', 'failed', 'pending') */
     public array $connectionStatus = [];
 
-    private ToggleGlobalNotificationsAction $toggleGlobalNotificationsAction;
-
-    private ToggleNotificationTypeGlobalStateAction $toggleNotificationTypeGlobalStateAction;
-
-    public function boot(): void
-    {
-        $this->toggleGlobalNotificationsAction = app(ToggleGlobalNotificationsAction::class);
-        $this->toggleNotificationTypeGlobalStateAction = app(ToggleNotificationTypeGlobalStateAction::class);
-    }
-
-    public function mount(): void
+    public function mount(NotificationPreferenceService $notificationService): void
     {
         $user = \Illuminate\Support\Facades\Auth::user();
         if ($user) {
-            $settings = app(LoadGlobalNotificationSettingsAction::class)->execute($user);
+            $this->authorize('accessSettingsPage');
+            $settings = $notificationService->getGlobalSettings($user);
             $this->globalNotificationsEnabled = $settings['global_enabled'];
             $this->notificationTypeStates = $settings['global_types'];
         }
@@ -125,23 +114,27 @@ class Settings extends Component
     /**
      * Called when the global notifications master switch is toggled.
      */
-    public function updatedGlobalNotificationsEnabled($value): void
+    public function updatedGlobalNotificationsEnabled($value, NotificationPreferenceService $notificationService): void
     {
         $boolValue = (bool) $value;
         $message = $boolValue ? 'Global notifications enabled.' : 'Global notifications disabled.';
         $variant = $boolValue ? 'success' : 'info';
         $user = \Illuminate\Support\Facades\Auth::user();
         if ($user) {
-            $this->toggleGlobalNotificationsAction->execute($user, $boolValue);
+            try {
+                $notificationService->toggleGlobalNotifications($user, $boolValue);
+                $this->dispatch('add-toast', message: $message, variant: $variant);
+                $this->dispatch('global-notifications-updated', enabled: $boolValue);
+            } catch (\Exception $e) {
+                $this->dispatch('add-toast', message: 'Failed to update setting: '.$e->getMessage(), variant: 'error');
+            }
         }
-        $this->dispatch('add-toast', message: $message, variant: $variant);
-        $this->dispatch('global-notifications-updated', enabled: $boolValue);
     }
 
     /**
      * Called when a per-type global notification toggle is changed.
      */
-    public function updatedNotificationTypeStates($value, $key): void
+    public function updatedNotificationTypeStates($value, $key, NotificationPreferenceService $notificationService): void
     {
         $boolValue = (bool) $value;
         try {
@@ -152,16 +145,18 @@ class Settings extends Component
             $variant = $boolValue ? 'success' : 'info';
             $user = \Illuminate\Support\Facades\Auth::user();
             if ($user) {
-                $this->toggleNotificationTypeGlobalStateAction->execute($user, $notificationType, $boolValue);
+                $notificationService->toggleGlobalNotificationType($user, $notificationType, $boolValue);
+                $this->dispatch('add-toast', message: $message, variant: $variant);
+                $this->dispatch($key.'-global-setting-updated', enabled: $boolValue);
             }
-            $this->dispatch('add-toast', message: $message, variant: $variant);
-            $this->dispatch($key.'-global-setting-updated', enabled: $boolValue);
         } catch (\ValueError $e) {
             $this->dispatch(
                 'add-toast',
                 message: "Invalid notification type key: {$key}",
                 variant: 'error'
             );
+        } catch (\Exception $e) {
+            $this->dispatch('add-toast', message: 'Failed to update setting: '.$e->getMessage(), variant: 'error');
         }
     }
 

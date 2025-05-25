@@ -8,18 +8,16 @@
  * - Notification list and actions (mark as read, delete, etc.)
  * - Syncs with global notification settings
  *
- * All business logic is delegated to action classes and enums.
+ * All business logic is delegated to the NotificationPreferenceService and enums.
  */
 
 declare(strict_types=1);
 
 namespace App\Livewire;
 
-use App\Actions\LoadUserNotificationPreferencesAction;
-use App\Actions\ToggleIndividualNotificationPreference;
-use App\Actions\ToggleMuteAllPreference;
 use App\Enums\NotificationType;
 use App\Models\User;
+use App\Services\NotificationPreferenceService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Lazy;
@@ -75,10 +73,11 @@ class Sidebar extends Component
     /**
      * Mount the component and load user preferences.
      */
-    public function mount(LoadUserNotificationPreferencesAction $loadPrefs): void
+    public function mount(NotificationPreferenceService $notificationService): void
     {
+        $this->authorize('accessPreferencesSidebar');
         $this->user = User::findOrFail(Auth::id());
-        $prefs = $loadPrefs->execute($this->user->id);
+        $prefs = $notificationService->getFormattedUserPreferences($this->user, $this->user->id);
         $this->userNotificationsMuted = $prefs['user_notifications_muted'];
         $this->userNotificationStates = $prefs['user_notification_states'];
         $this->isGloballyEnabled = $prefs['global_notifications_enabled'];
@@ -165,11 +164,10 @@ class Sidebar extends Component
     /**
      * Handle updates to the 'Mute Notifications' toggle.
      */
-    public function updatedUserNotificationsMuted(bool $value, ToggleMuteAllPreference $toggleMuteAll): void
+    public function updatedUserNotificationsMuted(bool $value, NotificationPreferenceService $notificationService): void
     {
         try {
-            // ToggleMuteAllPreference expects the "mute" value directly
-            $toggleMuteAll->execute($this->user->id, $value);
+            $notificationService->toggleUserMuteAll($this->user, $this->user->id, $value);
             $this->dispatchToast($value ? 'All personal notifications muted.' : 'Personal notifications enabled.', 'success');
         } catch (\Exception $e) {
             $this->dispatchToast('Failed to update preference: '.$e->getMessage(), 'error');
@@ -179,7 +177,7 @@ class Sidebar extends Component
     /**
      * Handle updates to individual notification preferences.
      */
-    public function updatedUserNotificationStates(bool $value, string $key, ToggleIndividualNotificationPreference $toggleIndividual): void
+    public function updatedUserNotificationStates(bool $value, string $key, NotificationPreferenceService $notificationService): void
     {
         try {
             $type = NotificationType::from($key);
@@ -195,7 +193,7 @@ class Sidebar extends Component
                 return;
             }
 
-            $toggleIndividual->execute($this->user->id, $type, $value);
+            $notificationService->toggleUserNotificationType($this->user, $this->user->id, $type, $value);
             $action = $value ? 'enabled' : 'disabled';
             $this->dispatchToast(($this->preferenceKeys()[$key]['label'] ?? $key)." $action.", 'success');
         } catch (\Throwable $e) {
@@ -207,10 +205,10 @@ class Sidebar extends Component
      * Toggle the sidebar open/closed and reload preferences if opening.
      */
     #[On('toggle-sidebar')]
-    public function toggleSidebar(LoadUserNotificationPreferencesAction $loadPrefs): void
+    public function toggleSidebar(NotificationPreferenceService $notificationService): void
     {
         if (! $this->isOpen) {
-            $prefs = $loadPrefs->execute($this->user->id);
+            $prefs = $notificationService->getFormattedUserPreferences($this->user, $this->user->id);
             $this->userNotificationsMuted = $prefs['user_notifications_muted'];
             $this->userNotificationStates = $prefs['user_notification_states'];
             $this->isGloballyEnabled = $prefs['global_notifications_enabled'];
@@ -256,6 +254,7 @@ class Sidebar extends Component
      */
     public function markAsRead(string $notificationId): void
     {
+        // Find notification that belongs to the current user (ownership check built-in)
         $notification = $this->user->notifications()->find($notificationId);
         if ($notification && $notification->unread()) {
             $notification->markAsRead();
@@ -283,6 +282,7 @@ class Sidebar extends Component
      */
     public function deleteNotification(string $notificationId): void
     {
+        // Find notification that belongs to the current user (ownership check built-in)
         $notification = $this->user->notifications()->find($notificationId);
         if ($notification) {
             $notification->delete();
@@ -310,7 +310,11 @@ class Sidebar extends Component
      */
     public function showNotificationDetails(string $notificationId): void
     {
-        $this->dispatch('openNotificationDetailsModal', notificationId: $notificationId);
+        // Find notification that belongs to the current user (ownership check built-in)
+        $notification = $this->user->notifications()->find($notificationId);
+        if ($notification) {
+            $this->dispatch('openNotificationDetailsModal', notificationId: $notificationId);
+        }
     }
 
     /**
@@ -327,9 +331,9 @@ class Sidebar extends Component
      * Handle global notification update event.
      */
     #[On('global-notifications-updated')]
-    public function handleGlobalNotificationUpdate(LoadUserNotificationPreferencesAction $loadPrefs): void
+    public function handleGlobalNotificationUpdate(NotificationPreferenceService $notificationService): void
     {
-        $prefs = $loadPrefs->execute($this->user->id);
+        $prefs = $notificationService->getFormattedUserPreferences($this->user, $this->user->id);
         $this->userNotificationsMuted = $prefs['user_notifications_muted'];
         $this->userNotificationStates = $prefs['user_notification_states'];
         $this->isGloballyEnabled = $prefs['global_notifications_enabled'];
@@ -345,9 +349,9 @@ class Sidebar extends Component
     #[On('api-down-warning-global-setting-updated')]
     #[On('admin-promotion-email-global-setting-updated')]
     #[On('duplicate-schedule-warning-global-setting-updated')]
-    public function handleAnyGlobalUpdate(LoadUserNotificationPreferencesAction $loadPrefs): void
+    public function handleAnyGlobalUpdate(NotificationPreferenceService $notificationService): void
     {
-        $prefs = $loadPrefs->execute($this->user->id);
+        $prefs = $notificationService->getFormattedUserPreferences($this->user, $this->user->id);
         $this->userNotificationsMuted = $prefs['user_notifications_muted'];
         $this->userNotificationStates = $prefs['user_notification_states'];
         $this->isGloballyEnabled = $prefs['global_notifications_enabled'];

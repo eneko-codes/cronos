@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
-use App\Actions\CheckNotificationEligibilityAction;
 use App\Models\User;
 use App\Notifications\WeeklyUserReportNotification;
+use App\Services\NotificationPreferenceService;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -30,7 +30,7 @@ class SendUserWeeklyReport implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(): void
+    public function handle(NotificationPreferenceService $notificationService): void
     {
         Log::info('SendUserWeeklyReport Job started.');
 
@@ -54,8 +54,6 @@ class SendUserWeeklyReport implements ShouldQueue
             "SendUserWeeklyReport Job: Found {$users->count()} trackable users to process."
         );
 
-        $eligibilityAction = app(CheckNotificationEligibilityAction::class);
-
         foreach ($users as $user) {
             Log::info("SendUserWeeklyReport Job: Processing user {$user->id}");
 
@@ -72,8 +70,8 @@ class SendUserWeeklyReport implements ShouldQueue
             // Prepare notification
             $notification = new WeeklyUserReportNotification($user, $reportData);
 
-            // Check permission using the action
-            if ($eligibilityAction->execute($notification->type(), $user)) {
+            // Check permission using the notification service
+            if ($notificationService->isEligibleForNotification($notification->type(), $user)) {
                 try {
                     $user->notify($notification);
                     Log::info(

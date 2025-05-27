@@ -12,11 +12,17 @@ use Livewire\Component;
 #[Lazy]
 class UserProfileHeader extends Component
 {
-    public User $user;
+    public int $userId;
 
     public function mount(User $user): void
     {
-        $this->user = $user;
+        $this->userId = $user->id;
+    }
+
+    #[Computed]
+    public function user(): User
+    {
+        return User::findOrFail($this->userId);
     }
 
     #[Computed]

@@ -4,18 +4,18 @@ declare(strict_types=1);
 
 namespace App\Observers;
 
-use App\Actions\CheckNotificationEligibilityAction;
 use App\Models\User;
 use App\Models\UserSchedule;
 use App\Notifications\ScheduleChangeNotification;
+use App\Services\NotificationPreferenceService;
 
 class UserScheduleObserver
 {
-    private CheckNotificationEligibilityAction $eligibilityAction;
+    private NotificationPreferenceService $notificationPreferenceService;
 
-    public function __construct(CheckNotificationEligibilityAction $eligibilityAction)
+    public function __construct(NotificationPreferenceService $notificationPreferenceService)
     {
-        $this->eligibilityAction = $eligibilityAction;
+        $this->notificationPreferenceService = $notificationPreferenceService;
     }
 
     /**
@@ -46,8 +46,8 @@ class UserScheduleObserver
             // Assuming the notification can handle the Schedule model object or relevant details from it.
             $notification = new ScheduleChangeNotification($user, $endedSchedule, null);
 
-            // Check permission using the action
-            if ($this->eligibilityAction->execute($notification->type(), $user)) {
+            // Check permission using the notification service
+            if ($this->notificationPreferenceService->isEligibleForNotification($notification->type(), $user)) {
                 $user->notify($notification);
             }
         }

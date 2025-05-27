@@ -65,10 +65,10 @@ class Sidebar extends Component
     public array $globalPreferenceStates = [];
 
     /**
-     * The authenticated user model.
+     * The authenticated user ID.
      */
     #[Locked]
-    public User $user;
+    public int $userId;
 
     /**
      * Mount the component and load user preferences.
@@ -76,13 +76,23 @@ class Sidebar extends Component
     public function mount(NotificationPreferenceService $notificationService): void
     {
         $this->authorize('accessPreferencesSidebar');
-        $this->user = User::findOrFail(Auth::id());
-        $prefs = $notificationService->getFormattedUserPreferences($this->user, $this->user->id);
+        $this->userId = Auth::id();
+        $user = $this->user;
+        $prefs = $notificationService->getFormattedUserPreferences($user, $user->id);
         $this->userNotificationsMuted = $prefs['user_notifications_muted'];
         $this->userNotificationStates = $prefs['user_notification_states'];
         $this->isGloballyEnabled = $prefs['global_notifications_enabled'];
         $this->globalPreferenceStates = $prefs['global_notification_type_states'];
         $this->dispatchUnreadCountChanged();
+    }
+
+    /**
+     * Get the authenticated user model.
+     */
+    #[Computed]
+    public function user(): User
+    {
+        return User::findOrFail($this->userId);
     }
 
     /**

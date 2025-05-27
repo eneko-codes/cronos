@@ -156,23 +156,23 @@
         Upcoming Leave
       </h3>
     </div>
-    @if ($upcomingLeave)
+    @if ($this->upcomingLeave)
       <div class="flex flex-col">
         <span class="text-base font-semibold text-gray-800 dark:text-gray-100">
-          {{ $upcomingLeave->leaveType?->name ?? 'Leave' }}
+          {{ $this->upcomingLeave->leaveType?->name ?? 'Leave' }}
         </span>
         <span class="text-sm text-gray-600 dark:text-gray-300">
-          {{ $upcomingLeave->start_date->format('M d') }} -
-          {{ $upcomingLeave->end_date->format('M d, Y') }}
+          {{ $this->upcomingLeave->start_date->format('M d') }} -
+          {{ $this->upcomingLeave->end_date->format('M d, Y') }}
         </span>
         <span class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          @if ($upcomingLeave->isHalfDay())
+          @if ($this->upcomingLeave->isHalfDay())
             Half day
-            ({{ $upcomingLeave->isMorningLeave() ? 'Morning' : 'Afternoon' }})
-          @elseif ($upcomingLeave->duration_days == 1)
+            ({{ $this->upcomingLeave->isMorningLeave() ? 'Morning' : 'Afternoon' }})
+          @elseif ($this->upcomingLeave->duration_days == 1)
             Full day
           @else
-            {{ $upcomingLeave->duration_days }} days
+            {{ $this->upcomingLeave->duration_days }} days
           @endif
         </span>
       </div>

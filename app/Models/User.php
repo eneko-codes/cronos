@@ -523,4 +523,72 @@ class User extends Authenticatable
 
         return array_merge($platformBadges, $specialBadges);
     }
+
+    /**
+     * Get comprehensive user data (schedules, leaves, attendances, time entries)
+     * for a specific user within a given date range.
+     *
+     * @param  \Carbon\Carbon  $startDate  Beginning of the date range.
+     * @param  \Carbon\Carbon  $endDate  End of the date range.
+     * @return array Associative array containing 'schedules', 'leaves', 'attendances', 'time_entries'.
+     */
+    public function getDataForDateRange(\Carbon\Carbon $startDate, \Carbon\Carbon $endDate): array
+    {
+        // Ensure we're working with dates at day precision
+        $startDateObject = $startDate->copy()->startOfDay();
+        $endDateObject = $endDate->copy()->endOfDay();
+
+        // Get schedules with eager loading to avoid N+1 queries
+        $schedules = $this->userSchedules()
+            ->with(['schedule.scheduleDetails'])
+            ->where('effective_from', '<=', $endDateObject)
+            ->where(function ($query) use ($startDateObject): void {
+                $query
+                    ->where('effective_until', '>=', $startDateObject)
+                    ->orWhereNull('effective_until');
+            })
+            ->get();
+
+        // Get leaves with eager loading
+        $leaves = $this->userLeaves()
+            ->with(['leaveType', 'department', 'category'])
+            ->where(function ($query) use ($startDateObject, $endDateObject): void {
+                $query
+                    ->whereBetween('start_date', [$startDateObject, $endDateObject])
+                    ->orWhereBetween('end_date', [$startDateObject, $endDateObject])
+                    ->orWhere(function ($innerQuery) use (
+                        $startDateObject,
+                        $endDateObject
+                    ): void {
+                        $innerQuery
+                            ->where('start_date', '<=', $startDateObject)
+                            ->where('end_date', '>=', $endDateObject);
+                    });
+            })
+            ->get();
+
+        // Get attendances with eager loading
+        $attendances = $this->userAttendances()
+            ->whereBetween('date', [
+                $startDateObject->toDateString(),
+                $endDateObject->toDateString(),
+            ])
+            ->get();
+
+        // Get time entries with eager loading
+        $timeEntries = $this->timeEntries()
+            ->with(['project', 'task'])
+            ->whereBetween('date', [
+                $startDateObject->toDateString(),
+                $endDateObject->toDateString(),
+            ])
+            ->get();
+
+        return [
+            'schedules' => $schedules,
+            'leaves' => $leaves,
+            'attendances' => $attendances,
+            'time_entries' => $timeEntries,
+        ];
+    }
 }

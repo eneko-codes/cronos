@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Observers;
 
-use App\Actions\CheckNotificationEligibilityAction;
 use App\Enums\RoleType;
 use App\Models\User;
 use App\Notifications\AdminPromotionEmail;
@@ -14,15 +13,11 @@ use App\Services\NotificationPreferenceService;
 
 class UserObserver
 {
-    private CheckNotificationEligibilityAction $eligibilityAction;
-
     private NotificationPreferenceService $notificationPreferenceService;
 
     public function __construct(
-        CheckNotificationEligibilityAction $eligibilityAction,
         NotificationPreferenceService $notificationPreferenceService
     ) {
-        $this->eligibilityAction = $eligibilityAction;
         $this->notificationPreferenceService = $notificationPreferenceService;
     }
 
@@ -36,7 +31,7 @@ class UserObserver
 
         $welcomeNotification = new WelcomeEmail;
 
-        if ($user->email && $this->eligibilityAction->execute($welcomeNotification->type(), $user)) {
+        if ($user->email && $this->notificationPreferenceService->isEligibleForNotification($welcomeNotification->type(), $user)) {
             $user->notify($welcomeNotification);
         }
     }
@@ -105,14 +100,14 @@ class UserObserver
                 ->get();
 
             foreach ($adminUsers as $admin) {
-                if ($this->eligibilityAction->execute($adminPromotionEmail->type(), $admin)) {
+                if ($this->notificationPreferenceService->isEligibleForNotification($adminPromotionEmail->type(), $admin)) {
                     $admin->notify($adminPromotionEmail);
                 }
             }
 
             // --- Notify the promoted user ---
             $userPromotionNotification = new UserPromotedToAdminNotification;
-            if ($this->eligibilityAction->execute($userPromotionNotification->type(), $user)) {
+            if ($this->notificationPreferenceService->isEligibleForNotification($userPromotionNotification->type(), $user)) {
                 $user->notify($userPromotionNotification);
             }
         }

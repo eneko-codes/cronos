@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Jobs\Sync;
 
-use App\Actions\CheckNotificationEligibilityAction;
 use App\Clients\DesktimeApiClient;
 use App\Clients\OdooApiClient;
 use App\Clients\ProofhubApiClient;
@@ -12,6 +11,7 @@ use App\Contracts\Pingable;
 use App\Enums\RoleType;
 use App\Models\User;
 use App\Notifications\ApiDownWarning;
+use App\Services\NotificationPreferenceService;
 use Exception;
 use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
@@ -171,9 +171,9 @@ abstract class BaseSyncJob implements ShouldBeEncrypted, ShouldQueue
     {
         $admins = User::where('user_type', RoleType::Admin)->get();
         $apiDownNotification = new ApiDownWarning($apiName, $errorMessage);
-        $eligibilityAction = app(CheckNotificationEligibilityAction::class);
+        $notificationService = resolve(NotificationPreferenceService::class);
         foreach ($admins as $admin) {
-            if ($eligibilityAction->execute($apiDownNotification->type(), $admin)) {
+            if ($notificationService->isEligibleForNotification($apiDownNotification->type(), $admin)) {
                 $admin->notifyNow($apiDownNotification);
             }
         }

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services\Dashboard;
 
-use App\Actions\User\GetDataForDateRange;
 use App\DataTransferObjects\DailyLeaveData;
 use App\DataTransferObjects\DashboardTotals;
 use App\DataTransferObjects\DeviationMetrics;
@@ -23,7 +22,6 @@ use Illuminate\Support\Collection;
 class DashboardDataAggregatorService
 {
     public function __construct(
-        private GetDataForDateRange $getDataForDateRangeAction,
         private \App\Services\Dashboard\Data\LeaveDataProcessorService $leaveProcessor,
         private \App\Services\Dashboard\Data\AttendanceDataProcessorService $attendanceProcessor,
         private \App\Services\Dashboard\Data\ScheduleDataProcessorService $scheduleProcessor,
@@ -47,7 +45,7 @@ class DashboardDataAggregatorService
         Carbon $endDate,
         bool $showDeviations
     ): array {
-        $rawData = $this->getDataForDateRangeAction->handle($user, $startDate, $endDate);
+        $rawData = $user->getDataForDateRange($startDate, $endDate);
 
         /** @var Collection<string, PeriodDayData> */
         $periodData = $this->processPeriodData($rawData, $startDate, $endDate, $showDeviations, $user);
@@ -75,7 +73,7 @@ class DashboardDataAggregatorService
     /**
      * Process data for each day in the period.
      *
-     * @param  array  $data  Raw data from GetDataForDateRange action
+     * @param  array  $data  Raw data from User::getDataForDateRange() method
      * @param  Carbon  $start  Start date of the period
      * @param  Carbon  $end  End date of the period
      * @param  bool  $showDeviations  Whether to calculate deviations

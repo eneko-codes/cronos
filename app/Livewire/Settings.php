@@ -55,11 +55,12 @@ class Settings extends Component
     /** @var array<string, string> Stores the status of recent connection tests ('success', 'failed', 'pending') */
     public array $connectionStatus = [];
 
-    public function mount(NotificationPreferenceService $notificationService): void
+    public function mount(): void
     {
         $user = \Illuminate\Support\Facades\Auth::user();
         if ($user) {
             $this->authorize('accessSettingsPage');
+            $notificationService = app(NotificationPreferenceService::class);
             $settings = $notificationService->getGlobalSettings($user);
             $this->globalNotificationsEnabled = $settings['global_enabled'];
             $this->notificationTypeStates = $settings['global_types'];
@@ -114,7 +115,7 @@ class Settings extends Component
     /**
      * Called when the global notifications master switch is toggled.
      */
-    public function updatedGlobalNotificationsEnabled($value, NotificationPreferenceService $notificationService): void
+    public function updatedGlobalNotificationsEnabled($value): void
     {
         $boolValue = (bool) $value;
         $message = $boolValue ? 'Global notifications enabled.' : 'Global notifications disabled.';
@@ -122,6 +123,7 @@ class Settings extends Component
         $user = \Illuminate\Support\Facades\Auth::user();
         if ($user) {
             try {
+                $notificationService = app(NotificationPreferenceService::class);
                 $notificationService->toggleGlobalNotifications($user, $boolValue);
                 $this->dispatch('add-toast', message: $message, variant: $variant);
                 $this->dispatch('global-notifications-updated', enabled: $boolValue);
@@ -134,7 +136,7 @@ class Settings extends Component
     /**
      * Called when a per-type global notification toggle is changed.
      */
-    public function updatedNotificationTypeStates($value, $key, NotificationPreferenceService $notificationService): void
+    public function updatedNotificationTypeStates($value, $key): void
     {
         $boolValue = (bool) $value;
         try {
@@ -145,6 +147,7 @@ class Settings extends Component
             $variant = $boolValue ? 'success' : 'info';
             $user = \Illuminate\Support\Facades\Auth::user();
             if ($user) {
+                $notificationService = app(NotificationPreferenceService::class);
                 $notificationService->toggleGlobalNotificationType($user, $notificationType, $boolValue);
                 $this->dispatch('add-toast', message: $message, variant: $variant);
                 $this->dispatch($key.'-global-setting-updated', enabled: $boolValue);

@@ -8,9 +8,11 @@ use App\Actions\RequestLoginLinkAction;
 use App\Actions\VerifyLoginTokenAction;
 use App\Http\Requests\LoginLinkRequest;
 use App\Http\Requests\VerifyLoginTokenRequest;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth as AuthFacade;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
 class LoginController extends Controller
@@ -77,10 +79,31 @@ class LoginController extends Controller
      */
     public function logout(Request $httpRequest): RedirectResponse
     {
+        $ipAddress = $httpRequest->ip();
+        $userAgent = $httpRequest->header('User-Agent');
+        $user = AuthFacade::user();
+        $sessionId = $httpRequest->session()->getId();
+
         AuthFacade::logout();
 
         $httpRequest->session()->invalidate();
         $httpRequest->session()->regenerateToken();
+
+        // Log the logout event with detailed information
+        $email = $user ? $user->email : 'Unknown';
+        $name = $user ? $user->name : 'Unknown user';
+        $userId = $user ? $user->id : null;
+        $timestamp = Carbon::now()->toIso8601String();
+
+        Log::info('User logged out: '.$name, [
+            'user_id' => $userId,
+            'email' => $email,
+            'name' => $name,
+            'ip_address' => $ipAddress,
+            'user_agent' => $userAgent,
+            'session_id' => $sessionId,
+            'timestamp' => $timestamp,
+        ]);
 
         return redirect('/');
     }

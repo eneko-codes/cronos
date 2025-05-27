@@ -22,7 +22,7 @@ use Livewire\Component;
 class UserTimeSheetTable extends Component
 {
     #[Locked]
-    public User $user;
+    public int $userId;
 
     /**
      * The first date of the currently displayed period (YYYY-MM-DD string).
@@ -51,10 +51,16 @@ class UserTimeSheetTable extends Component
 
     public function mount(User $user): void
     {
-        $this->user = $user;
+        $this->userId = $user->id;
         $this->currentDate = now()->toDateString();
         // viewMode and showDeviations will be initialized from URL or their defaults
         $this->loadPeriodDataAndTotals();
+    }
+
+    #[Computed]
+    public function user(): User
+    {
+        return User::findOrFail($this->userId);
     }
 
     /**

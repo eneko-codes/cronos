@@ -10,6 +10,7 @@
   "require": {
     "php": "^8.2",
     "laravel/framework": "^12.11.1",
+    "laravel/nightwatch": "^1.7",
     "laravel/pulse": "^1.4",
     "livewire/livewire": "^3.0"
   },

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\UserDashboardController;
 use App\Livewire\LeaveTypesListView;

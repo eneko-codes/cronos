@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Actions\User;
+namespace App\Queries;
 
 use App\Models\User;
 use App\Models\UserLeave;
 use Carbon\Carbon;
 
-class GetUpcomingLeaveAction
+class GetUpcomingLeaveQuery
 {
     public function execute(User $user): ?UserLeave
     {

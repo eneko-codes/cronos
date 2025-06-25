@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Actions\User;
+namespace App\Queries;
 
 use App\DataTransferObjects\TodaysAttendanceData;
 use App\Models\User;
@@ -10,7 +10,7 @@ use App\Models\UserAttendance;
 use Carbon\Carbon;
 use Carbon\CarbonInterval;
 
-class GetTodaysAttendanceAction
+class GetTodaysAttendanceQuery
 {
     public function execute(User $user): TodaysAttendanceData // Return non-nullable, provide default
     {

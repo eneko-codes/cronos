@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Actions\User;
+namespace App\Queries;
 
 use App\DataTransferObjects\TodaysScheduleData;
 use App\Models\User;
@@ -10,7 +10,7 @@ use App\Models\UserSchedule;
 use Carbon\Carbon;
 use Carbon\CarbonInterval;
 
-class GetTodaysScheduleAction
+class GetTodaysScheduleQuery
 {
     public function execute(User $user): ?TodaysScheduleData
     {

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Actions\User;
+namespace App\Queries;
 
 use App\Models\TimeEntry;
 use App\Models\User;
 use Carbon\Carbon;
 use Carbon\CarbonInterval;
 
-class GetTodaysLoggedTimeAction
+class GetTodaysLoggedTimeQuery
 {
     public function execute(User $user): string
     {

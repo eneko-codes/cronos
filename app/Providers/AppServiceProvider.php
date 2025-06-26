@@ -11,7 +11,9 @@ use App\Clients\SystemPinApiClient;
 use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
@@ -105,6 +107,14 @@ class AppServiceProvider extends ServiceProvider
         if ($this->app->environment('production')) {
             URL::forceScheme('https');
         }
+
+        // Prohibit destructive commands in production
+        if ($this->app->environment('production')) {
+            DB::ProhibitDestructiveCommands();
+        }
+
+        // Make sure all models are strict
+        Model::shouldBeStrict();
 
         // Only users who are admin can access pulse in production
         Gate::define('viewPulse', function (User $user) {

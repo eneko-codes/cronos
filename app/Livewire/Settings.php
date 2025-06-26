@@ -16,12 +16,15 @@ declare(strict_types=1);
 
 namespace App\Livewire;
 
+use App\Actions\UpdateSyncFrequencyAction;
 use App\Clients\DesktimeApiClient;
 use App\Clients\OdooApiClient;
 use App\Clients\ProofhubApiClient;
 use App\Clients\SystemPinApiClient;
 use App\Enums\NotificationType;
 use App\Enums\RoleType;
+use App\Enums\SyncFrequencyType;
+use App\Models\Setting;
 use App\Models\User;
 use App\Services\NotificationPreferenceService;
 use Exception;
@@ -65,6 +68,7 @@ class Settings extends Component
             $this->globalNotificationsEnabled = $settings['global_enabled'];
             $this->notificationTypeStates = $settings['global_types'];
         }
+        $this->syncFrequency = Setting::getValue('job_frequency.sync', 'everyThirtyMinutes');
         if (! $this->dataRetentionEnabled) {
             $this->dataRetentionGlobalPeriod = 0;
         }
@@ -108,8 +112,15 @@ class Settings extends Component
 
     public function updatedSyncFrequency($value): void
     {
-        // This method is unused - sync frequency setting functionality was removed
-        // but the property is kept for UI compatibility
+        try {
+            $enum = SyncFrequencyType::from($value); // Throws if invalid
+            app(UpdateSyncFrequencyAction::class)->execute($enum);
+            $this->dispatch('add-toast', message: 'Sync frequency updated.', variant: 'success');
+        } catch (\ValueError $e) {
+            $this->dispatch('add-toast', message: 'Invalid sync frequency selected.', variant: 'error');
+        } catch (\Exception $e) {
+            $this->dispatch('add-toast', message: 'Failed to update sync frequency: '.$e->getMessage(), variant: 'error');
+        }
     }
 
     /**

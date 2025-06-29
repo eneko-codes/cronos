@@ -14,6 +14,6 @@ class UpdateSyncFrequencyAction
      */
     public function execute(SyncFrequencyType $frequency): void
     {
-        Setting::setValue('job_frequency.sync', $frequency->value);
+        Setting::setValue('sync_frequency', $frequency->value);
     }
 }

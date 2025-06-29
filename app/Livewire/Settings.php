@@ -1,29 +1,18 @@
 <?php
 
-/**
- * Settings (Livewire Component)
- *
- * This component manages system-wide settings for the application, including:
- * - Global notifications master switch
- * - Per-type global notification toggles
- * - Data retention settings
- * - API health checks
- *
- * Notification toggles are handled directly via the NotificationPreferenceService.
- */
-
 declare(strict_types=1);
 
 namespace App\Livewire;
 
-use App\Actions\UpdateSyncFrequencyAction;
 use App\Clients\DesktimeApiClient;
 use App\Clients\OdooApiClient;
 use App\Clients\ProofhubApiClient;
 use App\Clients\SystemPinApiClient;
+use App\Enums\DataRetentionPeriod;
 use App\Enums\NotificationType;
 use App\Enums\RoleType;
 use App\Enums\SyncFrequencyType;
+use App\Enums\SyncWindowDays;
 use App\Models\Setting;
 use App\Models\User;
 use App\Services\NotificationPreferenceService;
@@ -58,6 +47,8 @@ class Settings extends Component
     /** @var array<string, string> Stores the status of recent connection tests ('success', 'failed', 'pending') */
     public array $connectionStatus = [];
 
+    public int $syncWindowDays = 7;
+
     public function mount(): void
     {
         $user = \Illuminate\Support\Facades\Auth::user();
@@ -68,53 +59,46 @@ class Settings extends Component
             $this->globalNotificationsEnabled = $settings['global_enabled'];
             $this->notificationTypeStates = $settings['global_types'];
         }
-        $this->syncFrequency = Setting::getValue('job_frequency.sync', 'everyThirtyMinutes');
-        if (! $this->dataRetentionEnabled) {
-            $this->dataRetentionGlobalPeriod = 0;
-        }
+        $this->syncFrequency = Setting::getValue('sync_frequency', 'everyThirtyMinutes');
+        $this->syncWindowDays = (int) Setting::getValue('sync_window_days', 7);
+        $this->dataRetentionGlobalPeriod = (int) Setting::getValue('data_retention.global_period', 0);
     }
 
     public function getSyncFrequencyOptions(): array
     {
-        return [
-            'never' => 'Never',
-            'everyMinute' => 'Every Minute',
-            'everyFiveMinutes' => 'Every 5 Minutes',
-            'everyFifteenMinutes' => 'Every 15 Minutes',
-            'everyThirtyMinutes' => 'Every 30 Minutes',
-            'hourly' => 'Every Hour',
-            'everyTwoHours' => 'Every Two Hours',
-            'everyThreeHours' => 'Every Three Hours',
-            'everyFourHours' => 'Every Four Hours',
-            'everySixHours' => 'Every Six Hours',
-            'everyTwelveHours' => 'Every Twelve Hours',
-            'dailyAt_9' => 'Daily at 9:00',
-            'daily' => 'Daily at midnight',
-            'weekly' => 'Weekly on Sunday',
-            'twiceMonthly' => 'Twice Monthly (1st and 15th)',
-            'monthly' => 'Monthly',
-        ];
+        $options = [];
+        foreach (SyncFrequencyType::cases() as $case) {
+            $options[$case->value] = $case->label();
+        }
+
+        return $options;
     }
 
     public function getDataRetentionOptions(): array
     {
-        return [
-            0 => 'Disabled',
-            30 => '30 days',
-            90 => '3 months',
-            180 => '6 months',
-            365 => '1 year',
-            730 => '2 years',
-            1095 => '3 years',
-            1825 => '5 years',
-        ];
+        $options = [];
+        foreach (DataRetentionPeriod::cases() as $case) {
+            $options[$case->value] = $case->label();
+        }
+
+        return $options;
+    }
+
+    public function getSyncWindowDaysOptions(): array
+    {
+        $options = [];
+        foreach (SyncWindowDays::cases() as $case) {
+            $options[$case->value] = $case->label();
+        }
+
+        return $options;
     }
 
     public function updatedSyncFrequency($value): void
     {
         try {
-            $enum = SyncFrequencyType::from($value); // Throws if invalid
-            app(UpdateSyncFrequencyAction::class)->execute($enum);
+            $enum = SyncFrequencyType::from($value);
+            app(\App\Actions\UpdateSyncFrequencyAction::class)->execute($enum);
             $this->dispatch('add-toast', message: 'Sync frequency updated.', variant: 'success');
         } catch (\ValueError $e) {
             $this->dispatch('add-toast', message: 'Invalid sync frequency selected.', variant: 'error');
@@ -171,6 +155,32 @@ class Settings extends Component
             );
         } catch (\Exception $e) {
             $this->dispatch('add-toast', message: 'Failed to update setting: '.$e->getMessage(), variant: 'error');
+        }
+    }
+
+    public function updatedSyncWindowDays($value): void
+    {
+        try {
+            $enum = SyncWindowDays::from((int) $value);
+            app(\App\Actions\UpdateSyncWindowDaysAction::class)->execute($enum);
+            $this->dispatch('add-toast', message: 'Sync window updated.', variant: 'success');
+        } catch (\ValueError $e) {
+            $this->dispatch('add-toast', message: 'Invalid sync window selected.', variant: 'error');
+        } catch (\Exception $e) {
+            $this->dispatch('add-toast', message: 'Failed to update sync window: '.$e->getMessage(), variant: 'error');
+        }
+    }
+
+    public function updatedDataRetentionGlobalPeriod($value): void
+    {
+        try {
+            $enum = DataRetentionPeriod::from((int) $value);
+            app(\App\Actions\UpdateDataRetentionPeriodAction::class)->execute($enum);
+            $this->dispatch('add-toast', message: 'Data retention period updated.', variant: 'success');
+        } catch (\ValueError $e) {
+            $this->dispatch('add-toast', message: 'Invalid data retention period selected.', variant: 'error');
+        } catch (\Exception $e) {
+            $this->dispatch('add-toast', message: 'Failed to update data retention period: '.$e->getMessage(), variant: 'error');
         }
     }
 

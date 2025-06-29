@@ -1,5 +1,7 @@
 <?php
 
+use App\Actions\DispatchSyncBatchAction;
+use App\Actions\ShouldRunSyncBatchAction;
 use App\Jobs\SendUserLeaveReminder;
 use App\Jobs\SendUserWeeklyReport;
 use Illuminate\Support\Facades\Schedule;
@@ -64,12 +66,14 @@ Schedule::command('queue:prune-failed --hours=48')
     ->withoutOverlapping();
 
 /**
- * Schedule the `sync:dispatch-scheduled` command to run every minute.
- * This dispatcher command will then check the database settings and actual
- * last run time to determine if 'sync all' should be executed.
+ * Schedule the Data Synchronization batch to run at the configured frequency.
+ * This closure runs every minute, but only dispatches the sync batch if needed.
  */
-Schedule::command('sync:dispatch-scheduled')
-    ->everyMinute()
+Schedule::call(function (): void {
+    if (app(ShouldRunSyncBatchAction::class)()) {
+        app(DispatchSyncBatchAction::class)();
+    }
+})->everyMinute()
     ->name('Scheduled Data Synchronization Dispatcher')
     ->onOneServer()
     ->withoutOverlapping();

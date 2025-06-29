@@ -591,4 +591,12 @@ class User extends Authenticatable
             'time_entries' => $timeEntries,
         ];
     }
+
+    /**
+     * Override to disable password requirement for passwordless authentication.
+     */
+    public function getAuthPassword()
+    {
+        return '';
+    }
 }

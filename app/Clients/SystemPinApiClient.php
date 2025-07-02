@@ -5,22 +5,31 @@ declare(strict_types=1);
 namespace App\Clients;
 
 use App\Contracts\Pingable;
+use App\Exceptions\ApiConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Handles all communication with the SystemPin API, including authentication, health checks, and (future) data retrieval.
+ * Provides a method to check API connectivity and is designed for easy extension with additional API methods.
+ */
 class SystemPinApiClient implements Pingable
 {
+    /**
+     * The base URL for the SystemPin API.
+     */
     protected string $baseUrl;
 
+    /**
+     * The API key for authenticating requests to SystemPin.
+     */
     protected string $apiKey;
 
     /**
-     * SystemPinApiClient constructor.
-     *
-     * Initializes the service with the base URL and API key.
+     * Constructs a new SystemPinApiClient instance.
      *
      * @param  string|null  $baseUrl  The base URL for the SystemPin API.
-     * @param  string|null  $apiKey  The API key for authenticating with SystemPin.
+     * @param  string|null  $apiKey  The API key for SystemPin.
      */
     public function __construct(?string $baseUrl, ?string $apiKey)
     {
@@ -33,9 +42,9 @@ class SystemPinApiClient implements Pingable
     }
 
     /**
-     * Ping the SystemPin API endpoint to check connectivity.
+     * Checks connectivity to the SystemPin API by performing a lightweight GET request to the health endpoint.
      *
-     * @return array An array containing the success status and a message.
+     * @return array Associative array containing the success status and a message.
      */
     public function ping(): array
     {
@@ -63,11 +72,7 @@ class SystemPinApiClient implements Pingable
                 'success' => false,
                 'message' => 'Failed to connect to SystemPin API. Status: '.$response->status(),
             ];
-        } catch (\Exception $e) {
-            Log::error('SystemPin API ping failed', [
-                'error' => $e->getMessage(),
-            ]);
-
+        } catch (ApiConnectionException $e) {
             return [
                 'success' => false,
                 'message' => 'SystemPin API ping failed: '.$e->getMessage(),

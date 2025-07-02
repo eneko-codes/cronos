@@ -9,24 +9,21 @@ use App\Models\User;
 use Illuminate\Support\Collection;
 
 /**
- * Class SyncDesktimeUsers
+ * Job to synchronize DeskTime user information with the local database.
  *
- * Synchronizes DeskTime user info into the local database,
- * updating users with their DeskTime IDs and clearing
- * DeskTime IDs for users no longer in DeskTime.
+ * Updates local users with their DeskTime IDs and clears DeskTime IDs for users no longer present in DeskTime.
  */
 class SyncDesktimeUsers extends BaseSyncJob
 {
     /**
-     * The priority of the job in the queue.
-     * Lower numbers indicate higher priority.
+     * The priority of the job in the queue. Lower numbers indicate higher priority.
      */
     public int $priority = 1;
 
     /**
-     * SyncDesktimeUsers constructor.
+     * Constructs a new SyncDesktimeUsers job instance.
      *
-     * @param  DesktimeApiClient  $desktime  An instance of the DesktimeApiClient service.
+     * @param  DesktimeApiClient  $desktime  The DeskTime API client.
      */
     public function __construct(DesktimeApiClient $desktime)
     {
@@ -35,13 +32,9 @@ class SyncDesktimeUsers extends BaseSyncJob
     }
 
     /**
-     * Executes the synchronization process.
+     * Main entry point for the job.
      *
-     * This method performs the following operations:
-     * 1. Fetches employees from DeskTime API
-     * 2. Extracts valid users with their DeskTime IDs and emails
-     * 3. Updates local users with DeskTime IDs
-     * 4. Clears DeskTime IDs for users no longer in DeskTime
+     * Fetches users from DeskTime, updates local users with DeskTime IDs, and clears DeskTime IDs for users no longer present in DeskTime.
      */
     protected function execute(): void
     {
@@ -58,7 +51,7 @@ class SyncDesktimeUsers extends BaseSyncJob
     /**
      * Retrieves and processes valid users from DeskTime.
      *
-     * @return Collection Collection of valid DeskTime users with emails and IDs
+     * @return Collection Collection of valid DeskTime users with emails and IDs.
      */
     private function getValidDesktimeUsers(): Collection
     {
@@ -85,7 +78,7 @@ class SyncDesktimeUsers extends BaseSyncJob
     /**
      * Updates local users with their DeskTime IDs.
      *
-     * @param  Collection  $validUsers  Collection of valid DeskTime users
+     * @param  Collection  $validUsers  Collection of valid DeskTime users.
      */
     private function updateUserDesktimeIds(Collection $validUsers): void
     {
@@ -97,9 +90,9 @@ class SyncDesktimeUsers extends BaseSyncJob
     }
 
     /**
-     * Clears DeskTime IDs for users no longer in DeskTime.
+     * Clears DeskTime IDs for users no longer present in DeskTime.
      *
-     * @param  Collection  $currentDesktimeEmails  Emails of current DeskTime users
+     * @param  Collection  $currentDesktimeEmails  Emails of current DeskTime users.
      */
     private function clearObsoleteDesktimeIds(
         Collection $currentDesktimeEmails

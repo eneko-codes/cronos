@@ -17,23 +17,25 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 
 /**
- * Class SyncOdooSchedules
+ * Job to synchronize Odoo schedule data (resource.calendar) with the local schedules table.
  *
- * Synchronizes schedule data from Odoo into local schedules table.
- * This job ensures the local schedules database reflects the current state of Odoo,
- * including schedules, schedule details, and user schedule assignments.
+ * Ensures the local schedules database reflects the current state of Odoo, including:
+ * - Creating or updating schedules and schedule details (time slots)
+ * - Logging and preserving schedules that no longer exist in Odoo
+ * - Detecting and notifying about duplicate schedule details
+ * - Updating user schedule assignments with historical tracking
  */
 class SyncOdooSchedules extends BaseSyncJob
 {
     /**
-     * The priority of the job in the queue.
+     * The priority of the job in the queue. Lower numbers indicate higher priority.
      */
     public int $priority = 2;
 
     /**
-     * SyncOdooSchedules constructor.
+     * Constructs a new SyncOdooSchedules job instance.
      *
-     * @param  OdooApiClient  $odoo  An instance of the OdooApiClient service.
+     * @param  OdooApiClient  $odoo  The Odoo API client instance.
      */
     public function __construct(OdooApiClient $odoo)
     {
@@ -41,16 +43,16 @@ class SyncOdooSchedules extends BaseSyncJob
     }
 
     /**
-     * Executes the synchronization process.
+     * Main entry point for the job's sync logic.
      *
-     * This method performs the following operations:
+     * Performs the following operations:
      * 1. Fetches all schedule data from Odoo API (schedules, time slots, and employee assignments)
      * 2. Creates or updates local schedules based on Odoo data
      * 3. Logs schedules that exist locally but not in Odoo for historical integrity
      * 4. Synchronizes schedule details (time slots) for each schedule
      * 5. Updates user schedule assignments with historical tracking
      *
-     * @throws Exception If any part of the synchronization process fails
+     * @throws Exception If any part of the synchronization process fails.
      */
     protected function execute(): void
     {
@@ -268,11 +270,11 @@ class SyncOdooSchedules extends BaseSyncJob
     }
 
     /**
-     * Determines if a schedule detail needs to be updated based on attribute changes.
+     * Determines if an existing schedule detail needs to be updated based on new attributes.
      *
-     * @param  object  $existingDetail  The existing schedule detail
-     * @param  array  $newAttributes  The new attributes to compare against
-     * @return bool True if update is needed, false otherwise
+     * @param  mixed  $existingDetail  The existing schedule detail model.
+     * @param  array  $newAttributes  The new attributes from Odoo.
+     * @return bool True if an update is needed, false otherwise.
      */
     protected function needsUpdate($existingDetail, array $newAttributes): bool
     {
@@ -286,11 +288,11 @@ class SyncOdooSchedules extends BaseSyncJob
     }
 
     /**
-     * Formats a decimal hour value (e.g., 9.5 => 09:30) in UTC "H:i" format.
+     * Formats a float time value from Odoo to a string in the specified timezone.
      *
-     * @param  float  $timeValue  The decimal time value from Odoo
-     * @param  string  $timezone  The timezone to use for conversion
-     * @return string Formatted time in UTC "H:i" format
+     * @param  float  $timeValue  The time value from Odoo (e.g., 8.5 for 08:30).
+     * @param  string  $timezone  The timezone to use for formatting.
+     * @return string The formatted time string (e.g., '08:30:00').
      */
     protected function formatOdooTime(
         float $timeValue,

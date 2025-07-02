@@ -14,18 +14,18 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Class SyncOdooLeaves
+ * Job to synchronize Odoo leave data (hr.leave) with the local user_leaves table.
  *
- * Synchronizes hr.leave data from Odoo into local user_leaves table.
- * This job ensures local leave records match the current state in Odoo.
- * By default, it fetches validated leaves (via OdooApiService->getLeaves()).
- * If a date range is passed, it fetches only leaves overlapping that range.
+ * Ensures local leave records match the current state in Odoo, including:
+ * - Fetching validated leaves (optionally filtered by date range)
+ * - Creating or updating local leave records
+ * - Removing obsolete leaves
+ * - Logging and handling invalid or unexpected data
  */
 class SyncOdooLeaves extends BaseSyncJob
 {
     /**
-     * The priority of the job in the queue.
-     * Lower numbers indicate higher priority.
+     * The priority of the job in the queue. Lower numbers indicate higher priority.
      */
     public int $priority = 2;
 
@@ -37,10 +37,11 @@ class SyncOdooLeaves extends BaseSyncJob
     private ?string $endDate;
 
     /**
-     * SyncOdooLeaves constructor.
+     * Constructs a new SyncOdooLeaves job instance.
      *
-     * @param  string|null  $startDate  Optional start date (e.g., '2025-01-13')
-     * @param  string|null  $endDate  Optional end date (e.g., '2025-01-13')
+     * @param  OdooApiClient  $odoo  The Odoo API client instance.
+     * @param  string|null  $startDate  Optional start date (e.g., '2025-01-13').
+     * @param  string|null  $endDate  Optional end date (e.g., '2025-01-13').
      */
     public function __construct(
         OdooApiClient $odoo,
@@ -53,15 +54,15 @@ class SyncOdooLeaves extends BaseSyncJob
     }
 
     /**
-     * Executes the synchronization process.
+     * Main entry point for the job's sync logic.
      *
-     * This method performs the following operations:
-     * 1. Fetches leaves from Odoo API filtered by date range if provided
+     * Performs the following operations:
+     * 1. Fetches leaves from Odoo API (optionally filtered by date range)
      * 2. Gets valid leave type IDs from local database
      * 3. Removes local leaves that no longer exist in Odoo
      * 4. Processes and updates local leaves based on Odoo data
      *
-     * @throws Exception If any part of the synchronization process fails
+     * @throws Exception If any part of the synchronization process fails.
      */
     protected function execute(): void
     {
@@ -76,12 +77,25 @@ class SyncOdooLeaves extends BaseSyncJob
 
         // Step 4: Process and update local leaves based on Odoo data
         $this->syncLeaves($odooLeaves, $validLeaveTypeIds);
+
+        // Log the actual date range of the data received
+        $fromDates = $odooLeaves->pluck('date_from')->filter();
+        $toDates = $odooLeaves->pluck('date_to')->filter();
+        if ($fromDates->isNotEmpty() && $toDates->isNotEmpty()) {
+            $minFrom = $fromDates->min();
+            $maxTo = $toDates->max();
+            Log::info('Odoo Leaves API actual data date range', [
+                'min_date_from' => $minFrom,
+                'max_date_to' => $maxTo,
+                'leave_count' => $odooLeaves->count(),
+            ]);
+        }
     }
 
     /**
      * Removes local leave records that no longer exist in Odoo.
      *
-     * @param  Collection  $currentOdooLeaveIds  Collection of leave IDs from Odoo
+     * @param  Collection  $currentOdooLeaveIds  Collection of leave IDs from Odoo.
      */
     private function removeObsoleteLeaves(Collection $currentOdooLeaveIds): void
     {
@@ -106,8 +120,8 @@ class SyncOdooLeaves extends BaseSyncJob
     /**
      * Processes and creates/updates local leave records based on Odoo data.
      *
-     * @param  Collection  $odooLeaves  Leaves from Odoo API
-     * @param  Collection  $validLeaveTypeIds  Valid leave type IDs from local database
+     * @param  Collection  $odooLeaves  Leaves from Odoo API.
+     * @param  Collection  $validLeaveTypeIds  Valid leave type IDs from local database.
      */
     private function syncLeaves(
         Collection $odooLeaves,
@@ -141,8 +155,8 @@ class SyncOdooLeaves extends BaseSyncJob
     /**
      * Validates that a leave record has all required fields.
      *
-     * @param  array  $leave  Leave record from Odoo
-     * @return bool Whether the leave has all required fields
+     * @param  array  $leave  Leave record from Odoo.
+     * @return bool Whether the leave has all required fields.
      */
     private function validateLeaveFields(array $leave): bool
     {
@@ -170,8 +184,8 @@ class SyncOdooLeaves extends BaseSyncJob
     /**
      * Logs when a leave has an invalid leave type.
      *
-     * @param  array  $leave  Leave record from Odoo
-     * @param  int  $leaveTypeId  The leave type ID from Odoo
+     * @param  array  $leave  Leave record from Odoo.
+     * @param  int  $leaveTypeId  The leave type ID from Odoo.
      */
     private function logInvalidLeaveType(array $leave, int $leaveTypeId): void
     {
@@ -184,7 +198,7 @@ class SyncOdooLeaves extends BaseSyncJob
     /**
      * Checks and logs if a leave has an unexpected state.
      *
-     * @param  array  $leave  Leave record from Odoo
+     * @param  array  $leave  Leave record from Odoo.
      */
     private function checkLeaveState(array $leave): void
     {
@@ -210,10 +224,10 @@ class SyncOdooLeaves extends BaseSyncJob
     }
 
     /**
-     * Prepares leave data for database insertion/update.
+     * Prepares the data array for creating or updating a UserLeave record.
      *
-     * @param  array  $leave  Leave record from Odoo
-     * @return array Prepared data for database
+     * @param  array  $leave  Leave record from Odoo.
+     * @return array Prepared data for UserLeave.
      */
     private function prepareLeaveData(array $leave): array
     {
@@ -250,10 +264,10 @@ class SyncOdooLeaves extends BaseSyncJob
     }
 
     /**
-     * Assigns employee data to a leave record.
+     * Assigns the employee to the leave data array.
      *
-     * @param  array  $leave  Leave record from Odoo
-     * @param  array  &$data  Leave data for database (passed by reference)
+     * @param  array  $leave  Leave record from Odoo.
+     * @param  array  &$data  Reference to the data array being prepared.
      */
     private function assignEmployeeToLeave(array $leave, array &$data): void
     {

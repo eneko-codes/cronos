@@ -5,39 +5,25 @@ declare(strict_types=1);
 namespace App\Clients;
 
 use App\Contracts\Pingable;
-use Exception;
+use App\Exceptions\ApiConnectionException;
+use App\Exceptions\ApiRequestException;
+use App\Exceptions\ApiResponseException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 
 /**
- * Custom exception for Odoo API connection errors
- */
-class OdooConnectionException extends Exception {}
-
-/**
- * Custom exception for Odoo API request errors
- */
-class OdooRequestException extends Exception {}
-
-/**
- * Custom exception for Odoo API response errors
- */
-class OdooResponseException extends Exception {}
-
-/**
- * Class OdooApiClient
+ * Handles all interactions with the Odoo API, including authentication, data retrieval, and health checks.
+ * Provides methods to fetch users, departments, categories, leave types, leaves, schedules, and schedule details.
+ * All data is returned as raw as possible, without renaming keys or setting defaults.
  *
- * Handles all interactions with the Odoo API, including authentication and data retrieval.
- * This service fetches raw data from Odoo without renaming keys or setting defaults.
- *
- * Odoo 13 note: "date_from" and "date_to" in "hr.leave" are stored as UTC datetime fields.
+ * Note: Odoo 13 stores 'date_from' and 'date_to' in 'hr.leave' as UTC datetime fields.
  */
 class OdooApiClient implements Pingable
 {
     /**
-     * The Odoo base URL (e.g., https://odoo.company.com).
+     * The base URL for the Odoo API (e.g., https://odoo.company.com).
      */
     private string $baseUrl;
 
@@ -47,26 +33,24 @@ class OdooApiClient implements Pingable
     private string $database;
 
     /**
-     * Odoo username.
+     * The Odoo username for authentication.
      */
     private string $username;
 
     /**
-     * Odoo password.
+     * The Odoo password for authentication.
      */
     private string $password;
 
     /**
-     * OdooApiClient constructor.
-     *
-     * Initializes the service with configuration values passed as arguments.
+     * Constructs a new OdooApiClient instance.
      *
      * @param  string  $baseUrl  The Odoo base URL.
      * @param  string  $database  The Odoo database name.
-     * @param  string  $username  Odoo username.
-     * @param  string  $password  Odoo password.
+     * @param  string  $username  The Odoo username.
+     * @param  string  $password  The Odoo password.
      *
-     * @throws Exception If any configuration argument is empty.
+     * @throws ApiConnectionException If any configuration argument is empty.
      */
     public function __construct(
         string $baseUrl,
@@ -85,16 +69,16 @@ class OdooApiClient implements Pingable
             empty($this->username) ||
             empty($this->password)
         ) {
-            throw new Exception('Odoo API configuration is incomplete.');
+            throw new ApiConnectionException('Odoo API configuration is incomplete.');
         }
     }
 
     /**
-     * Authenticates with Odoo by calling the "common.authenticate" method.
+     * Authenticates with Odoo by calling the 'common.authenticate' method.
      *
      * @return int The authenticated Odoo user ID.
      *
-     * @throws Exception If authentication fails.
+     * @throws ApiConnectionException If authentication fails.
      */
     private function authenticate(): int
     {
@@ -106,7 +90,7 @@ class OdooApiClient implements Pingable
         ]);
 
         if (! is_int($result)) {
-            throw new Exception(
+            throw new ApiConnectionException(
                 'Odoo authentication failed: no valid user ID returned.'
             );
         }
@@ -115,14 +99,14 @@ class OdooApiClient implements Pingable
     }
 
     /**
-     * Executes a JSON-RPC call to Odoo.
+     * Executes a JSON-RPC call to the Odoo API.
      *
-     * @param  string  $service  The Odoo service to call (e.g., "common" or "object").
+     * @param  string  $service  The Odoo service to call (e.g., 'common' or 'object').
      * @param  string  $method  The method to execute within the service.
      * @param  array  $args  The parameters to pass to the method.
      * @return mixed The decoded JSON result from Odoo.
      *
-     * @throws Exception If the API call fails or Odoo returns an error.
+     * @throws ApiConnectionException|ApiRequestException|ApiResponseException If the API call fails or Odoo returns an error.
      */
     private function call(
         string $service,
@@ -146,7 +130,7 @@ class OdooApiClient implements Pingable
             $responseBody = $response->json();
 
             if ($response->failed() || isset($responseBody['error'])) {
-                throw new OdooResponseException(
+                throw new ApiResponseException(
                     'Odoo API Error: '.
                       ($responseBody['error']['message'] ?? 'Unknown error')
                 );
@@ -154,11 +138,11 @@ class OdooApiClient implements Pingable
 
             return $responseBody['result'] ?? null;
         } catch (ConnectionException $e) {
-            throw new OdooConnectionException(
+            throw new ApiConnectionException(
                 'Failed to connect to Odoo API: '.$e->getMessage()
             );
         } catch (RequestException $e) {
-            throw new OdooRequestException(
+            throw new ApiRequestException(
                 'Odoo API request failed: '.$e->getMessage()
             );
         }
@@ -167,12 +151,12 @@ class OdooApiClient implements Pingable
     /**
      * Performs a search and read operation on any Odoo model.
      *
-     * @param  string  $model  The Odoo model to query (e.g., "hr.employee").
+     * @param  string  $model  The Odoo model to query (e.g., 'hr.employee').
      * @param  array  $domain  The domain filters for the search.
      * @param  array  $fields  The fields to retrieve.
      * @return Collection The resulting records as a Laravel collection.
      *
-     * @throws Exception If the API call fails.
+     * @throws ApiConnectionException|ApiRequestException|ApiResponseException If the API call fails.
      */
     private function searchRead(
         string $model,
@@ -193,7 +177,10 @@ class OdooApiClient implements Pingable
     }
 
     /**
-     * Retrieves "hr.employee" records from Odoo.
+     * Retrieves all 'hr.employee' records from Odoo.
+     *
+     * @param  array  $domain  Optional domain filters.
+     * @return Collection Collection of employee records.
      */
     public function getUsers(array $domain = []): Collection
     {
@@ -210,7 +197,10 @@ class OdooApiClient implements Pingable
     }
 
     /**
-     * Retrieves "hr.department" records from Odoo.
+     * Retrieves all 'hr.department' records from Odoo.
+     *
+     * @param  array  $domain  Optional domain filters.
+     * @return Collection Collection of department records.
      */
     public function getDepartments(array $domain = []): Collection
     {
@@ -224,7 +214,10 @@ class OdooApiClient implements Pingable
     }
 
     /**
-     * Retrieves "hr.employee.category" records from Odoo.
+     * Retrieves all 'hr.employee.category' records from Odoo.
+     *
+     * @param  array  $domain  Optional domain filters.
+     * @return Collection Collection of category records.
      */
     public function getCategories(array $domain = []): Collection
     {
@@ -236,7 +229,10 @@ class OdooApiClient implements Pingable
     }
 
     /**
-     * Retrieves "hr.leave.type" records from Odoo.
+     * Retrieves all 'hr.leave.type' records from Odoo.
+     *
+     * @param  array  $domain  Optional domain filters.
+     * @return Collection Collection of leave type records.
      */
     public function getLeaveTypes(array $domain = []): Collection
     {
@@ -252,11 +248,12 @@ class OdooApiClient implements Pingable
     }
 
     /**
-     * Retrieves "hr.leave" records from Odoo, optionally filtered by date range.
+     * Retrieves 'hr.leave' records from Odoo, optionally filtered by date range and additional domain filters.
      *
-     * @param  string|null  $startDate  Local date in 'Y-m-d' format (e.g., '2025-01-13')
-     * @param  string|null  $endDate  Local date in 'Y-m-d' format (e.g., '2025-01-13')
-     * @param  array  $domain  Additional domain filters
+     * @param  string|null  $startDate  Optional start date in 'Y-m-d' format.
+     * @param  string|null  $endDate  Optional end date in 'Y-m-d' format.
+     * @param  array  $domain  Additional domain filters.
+     * @return Collection Collection of leave records.
      */
     public function getLeaves(
         ?string $startDate = null,
@@ -294,7 +291,10 @@ class OdooApiClient implements Pingable
     }
 
     /**
-     * Retrieves "resource.calendar" records from Odoo.
+     * Retrieves all 'resource.calendar' records from Odoo.
+     *
+     * @param  array  $domain  Optional domain filters.
+     * @return Collection Collection of schedule records.
      */
     public function getSchedules(array $domain = []): Collection
     {
@@ -305,6 +305,9 @@ class OdooApiClient implements Pingable
 
     /**
      * Retrieves schedule details (attendances) from Odoo.
+     *
+     * @param  array  $domain  Optional domain filters.
+     * @return Collection Collection of schedule detail records.
      */
     public function getScheduleDetails(array $domain = []): Collection
     {
@@ -320,7 +323,9 @@ class OdooApiClient implements Pingable
     }
 
     /**
-     * Retrieves version information from Odoo.
+     * Retrieves version information from the Odoo server.
+     *
+     * @return array Associative array with success status, message, and version info if available.
      */
     public function getServerVersion(): mixed
     {
@@ -332,7 +337,7 @@ class OdooApiClient implements Pingable
                 'message' => 'Odoo API is reachable.',
                 'version' => $result['server_version'] ?? 'Unknown',
             ];
-        } catch (OdooConnectionException|OdooRequestException|OdooResponseException $e) {
+        } catch (ApiConnectionException|ApiRequestException|ApiResponseException $e) {
             return [
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -341,8 +346,9 @@ class OdooApiClient implements Pingable
     }
 
     /**
-     * Implements Pingable::ping().
-     * Pings the Odoo server by calling the "common.version" method.
+     * Checks the health of the Odoo API by calling the 'common.version' method.
+     *
+     * @return array Associative array indicating success status and a message.
      */
     public function ping(): array
     {
@@ -354,7 +360,7 @@ class OdooApiClient implements Pingable
                 'message' => 'Odoo API is reachable.',
                 'version' => $result['server_version'] ?? 'Unknown',
             ];
-        } catch (OdooConnectionException|OdooRequestException|OdooResponseException $e) {
+        } catch (ApiConnectionException|ApiRequestException|ApiResponseException $e) {
             return [
                 'success' => false,
                 'message' => $e->getMessage(),

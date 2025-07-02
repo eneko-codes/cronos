@@ -4,14 +4,10 @@ declare(strict_types=1);
 
 namespace App\Jobs\Sync;
 
+use App\Actions\CheckApisHealthAction;
 use App\Clients\DesktimeApiClient;
 use App\Clients\OdooApiClient;
 use App\Clients\ProofhubApiClient;
-use App\Contracts\Pingable;
-use App\Enums\RoleType;
-use App\Models\User;
-use App\Notifications\ApiDownWarning;
-use App\Services\NotificationPreferenceService;
 use Exception;
 use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
@@ -25,68 +21,62 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Class BaseSyncJob
+ * Abstract base class for all sync jobs.
  *
- * - The base class for all sync jobs
- * - Provides standardized logging, caching, and error handling
+ * Provides standardized logging, database transaction handling, error handling, and API health checks for all sync jobs.
+ * Implements the Template Method pattern: the handle() method defines the job lifecycle, while child classes implement the execute() method for specific sync logic.
  *
- * This class implements the Template Method pattern where:
- * - The handle() method defines the skeleton of the algorithm (what Laravel calls)
- * - The execute() method is the specific step that varies between job implementations
- *
- * This separation provides several benefits:
- * 1. Framework Integration: handle() is what Laravel's queue system expects
- * 2. Centralized Control: handle() can be extended to add functionality to all sync jobs at once
- *    (like logging, transactions, timing, etc.) without modifying child classes
- * 3. Separation of Concerns: Child classes only need to implement business logic without
- *    worrying about queue integration details
+ * Benefits:
+ * - Ensures correct integration with Laravel's queue system for all sync jobs.
+ * - Centralizes common functionality (logging, transactions, error handling, etc.).
+ * - Allows child classes to focus solely on business logic.
  */
 abstract class BaseSyncJob implements ShouldBeEncrypted, ShouldQueue
 {
     use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     /**
-     * We explicitly declare these properties so referencing them
-     * (in checkApisHealth()) won't cause "Undefined property" errors.
+     * Odoo API client instance (optional, for jobs that sync Odoo data).
      */
     protected ?OdooApiClient $odoo = null;
 
+    /**
+     * DeskTime API client instance (optional, for jobs that sync DeskTime data).
+     */
     protected ?DesktimeApiClient $desktime = null;
 
+    /**
+     * ProofHub API client instance (optional, for jobs that sync ProofHub data).
+     */
     protected ?ProofhubApiClient $proofhub = null;
 
     /**
-     * Max job tries.
+     * Maximum number of job attempts before failing.
      */
     public int $tries = 3;
 
     /**
-     * Max exceptions allowed.
+     * Maximum number of exceptions allowed before failing.
      */
     public int $maxExceptions = 3;
 
     /**
-     * Timeout (seconds).
+     * Job timeout in seconds.
      */
     public int $timeout = 120;
 
     /**
-     * Backoff times (seconds).
+     * Backoff times (in seconds) between retries.
      */
     public array $backoff = [10, 30, 60];
 
     /**
-     * Handle the job.
+     * Main entry point for the job.
      *
-     * This is the "template method" that Laravel's queue system calls.
-     * By implementing this in the base class, we:
-     * 1. Ensure correct integration with Laravel's queue system for all child jobs
-     * 2. Provide a single point for adding common functionality to all sync jobs
-     * 3. Allow future extensions (like logging, metrics, transactions) without modifying child classes
+     * Wraps the job's execution logic in a database transaction, logs the process, and handles errors.
+     * Calls the abstract execute() method, which must be implemented by child classes.
      *
-     * In a future implementation, this method could be enhanced to add functionality
-     * such as transaction support, logging, error handling, etc., providing these
-     * features to all child classes automatically.
+     * @throws Exception If the job fails during execution.
      */
     public function handle(): void
     {
@@ -109,7 +99,6 @@ abstract class BaseSyncJob implements ShouldBeEncrypted, ShouldQueue
             ]);
 
             // Re-throw the exception to ensure Laravel's queue worker handles the failure
-            // (e.g., moving to failed_jobs table, respecting retries)
             throw $e;
         }
     }
@@ -117,65 +106,26 @@ abstract class BaseSyncJob implements ShouldBeEncrypted, ShouldQueue
     /**
      * The main sync logic, to be defined by child classes.
      *
-     * This abstract method must be implemented by all child classes to provide
-     * their specific synchronization logic. By separating this from handle(),
-     * child classes can focus solely on business logic without needing to
-     * understand Laravel queue integration details.
+     * Child classes must implement this method to provide their specific synchronization logic.
      *
-     * @throws Exception
+     * @throws Exception If the sync logic fails.
      */
     abstract protected function execute(): void;
 
     /**
-     * When all retries are exhausted.
+     * Called when all retries are exhausted and the job is marked as failed.
      *
-     * @param  \Throwable  $exception  The exception that caused the job to fail
+     * Triggers API health checks and sends notifications if any API is down.
+     *
+     * @param  Throwable  $exception  The exception that caused the job to fail.
      */
     public function failed(Throwable $exception): void
     {
-        // Check API health once the job is truly marked as "failed"
-        $this->checkApisHealth();
-    }
-
-    /**
-     * Checks the health of all relevant APIs (Odoo, DeskTime, ProofHub)
-     * and sends a notification if any is down.
-     */
-    protected function checkApisHealth(): void
-    {
-        $apis = [
+        // Use the new action to check API health and send notifications
+        (new CheckApisHealthAction)->execute([
             'Odoo' => $this->odoo,
             'DeskTime' => $this->desktime,
             'ProofHub' => $this->proofhub,
-        ];
-
-        foreach ($apis as $serviceName => $service) {
-            if ($service instanceof Pingable) {
-                try {
-                    $pingResult = $service->ping();
-                    $isDown = ! ($pingResult['success'] ?? false);
-
-                    if ($isDown) {
-                        $errorMessage = $pingResult['message'] ?? 'API health check failed';
-                        $this->sendApiDownNotification($serviceName, $errorMessage);
-                    }
-                } catch (Exception $e) {
-                    $errorMessage = "Health check failed: {$e->getMessage()}";
-                    $this->sendApiDownNotification($serviceName, $errorMessage);
-                }
-            }
-        }
-    }
-
-    protected function sendApiDownNotification(string $apiName, string $errorMessage): void
-    {
-        $admins = User::where('user_type', RoleType::Admin)->get();
-        $apiDownNotification = new ApiDownWarning($apiName, $errorMessage);
-        $notificationService = resolve(NotificationPreferenceService::class);
-        foreach ($admins as $admin) {
-            if ($notificationService->isEligibleForNotification($apiDownNotification->type(), $admin)) {
-                $admin->notifyNow($apiDownNotification);
-            }
-        }
+        ]);
     }
 }

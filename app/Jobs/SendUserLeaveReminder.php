@@ -16,14 +16,22 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Job to send leave reminder notifications to users with approved upcoming leaves.
+ *
+ * For each user with an approved leave starting in a specified number of days, this job checks notification eligibility and queues a reminder notification.
+ */
 class SendUserLeaveReminder implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    /**
+     * Number of days in advance to send the reminder.
+     */
     protected int $daysInAdvance;
 
     /**
-     * Create a new job instance.
+     * Constructs a new SendUserLeaveReminder job instance.
      *
      * @param  int  $daysInAdvance  How many days in advance to send the reminder (default: 1).
      */
@@ -33,7 +41,12 @@ class SendUserLeaveReminder implements ShouldQueue
     }
 
     /**
-     * Execute the job.
+     * Main entry point for the job.
+     *
+     * Finds all users with approved leaves starting on the target date, checks notification eligibility, and queues reminders.
+     * Logs the process and any errors encountered.
+     *
+     * @param  NotificationPreferenceService  $notificationService  Service to check notification eligibility.
      */
     public function handle(NotificationPreferenceService $notificationService): void
     {

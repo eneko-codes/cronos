@@ -12,25 +12,24 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Class SyncOdooDepartments
+ * Job to synchronize Odoo department data (hr.department) with the local departments table.
  *
- * Synchronizes hr.department data from Odoo into local departments table.
- * This job ensures the local departments database reflects the current state of Odoo,
- * including creating new departments, updating existing ones, preserving and logging departments
- * that no longer exist in Odoo, and updating users' department assignments.
+ * Ensures the local departments database reflects the current state of Odoo, including:
+ * - Creating new departments and updating existing ones
+ * - Preserving and logging departments that no longer exist in Odoo
+ * - Updating users' department assignments as needed
  */
 class SyncOdooDepartments extends BaseSyncJob
 {
     /**
-     * The priority of the job in the queue.
-     * Lower numbers indicate higher priority.
+     * The priority of the job in the queue. Lower numbers indicate higher priority.
      */
     public int $priority = 1;
 
     /**
-     * SyncOdooDepartments constructor.
+     * Constructs a new SyncOdooDepartments job instance.
      *
-     * @param  OdooApiClient  $odoo  An instance of the OdooApiClient service.
+     * @param  OdooApiClient  $odoo  The Odoo API client instance.
      */
     public function __construct(OdooApiClient $odoo)
     {
@@ -38,14 +37,14 @@ class SyncOdooDepartments extends BaseSyncJob
     }
 
     /**
-     * Executes the synchronization process.
+     * Main entry point for the job's sync logic.
      *
-     * This method performs the following operations:
+     * Performs the following operations:
      * 1. Fetches all departments from Odoo API
      * 2. Creates or updates local departments based on Odoo data
      * 3. Logs departments that exist locally but not in Odoo for historical integrity
      *
-     * @throws Exception If any part of the synchronization process fails
+     * @throws Exception If any part of the synchronization process fails.
      */
     protected function execute(): void
     {
@@ -62,7 +61,9 @@ class SyncOdooDepartments extends BaseSyncJob
     }
 
     /**
-     * Maps Odoo departments to our local structure.
+     * Maps Odoo departments to the local structure.
+     *
+     * @return Collection Mapped department data.
      */
     private function mapOdooDepartments(): Collection
     {
@@ -79,6 +80,8 @@ class SyncOdooDepartments extends BaseSyncJob
 
     /**
      * Creates or updates local departments based on Odoo data.
+     *
+     * @param  Collection  $mappedDepartments  Collection of mapped department data from Odoo.
      */
     private function syncDepartments(Collection $mappedDepartments): void
     {
@@ -97,6 +100,8 @@ class SyncOdooDepartments extends BaseSyncJob
 
     /**
      * Logs departments that exist locally but not in Odoo for historical integrity.
+     *
+     * @param  Collection  $currentOdooDepartmentIds  Collection of current Odoo department IDs.
      */
     private function logMissingDepartments(
         Collection $currentOdooDepartmentIds

@@ -16,46 +16,42 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
- * Class SyncOdooUsers
+ * Job to synchronize Odoo employee data (hr.employee) with the local users table.
  *
- * Synchronizes hr.employee data from Odoo into the local users table.
- * This job ensures the local users database reflects the current state
- * of the Odoo system, including creating new users, updating existing ones,
- * handling active status, department, categories, and schedule assignments.
- * Users no longer present in Odoo are marked as inactive.
+ * Ensures the local users database reflects the current state of Odoo, including:
+ * - Creating new users and updating existing ones
+ * - Syncing active status, department, categories, and schedule assignments
+ * - Marking users as inactive if they no longer exist in Odoo
  */
 class SyncOdooUsers extends BaseSyncJob
 {
     /**
-     * The priority of the job in the queue.
-     * Lower numbers indicate higher priority.
+     * The priority of the job in the queue. Lower numbers indicate higher priority.
      */
     public int $priority = 1;
 
     /**
-     * SyncOdooUsers constructor.
+     * Constructs a new SyncOdooUsers job instance.
      *
-     * @param  OdooApiClient  $odoo  An instance of the OdooApiClient service.
+     * @param  OdooApiClient  $odoo  The Odoo API client instance.
      */
     public function __construct(OdooApiClient $odoo)
     {
-        // Assign the parent's protected ?OdooApiService $odoo property.
+        // Assign the parent's protected ?OdooApiClient $odoo property.
         $this->odoo = $odoo;
     }
 
     /**
-     * Executes the synchronization process.
+     * Main entry point for the job's sync logic.
      *
-     * This method performs the following operations:
-     * 1. Fetches employees from Odoo API (now includes dept, cats, schedule)
-     * 2. Identifies and logs employees without email addresses
+     * Performs the following operations:
+     * 1. Fetches employees from Odoo API
+     * 2. Logs employees without email addresses
      * 3. Filters to keep only employees with valid emails
-     * 4. Creates or updates local user records, including relationships
-     * 5. Identifies users in local DB that no longer exist in Odoo
-     * 6. Deactivates obsolete user records instead of deleting
+     * 4. Creates or updates local user records and relationships
+     * 5. Deactivates users no longer present in Odoo
      *
-     *
-     * @throws Exception
+     * @throws Exception If the sync logic fails.
      */
     protected function execute(): void
     {
@@ -79,9 +75,9 @@ class SyncOdooUsers extends BaseSyncJob
     }
 
     /**
-     * Logs employees who are missing email addresses.
+     * Logs Odoo employees who are missing email addresses.
      *
-     * @param  Collection  $employees  Collection of employees from Odoo
+     * @param  Collection  $employees  Collection of employees from Odoo.
      */
     private function logEmployeesWithoutEmail(Collection $employees): void
     {
@@ -104,10 +100,9 @@ class SyncOdooUsers extends BaseSyncJob
     }
 
     /**
-     * Creates or updates local user records from valid Odoo employees,
-     * including department, category, and schedule assignments.
+     * Creates or updates local user records from valid Odoo employees, including department, category, and schedule assignments.
      *
-     * @param  Collection  $validEmployees  Collection of valid employees from Odoo
+     * @param  Collection  $validEmployees  Collection of valid employees from Odoo.
      */
     private function syncValidEmployees(Collection $validEmployees): void
     {
@@ -134,10 +129,10 @@ class SyncOdooUsers extends BaseSyncJob
     }
 
     /**
-     * Synchronizes the user's categories.
+     * Synchronizes the user's categories with the local database.
      *
-     * @param  User  $user  The local user model
-     * @param  array  $odooCategoryIds  Array of Odoo category IDs for this user
+     * @param  User  $user  The local user model.
+     * @param  array  $odooCategoryIds  Array of Odoo category IDs for this user.
      */
     private function syncUserCategories(User $user, array $odooCategoryIds): void
     {
@@ -147,10 +142,10 @@ class SyncOdooUsers extends BaseSyncJob
     }
 
     /**
-     * Synchronizes the user's schedule assignment.
+     * Synchronizes the user's schedule assignment with the local database.
      *
-     * @param  User  $user  The local user model
-     * @param  int|null  $newOdooScheduleId  The Odoo schedule ID for this user, or null
+     * @param  User  $user  The local user model.
+     * @param  int|null  $newOdooScheduleId  The Odoo schedule ID for this user, or null.
      */
     private function syncUserSchedule(User $user, ?int $newOdooScheduleId): void
     {
@@ -192,7 +187,7 @@ class SyncOdooUsers extends BaseSyncJob
     /**
      * Deactivates local user records that no longer exist in the current Odoo fetch.
      *
-     * @param  Collection  $currentOdooIds  Collection of current Odoo employee IDs
+     * @param  Collection  $currentOdooIds  Collection of current Odoo employee IDs.
      */
     private function deactivateObsoleteUsers(Collection $currentOdooIds): void
     {

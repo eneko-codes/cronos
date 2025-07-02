@@ -5,15 +5,14 @@ declare(strict_types=1);
 namespace App\Clients;
 
 use App\Contracts\Pingable;
+use App\Exceptions\ApiConnectionException;
 use Carbon\Carbon;
-use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 
 /**
- * Class DesktimeApiClient
- *
- * Handles API interactions with DeskTime.
+ * Handles all communication with the DeskTime API, including authentication, data retrieval, and health checks.
+ * Provides methods to fetch users, attendance data, and account timezone, and to check API health.
  */
 class DesktimeApiClient implements Pingable
 {
@@ -23,21 +22,22 @@ class DesktimeApiClient implements Pingable
     private string $baseUrl;
 
     /**
-     * The API key for authenticating with DeskTime.
+     * The API key for authenticating requests to DeskTime.
      */
     private string $apiKey;
 
+    /**
+     * The account timezone, cached after first retrieval.
+     */
     private ?string $accountTimezone = null;
 
     /**
-     * DesktimeApiClient constructor.
-     *
-     * Initializes the service with the base URL and API key.
+     * Constructs a new DesktimeApiClient instance.
      *
      * @param  string  $baseUrl  The base URL for the DeskTime API.
-     * @param  string  $apiKey  The API key for authenticating with DeskTime.
+     * @param  string  $apiKey  The API key for DeskTime.
      *
-     * @throws Exception If configuration arguments are empty.
+     * @throws ApiConnectionException If configuration arguments are empty or the API request fails.
      */
     public function __construct(string $baseUrl, string $apiKey)
     {
@@ -45,18 +45,18 @@ class DesktimeApiClient implements Pingable
         $this->apiKey = $apiKey;
 
         if (empty($this->baseUrl) || empty($this->apiKey)) {
-            throw new Exception('DeskTime API configuration is incomplete.');
+            throw new ApiConnectionException('DeskTime API configuration is incomplete.');
         }
     }
 
     /**
      * Makes an HTTP GET request to a DeskTime API endpoint with the API key.
      *
-     * @param  string  $endpoint  API endpoint (e.g., '/ping', '/employees')
-     * @param  array  $params  Query parameters to include in the request
-     * @return array Decoded JSON response
+     * @param  string  $endpoint  API endpoint (e.g., '/ping', '/employees').
+     * @param  array  $params  Query parameters to include in the request.
+     * @return array Decoded JSON response.
      *
-     * @throws Exception If the API request fails.
+     * @throws ApiConnectionException If the API request fails.
      */
     private function call(string $endpoint, array $params = []): array
     {
@@ -66,27 +66,25 @@ class DesktimeApiClient implements Pingable
             $response = Http::get("{$this->baseUrl}{$endpoint}", $params);
 
             if ($response->failed()) {
-                throw new Exception(
+                throw new ApiConnectionException(
                     "DeskTime API returned error: {$response->status()}"
                 );
             }
 
             return $response->json();
-        } catch (Exception $e) {
-            // Only throw the exception without logging
-            // This prevents double logging when the caller also logs the exception
-            throw $e;
+        } catch (\Exception $e) {
+            throw new ApiConnectionException($e->getMessage(), $e->getCode(), $e);
         }
     }
 
     /**
-     * Retrieves all users from DeskTime.
+     * Retrieves all users from DeskTime for a given date and period.
      *
      * @param  string|null  $date  Date in 'Y-m-d' format. Defaults to today.
      * @param  string  $period  Either 'day' or 'month'. Defaults to 'month'.
-     * @return Collection Collection of employees data by date
+     * @return Collection Collection of employees data by date.
      *
-     * @throws Exception If the API request fails.
+     * @throws ApiConnectionException If the API request fails.
      */
     public function getAllEmployees(
         ?string $date = null,
@@ -107,13 +105,13 @@ class DesktimeApiClient implements Pingable
     }
 
     /**
-     * Retrieves attendance data for a single employee.
+     * Retrieves attendance data for a single employee for a given date.
      *
      * @param  int  $userId  DeskTime user ID.
      * @param  string|null  $date  Date in 'Y-m-d' format. Defaults to today.
-     * @return Collection Employee data including attendance
+     * @return Collection Employee data including attendance.
      *
-     * @throws Exception If the API request fails.
+     * @throws ApiConnectionException If the API request fails.
      */
     public function getSingleEmployee(
         int $userId,
@@ -130,11 +128,11 @@ class DesktimeApiClient implements Pingable
     }
 
     /**
-     * Gets the account timezone from DeskTime.
+     * Retrieves the account timezone from DeskTime, caching the result after the first call.
      *
-     * @return string Timezone identifier
+     * @return string Timezone identifier.
      *
-     * @throws Exception If the API request fails
+     * @throws ApiConnectionException If the API request fails.
      */
     public function getAccountTimezone(): string
     {
@@ -147,8 +145,9 @@ class DesktimeApiClient implements Pingable
     }
 
     /**
-     * Implements Pingable::ping().
-     * Checks the health of the DeskTime API.
+     * Checks the health of the DeskTime API by performing a lightweight GET request.
+     *
+     * @return array Associative array indicating success status and a message.
      */
     public function ping(): array
     {
@@ -161,7 +160,7 @@ class DesktimeApiClient implements Pingable
                   ? 'DeskTime API is reachable.'
                   : 'DeskTime API returned unexpected response.',
             ];
-        } catch (Exception $e) {
+        } catch (ApiConnectionException $e) {
             return [
                 'success' => false,
                 'message' => 'Failed to connect to DeskTime API: '.$e->getMessage(),

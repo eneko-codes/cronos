@@ -11,25 +11,23 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Class SyncOdooCategories
+ * Job to synchronize Odoo employee category data (hr.employee.category) with the local categories table.
  *
- * Synchronizes hr.employee.category data from Odoo into local categories table.
- * This job ensures the local categories database reflects the current state of the Odoo system,
- * including creating new categories, updating existing ones, and preserving categories
- * that no longer exist in Odoo for historical integrity.
+ * Ensures the local categories database reflects the current state of Odoo, including:
+ * - Creating new categories and updating existing ones
+ * - Preserving and logging categories that no longer exist in Odoo for historical integrity
  */
 class SyncOdooCategories extends BaseSyncJob
 {
     /**
-     * The priority of the job in the queue.
-     * Lower numbers indicate higher priority.
+     * The priority of the job in the queue. Lower numbers indicate higher priority.
      */
     public int $priority = 1;
 
     /**
-     * SyncOdooCategories constructor.
+     * Constructs a new SyncOdooCategories job instance.
      *
-     * @param  OdooApiClient  $odoo  An instance of the OdooApiClient service.
+     * @param  OdooApiClient  $odoo  The Odoo API client instance.
      */
     public function __construct(OdooApiClient $odoo)
     {
@@ -38,15 +36,14 @@ class SyncOdooCategories extends BaseSyncJob
     }
 
     /**
-     * Executes the synchronization process.
+     * Main entry point for the job's sync logic.
      *
-     * This method performs the following operations:
+     * Performs the following operations:
      * 1. Fetches categories from Odoo API and maps them to local structure
      * 2. Creates or updates local categories based on Odoo data
-     * 3. Identifies categories that exist locally but not in Odoo
-     * 4. Logs missing categories for historical integrity
+     * 3. Logs categories that exist locally but not in Odoo for historical integrity
      *
-     * @throws Exception If any part of the synchronization process fails
+     * @throws Exception If any part of the synchronization process fails.
      */
     protected function execute(): void
     {
@@ -61,7 +58,9 @@ class SyncOdooCategories extends BaseSyncJob
     }
 
     /**
-     * Maps Odoo categories to our local structure.
+     * Maps Odoo categories to the local structure.
+     *
+     * @return Collection Mapped category data.
      */
     private function mapOdooCategories(): Collection
     {
@@ -76,6 +75,8 @@ class SyncOdooCategories extends BaseSyncJob
 
     /**
      * Creates or updates local categories based on Odoo data.
+     *
+     * @param  Collection  $mappedCategories  Collection of mapped category data from Odoo.
      */
     private function syncCategories(Collection $mappedCategories): void
     {
@@ -92,10 +93,11 @@ class SyncOdooCategories extends BaseSyncJob
 
     /**
      * Logs categories that exist locally but not in Odoo for historical integrity.
+     *
+     * @param  Collection  $currentOdooCategoryIds  Collection of current Odoo category IDs.
      */
-    private function logMissingCategories(
-        Collection $currentOdooCategoryIds
-    ): void {
+    private function logMissingCategories(Collection $currentOdooCategoryIds): void
+    {
         $missingCategories = Category::whereNotIn('odoo_category_id', $currentOdooCategoryIds)
             ->get();
 

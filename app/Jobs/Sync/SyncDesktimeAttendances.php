@@ -12,22 +12,24 @@ use Exception;
 use Illuminate\Support\Collection;
 
 /**
- * Synchronizes DeskTime attendance records.
+ * Job to synchronize attendance records from the DeskTime API with the local database.
  *
- * Fetches attendance data from the DeskTime API and updates the local database.
- * Can synchronize all users or just a specific user, and can be limited
- * to a specific date range.
+ * Supports syncing for all users or a specific user, and can be restricted to a given date range.
+ * Ensures local records are up-to-date and removes obsolete entries.
  */
 class SyncDesktimeAttendances extends BaseSyncJob
 {
     /**
-     * The priority of the job in the queue.
-     * Lower numbers indicate higher priority.
+     * The priority of the job in the queue. Lower numbers indicate higher priority.
      */
     public int $priority = 2;
 
     /**
      * Optional parameters to filter the data to synchronize.
+     *
+     * @var int|null If set, only sync attendance for this user.
+     * @var string|null Optional start date (Y-m-d).
+     * @var string|null Optional end date (Y-m-d).
      */
     private ?int $userId;
 
@@ -36,12 +38,12 @@ class SyncDesktimeAttendances extends BaseSyncJob
     private ?string $toDate;
 
     /**
-     * SyncDesktimeAttendances constructor.
+     * Constructs a new SyncDesktimeAttendances job instance.
      *
-     * @param  DesktimeApiClient  $desktime  An instance of the DesktimeApiClient service
-     * @param  int|null  $userId  Optional user ID to sync only one user
-     * @param  string|null  $fromDate  Optional start date in Y-m-d format
-     * @param  string|null  $toDate  Optional end date in Y-m-d format
+     * @param  DesktimeApiClient  $desktime  The DeskTime API client.
+     * @param  int|null  $userId  Optional user ID to sync only one user.
+     * @param  string|null  $fromDate  Optional start date in Y-m-d format.
+     * @param  string|null  $toDate  Optional end date in Y-m-d format.
      */
     public function __construct(
         DesktimeApiClient $desktime,
@@ -56,13 +58,10 @@ class SyncDesktimeAttendances extends BaseSyncJob
     }
 
     /**
-     * Executes the synchronization process.
+     * Main entry point for the job.
+     * Determines the date range to process and iterates over each day, fetching and updating attendance data for all relevant users.
      *
-     * This method performs the following operations:
-     * 1. Determines the date range to process
-     * 2. Processes attendance data for each date in the range
-     *
-     * @throws Exception If any part of the synchronization process fails
+     * @throws Exception If any part of the synchronization process fails.
      */
     protected function execute(): void
     {
@@ -73,12 +72,24 @@ class SyncDesktimeAttendances extends BaseSyncJob
         collect($dateRange)->each(function ($date): void {
             $this->processAttendanceForDate($date->format('Y-m-d'));
         });
+
+        // Log the actual date range of the data received
+        $dates = collect($dateRange)->map(fn ($date) => $date->format('Y-m-d'))->filter();
+        if ($dates->isNotEmpty()) {
+            $minDate = $dates->min();
+            $maxDate = $dates->max();
+            \Log::info('DeskTime API actual data date range', [
+                'min_date' => $minDate,
+                'max_date' => $maxDate,
+                'attendance_days_count' => $dates->count(),
+            ]);
+        }
     }
 
     /**
-     * Generates a range of dates to process based on the parameters.
+     * Generates a range of dates to process based on the job parameters.
      *
-     * @return array An array of Carbon instances representing each day
+     * @return array An array of Carbon instances representing each day in the range.
      */
     private function getDatesRange(): array
     {
@@ -92,9 +103,9 @@ class SyncDesktimeAttendances extends BaseSyncJob
     }
 
     /**
-     * Processes attendance data for a specific date.
+     * Processes attendance data for a specific date for all relevant users.
      *
-     * @param  string  $date  Date in Y-m-d format
+     * @param  string  $date  Date in Y-m-d format.
      */
     private function processAttendanceForDate(string $date): void
     {
@@ -109,9 +120,9 @@ class SyncDesktimeAttendances extends BaseSyncJob
     }
 
     /**
-     * Gets the users that should be synchronized.
+     * Retrieves the users that should be synchronized (all trackable users with a DeskTime ID, or a specific user).
      *
-     * @return Collection Collection of users to sync
+     * @return Collection Collection of users to sync.
      */
     private function getUsers(): Collection
     {
@@ -125,10 +136,10 @@ class SyncDesktimeAttendances extends BaseSyncJob
     }
 
     /**
-     * Processes attendance in single user mode.
+     * Processes attendance for a single user on a specific date.
      *
-     * @param  Collection  $users  Users to process (should be just one)
-     * @param  string  $date  Date in Y-m-d format
+     * @param  Collection  $users  Users to process (should be just one).
+     * @param  string  $date  Date in Y-m-d format.
      */
     private function processSingleUserMode(Collection $users, string $date): void
     {
@@ -143,10 +154,10 @@ class SyncDesktimeAttendances extends BaseSyncJob
     }
 
     /**
-     * Processes attendance in bulk mode (all users).
+     * Processes attendance for all users on a specific date (bulk mode).
      *
-     * @param  Collection  $users  Users to process
-     * @param  string  $date  Date in Y-m-d format
+     * @param  Collection  $users  Users to process.
+     * @param  string  $date  Date in Y-m-d format.
      */
     private function processBulkMode(Collection $users, string $date): void
     {
@@ -164,11 +175,11 @@ class SyncDesktimeAttendances extends BaseSyncJob
     }
 
     /**
-     * Processes the attendance for a single user on a single date.
+     * Processes the attendance record for a single user on a single date.
      *
-     * @param  User  $user  The user to process
-     * @param  string  $date  Date in Y-m-d format
-     * @param  Collection  $attendance  Attendance data from DeskTime
+     * @param  User  $user  The user to process.
+     * @param  string  $date  Date in Y-m-d format.
+     * @param  Collection  $attendance  Attendance data from DeskTime.
      */
     private function processAttendanceRecord(
         User $user,

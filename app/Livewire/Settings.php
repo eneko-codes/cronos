@@ -35,6 +35,8 @@ class Settings extends Component
 
     public int $dataRetentionGlobalPeriod = 0;
 
+    public int $syncWindowDays = 1;
+
     /** @var bool Whether all notifications are globally enabled */
     public bool $globalNotificationsEnabled = true;
 
@@ -47,8 +49,6 @@ class Settings extends Component
     /** @var array<string, string> Stores the status of recent connection tests ('success', 'failed', 'pending') */
     public array $connectionStatus = [];
 
-    public int $syncWindowDays = 7;
-
     public function mount(): void
     {
         $user = \Illuminate\Support\Facades\Auth::user();
@@ -60,7 +60,7 @@ class Settings extends Component
             $this->notificationTypeStates = $settings['global_types'];
         }
         $this->syncFrequency = Setting::getValue('sync_frequency', 'everyThirtyMinutes');
-        $this->syncWindowDays = (int) Setting::getValue('sync_window_days', 7);
+        $this->syncWindowDays = (int) Setting::getValue('sync_window_days', 1);
         $this->dataRetentionGlobalPeriod = (int) Setting::getValue('data_retention.global_period', 0);
     }
 

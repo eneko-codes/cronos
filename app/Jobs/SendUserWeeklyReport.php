@@ -15,12 +15,17 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Job to send weekly report notifications to all trackable users.
+ *
+ * For each trackable user, this job generates a weekly report (placeholder data) and queues a notification if the user is eligible.
+ */
 class SendUserWeeklyReport implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     /**
-     * Create a new job instance.
+     * Constructs a new SendUserWeeklyReport job instance.
      */
     public function __construct()
     {
@@ -28,7 +33,12 @@ class SendUserWeeklyReport implements ShouldQueue
     }
 
     /**
-     * Execute the job.
+     * Main entry point for the job.
+     *
+     * For each trackable user, generates a weekly report and queues a notification if eligible.
+     * Logs the process and any errors encountered.
+     *
+     * @param  NotificationPreferenceService  $notificationService  Service to check notification eligibility.
      */
     public function handle(NotificationPreferenceService $notificationService): void
     {

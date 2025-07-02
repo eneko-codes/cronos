@@ -11,25 +11,23 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Class SyncOdooLeaveTypes
+ * Job to synchronize Odoo leave type data (hr.leave.type) with the local leave_types table.
  *
- * Synchronizes hr.leave.type data from Odoo into local leave_types table.
- * This job ensures local leave types match the current state in Odoo,
- * including creating new types, updating existing ones, and preserving
- * leave types that no longer exist in Odoo for historical integrity.
+ * Ensures local leave types match the current state in Odoo, including:
+ * - Creating new leave types and updating existing ones
+ * - Preserving and logging leave types that no longer exist in Odoo for historical integrity
  */
 class SyncOdooLeaveTypes extends BaseSyncJob
 {
     /**
-     * The priority of the job in the queue.
-     * Lower numbers indicate higher priority.
+     * The priority of the job in the queue. Lower numbers indicate higher priority.
      */
     public int $priority = 2;
 
     /**
-     * SyncOdooLeaveTypes constructor.
+     * Constructs a new SyncOdooLeaveTypes job instance.
      *
-     * @param  OdooApiClient  $odoo  An instance of the OdooApiClient service.
+     * @param  OdooApiClient  $odoo  The Odoo API client instance.
      */
     public function __construct(OdooApiClient $odoo)
     {
@@ -37,14 +35,14 @@ class SyncOdooLeaveTypes extends BaseSyncJob
     }
 
     /**
-     * Executes the synchronization process.
+     * Main entry point for the job's sync logic.
      *
-     * This method performs the following operations:
+     * Performs the following operations:
      * 1. Fetches leave types from Odoo API and maps them to local structure
      * 2. Creates or updates local leave types based on Odoo data
      * 3. Logs leave types that exist locally but not in Odoo for historical integrity
      *
-     * @throws Exception If any part of the synchronization process fails
+     * @throws Exception If any part of the synchronization process fails.
      */
     protected function execute(): void
     {
@@ -59,7 +57,9 @@ class SyncOdooLeaveTypes extends BaseSyncJob
     }
 
     /**
-     * Maps Odoo leave types to our local structure.
+     * Maps Odoo leave types to the local structure.
+     *
+     * @return Collection Mapped leave type data.
      */
     private function mapOdooLeaveTypes(): Collection
     {
@@ -85,6 +85,8 @@ class SyncOdooLeaveTypes extends BaseSyncJob
 
     /**
      * Creates or updates local leave types based on Odoo data.
+     *
+     * @param  Collection  $mappedLeaveTypes  Collection of mapped leave type data from Odoo.
      */
     private function syncLeaveTypes(Collection $mappedLeaveTypes): void
     {
@@ -106,6 +108,8 @@ class SyncOdooLeaveTypes extends BaseSyncJob
 
     /**
      * Logs leave types that exist locally but not in Odoo for historical integrity.
+     *
+     * @param  Collection  $currentOdooLeaveTypeIds  Collection of current Odoo leave type IDs.
      */
     private function logMissingLeaveTypes(
         Collection $currentOdooLeaveTypeIds

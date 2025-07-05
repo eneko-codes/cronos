@@ -12,37 +12,13 @@
         wire:click.stop
         class="relative z-[101] flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-lg border-2 border-gray-200 bg-gray-100 shadow-lg transition-transform duration-300 dark:border-gray-700 dark:bg-gray-800"
       >
-        {{-- Close Button --}}
-        <button
-          wire:click="closeModal"
-          class="absolute right-2 top-2 z-10 rounded-full p-1 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            class="size-6"
-          >
-            <path
-              fill-rule="evenodd"
-              d="M5.47 5.47a.75.75 0 0 1 1.06 0L12 10.94l5.47-5.47a.75.75 0 1 1 1.06 1.06L13.06 12l5.47 5.47a.75.75 0 1 1-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 0 1-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 0 1 0-1.06Z"
-              clip-rule="evenodd"
-            />
-          </svg>
-        </button>
-
-        {{-- Content Area --}}
+        {{-- Sticky Header --}}
         <div
-          class="flex flex-1 flex-col gap-2 overflow-y-auto p-6"
-          wire:target="isOpen"
-          wire:loading.class="opacity-50"
+          class="sticky top-0 z-20 flex items-start justify-between gap-2 border-b border-gray-200 bg-gray-100 px-4 py-3 backdrop-blur dark:border-gray-700 dark:bg-gray-800"
         >
-          {{-- Subject Header with Optional Badge --}}
-          <div class="flex flex-col items-start gap-2">
-            {{-- Conditional Badge --}}
+          <div class="mt-0 flex flex-col items-start gap-2">
             @php
               $level = $notificationData['level'] ?? 'info';
-              // Map notification level to badge variant
               $badgeVariant = match ($level) {
                 'success' => 'success',
                 'warning' => 'warning',
@@ -51,35 +27,55 @@
               };
             @endphp
 
-            {{-- Always show badge now --}}
             <x-badge :variant="$badgeVariant" size="md">
               {{ Str::ucfirst($level) }}
             </x-badge>
-
-            <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+            <h2
+              class="m-0 self-center text-xl font-bold text-gray-900 dark:text-white"
+            >
               {{ $notificationSubject }}
             </h2>
-          </div>
-
-          {{-- Timestamps Section --}}
-          <div
-            class="flex flex-row gap-4 text-xs text-gray-500 dark:text-gray-400"
-          >
-            {{-- Received Timestamp --}}
-            <x-tooltip :text="$notificationCreatedAtFormatted">
-              <span>Received: {{ $notificationCreatedAtDiff }}</span>
-            </x-tooltip>
-
-            {{-- Read Timestamp (Conditional) --}}
-            @if ($notificationReadAtDiff)
-              <x-tooltip :text="$notificationReadAtFormatted">
-                <span>Read: {{ $notificationReadAtDiff }}</span>
+            <div
+              class="flex w-full flex-row flex-wrap gap-4 text-xs text-gray-500 dark:text-gray-400"
+            >
+              <x-tooltip :text="$notificationCreatedAtFormatted">
+                <span>Received: {{ $notificationCreatedAtDiff }}</span>
               </x-tooltip>
-            @endif
+              @if ($notificationReadAtDiff)
+                <x-tooltip :text="$notificationReadAtFormatted">
+                  <span>Read: {{ $notificationReadAtDiff }}</span>
+                </x-tooltip>
+              @endif
+            </div>
           </div>
+          <button
+            wire:click="closeModal"
+            class="mt-0 rounded-full p-1 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+            aria-label="Close modal"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              class="size-6"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M5.47 5.47a.75.75 0 0 1 1.06 0L12 10.94l5.47-5.47a.75.75 0 1 1 1.06 1.06L13.06 12l5.47 5.47a.75.75 0 1 1-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 0 1-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 0 1 0-1.06Z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </button>
+        </div>
 
+        {{-- Content Area --}}
+        <div
+          class="flex flex-1 flex-col gap-2 overflow-y-auto p-6"
+          wire:target="isOpen"
+          wire:loading.class="opacity-50"
+        >
           {{-- Message Section --}}
-          <div class="border-y border-gray-300 py-4 dark:border-gray-700">
+          <div class="py-4">
             <p class="text-sm text-gray-800 dark:text-gray-200">
               {!! $notificationMessage !!}
             </p>

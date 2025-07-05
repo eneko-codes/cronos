@@ -5,40 +5,45 @@
       wire:click="$set('isOpen', false)"
       x-data
       @keydown.escape.window="$wire.set('isOpen', false)"
-      class="fixed inset-0 z-40 flex items-center justify-center bg-gray-500/75 backdrop-blur-sm transition-opacity duration-300 dark:bg-gray-900/75"
+      class="fixed inset-0 z-40 flex items-center justify-center bg-gray-500/75 p-2 backdrop-blur-sm transition-opacity duration-300 md:p-6 dark:bg-gray-900/75"
+      role="dialog"
+      aria-modal="true"
     >
       <div
         wire:key="modal-content"
         wire:click.stop
-        class="relative z-50 flex min-w-[400px] flex-col overflow-hidden rounded-lg border-2 border-gray-200 bg-gray-100 shadow-lg transition-transform duration-300 dark:border-gray-700 dark:bg-gray-800"
+        class="relative z-50 mx-4 my-8 flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-lg border-2 border-gray-200 bg-gray-100 shadow-lg transition-transform duration-300 md:max-w-2xl lg:max-w-3xl dark:border-gray-700 dark:bg-gray-800"
       >
-        <button
-          wire:click="$set('isOpen', false)"
-          class="absolute right-2 top-2 z-10 rounded-full p-1 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+        <div
+          class="sticky top-0 z-20 flex items-start justify-between gap-2 border-b border-gray-200 bg-gray-100 px-4 py-3 backdrop-blur dark:border-gray-700 dark:bg-gray-800"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            class="size-6"
+          <h2 class="m-0 mt-0 self-center text-xl font-bold">{{ $name }}</h2>
+          <button
+            wire:click="$set('isOpen', false)"
+            class="mt-0 rounded-full p-1 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+            aria-label="Close modal"
           >
-            <path
-              fill-rule="evenodd"
-              d="M5.47 5.47a.75.75 0 0 1 1.06 0L12 10.94l5.47-5.47a.75.75 0 1 1 1.06 1.06L13.06 12l5.47 5.47a.75.75 0 1 1-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 0 1-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 0 1 0-1.06Z"
-              clip-rule="evenodd"
-            />
-          </svg>
-        </button>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              class="size-6"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M5.47 5.47a.75.75 0 0 1 1.06 0L12 10.94l5.47-5.47a.75.75 0 1 1 1.06 1.06L13.06 12l5.47 5.47a.75.75 0 1 1-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 0 1-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 0 1 0-1.06Z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </button>
+        </div>
 
-        <div class="overflow-x-auto p-6">
+        <div class="flex-1 overflow-x-auto overflow-y-auto p-4 md:p-6">
           <div
             class="flex flex-col gap-4"
             wire:target="isOpen"
             wire:loading.class="opacity-50"
           >
-            <!-- Header Section -->
-            <h2 class="text-xl font-bold">{{ $name }}</h2>
-
             <!-- User Details List -->
             <ul>
               @foreach ($details as $label => $value)
@@ -46,7 +51,7 @@
                   class="flex flex-col border-b border-gray-300 py-2 dark:border-gray-700"
                 >
                   <p class="text-sm font-semibold">{{ $label }}:</p>
-                  <p class="overflow-x-scroll text-sm font-light">
+                  <p class="overflow-x-scroll text-sm font-light break-all">
                     {{ $value }}
                   </p>
                 </li>
@@ -58,7 +63,7 @@
               >
                 <p class="text-sm font-semibold">Created at:</p>
                 <x-tooltip :text="$createdAtFormatted">
-                  <p class="overflow-x-scroll text-sm font-light">
+                  <p class="overflow-x-scroll text-sm font-light break-all">
                     {{ $createdAtDiff }}
                   </p>
                 </x-tooltip>
@@ -70,7 +75,7 @@
               >
                 <p class="text-sm font-semibold">Updated at:</p>
                 <x-tooltip :text="$updatedAtFormatted">
-                  <p class="overflow-x-scroll text-sm font-light">
+                  <p class="overflow-x-scroll text-sm font-light break-all">
                     {{ $updatedAtDiff }}
                   </p>
                 </x-tooltip>

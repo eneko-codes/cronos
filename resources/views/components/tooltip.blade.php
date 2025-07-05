@@ -1,97 +1,29 @@
-<div
-  x-data="{
-    open: false,
-    tooltipId: $id('tooltip'),
-    debouncedUpdatePosition: null,
-    debounce(func, wait) {
-      let timeout
-      return (...args) => {
-        clearTimeout(timeout)
-        timeout = setTimeout(() => func.apply(this, args), wait)
-      }
-    },
-    initPositionUpdater() {
-      // Initialize debounced function here so 'this' context is correct
-      this.debouncedUpdatePosition = this.debounce(this.updatePosition, 150)
-      window.addEventListener('resize', this.debouncedUpdatePosition)
-      // Use capture phase for scroll to catch events in nested scroll containers
-      document.addEventListener('scroll', this.debouncedUpdatePosition, true)
-    },
-    destroyPositionUpdater() {
-      window.removeEventListener('resize', this.debouncedUpdatePosition)
-      document.removeEventListener('scroll', this.debouncedUpdatePosition, true)
-    },
-    showTooltip() {
-      this.open = true
-      // Ensure position is calculated when shown
-      this.$nextTick(() => this.updatePosition())
-    },
-    hideTooltip() {
-      this.open = false
-    },
-    updatePosition() {
-      if (! this.open || ! this.$refs.tooltip) return
-
-      const tooltip = this.$refs.tooltip
-      const trigger = this.$el
-      const viewport = {
-        width: document.documentElement.clientWidth,
-        height: document.documentElement.clientHeight,
-        scrollX: window.scrollX,
-        scrollY: window.scrollY,
-      }
-      const triggerRect = trigger.getBoundingClientRect()
-      const tooltipRect = tooltip.getBoundingClientRect()
-      tooltip.style.position = 'fixed'
-      tooltip.style.top = null
-      tooltip.style.bottom = null
-      tooltip.style.left = null
-      tooltip.style.right = null
-      tooltip.style.transform = null
-      let top = triggerRect.bottom + 5
-      let left = triggerRect.left + triggerRect.width / 2
-      if (top + tooltipRect.height > viewport.height) {
-        top = triggerRect.top - tooltipRect.height - 5
-      }
-      if (left + tooltipRect.width > viewport.width) {
-        left = viewport.width - tooltipRect.width - 5
-      }
-      if (left < 5) {
-        left = 5
-      }
-      tooltip.style.top = `${top}px`
-      tooltip.style.left = `${left}px`
-    },
-  }"
-  x-init="initPositionUpdater()"
-  x-destroy="destroyPositionUpdater()"
-  @mouseenter="showTooltip()"
-  @mouseleave="hideTooltip()"
-  @focus="showTooltip()"
-  @blur="hideTooltip()"
-  :aria-describedby="tooltipId"
-  tabindex="0"
-  class="relative w-fit"
->
-  {{ $slot }}
-  <div
-    x-ref="tooltip"
-    :id="tooltipId"
-    role="tooltip"
+<div x-data="{ open: false }" class="relative w-fit">
+  <span
+    x-ref="trigger"
+    @mouseenter="open = true"
+    @mouseleave="open = false"
+    @focus="open = true"
+    @blur="open = false"
+    tabindex="0"
+    class="cursor-help focus:outline-none"
+    :aria-describedby="'tooltip-' + $id('tooltip')"
+  >
+    {{ $slot }}
+  </span>
+  <span
+    :id="$id('tooltip')"
     x-show="open"
-    x-transition:enter="transition duration-100 ease-out"
-    x-transition:enter-start="scale-95 opacity-0"
-    x-transition:enter-end="scale-100 opacity-100"
-    x-transition:leave="transition duration-75 ease-in"
-    x-transition:leave-start="scale-100 opacity-100"
-    x-transition:leave-end="scale-95 opacity-0"
-    x-cloak
-    class="pointer-events-none fixed z-[9999] h-fit w-fit max-w-sm rounded border border-gray-300 bg-gray-100 p-2 text-xs font-medium whitespace-normal text-gray-700 shadow-lg dark:border-gray-500 dark:bg-gray-600 dark:text-gray-100"
+    x-anchor.bottom.offset.8="$refs.trigger"
+    x-transition.opacity.duration.150ms
+    class="pointer-events-none absolute z-50 w-max max-w-xs min-w-[8rem] rounded-lg border border-gray-200 bg-white/95 px-3 py-2 text-xs text-gray-900 shadow-md backdrop-blur select-none dark:border-gray-700 dark:bg-gray-900/95 dark:text-white"
+    role="tooltip"
+    style="display: none"
   >
     @if (isset($text))
       {{ $text }}
     @else
       {{ $attributes->get('text') }}
     @endif
-  </div>
+  </span>
 </div>

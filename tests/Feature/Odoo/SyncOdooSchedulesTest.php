@@ -31,8 +31,7 @@ describe('SyncOdooSchedules job', function (): void {
             dayofweek: 1,
             hour_from: 9.0,
             hour_to: 13.0,
-            day_period: 'morning',
-            raw: []
+            day_period: 'morning'
         );
         $mockOdoo = Mockery::mock(OdooApiClient::class);
         $mockOdoo->shouldReceive('getSchedules')->once()->andReturn(collect([$scheduleDto]));

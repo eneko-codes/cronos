@@ -131,8 +131,7 @@ describe('OdooDTO', function (): void {
             dayofweek: 1,
             hour_from: 9.0,
             hour_to: 13.0,
-            day_period: 'morning',
-            raw: ['foo' => 'bar']
+            day_period: 'morning'
         );
         expect($dto->id)->toBeInt()->toBe(60);
         expect($dto->calendar_id)->toBeInt()->toBe(61);
@@ -141,6 +140,5 @@ describe('OdooDTO', function (): void {
         expect($dto->hour_from)->toBeFloat()->toBe(9.0);
         expect($dto->hour_to)->toBeFloat()->toBe(13.0);
         expect($dto->day_period)->toBeString()->toBe('morning');
-        expect($dto->raw)->toBeArray()->toBe(['foo' => 'bar']);
     });
 });

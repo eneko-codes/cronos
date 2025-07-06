@@ -394,7 +394,7 @@
                       {{ $preference["label"] }}
                       <x-tooltip>
                         <x-slot name="text">
-                          {{ $preference["tooltipText"] }}
+                          {{ $preference["description"] }}
                         </x-slot>
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -418,12 +418,25 @@
                       </x-badge>
                     @endif
                   </span>
-                  <x-toggle-switch
-                    :id="'preference-' . $key"
-                    wire:model.change="userNotificationStates.{{ $key }}"
-                    :checked="(bool)($userNotificationStates[$key] ?? false)"
-                    :disabled="$preference['isDisabled']"
-                  />
+                  @if ($preference["isSpecificTypeGloballyOff"])
+                    <x-tooltip
+                      text="This notification type is currently disabled by an administrator."
+                    >
+                      <x-toggle-switch
+                        :id="'preference-' . $key"
+                        wire:model.change="userNotificationStates.{{ $key }}"
+                        :checked="(bool)($userNotificationStates[$key] ?? false)"
+                        :disabled="$preference['isDisabled']"
+                      />
+                    </x-tooltip>
+                  @else
+                    <x-toggle-switch
+                      :id="'preference-' . $key"
+                      wire:model.change="userNotificationStates.{{ $key }}"
+                      :checked="(bool)($userNotificationStates[$key] ?? false)"
+                      :disabled="$preference['isDisabled']"
+                    />
+                  @endif
                 </div>
               @endforeach
             </div>

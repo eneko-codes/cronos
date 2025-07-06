@@ -121,12 +121,11 @@ class Sidebar extends Component
             $isSpecificTypeGloballyOff = isset($this->globalPreferenceStates[$type->value]) && ! $this->globalPreferenceStates[$type->value];
             // Determine disabled state
             $isDisabled = ! $this->isGloballyEnabled || $isSpecificTypeGloballyOff || $this->userNotificationsMuted;
-            // Determine tooltip text
-            $tooltipText = $isSpecificTypeGloballyOff
-                ? 'This notification type is currently disabled by an administrator.'
-                : 'Enable or disable '.strtolower($type->label()).' for your account.';
+            // Determine tooltip text (always normal description for label)
+            $tooltipText = 'Enable or disable '.strtolower($type->label()).' for your account.';
             $keys[$type->value] = [
                 'label' => $type->label(),
+                'description' => $type->description(),
                 'isAdminOnly' => $type->isAdminOnly(),
                 'isDisabled' => $isDisabled,
                 'isSpecificTypeGloballyOff' => $isSpecificTypeGloballyOff,

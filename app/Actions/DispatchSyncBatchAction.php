@@ -61,6 +61,13 @@ class DispatchSyncBatchAction
             new SyncDesktimeAttendances($desktimeApi, null, $fromDate, $toDate),
         ];
 
+        // Merge all jobs into a single array to enforce strict order
+        $allJobs = array_merge(
+            $odooChain,
+            $proofhubChain,
+            $desktimeChain
+        );
+
         $batchName = "Data Sync Batch ({$windowDays} days: {$fromDate} to {$toDate})";
 
         // Log the batch dispatch
@@ -68,13 +75,8 @@ class DispatchSyncBatchAction
             "Dispatching sync batch for {$windowDays} day window: {$fromDate} to {$toDate}"
         );
 
-        // Dispatch as a batch with chains for each platform
-        Bus::batch([
-            $odooChain,
-            $proofhubChain,
-            $desktimeChain,
-        ])
-            ->name($batchName)
+        // Dispatch as a single chain to ensure strict order
+        Bus::chain($allJobs)
             ->dispatch();
 
     }

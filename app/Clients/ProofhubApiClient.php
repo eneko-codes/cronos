@@ -244,7 +244,7 @@ class ProofhubApiClient implements Pingable
         return $allResults->map(fn ($item) => new ProofhubUserDTO(
             $item['id'],
             isset($item['email']) ? strtolower(trim($item['email'])) : $item['email'],
-            $item['name']
+            isset($item['name']) ? $item['name'] : null
         ));
     }
 
@@ -270,7 +270,7 @@ class ProofhubApiClient implements Pingable
 
         return $allResults->map(fn ($item) => new ProofhubProjectDTO(
             $item['id'],
-            $item['name'],
+            isset($item['name']) ? $item['name'] : null,
             $item['title'],
             $item['assigned']
         ));
@@ -298,12 +298,12 @@ class ProofhubApiClient implements Pingable
 
         return $allResults->map(fn ($item) => new ProofhubTaskDTO(
             $item['id'],
-            $item['name'],
-            $item['project_id'],
-            $item['project'],
-            $item['assigned'],
-            $item['title'],
-            $item['subtasks']
+            isset($item['name']) ? $item['name'] : null,
+            isset($item['project_id']) ? $item['project_id'] : null,
+            isset($item['project']) ? $item['project'] : null,
+            isset($item['assigned']) ? $item['assigned'] : null,
+            isset($item['title']) ? $item['title'] : null,
+            isset($item['subtasks']) ? $item['subtasks'] : null
         ));
     }
 
@@ -330,11 +330,11 @@ class ProofhubApiClient implements Pingable
 
         return $allResults->map(fn ($item) => new ProofhubTimeEntryDTO(
             $item['id'],
-            $item['user_id'],
-            $item['project_id'],
-            $item['task_id'],
-            $item['duration'],
-            $item['date']
+            isset($item['user_id']) ? $item['user_id'] : null,
+            isset($item['project_id']) ? $item['project_id'] : null,
+            isset($item['task_id']) ? $item['task_id'] : null,
+            isset($item['duration']) ? $item['duration'] : null,
+            isset($item['date']) ? $item['date'] : null
         ));
     }
 }

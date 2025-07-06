@@ -107,9 +107,8 @@ class DesktimeApiClient implements Pingable
         return collect($data['employees'])
             ->flatMap(fn ($dateUsers) => collect($dateUsers)->map(fn ($user) => new DesktimeEmployeeDTO(
                 $user['id'],
-                isset($user['email']) ? strtolower(trim($user['email'])) : $user['email'],
-                $user['name'],
-                $user
+                isset($user['email']) ? strtolower(trim($user['email'])) : null,
+                isset($user['name']) ? $user['name'] : null
             )))
             ->values();
     }
@@ -137,8 +136,7 @@ class DesktimeApiClient implements Pingable
         return new DesktimeAttendanceDTO(
             $data['id'],
             $date,
-            $data['desktimeTime'],
-            $data
+            isset($data['desktimeTime']) ? $data['desktimeTime'] : null
         );
     }
 

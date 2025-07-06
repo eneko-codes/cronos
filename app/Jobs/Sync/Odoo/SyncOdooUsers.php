@@ -45,46 +45,51 @@ class SyncOdooUsers extends BaseSyncJob
      * Main entry point for the job's sync logic.
      *
      * Performs the following operations:
-     * 1. Fetches employees from Odoo API
-     * 2. Logs employees without email addresses
-     * 3. Filters to keep only employees with valid emails
-     * 4. Creates or updates local user records and relationships
-     * 5. Deactivates users no longer present in Odoo
+     * - Fetches employees from Odoo API
+     * - Logs employees without email addresses
+     * - Filters to keep only employees with valid emails
+     * - Creates or updates local user records and relationships
+     * - Deactivates users no longer present in Odoo
      *
      * @throws Exception If the sync logic fails.
      */
     protected function execute(): void
     {
-        // Step 1: Fetch all employees from Odoo API as a Collection of UserDTOs
+        // Fetch all employees from Odoo API as a Collection of UserDTOs
         $odooEmployees = $this->odoo->getUsers();
 
-        // Step 2: Process employees without email addresses
+        // Log employees who are missing email addresses for audit/debugging
         $this->logEmployeesWithoutEmail($odooEmployees);
 
-        // Step 3: Process valid employees (those with email addresses)
+        // Filter to keep only employees with valid emails (required for local user creation)
         $validEmployees = $odooEmployees->filter(function (OdooUserDTO $employee) {
             return filled($employee->work_email);
         });
 
-        // Step 4: Create or update users and their relationships
+        // Create or update users and their relationships (department, categories, schedule)
         $this->syncValidEmployees($validEmployees);
 
-        // Step 5 & 6: Deactivate obsolete users
+        // Deactivate users not present in Odoo (mark as inactive locally)
         $this->deactivateObsoleteUsers($validEmployees->pluck('id'));
-        Log::info(class_basename(static::class).' Finished', ['job' => class_basename(static::class)]);
     }
 
     /**
      * Logs Odoo employees who are missing email addresses.
+     *
+     * Iterates through the provided collection and logs a warning for each employee
+     * that does not have a work email. This helps identify incomplete or problematic
+     * records in the Odoo source data.
      *
      * @param  Collection|OdooUserDTO[]  $employees  Collection of employees from Odoo.
      */
     private function logEmployeesWithoutEmail(Collection $employees): void
     {
         $employees
+            // Filter employees with empty work_email
             ->filter(function (OdooUserDTO $employee) {
                 return empty($employee->work_email);
             })
+            // If any are found, log each one
             ->whenNotEmpty(function ($employeesWithoutEmail): void {
                 $employeesWithoutEmail->each(function (OdooUserDTO $employee): void {
                     Log::warning(
@@ -100,13 +105,18 @@ class SyncOdooUsers extends BaseSyncJob
     }
 
     /**
-     * Creates or updates local user records from valid Odoo employees, including department, category, and schedule assignments.
+     * Creates or updates local user records from valid Odoo employees.
+     *
+     * For each valid Odoo employee, this method will:
+     * - Create a new user or update an existing one in the local database.
+     * - Sync department, categories, and schedule assignments.
      *
      * @param  Collection|OdooUserDTO[]  $validEmployees  Collection of valid employees from Odoo.
      */
     private function syncValidEmployees(Collection $validEmployees): void
     {
         $validEmployees->each(function (OdooUserDTO $employee): void {
+            // Skip if required fields are missing
             if (empty($employee->name) || empty($employee->work_email)) {
                 Log::warning(class_basename(static::class).' Skipping user with missing required fields', [
                     'job' => class_basename(static::class),
@@ -116,6 +126,7 @@ class SyncOdooUsers extends BaseSyncJob
 
                 return;
             }
+            // Create or update the user record
             $user = User::updateOrCreate(
                 ['odoo_id' => $employee->id],
                 [
@@ -128,11 +139,9 @@ class SyncOdooUsers extends BaseSyncJob
                     'odoo_manager_id' => $employee->parent_id, // Sync manager Odoo ID
                 ]
             );
-
-            // Sync categories
+            // Sync user categories (many-to-many)
             $this->syncUserCategories($user, $employee->category_ids ?? []);
-
-            // Sync schedule
+            // Sync user schedule (one-to-many, with effective dates)
             $this->syncUserSchedule($user, $employee->resource_calendar_id);
         });
     }
@@ -140,12 +149,15 @@ class SyncOdooUsers extends BaseSyncJob
     /**
      * Synchronizes the user's categories with the local database.
      *
+     * Ensures that the user's category assignments in the local database match
+     * the list of Odoo category IDs provided. Only valid local categories are synced.
+     *
      * @param  User  $user  The local user model.
      * @param  array  $odooCategoryIds  Array of Odoo category IDs for this user.
      */
     private function syncUserCategories(User $user, array $odooCategoryIds): void
     {
-        // Ensure the category IDs exist in the local categories table before syncing
+        // Only sync categories that exist locally
         $validLocalCategoryIds = Category::whereIn('odoo_category_id', $odooCategoryIds)->pluck('odoo_category_id');
         $user->categories()->sync($validLocalCategoryIds);
     }
@@ -153,24 +165,24 @@ class SyncOdooUsers extends BaseSyncJob
     /**
      * Synchronizes the user's schedule assignment with the local database.
      *
+     * If the Odoo schedule ID has changed, closes the old assignment and creates a new one.
+     * If the schedule is removed or invalid, closes the current assignment.
+     *
      * @param  User  $user  The local user model.
      * @param  int|null  $newOdooScheduleId  The Odoo schedule ID for this user, or null.
      */
     private function syncUserSchedule(User $user, ?int $newOdooScheduleId): void
     {
         $startOfDay = Carbon::now()->startOfDay();
-
-        // Get the currently active schedule assignment
+        // Get the currently active schedule assignment (if any)
         /** @var \App\Models\UserSchedule|null $activeUserSchedule */
         $activeUserSchedule = $user->activeUserSchedule()->first();
         $currentOdooScheduleId = $activeUserSchedule?->odoo_schedule_id;
-
-        // Case 1: No change
+        // If the schedule hasn't changed, do nothing
         if ($currentOdooScheduleId === $newOdooScheduleId) {
             return;
         }
-
-        // Case 2: Schedule removed or becomes invalid
+        // If the new schedule is removed or invalid, close the current assignment
         if (! $newOdooScheduleId || ! Schedule::where('odoo_schedule_id', $newOdooScheduleId)->exists()) {
             if ($activeUserSchedule) {
                 $activeUserSchedule->update(['effective_until' => $startOfDay]);
@@ -178,14 +190,10 @@ class SyncOdooUsers extends BaseSyncJob
 
             return; // No new schedule to assign
         }
-
-        // Case 3: Schedule changed or assigned for the first time
-        // Close the old assignment if it exists
+        // If the schedule changed, close the old assignment and create a new one
         if ($activeUserSchedule) {
             $activeUserSchedule->update(['effective_until' => $startOfDay]);
         }
-
-        // Create the new assignment
         $user->userSchedules()->create([
             'odoo_schedule_id' => $newOdooScheduleId,
             'effective_from' => $startOfDay,
@@ -195,6 +203,9 @@ class SyncOdooUsers extends BaseSyncJob
 
     /**
      * Deactivates local user records that no longer exist in the current Odoo fetch.
+     *
+     * Finds users in the local database (with odoo_id) that are not present in the current
+     * Odoo employee list and marks them as inactive.
      *
      * @param  Collection  $currentOdooIds  Collection of current Odoo employee IDs.
      */

@@ -9,7 +9,6 @@ final readonly class DesktimeAttendanceDTO
     public function __construct(
         public ?int $user_id = null,
         public ?string $date = null,
-        public ?int $desktimeTime = null,
-        public ?array $raw = null
+        public ?int $desktimeTime = null
     ) {}
 }

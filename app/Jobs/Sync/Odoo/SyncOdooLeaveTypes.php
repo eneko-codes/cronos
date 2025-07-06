@@ -49,19 +49,22 @@ class SyncOdooLeaveTypes extends BaseSyncJob
     protected function execute(): void
     {
         Log::info(class_basename(static::class).' Started', ['job' => class_basename(static::class)]);
-        // Step 1: Fetch and map leave types from Odoo
+        // Fetch and map leave types from Odoo
         $mappedLeaveTypes = $this->mapOdooLeaveTypes();
 
-        // Step 2: Create or update local leave types based on Odoo data
+        // Create or update local leave types based on Odoo data
         $this->syncLeaveTypes($mappedLeaveTypes);
 
-        // Step 3: Log leave types that exist locally but not in Odoo
+        // Log leave types that exist locally but not in Odoo
         $this->logMissingLeaveTypes($mappedLeaveTypes->pluck('odoo_leave_type_id'));
         Log::info(class_basename(static::class).' Finished', ['job' => class_basename(static::class)]);
     }
 
     /**
      * Maps Odoo leave types to the local structure.
+     *
+     * Calls the Odoo API client to fetch all leave types and returns them as a collection
+     * of mapped leave type data arrays.
      *
      * @return Collection Mapped leave type data.
      */
@@ -90,11 +93,16 @@ class SyncOdooLeaveTypes extends BaseSyncJob
     /**
      * Creates or updates local leave types based on Odoo data.
      *
+     * For each mapped leave type, this method will:
+     * - Create a new leave type or update an existing one in the local database.
+     * - Skip and log any leave types missing required fields.
+     *
      * @param  Collection  $mappedLeaveTypes  Collection of mapped leave type data from Odoo.
      */
     private function syncLeaveTypes(Collection $mappedLeaveTypes): void
     {
         $mappedLeaveTypes->each(function ($leaveType): void {
+            // Skip if required fields are missing
             if ($leaveType['name'] === null || $leaveType['active'] === null) {
                 Log::warning(class_basename(static::class).' Skipping leave type with missing required fields', [
                     'job' => class_basename(static::class),
@@ -104,6 +112,7 @@ class SyncOdooLeaveTypes extends BaseSyncJob
 
                 return;
             }
+            // Create or update the leave type record
             LeaveType::updateOrCreate(
                 ['odoo_leave_type_id' => $leaveType['odoo_leave_type_id']],
                 [
@@ -122,6 +131,9 @@ class SyncOdooLeaveTypes extends BaseSyncJob
     /**
      * Logs leave types that exist locally but not in Odoo for historical integrity.
      *
+     * Finds leave types in the local database that are not present in the current
+     * Odoo leave type list and logs them for historical tracking.
+     *
      * @param  Collection  $currentOdooLeaveTypeIds  Collection of current Odoo leave type IDs.
      */
     private function logMissingLeaveTypes(
@@ -129,11 +141,11 @@ class SyncOdooLeaveTypes extends BaseSyncJob
     ): void {
         $missingLeaveTypes = LeaveType::whereNotIn('odoo_leave_type_id', $currentOdooLeaveTypeIds)
             ->get();
-
+        // If there are no missing leave types, nothing to log
         if ($missingLeaveTypes->isEmpty()) {
             return;
         }
-
+        // Log each missing leave type for historical integrity
         $missingLeaveTypes->each(function ($leaveType): void {
             Log::info(
                 class_basename(static::class).': Leave type no longer exists in Odoo but preserved for historical integrity',

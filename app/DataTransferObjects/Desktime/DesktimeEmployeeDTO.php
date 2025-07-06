@@ -9,7 +9,6 @@ final readonly class DesktimeEmployeeDTO
     public function __construct(
         public ?int $id = null,
         public ?string $email = null,
-        public ?string $name = null,
-        public ?array $raw = null
+        public ?string $name = null
     ) {}
 }

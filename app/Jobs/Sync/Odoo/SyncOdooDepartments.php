@@ -50,13 +50,13 @@ class SyncOdooDepartments extends BaseSyncJob
     protected function execute(): void
     {
         Log::info(class_basename(static::class).' Started', ['job' => class_basename(static::class)]);
-        // Step 1: Fetch and map departments from Odoo
+        // Fetch and map departments from Odoo
         $mappedDepartments = $this->mapOdooDepartments();
 
-        // Step 2: Create or update local departments based on Odoo data
+        // Create or update local departments based on Odoo data
         $this->syncDepartments($mappedDepartments);
 
-        // Step 3: Log departments that exist locally but not in Odoo
+        // Log departments that exist locally but not in Odoo
         $this->logMissingDepartments(
             $mappedDepartments->pluck('odoo_department_id')
         );
@@ -65,6 +65,9 @@ class SyncOdooDepartments extends BaseSyncJob
 
     /**
      * Maps Odoo departments to the local structure.
+     *
+     * Calls the Odoo API client to fetch all departments and returns them as a collection
+     * of OdooDepartmentDTO objects.
      *
      * @return Collection|OdooDepartmentDTO[]
      */
@@ -76,11 +79,16 @@ class SyncOdooDepartments extends BaseSyncJob
     /**
      * Creates or updates local departments based on Odoo data.
      *
+     * For each Odoo department, this method will:
+     * - Create a new department or update an existing one in the local database.
+     * - Skip and log any departments missing required fields.
+     *
      * @param  Collection|OdooDepartmentDTO[]  $departments  Collection of OdooDepartmentDTOs from Odoo.
      */
     private function syncDepartments(Collection $departments): void
     {
         $departments->each(function (OdooDepartmentDTO $dept): void {
+            // Skip if required fields are missing
             if ($dept->name === null || $dept->active === null) {
                 Log::warning(class_basename(static::class).' Skipping department with missing required fields', [
                     'job' => class_basename(static::class),
@@ -90,6 +98,7 @@ class SyncOdooDepartments extends BaseSyncJob
 
                 return;
             }
+            // Create or update the department record
             Department::updateOrCreate(
                 ['odoo_department_id' => $dept->id],
                 [
@@ -105,6 +114,9 @@ class SyncOdooDepartments extends BaseSyncJob
     /**
      * Logs departments that exist locally but not in Odoo for historical integrity.
      *
+     * Finds departments in the local database that are not present in the current
+     * Odoo department list and logs them for historical tracking.
+     *
      * @param  Collection  $currentOdooDepartmentIds  Collection of current Odoo department IDs.
      */
     private function logMissingDepartments(
@@ -112,11 +124,11 @@ class SyncOdooDepartments extends BaseSyncJob
     ): void {
         $missingDepartments = Department::whereNotIn('odoo_department_id', $currentOdooDepartmentIds)
             ->get();
-
+        // If there are no missing departments, nothing to log
         if ($missingDepartments->isEmpty()) {
             return;
         }
-
+        // Log each missing department for historical integrity
         $missingDepartments->each(function ($department): void {
             Log::info(
                 class_basename(static::class).': Department no longer exists in Odoo but preserved for historical integrity',

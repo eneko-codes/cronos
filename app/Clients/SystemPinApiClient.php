@@ -96,6 +96,5 @@ class SystemPinApiClient implements Pingable
     //     // return collect($apiResponse)->map(fn ($item) => new AttendanceDTO(/* ... */));
     // }
 
-    // When implementing DTO mapping in the future, pass raw API values directly to DTOs without defaulting logic.
-    // DTOs should handle all defaults internally.
+    // When implementing DTO mapping in the future, always check for key existence (isset or null coalescing) and do not store raw API data in DTOs.
 }

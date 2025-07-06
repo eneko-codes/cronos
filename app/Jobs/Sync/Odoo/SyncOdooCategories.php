@@ -41,28 +41,29 @@ class SyncOdooCategories extends BaseSyncJob
      * Main entry point for the job's sync logic.
      *
      * Performs the following operations:
-     * 1. Fetches categories from Odoo API and maps them to local structure
-     * 2. Creates or updates local categories based on Odoo data
-     * 3. Logs categories that exist locally but not in Odoo for historical integrity
+     * - Fetches categories from Odoo API and maps them to local structure
+     * - Creates or updates local categories based on Odoo data
+     * - Logs categories that exist locally but not in Odoo for historical integrity
      *
      * @throws Exception If any part of the synchronization process fails.
      */
     protected function execute(): void
     {
-        Log::info(class_basename(static::class).' Started', ['job' => class_basename(static::class)]);
-        // Step 1: Fetch and map categories from Odoo
+        // Fetch and map categories from Odoo
         $mappedCategories = $this->mapOdooCategories();
 
-        // Step 2: Create or update local categories
+        // Create or update local categories (ensures local DB matches Odoo)
         $this->syncCategories($mappedCategories);
 
-        // Step 3: Log categories that exist locally but not in Odoo
+        // Log categories that exist locally but not in Odoo (for historical integrity)
         $this->logMissingCategories($mappedCategories->pluck('odoo_category_id'));
-        Log::info(class_basename(static::class).' Finished', ['job' => class_basename(static::class)]);
     }
 
     /**
      * Maps Odoo categories to the local structure.
+     *
+     * Calls the Odoo API client to fetch all categories and returns them as a collection
+     * of OdooCategoryDTO objects.
      *
      * @return Collection|OdooCategoryDTO[] Mapped category data.
      */
@@ -74,11 +75,16 @@ class SyncOdooCategories extends BaseSyncJob
     /**
      * Creates or updates local categories based on Odoo data.
      *
+     * For each Odoo category, this method will:
+     * - Create a new category or update an existing one in the local database.
+     * - Skip and log any categories missing required fields.
+     *
      * @param  Collection|OdooCategoryDTO[]  $categories  Collection of OdooCategoryDTOs from Odoo.
      */
     private function syncCategories(Collection $categories): void
     {
         $categories->each(function (OdooCategoryDTO $cat): void {
+            // Skip if required fields are missing
             if ($cat->name === null || $cat->active === null) {
                 Log::warning(class_basename(static::class).' Skipping category with missing required fields', [
                     'job' => class_basename(static::class),
@@ -88,6 +94,7 @@ class SyncOdooCategories extends BaseSyncJob
 
                 return;
             }
+            // Create or update the category record
             Category::updateOrCreate(
                 ['odoo_category_id' => $cat->id],
                 [
@@ -101,17 +108,20 @@ class SyncOdooCategories extends BaseSyncJob
     /**
      * Logs categories that exist locally but not in Odoo for historical integrity.
      *
+     * Finds categories in the local database that are not present in the current
+     * Odoo category list and logs them for historical tracking.
+     *
      * @param  Collection  $currentOdooCategoryIds  Collection of current Odoo category IDs.
      */
     private function logMissingCategories(Collection $currentOdooCategoryIds): void
     {
         $missingCategories = Category::whereNotIn('odoo_category_id', $currentOdooCategoryIds)
             ->get();
-
+        // If there are no missing categories, nothing to log
         if ($missingCategories->isEmpty()) {
             return;
         }
-
+        // Log each missing category for historical integrity
         $missingCategories->each(function ($category): void {
             Log::info(
                 class_basename(static::class).

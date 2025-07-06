@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace App\Clients;
 
 use App\Contracts\Pingable;
+use App\DataTransferObjects\Proofhub\ProofhubProjectDTO;
+use App\DataTransferObjects\Proofhub\ProofhubTaskDTO;
+use App\DataTransferObjects\Proofhub\ProofhubTimeEntryDTO;
+use App\DataTransferObjects\Proofhub\ProofhubUserDTO;
 use App\Exceptions\ApiConnectionException;
 use App\Exceptions\ApiRequestException;
 use App\Exceptions\ApiResponseException;
@@ -237,7 +241,11 @@ class ProofhubApiClient implements Pingable
             $currentPage++;
         } while ($pageResult['data']->isNotEmpty() && $pageResult['nextPageUrl'] === null ? false : $pageResult['nextPageUrl'] !== null);
 
-        return $allResults;
+        return $allResults->map(fn ($item) => new ProofhubUserDTO(
+            $item['id'],
+            isset($item['email']) ? strtolower(trim($item['email'])) : $item['email'],
+            $item['name']
+        ));
     }
 
     /**
@@ -260,7 +268,12 @@ class ProofhubApiClient implements Pingable
             $currentPage++;
         } while ($pageResult['data']->isNotEmpty() && $pageResult['nextPageUrl'] === null ? false : $pageResult['nextPageUrl'] !== null);
 
-        return $allResults;
+        return $allResults->map(fn ($item) => new ProofhubProjectDTO(
+            $item['id'],
+            $item['name'],
+            $item['title'],
+            $item['assigned']
+        ));
     }
 
     /**
@@ -283,7 +296,15 @@ class ProofhubApiClient implements Pingable
             $currentPage++;
         } while ($pageResult['data']->isNotEmpty() && $pageResult['nextPageUrl'] === null ? false : $pageResult['nextPageUrl'] !== null);
 
-        return $allResults;
+        return $allResults->map(fn ($item) => new ProofhubTaskDTO(
+            $item['id'],
+            $item['name'],
+            $item['project_id'],
+            $item['project'],
+            $item['assigned'],
+            $item['title'],
+            $item['subtasks']
+        ));
     }
 
     /**
@@ -307,6 +328,13 @@ class ProofhubApiClient implements Pingable
             $currentPage++;
         } while ($pageResult['data']->isNotEmpty() && $pageResult['nextPageUrl'] === null ? false : $pageResult['nextPageUrl'] !== null);
 
-        return $allResults;
+        return $allResults->map(fn ($item) => new ProofhubTimeEntryDTO(
+            $item['id'],
+            $item['user_id'],
+            $item['project_id'],
+            $item['task_id'],
+            $item['duration'],
+            $item['date']
+        ));
     }
 }

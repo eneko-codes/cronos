@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Jobs\Sync;
+namespace App\Jobs\Sync\Odoo;
 
 use App\Clients\OdooApiClient;
+use App\DataTransferObjects\Odoo\OdooUserDTO;
+use App\Jobs\Sync\BaseSyncJob;
 use App\Models\Category;
 use App\Models\Schedule;
 use App\Models\User;
 use Carbon\Carbon;
 use Exception;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 /**
  * Job to synchronize Odoo employee data (hr.employee) with the local users table.
@@ -55,16 +55,15 @@ class SyncOdooUsers extends BaseSyncJob
      */
     protected function execute(): void
     {
-        // Step 1: Fetch all employees from Odoo API as a Collection
-        // Ensure getUsers() fetches 'job_title' and 'parent_id' fields
+        // Step 1: Fetch all employees from Odoo API as a Collection of UserDTOs
         $odooEmployees = $this->odoo->getUsers();
 
         // Step 2: Process employees without email addresses
         $this->logEmployeesWithoutEmail($odooEmployees);
 
         // Step 3: Process valid employees (those with email addresses)
-        $validEmployees = $odooEmployees->filter(function ($employee) {
-            return filled($employee['work_email']);
+        $validEmployees = $odooEmployees->filter(function (OdooUserDTO $employee) {
+            return filled($employee->work_email);
         });
 
         // Step 4: Create or update users and their relationships
@@ -72,27 +71,28 @@ class SyncOdooUsers extends BaseSyncJob
 
         // Step 5 & 6: Deactivate obsolete users
         $this->deactivateObsoleteUsers($validEmployees->pluck('id'));
+        Log::info(class_basename(static::class).' Finished', ['job' => class_basename(static::class)]);
     }
 
     /**
      * Logs Odoo employees who are missing email addresses.
      *
-     * @param  Collection  $employees  Collection of employees from Odoo.
+     * @param  Collection|OdooUserDTO[]  $employees  Collection of employees from Odoo.
      */
     private function logEmployeesWithoutEmail(Collection $employees): void
     {
         $employees
-            ->filter(function ($employee) {
-                return empty($employee['work_email']);
+            ->filter(function (OdooUserDTO $employee) {
+                return empty($employee->work_email);
             })
             ->whenNotEmpty(function ($employeesWithoutEmail): void {
-                $employeesWithoutEmail->each(function ($employee): void {
+                $employeesWithoutEmail->each(function (OdooUserDTO $employee): void {
                     Log::warning(
-                        class_basename($this).
-                          ": Odoo employee '{$employee['name']}' missing work email",
+                        class_basename(static::class).
+                          ": Odoo employee '{$employee->name}' missing work email",
                         [
-                            'odoo_id' => $employee['id'],
-                            'name' => $employee['name'],
+                            'odoo_id' => $employee->id,
+                            'name' => $employee->name,
                         ]
                     );
                 });
@@ -102,29 +102,38 @@ class SyncOdooUsers extends BaseSyncJob
     /**
      * Creates or updates local user records from valid Odoo employees, including department, category, and schedule assignments.
      *
-     * @param  Collection  $validEmployees  Collection of valid employees from Odoo.
+     * @param  Collection|OdooUserDTO[]  $validEmployees  Collection of valid employees from Odoo.
      */
     private function syncValidEmployees(Collection $validEmployees): void
     {
-        $validEmployees->each(function ($employee): void {
+        $validEmployees->each(function (OdooUserDTO $employee): void {
+            if (empty($employee->name) || empty($employee->work_email)) {
+                Log::warning(class_basename(static::class).' Skipping user with missing required fields', [
+                    'job' => class_basename(static::class),
+                    'entity' => 'user',
+                    'employee' => $employee,
+                ]);
+
+                return;
+            }
             $user = User::updateOrCreate(
-                ['odoo_id' => $employee['id']],
+                ['odoo_id' => $employee->id],
                 [
-                    'name' => $employee['name'],
-                    'email' => Str::lower($employee['work_email']),
-                    'timezone' => $employee['tz'] ?? 'UTC',
-                    'is_active' => $employee['active'] ?? true, // Sync active status
-                    'department_id' => Arr::get($employee, 'department_id.0'), // Sync department
-                    'job_title' => $employee['job_title'] ?? null, // Sync job title
-                    'odoo_manager_id' => Arr::get($employee, 'parent_id.0'), // Sync manager Odoo ID
+                    'name' => $employee->name,
+                    'email' => \Str::lower($employee->work_email),
+                    'timezone' => $employee->tz ?? 'UTC',
+                    'is_active' => $employee->active ?? true, // Sync active status
+                    'department_id' => $employee->department_id, // Sync department
+                    'job_title' => $employee->job_title ?? null, // Sync job title
+                    'odoo_manager_id' => $employee->parent_id, // Sync manager Odoo ID
                 ]
             );
 
             // Sync categories
-            $this->syncUserCategories($user, $employee['category_ids'] ?? []);
+            $this->syncUserCategories($user, $employee->category_ids ?? []);
 
             // Sync schedule
-            $this->syncUserSchedule($user, Arr::get($employee, 'resource_calendar_id.0'));
+            $this->syncUserSchedule($user, $employee->resource_calendar_id);
         });
     }
 
@@ -197,7 +206,7 @@ class SyncOdooUsers extends BaseSyncJob
             ->where('is_active', true) // Only deactivate those currently active
             ->get()
             ->each(function (User $user): void {
-                Log::info(class_basename($this).': Deactivating user no longer found in Odoo sync.', [
+                Log::info(class_basename(static::class).': Deactivating user no longer found in Odoo sync.', [
                     'user_id' => $user->id,
                     'odoo_id' => $user->odoo_id,
                     'name' => $user->name,

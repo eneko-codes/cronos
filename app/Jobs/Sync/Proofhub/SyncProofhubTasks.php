@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Jobs\Sync;
+namespace App\Jobs\Sync\Proofhub;
 
 use App\Clients\ProofhubApiClient;
+use App\DataTransferObjects\Proofhub\ProofhubTaskDTO;
+use App\Jobs\Sync\BaseSyncJob;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
@@ -49,30 +51,31 @@ class SyncProofhubTasks extends BaseSyncJob
      */
     protected function execute(): void
     {
-        Log::info('Starting ProofHub task sync.');
+        Log::info(class_basename(static::class).' Started', ['job' => class_basename(static::class)]);
         $allTasks = $this->proofhub->getTasks();
         $allSyncedProofhubTaskIds = collect();
-        foreach ($allTasks as $taskData) {
-            $mainTaskId = data_get($taskData, 'id');
+        foreach ($allTasks as $task) {
+            /** @var ProofhubTaskDTO $task */
+            $mainTaskId = $task->id;
             if (! $mainTaskId) {
                 continue;
             }
             $allSyncedProofhubTaskIds->push($mainTaskId);
 
-            $projectId = data_get($taskData, 'project.id');
+            $projectId = $task->project['id'] ?? null;
             if (! $this->validateProject($projectId, $mainTaskId)) {
                 continue;
             }
-            $task = $this->syncTaskRecord($taskData, $projectId);
-            $this->syncTaskUsers($task, data_get($taskData, 'assigned', []));
-            $subtaskIds = $this->processSubtasks($taskData, $projectId);
+            $taskModel = $this->syncTaskRecord($task, $projectId);
+            if ($taskModel === null) {
+                continue;
+            }
+            $this->syncTaskUsers($taskModel, $task->assigned ?? []);
+            $subtaskIds = $this->processSubtasks($task, $projectId);
             $allSyncedProofhubTaskIds = $allSyncedProofhubTaskIds->merge($subtaskIds);
         }
         $this->removeObsoleteTasks($allSyncedProofhubTaskIds->unique());
-        Log::info('Finished ProofHub task sync.', [
-            'total_tasks_subtasks_processed' => $allSyncedProofhubTaskIds->count(),
-            'unique_tasks_subtasks_found' => $allSyncedProofhubTaskIds->unique()->count(),
-        ]);
+        Log::info(class_basename(static::class).' Finished', ['job' => class_basename(static::class)]);
     }
 
     /**
@@ -85,7 +88,8 @@ class SyncProofhubTasks extends BaseSyncJob
     private function validateProject($projectId, $taskId): bool
     {
         if (! $projectId) {
-            Log::warning('Skipping task - Project ID missing in API data', [
+            Log::warning(class_basename(static::class).' Skipping task - Project ID missing in API data', [
+                'job' => class_basename(static::class),
                 'task_id' => $taskId,
             ]);
 
@@ -99,8 +103,9 @@ class SyncProofhubTasks extends BaseSyncJob
 
         if (! $projectExists) {
             Log::info(
-                class_basename($this).': Skipping task - Project not found locally',
+                class_basename(static::class).': Skipping task - Project not found locally',
                 [
+                    'job' => class_basename(static::class),
                     'task_id' => $taskId,
                     'proofhub_project_id' => $projectId,
                 ]
@@ -115,21 +120,26 @@ class SyncProofhubTasks extends BaseSyncJob
     /**
      * Creates or updates a single task or subtask record in the local database.
      *
-     * @param  array  $taskData  Task or subtask data from ProofHub.
+     * @param  ProofhubTaskDTO  $taskData  Task or subtask DTO from ProofHub.
      * @param  mixed  $projectId  ProofHub project ID.
      * @return Task The updated or created Task model.
      */
-    private function syncTaskRecord(array $taskData, $projectId): Task
+    private function syncTaskRecord(ProofhubTaskDTO $taskData, $projectId): ?Task
     {
-        $taskId = data_get($taskData, 'id');
-        $taskName = data_get($taskData, 'title');
+        $taskId = $taskData->id;
+        $taskName = $taskData->title;
+        if ($taskName === null) {
+            Log::warning(class_basename(static::class).': Skipping task with missing required name', ['job' => class_basename(static::class), 'taskData' => $taskData]);
+
+            return null;
+        }
 
         // Use updateOrCreate to sync the task based on its ProofHub ID
         return Task::updateOrCreate(
             ['proofhub_task_id' => $taskId],
             [
                 'proofhub_project_id' => $projectId,
-                'name' => $taskName ?: 'Untitled Task', // Provide a default name if missing
+                'name' => $taskName,
             ]
         );
     }
@@ -146,7 +156,17 @@ class SyncProofhubTasks extends BaseSyncJob
         $localUserIds = User::whereIn('proofhub_id', $assignedUserIds)
             ->trackable()
             ->pluck('id');
-
+        // Log missing users
+        $missingUserIds = array_diff($assignedUserIds, User::whereIn('proofhub_id', $assignedUserIds)->pluck('proofhub_id')->toArray());
+        if (! empty($missingUserIds)) {
+            foreach ($missingUserIds as $missingId) {
+                Log::warning(class_basename(static::class).': ProofHub: Assigned user not found locally for task', [
+                    'job' => class_basename(static::class),
+                    'proofhub_user_id' => $missingId,
+                    'proofhub_task_id' => $task->proofhub_task_id,
+                ]);
+            }
+        }
         // Sync the relationship efficiently
         $task->users()->sync($localUserIds);
     }
@@ -154,26 +174,36 @@ class SyncProofhubTasks extends BaseSyncJob
     /**
      * Processes subtasks nested within a main task's data.
      *
-     * @param  array  $taskData  Main task data potentially containing a 'subtasks' array.
+     * @param  ProofhubTaskDTO  $taskData  Main task DTO potentially containing a 'subtasks' array.
      * @param  mixed  $projectId  ProofHub project ID of the main task.
      * @return Collection Collection of ProofHub IDs for the processed subtasks.
      */
-    private function processSubtasks(array $taskData, $projectId): Collection
+    private function processSubtasks(ProofhubTaskDTO $taskData, $projectId): Collection
     {
         $syncedSubtaskIds = collect();
-        $subtasks = collect(data_get($taskData, 'subtasks', [])); // Get subtasks or empty collection
+        $subtasks = collect($taskData->subtasks ?? []); // Get subtasks or empty collection
 
         $subtasks
-            ->filter(fn ($subtask) => data_get($subtask, 'id')) // Ensure subtask has an ID
+            ->filter(fn ($subtask) => is_array($subtask) ? isset($subtask['id']) : isset($subtask->id)) // Ensure subtask has an ID
             ->each(function ($subtask) use ($syncedSubtaskIds, $projectId): void {
-                $subtaskId = data_get($subtask, 'id');
+                $subtaskId = is_array($subtask) ? $subtask['id'] : $subtask->id;
                 $syncedSubtaskIds->push($subtaskId);
 
-                // Create or update the subtask record
-                $subtaskModel = $this->syncTaskRecord($subtask, $projectId);
+                // Ensure subtask is an array for TaskDTO construction
+                $subtaskArray = is_array($subtask) ? $subtask : (array) $subtask;
+                $subtaskModel = $this->syncTaskRecord(new ProofhubTaskDTO(
+                    $subtaskArray['id'] ?? null,
+                    $subtaskArray['name'] ?? '',
+                    $subtaskArray['project_id'] ?? null,
+                    $subtaskArray['project'] ?? null,
+                    $subtaskArray['assigned'] ?? [],
+                    $subtaskArray['title'] ?? null,
+                    $subtaskArray['subtasks'] ?? []
+                ), $projectId);
 
                 // Process subtask user assignments
-                $this->syncTaskUsers($subtaskModel, data_get($subtask, 'assigned', []));
+                $assigned = $subtaskArray['assigned'] ?? [];
+                $this->syncTaskUsers($subtaskModel, $assigned);
             });
 
         return $syncedSubtaskIds;
@@ -188,7 +218,7 @@ class SyncProofhubTasks extends BaseSyncJob
     {
         if ($syncedTaskIds->isEmpty()) {
             Log::info(
-                'No ProofHub tasks/subtasks found during sync, skipping obsolete task cleanup.'
+                class_basename(static::class).': No ProofHub tasks/subtasks found during sync, skipping obsolete task cleanup.'
             );
 
             return;
@@ -201,14 +231,17 @@ class SyncProofhubTasks extends BaseSyncJob
         )->pluck('proofhub_task_id');
 
         if ($obsoleteTaskIds->isEmpty()) {
-            Log::info('No obsolete ProofHub tasks to delete.');
+            Log::info(
+                class_basename(static::class).': No obsolete ProofHub tasks to delete.'
+            );
 
             return;
         }
 
         Log::info(
-            "Deleting {$obsoleteTaskIds->count()} obsolete ProofHub tasks/subtasks.",
+            class_basename(static::class).": Deleting {$obsoleteTaskIds->count()} obsolete ProofHub tasks/subtasks.",
             [
+                'job' => class_basename(static::class),
                 'ids_to_delete' => $obsoleteTaskIds->all(),
             ]
         );

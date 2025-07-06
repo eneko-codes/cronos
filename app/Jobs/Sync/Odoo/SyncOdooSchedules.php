@@ -2,10 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Jobs\Sync;
+namespace App\Jobs\Sync\Odoo;
 
 use App\Clients\OdooApiClient;
+use App\DataTransferObjects\Odoo\OdooScheduleDetailDTO;
+use App\DataTransferObjects\Odoo\OdooScheduleDTO;
 use App\Enums\RoleType;
+use App\Jobs\Sync\BaseSyncJob;
 use App\Models\Schedule;
 use App\Models\User;
 use App\Notifications\DuplicateScheduleWarning;
@@ -56,21 +59,29 @@ class SyncOdooSchedules extends BaseSyncJob
      */
     protected function execute(): void
     {
+        Log::info(class_basename(static::class).' Started', ['job' => class_basename(static::class)]);
         try {
             // Step 1: Fetch schedules and time slots separately
             $odooSchedules = $this->odoo->getSchedules();
-            // Fetch all schedule details (time slots)
             $odooTimeSlots = $this->odoo->getScheduleDetails();
-            // Group the fetched time slots by their parent calendar ID
-            $odooTimeSlotsGrouped = $odooTimeSlots->groupBy('calendar_id.0');
+            $odooTimeSlotsGrouped = $odooTimeSlots->groupBy(fn (OdooScheduleDetailDTO $d) => $d->calendar_id);
 
             // Step 2: Create or update local schedules
-            $odooSchedules->each(function ($scheduleData): void {
+            $odooSchedules->each(function (OdooScheduleDTO $scheduleData): void {
+                if (empty($scheduleData->name)) {
+                    Log::warning(class_basename(static::class).' Skipping schedule with missing required description', [
+                        'job' => class_basename(static::class),
+                        'entity' => 'schedule',
+                        'schedule_data' => $scheduleData,
+                    ]);
+
+                    return;
+                }
                 Schedule::updateOrCreate(
-                    ['odoo_schedule_id' => $scheduleData['id']],
+                    ['odoo_schedule_id' => $scheduleData->id],
                     [
-                        'description' => $scheduleData['name'],
-                        'average_hours_day' => $scheduleData['hours_per_day'] ?? null,
+                        'description' => $scheduleData->name,
+                        'average_hours_day' => $scheduleData->hours_per_day ?? null,
                     ]
                 );
             });
@@ -97,9 +108,9 @@ class SyncOdooSchedules extends BaseSyncJob
             }
 
             // Step 4: Synchronize schedule details (time slots)
-            $odooSchedules->each(function ($scheduleData) use ($odooTimeSlotsGrouped): void {
-                $odooScheduleId = $scheduleData['id'];
-                $timezone = $scheduleData['tz'] ?? 'UTC';
+            $odooSchedules->each(function (OdooScheduleDTO $scheduleData) use ($odooTimeSlotsGrouped): void {
+                $odooScheduleId = $scheduleData->id;
+                $timezone = $scheduleData->tz ?? 'UTC';
 
                 $schedule = Schedule::where(
                     'odoo_schedule_id',
@@ -111,7 +122,7 @@ class SyncOdooSchedules extends BaseSyncJob
 
                 // Get time slots for the current schedule
                 $odooDetails = $odooTimeSlotsGrouped->get($odooScheduleId, collect());
-                $odooDetailsById = $odooDetails->keyBy('id');
+                $odooDetailsById = $odooDetails->keyBy(fn (OdooScheduleDetailDTO $d) => $d->id);
                 $existingDetails = $schedule
                     ->scheduleDetails()
                     ->get()
@@ -119,25 +130,26 @@ class SyncOdooSchedules extends BaseSyncJob
 
                 // Check for duplicate schedule details
                 $duplicates = $odooDetails
-                    ->groupBy(function ($detail) {
-                        $dayPeriod = isset($detail['day_period'])
-                          ? Str::lower($detail['day_period'])
+                    ->groupBy(function (OdooScheduleDetailDTO $detail) {
+                        $dayPeriod = isset($detail->day_period)
+                          ? Str::lower($detail->day_period)
                           : 'morning';
 
-                        return $detail['dayofweek'].'-'.$dayPeriod;
+                        return $detail->dayofweek.'-'.$dayPeriod;
                     })
                     ->filter(function ($group) {
-                        return $group->count() > 1;
+                        return collect($group)->count() > 1;
                     });
 
                 // Prepare duplicate data for logging/notification regardless of whether it's empty
                 $duplicatesDetailsForNotification = $duplicates
                     ->map(function ($group) {
+                        $group = collect($group);
                         $firstDetail = $group->first();
-                        $dayPeriod = isset($firstDetail['day_period'])
-                            ? Str::lower($firstDetail['day_period'])
+                        $dayPeriod = isset($firstDetail->day_period)
+                            ? Str::lower($firstDetail->day_period)
                             : 'morning';
-                        $dayOfWeek = $firstDetail['dayofweek'];
+                        $dayOfWeek = $firstDetail->dayofweek;
 
                         return [
                             'weekday' => $dayOfWeek,
@@ -152,7 +164,7 @@ class SyncOdooSchedules extends BaseSyncJob
                     // Log the warning as before
                     Log::warning(
                         class_basename($this).
-                          ": Schedule #{$odooScheduleId} ({$scheduleData['name']}) has duplicate details",
+                          ": Schedule #{$odooScheduleId} ({$scheduleData->name}) has duplicate details",
                         [
                             'schedule_id' => $odooScheduleId,
                             'duplicates' => $duplicatesDetailsForNotification->toArray(), // Use prepared data
@@ -167,7 +179,7 @@ class SyncOdooSchedules extends BaseSyncJob
                             try {
                                 $notification = (new DuplicateScheduleWarning(
                                     $odooScheduleId,
-                                    $scheduleData['name'],
+                                    $scheduleData->name,
                                     $duplicatesDetailsForNotification->toArray() // Convert to array before passing
                                 ))->afterCommit(); // Ensure the notification is sent after the job db transaction is committed
 
@@ -206,16 +218,16 @@ class SyncOdooSchedules extends BaseSyncJob
                     $detailData = $odooDetailsById[$idToInsert];
                     $schedule->scheduleDetails()->create([
                         'odoo_schedule_id' => $odooScheduleId,
-                        'odoo_detail_id' => $detailData['id'],
-                        'weekday' => $detailData['dayofweek'],
-                        'day_period' => $detailData['day_period']
-                          ? Str::lower($detailData['day_period'])
+                        'odoo_detail_id' => $detailData->id,
+                        'weekday' => $detailData->dayofweek,
+                        'day_period' => $detailData->day_period
+                          ? Str::lower($detailData->day_period)
                           : 'morning',
                         'start' => $this->formatOdooTime(
-                            $detailData['hour_from'],
+                            $detailData->hour_from,
                             $timezone
                         ),
-                        'end' => $this->formatOdooTime($detailData['hour_to'], $timezone),
+                        'end' => $this->formatOdooTime($detailData->hour_to, $timezone),
                     ]);
                 });
 
@@ -229,15 +241,15 @@ class SyncOdooSchedules extends BaseSyncJob
                     $existingDetail = $existingDetails[$idToUpdate];
 
                     $updatedAttributes = [
-                        'weekday' => $detailData['dayofweek'],
-                        'day_period' => $detailData['day_period']
-                          ? Str::lower($detailData['day_period'])
+                        'weekday' => $detailData->dayofweek,
+                        'day_period' => $detailData->day_period
+                          ? Str::lower($detailData->day_period)
                           : 'morning',
                         'start' => $this->formatOdooTime(
-                            $detailData['hour_from'],
+                            $detailData->hour_from,
                             $timezone
                         ),
-                        'end' => $this->formatOdooTime($detailData['hour_to'], $timezone),
+                        'end' => $this->formatOdooTime($detailData->hour_to, $timezone),
                     ];
 
                     if ($this->needsUpdate($existingDetail, $updatedAttributes)) {
@@ -267,6 +279,7 @@ class SyncOdooSchedules extends BaseSyncJob
                 throw $e; // Re-throw other exceptions to allow retries
             }
         }
+        Log::info(class_basename(static::class).' Finished', ['job' => class_basename(static::class)]);
     }
 
     /**

@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Jobs\Sync;
+namespace App\Jobs\Sync\Odoo;
 
 use App\Clients\OdooApiClient;
+use App\DataTransferObjects\Odoo\OdooCategoryDTO;
+use App\Jobs\Sync\BaseSyncJob;
 use App\Models\Category;
 use Exception;
 use Illuminate\Support\Collection;
@@ -47,6 +49,7 @@ class SyncOdooCategories extends BaseSyncJob
      */
     protected function execute(): void
     {
+        Log::info(class_basename(static::class).' Started', ['job' => class_basename(static::class)]);
         // Step 1: Fetch and map categories from Odoo
         $mappedCategories = $this->mapOdooCategories();
 
@@ -55,37 +58,41 @@ class SyncOdooCategories extends BaseSyncJob
 
         // Step 3: Log categories that exist locally but not in Odoo
         $this->logMissingCategories($mappedCategories->pluck('odoo_category_id'));
+        Log::info(class_basename(static::class).' Finished', ['job' => class_basename(static::class)]);
     }
 
     /**
      * Maps Odoo categories to the local structure.
      *
-     * @return Collection Mapped category data.
+     * @return Collection|OdooCategoryDTO[] Mapped category data.
      */
     private function mapOdooCategories(): Collection
     {
-        return $this->odoo->getCategories()->map(function ($cat) {
-            return [
-                'odoo_category_id' => $cat['id'],
-                'name' => $cat['name'],
-                'active' => $cat['active'] ?? true,
-            ];
-        });
+        return $this->odoo->getCategories();
     }
 
     /**
      * Creates or updates local categories based on Odoo data.
      *
-     * @param  Collection  $mappedCategories  Collection of mapped category data from Odoo.
+     * @param  Collection|OdooCategoryDTO[]  $categories  Collection of OdooCategoryDTOs from Odoo.
      */
-    private function syncCategories(Collection $mappedCategories): void
+    private function syncCategories(Collection $categories): void
     {
-        $mappedCategories->each(function ($cat): void {
+        $categories->each(function (OdooCategoryDTO $cat): void {
+            if ($cat->name === null || $cat->active === null) {
+                Log::warning(class_basename(static::class).' Skipping category with missing required fields', [
+                    'job' => class_basename(static::class),
+                    'entity' => 'category',
+                    'category' => $cat,
+                ]);
+
+                return;
+            }
             Category::updateOrCreate(
-                ['odoo_category_id' => $cat['odoo_category_id']],
+                ['odoo_category_id' => $cat->id],
                 [
-                    'name' => $cat['name'],
-                    'active' => $cat['active'],
+                    'name' => $cat->name,
+                    'active' => $cat->active,
                 ]
             );
         });
@@ -107,7 +114,7 @@ class SyncOdooCategories extends BaseSyncJob
 
         $missingCategories->each(function ($category): void {
             Log::info(
-                class_basename($this).
+                class_basename(static::class).
                     ": Category '{$category->name}' no longer exists in Odoo but preserved for historical integrity",
                 [
                     'odoo_category_id' => $category->odoo_category_id,

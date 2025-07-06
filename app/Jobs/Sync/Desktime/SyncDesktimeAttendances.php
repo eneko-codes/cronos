@@ -2,14 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Jobs\Sync;
+namespace App\Jobs\Sync\Desktime;
 
 use App\Clients\DesktimeApiClient;
+use App\DataTransferObjects\Desktime\DesktimeEmployeeDTO;
+use App\Jobs\Sync\BaseSyncJob;
 use App\Models\User;
 use App\Models\UserAttendance;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Job to synchronize attendance records from the DeskTime API with the local database.
@@ -65,25 +68,26 @@ class SyncDesktimeAttendances extends BaseSyncJob
      */
     protected function execute(): void
     {
+        Log::info(class_basename(static::class).' Started', ['job' => class_basename(static::class)]);
         // Step 1: Determine the date range to process
         $dateRange = $this->getDatesRange();
-
         // Step 2: Process attendance data for each date
         collect($dateRange)->each(function ($date): void {
             $this->processAttendanceForDate($date->format('Y-m-d'));
         });
-
         // Log the actual date range of the data received
         $dates = collect($dateRange)->map(fn ($date) => $date->format('Y-m-d'))->filter();
         if ($dates->isNotEmpty()) {
             $minDate = $dates->min();
             $maxDate = $dates->max();
-            \Log::info('DeskTime API actual data date range', [
+            Log::info(class_basename(static::class).' Data range', [
+                'job' => class_basename(static::class),
                 'min_date' => $minDate,
                 'max_date' => $maxDate,
                 'attendance_days_count' => $dates->count(),
             ]);
         }
+        Log::info(class_basename(static::class).' Finished', ['job' => class_basename(static::class), 'days_processed' => $dates->count()]);
     }
 
     /**
@@ -148,8 +152,12 @@ class SyncDesktimeAttendances extends BaseSyncJob
                 $user->desktime_id,
                 $date
             );
-            $attendance = $attendance->put('date', $date);
-            $this->processAttendanceRecord($user, $date, $attendance);
+            // $attendance is now an AttendanceDTO
+            $attendanceData = collect([
+                'desktimeTime' => $attendance->desktimeTime,
+                // Add more fields if needed from AttendanceDTO
+            ]);
+            $this->processAttendanceRecord($user, $date, $attendanceData);
         });
     }
 
@@ -163,14 +171,22 @@ class SyncDesktimeAttendances extends BaseSyncJob
     {
         $employeesData = $this->desktime->getAllEmployees($date, 'day');
         $dateEmployees = collect($employeesData->get($date, []));
-
-        // Process ALL users, not just those in the API response
         $users->each(function ($user) use ($dateEmployees, $date): void {
-            $employeeData = collect(
-                $dateEmployees->get((string) $user->desktime_id, [])
-            );
-            // Always process every user to ensure proper deletion of missing records
-            $this->processAttendanceRecord($user, $date, $employeeData);
+            $employeeDTO = $dateEmployees->first(fn (DesktimeEmployeeDTO $dto) => $dto->id === $user->desktime_id);
+            if (! $employeeDTO) {
+                Log::warning(class_basename(static::class).' Skipping: user not found in employees data', [
+                    'job' => class_basename(static::class),
+                    'entity' => 'user',
+                    'entity_id' => $user->id,
+                    'desktime_id' => $user->desktime_id,
+                    'email' => $user->email,
+                    'date' => $date,
+                ]);
+
+                return;
+            }
+            $attendanceData = collect(['desktimeTime' => $employeeDTO->desktimeTime ?? 0]);
+            $this->processAttendanceRecord($user, $date, $attendanceData);
         });
     }
 
@@ -224,7 +240,16 @@ class SyncDesktimeAttendances extends BaseSyncJob
         Collection $attendance
     ): void {
         $presenceSeconds = $attendance->get('desktimeTime', 0);
+        if (empty($date)) {
+            Log::warning(class_basename(static::class).' Skipping: missing required fields', [
+                'job' => class_basename(static::class),
+                'user_id' => $userId,
+                'date' => $date,
+                'attendance' => $attendance,
+            ]);
 
+            return;
+        }
         UserAttendance::updateOrCreate(
             [
                 'user_id' => $userId,

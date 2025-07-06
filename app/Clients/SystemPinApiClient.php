@@ -81,4 +81,21 @@ class SystemPinApiClient implements Pingable
     }
 
     // Add other SystemPin API methods here (e.g., getUsers, getAttendances)
+
+    // Example for future implementers:
+    // use App\DataTransferObjects\SystemPin\UserDTO;
+    // use App\DataTransferObjects\SystemPin\AttendanceDTO;
+    //
+    // public function getUsers(): Collection
+    // {
+    //     // return collect($apiResponse)->map(fn ($item) => new UserDTO(/* ... */));
+    // }
+    //
+    // public function getAttendances(): Collection
+    // {
+    //     // return collect($apiResponse)->map(fn ($item) => new AttendanceDTO(/* ... */));
+    // }
+
+    // When implementing DTO mapping in the future, pass raw API values directly to DTOs without defaulting logic.
+    // DTOs should handle all defaults internally.
 }

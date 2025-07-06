@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Clients;
 
 use App\Contracts\Pingable;
+use App\DataTransferObjects\Desktime\DesktimeAttendanceDTO;
+use App\DataTransferObjects\Desktime\DesktimeEmployeeDTO;
 use App\Exceptions\ApiConnectionException;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -82,7 +84,7 @@ class DesktimeApiClient implements Pingable
      *
      * @param  string|null  $date  Date in 'Y-m-d' format. Defaults to today.
      * @param  string  $period  Either 'day' or 'month'. Defaults to 'month'.
-     * @return Collection Collection of employees data by date.
+     * @return Collection|DesktimeEmployeeDTO[] Collection of DesktimeEmployeeDTOs.
      *
      * @throws ApiConnectionException If the API request fails.
      */
@@ -101,7 +103,15 @@ class DesktimeApiClient implements Pingable
             return collect();
         }
 
-        return collect($data['employees']);
+        // Flatten all employees into a single collection of DesktimeEmployeeDTOs
+        return collect($data['employees'])
+            ->flatMap(fn ($dateUsers) => collect($dateUsers)->map(fn ($user) => new DesktimeEmployeeDTO(
+                $user['id'],
+                isset($user['email']) ? strtolower(trim($user['email'])) : $user['email'],
+                $user['name'],
+                $user
+            )))
+            ->values();
     }
 
     /**
@@ -109,14 +119,14 @@ class DesktimeApiClient implements Pingable
      *
      * @param  int  $userId  DeskTime user ID.
      * @param  string|null  $date  Date in 'Y-m-d' format. Defaults to today.
-     * @return Collection Employee data including attendance.
+     * @return DesktimeAttendanceDTO Employee attendance DTO.
      *
      * @throws ApiConnectionException If the API request fails.
      */
     public function getSingleEmployee(
         int $userId,
         ?string $date = null
-    ): Collection {
+    ): DesktimeAttendanceDTO {
         $date = $date ?? Carbon::today()->toDateString();
 
         $data = $this->call('/employee', [
@@ -124,7 +134,12 @@ class DesktimeApiClient implements Pingable
             'date' => $date,
         ]);
 
-        return collect($data);
+        return new DesktimeAttendanceDTO(
+            $data['id'],
+            $date,
+            $data['desktimeTime'],
+            $data
+        );
     }
 
     /**

@@ -2,12 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Jobs\Sync;
+namespace App\Jobs\Sync\Odoo;
 
 use App\Clients\OdooApiClient;
+use App\DataTransferObjects\Odoo\OdooDepartmentDTO;
+use App\Jobs\Sync\BaseSyncJob;
 use App\Models\Department;
 use Exception;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
@@ -48,6 +49,7 @@ class SyncOdooDepartments extends BaseSyncJob
      */
     protected function execute(): void
     {
+        Log::info(class_basename(static::class).' Started', ['job' => class_basename(static::class)]);
         // Step 1: Fetch and map departments from Odoo
         $mappedDepartments = $this->mapOdooDepartments();
 
@@ -58,41 +60,43 @@ class SyncOdooDepartments extends BaseSyncJob
         $this->logMissingDepartments(
             $mappedDepartments->pluck('odoo_department_id')
         );
+        Log::info(class_basename(static::class).' Finished', ['job' => class_basename(static::class)]);
     }
 
     /**
      * Maps Odoo departments to the local structure.
      *
-     * @return Collection Mapped department data.
+     * @return Collection|OdooDepartmentDTO[]
      */
     private function mapOdooDepartments(): Collection
     {
-        return $this->odoo->getDepartments()->map(function ($dept) {
-            return [
-                'odoo_department_id' => $dept['id'],
-                'name' => $dept['name'],
-                'active' => $dept['active'] ?? true,
-                'odoo_manager_employee_id' => Arr::get($dept, 'manager_id.0'),
-                'odoo_parent_department_id' => Arr::get($dept, 'parent_id.0'),
-            ];
-        });
+        return $this->odoo->getDepartments();
     }
 
     /**
      * Creates or updates local departments based on Odoo data.
      *
-     * @param  Collection  $mappedDepartments  Collection of mapped department data from Odoo.
+     * @param  Collection|OdooDepartmentDTO[]  $departments  Collection of OdooDepartmentDTOs from Odoo.
      */
-    private function syncDepartments(Collection $mappedDepartments): void
+    private function syncDepartments(Collection $departments): void
     {
-        $mappedDepartments->each(function ($dept): void {
+        $departments->each(function (OdooDepartmentDTO $dept): void {
+            if ($dept->name === null || $dept->active === null) {
+                Log::warning(class_basename(static::class).' Skipping department with missing required fields', [
+                    'job' => class_basename(static::class),
+                    'entity' => 'department',
+                    'department' => $dept,
+                ]);
+
+                return;
+            }
             Department::updateOrCreate(
-                ['odoo_department_id' => $dept['odoo_department_id']],
+                ['odoo_department_id' => $dept->id],
                 [
-                    'name' => $dept['name'],
-                    'active' => $dept['active'],
-                    'odoo_manager_employee_id' => $dept['odoo_manager_employee_id'],
-                    'odoo_parent_department_id' => $dept['odoo_parent_department_id'],
+                    'name' => $dept->name,
+                    'active' => $dept->active,
+                    'odoo_manager_employee_id' => $dept->manager_id,
+                    'odoo_parent_department_id' => $dept->parent_id,
                 ]
             );
         });
@@ -115,8 +119,7 @@ class SyncOdooDepartments extends BaseSyncJob
 
         $missingDepartments->each(function ($department): void {
             Log::info(
-                class_basename($this).
-                    ': Department no longer exists in Odoo but preserved for historical integrity',
+                class_basename(static::class).': Department no longer exists in Odoo but preserved for historical integrity',
                 [
                     'odoo_department_id' => $department->odoo_department_id,
                     'name' => $department->name,

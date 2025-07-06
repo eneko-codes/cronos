@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Jobs\Sync;
+namespace App\Jobs\Sync\Proofhub;
 
 use App\Clients\ProofhubApiClient;
+use App\DataTransferObjects\Proofhub\ProofhubUserDTO;
+use App\Jobs\Sync\BaseSyncJob;
 use App\Models\User;
 use Exception;
 use Illuminate\Support\Collection;
@@ -42,20 +44,17 @@ class SyncProofhubUsers extends BaseSyncJob
      */
     protected function execute(): void
     {
-        Log::info('Starting ProofHub user sync.');
+        Log::info(class_basename(static::class).' Started', ['job' => class_basename(static::class)]);
         $allUsers = $this->proofhub->getUsers();
         $allProofhubEmails = $this->processUserPage($allUsers);
         $this->clearObsoleteProofhubIds($allProofhubEmails->unique());
-        Log::info('Finished ProofHub user sync.', [
-            'total_emails_found' => $allProofhubEmails->count(),
-            'unique_emails_found' => $allProofhubEmails->unique()->count(),
-        ]);
+        Log::info(class_basename(static::class).' Finished', ['job' => class_basename(static::class)]);
     }
 
     /**
-     * Processes a collection of user data from ProofHub.
+     * Processes a collection of user DTOs from ProofHub.
      *
-     * @param  Collection  $usersPage  Collection of users from the API.
+     * @param  Collection|ProofhubUserDTO[]  $usersPage  Collection of ProofhubUserDTOs from the API.
      * @return Collection Collection of email addresses found in this batch.
      */
     private function processUserPage(Collection $usersPage): Collection
@@ -63,10 +62,10 @@ class SyncProofhubUsers extends BaseSyncJob
         $emailsOnPage = collect();
 
         $usersPage
-            ->filter(fn ($user) => isset($user['email']) && isset($user['id']))
-            ->each(function ($user) use ($emailsOnPage): void {
-                $email = strtolower($user['email']);
-                $proofhubId = (string) $user['id'];
+            ->filter(fn (ProofhubUserDTO $user) => isset($user->email) && isset($user->id))
+            ->each(function (ProofhubUserDTO $user) use ($emailsOnPage): void {
+                $email = strtolower($user->email);
+                $proofhubId = (string) $user->id;
                 $emailsOnPage->push($email);
 
                 // Update local user record

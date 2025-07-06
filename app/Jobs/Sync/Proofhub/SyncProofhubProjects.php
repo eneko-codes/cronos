@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Jobs\Sync;
+namespace App\Jobs\Sync\Proofhub;
 
 use App\Clients\ProofhubApiClient;
+use App\DataTransferObjects\Proofhub\ProofhubProjectDTO;
+use App\Jobs\Sync\BaseSyncJob;
 use App\Models\Project;
 use App\Models\User;
 use Exception;
@@ -48,28 +50,26 @@ class SyncProofhubProjects extends BaseSyncJob
      */
     protected function execute(): void
     {
-        Log::info('Starting ProofHub project sync.');
+        Log::info(class_basename(static::class).' Started', ['job' => class_basename(static::class)]);
         $allProjects = $this->proofhub->getProjects();
         $allSyncedProofhubProjectIds = collect();
-        foreach ($allProjects as $projectData) {
-            $projectId = data_get($projectData, 'id');
+        foreach ($allProjects as $project) {
+            /** @var ProofhubProjectDTO $project */
+            $projectId = $project->id;
             if (! $projectId) {
                 continue;
             }
-            $projectName = data_get($projectData, 'title');
-            $assignedUserIds = data_get($projectData, 'assigned', []);
-            $project = Project::updateOrCreate(
+            $projectName = $project->title;
+            $assignedUserIds = $project->assigned ?? [];
+            $projectModel = Project::updateOrCreate(
                 ['proofhub_project_id' => $projectId],
                 ['name' => $projectName]
             );
-            $this->syncProjectUsers($project, $assignedUserIds);
+            $this->syncProjectUsers($projectModel, $assignedUserIds);
             $allSyncedProofhubProjectIds->push($projectId);
         }
         $this->removeObsoleteProjects($allSyncedProofhubProjectIds->unique());
-        Log::info('Finished ProofHub project sync.', [
-            'total_projects_processed' => $allSyncedProofhubProjectIds->count(),
-            'unique_projects_found' => $allSyncedProofhubProjectIds->unique()->count(),
-        ]);
+        Log::info(class_basename(static::class).' Finished', ['job' => class_basename(static::class)]);
     }
 
     /**
@@ -84,15 +84,29 @@ class SyncProofhubProjects extends BaseSyncJob
     ): void {
         // Find local user IDs corresponding to the trackable ProofHub users
         $localUserIds = User::whereIn('proofhub_id', $assignedUserIds)
-            ->trackable() // Ensure we only link trackable users
+            ->trackable()
             ->pluck('id');
-
+        // Log missing users
+        $missingUserIds = array_diff($assignedUserIds, User::whereIn('proofhub_id', $assignedUserIds)->pluck('proofhub_id')->toArray());
+        if (! empty($missingUserIds)) {
+            foreach ($missingUserIds as $missingId) {
+                $this->processAssignedUser($missingId, $project->proofhub_project_id);
+            }
+        }
         // Efficiently sync the relationships
-        // This will attach missing users and detach users not in $localUserIds
         $project->users()->sync($localUserIds);
+    }
 
-        // Optional: Log the sync action details if needed
-        // Log::debug('Synced users for project.', ['project_id' => $project->id, 'assigned_user_ids' => $localUserIds->all()]);
+    private function processAssignedUser($assignedUser, $projectId): void
+    {
+        if (! $assignedUser) {
+            Log::warning(class_basename(static::class).' ProofHub: Assigned user not found locally for project', [
+                'job' => class_basename(static::class),
+                'entity' => 'user',
+                'project_id' => $projectId,
+                'assigned_user' => $assignedUser,
+            ]);
+        }
     }
 
     /**

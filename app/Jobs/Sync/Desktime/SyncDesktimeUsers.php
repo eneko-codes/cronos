@@ -2,11 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Jobs\Sync;
+namespace App\Jobs\Sync\Desktime;
 
 use App\Clients\DesktimeApiClient;
+use App\DataTransferObjects\Desktime\DesktimeEmployeeDTO;
+use App\Jobs\Sync\BaseSyncJob;
 use App\Models\User;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Job to synchronize DeskTime user information with the local database.
@@ -38,66 +41,60 @@ class SyncDesktimeUsers extends BaseSyncJob
      */
     protected function execute(): void
     {
+        Log::info(class_basename(static::class).' Started', ['job' => class_basename(static::class)]);
         // Step 1: Fetch and process DeskTime users
         $validUsers = $this->getValidDesktimeUsers();
-
         // Step 2: Update users with DeskTime IDs
         $this->updateUserDesktimeIds($validUsers);
-
         // Step 3: Clear DeskTime IDs for users no longer in DeskTime
-        $this->clearObsoleteDesktimeIds($validUsers->pluck('email'));
+        $this->clearObsoleteDesktimeIds($validUsers);
+        Log::info(class_basename(static::class).' Finished', ['job' => class_basename(static::class), 'processed_count' => $validUsers->count()]);
     }
 
     /**
      * Retrieves and processes valid users from DeskTime.
      *
-     * @return Collection Collection of valid DeskTime users with emails and IDs.
+     * @return Collection|DesktimeEmployeeDTO[] Collection of valid DeskTime DesktimeEmployeeDTOs.
      */
     private function getValidDesktimeUsers(): Collection
     {
-        $employeesData = $this->desktime->getAllEmployees(null, 'month');
-
-        // Merge users from all dates of the response JSON
-        $desktimeUsers = $employeesData
-            ->reduce(function ($allUsers, $dateUsers) {
-                return $allUsers->merge($dateUsers);
-            }, collect())
-            ->unique('id'); // Remove duplicates
-
-        // Filter & map valid users
-        return $desktimeUsers
-            ->filter(fn ($user) => ! empty($user['email']) && ! empty($user['id']))
-            ->map(
-                fn ($user) => [
-                    'email' => strtolower(trim($user['email'])),
-                    'desktime_id' => $user['id'],
-                ]
-            );
+        return $this->desktime->getAllEmployees(null, 'month')
+            ->unique('id')
+            ->filter(fn (DesktimeEmployeeDTO $user) => ! empty($user->email) && ! empty($user->id));
     }
 
     /**
      * Updates local users with their DeskTime IDs.
      *
-     * @param  Collection  $validUsers  Collection of valid DeskTime users.
+     * @param  Collection|DesktimeEmployeeDTO[]  $validUsers  Collection of valid DeskTime DesktimeEmployeeDTOs.
      */
     private function updateUserDesktimeIds(Collection $validUsers): void
     {
-        $validUsers->each(function ($desktimeUser): void {
-            User::where('email', $desktimeUser['email'])->update([
-                'desktime_id' => $desktimeUser['desktime_id'],
+        $validUsers->each(function (DesktimeEmployeeDTO $user): void {
+            $email = strtolower(trim($user->email));
+            $updated = User::where('email', $email)->update([
+                'desktime_id' => $user->id,
             ]);
+            if (! $updated) {
+                Log::warning(class_basename(static::class).' Skipping: user not found', [
+                    'job' => class_basename(static::class),
+                    'entity' => 'user',
+                    'entity_id' => $user->id,
+                    'email' => $email,
+                ]);
+            }
         });
     }
 
     /**
      * Clears DeskTime IDs for users no longer present in DeskTime.
      *
-     * @param  Collection  $currentDesktimeEmails  Emails of current DeskTime users.
+     * @param  Collection|DesktimeEmployeeDTO[]  $validUsers  Collection of valid DeskTime DesktimeEmployeeDTOs.
      */
-    private function clearObsoleteDesktimeIds(
-        Collection $currentDesktimeEmails
-    ): void {
-        User::whereNotIn('email', $currentDesktimeEmails)
+    private function clearObsoleteDesktimeIds(Collection $validUsers): void
+    {
+        $emails = $validUsers->map(fn (DesktimeEmployeeDTO $user) => strtolower(trim($user->email)));
+        User::whereNotIn('email', $emails)
             ->whereNotNull('desktime_id')
             ->update(['desktime_id' => null]);
     }

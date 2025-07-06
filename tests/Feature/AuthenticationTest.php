@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
 
 uses(RefreshDatabase::class);
 
@@ -102,7 +103,9 @@ test('a user can log in with a valid magic link token', function (): void {
     $this->assertNotNull($rawToken, 'Raw token could not be extracted from email.');
 
     // 2. Visit the verification link with the token
-    $response = $this->get(route('login.verify', ['token' => $rawToken, 'remember' => '0']));
+    $this->withSession(['url.intended' => route('dashboard')]);
+    $url = URL::signedRoute('login.verify', ['token' => $rawToken, 'remember' => '0']);
+    $response = $this->get($url);
 
     $response->assertRedirect(route('dashboard')); // Assuming 'dashboard' is the intended redirect
     $this->assertAuthenticatedAs($user);
@@ -116,7 +119,8 @@ test('a user cannot log in with an invalid magic link token', function (): void 
 
     $invalidToken = str_repeat('a', 60); // A 60-char string, but not one from our system
 
-    $response = $this->get(route('login.verify', ['token' => $invalidToken, 'remember' => '0']));
+    $url = URL::signedRoute('login.verify', ['token' => $invalidToken, 'remember' => '0']);
+    $response = $this->get($url);
 
     $response->assertRedirect(route('login'));
     $response->assertSessionHasErrors('token', 'The login link is invalid or has expired. Please request a new one.');
@@ -126,7 +130,8 @@ test('a user cannot log in with an invalid magic link token', function (): void 
 test('a user cannot log in with a malformed (wrong length) magic link token', function (): void {
     $malformedToken = str_repeat('a', 59); // Incorrect length, fails 'size:60' validation
 
-    $response = $this->get(route('login.verify', ['token' => $malformedToken, 'remember' => '0']));
+    $url = URL::signedRoute('login.verify', ['token' => $malformedToken, 'remember' => '0']);
+    $response = $this->get($url);
 
     $response->assertRedirect(route('login'));
     // This error message comes from VerifyLoginTokenRequest::failedValidation()
@@ -165,7 +170,8 @@ test('a user cannot log in with an expired magic link token', function (): void 
     // Mark the token as expired
     $loginTokenEntry->update(['expires_at' => now()->subMinutes(1)]);
 
-    $response = $this->get(route('login.verify', ['token' => $rawToken, 'remember' => '0']));
+    $url = URL::signedRoute('login.verify', ['token' => $rawToken, 'remember' => '0']);
+    $response = $this->get($url);
 
     $response->assertRedirect(route('login'));
     $response->assertSessionHasErrors('token', 'The login link has expired. Please request a new one.');
@@ -199,7 +205,8 @@ test('login token is deleted after successful login', function (): void {
     });
     $this->assertNotNull($rawToken);
 
-    $this->get(route('login.verify', ['token' => $rawToken, 'remember' => '0']));
+    $url = URL::signedRoute('login.verify', ['token' => $rawToken, 'remember' => '0']);
+    $response = $this->get($url);
 
     $this->assertAuthenticatedAs($user);
     $this->assertDatabaseMissing('login_tokens', ['id' => $loginTokenEntry->id]);
@@ -232,7 +239,9 @@ test('user session is remembered when remember me is checked', function (): void
 
     // 2. Visit the verification link with the token and remember=1
     // The `VerifyLoginTokenAction` takes `remember` from the request, which comes from the signed URL.
-    $response = $this->get(route('login.verify', ['token' => $rawToken, 'remember' => '1']));
+    $this->withSession(['url.intended' => route('dashboard')]);
+    $url = URL::signedRoute('login.verify', ['token' => $rawToken, 'remember' => '1']);
+    $response = $this->get($url);
 
     $response->assertRedirect(route('dashboard'));
     $this->assertAuthenticatedAs($user);

@@ -5,6 +5,13 @@ declare(strict_types=1);
 namespace App\Clients;
 
 use App\Contracts\Pingable;
+use App\DataTransferObjects\Odoo\OdooCategoryDTO;
+use App\DataTransferObjects\Odoo\OdooDepartmentDTO;
+use App\DataTransferObjects\Odoo\OdooLeaveDTO;
+use App\DataTransferObjects\Odoo\OdooLeaveTypeDTO;
+use App\DataTransferObjects\Odoo\OdooScheduleDetailDTO;
+use App\DataTransferObjects\Odoo\OdooScheduleDTO;
+use App\DataTransferObjects\Odoo\OdooUserDTO;
 use App\Exceptions\ApiConnectionException;
 use App\Exceptions\ApiRequestException;
 use App\Exceptions\ApiResponseException;
@@ -180,7 +187,7 @@ class OdooApiClient implements Pingable
      * Retrieves all 'hr.employee' records from Odoo.
      *
      * @param  array  $domain  Optional domain filters.
-     * @return Collection Collection of employee records.
+     * @return \Illuminate\Support\Collection|OdooUserDTO[] Collection of OdooUserDTOs.
      */
     public function getUsers(array $domain = []): Collection
     {
@@ -193,14 +200,27 @@ class OdooApiClient implements Pingable
             'department_id',
             'category_ids',
             'resource_calendar_id',
-        ]);
+            'job_title',
+            'parent_id',
+        ])->map(fn ($item) => new OdooUserDTO(
+            $item['id'],
+            isset($item['work_email']) ? strtolower(trim($item['work_email'])) : $item['work_email'],
+            $item['name'],
+            $item['tz'],
+            $item['active'],
+            isset($item['department_id'][0]) ? $item['department_id'][0] : $item['department_id'],
+            $item['category_ids'],
+            isset($item['resource_calendar_id'][0]) ? $item['resource_calendar_id'][0] : $item['resource_calendar_id'],
+            (isset($item['job_title']) && is_string($item['job_title'])) ? $item['job_title'] : null,
+            isset($item['parent_id'][0]) ? $item['parent_id'][0] : $item['parent_id']
+        ));
     }
 
     /**
      * Retrieves all 'hr.department' records from Odoo.
      *
      * @param  array  $domain  Optional domain filters.
-     * @return Collection Collection of department records.
+     * @return \Illuminate\Support\Collection|OdooDepartmentDTO[] Collection of OdooDepartmentDTOs.
      */
     public function getDepartments(array $domain = []): Collection
     {
@@ -210,14 +230,20 @@ class OdooApiClient implements Pingable
             'active',
             'manager_id',
             'parent_id',
-        ]);
+        ])->map(fn ($item) => new OdooDepartmentDTO(
+            $item['id'],
+            $item['name'],
+            $item['active'],
+            isset($item['manager_id'][0]) ? $item['manager_id'][0] : $item['manager_id'],
+            isset($item['parent_id'][0]) ? $item['parent_id'][0] : $item['parent_id']
+        ));
     }
 
     /**
      * Retrieves all 'hr.employee.category' records from Odoo.
      *
      * @param  array  $domain  Optional domain filters.
-     * @return Collection Collection of category records.
+     * @return \Illuminate\Support\Collection|OdooCategoryDTO[] Collection of OdooCategoryDTOs.
      */
     public function getCategories(array $domain = []): Collection
     {
@@ -225,14 +251,18 @@ class OdooApiClient implements Pingable
             'id',
             'name',
             'active',
-        ]);
+        ])->map(fn ($item) => new OdooCategoryDTO(
+            $item['id'],
+            $item['name'],
+            $item['active']
+        ));
     }
 
     /**
      * Retrieves all 'hr.leave.type' records from Odoo.
      *
      * @param  array  $domain  Optional domain filters.
-     * @return Collection Collection of leave type records.
+     * @return \Illuminate\Support\Collection|OdooLeaveTypeDTO[] Collection of OdooLeaveTypeDTOs.
      */
     public function getLeaveTypes(array $domain = []): Collection
     {
@@ -244,7 +274,15 @@ class OdooApiClient implements Pingable
             'validation_type',
             'request_unit',
             'unpaid',
-        ]);
+        ])->map(fn ($item) => new OdooLeaveTypeDTO(
+            $item['id'],
+            $item['name'],
+            $item['active'],
+            $item['allocation_type'],
+            $item['validation_type'],
+            $item['request_unit'],
+            $item['unpaid']
+        ));
     }
 
     /**
@@ -253,7 +291,7 @@ class OdooApiClient implements Pingable
      * @param  string|null  $startDate  Optional start date in 'Y-m-d' format.
      * @param  string|null  $endDate  Optional end date in 'Y-m-d' format.
      * @param  array  $domain  Additional domain filters.
-     * @return Collection Collection of leave records.
+     * @return \Illuminate\Support\Collection|OdooLeaveDTO[] Collection of OdooLeaveDTOs.
      */
     public function getLeaves(
         ?string $startDate = null,
@@ -266,8 +304,6 @@ class OdooApiClient implements Pingable
         ];
 
         if ($startDate && $endDate) {
-            // Overlap condition in Odoo domain format:
-            // date_from <= range_end AND date_to >= range_start
             $baseFilters[] = ['date_from', '<=', $endDate.' 23:59:59'];
             $baseFilters[] = ['date_to', '>=', $startDate.' 00:00:00'];
         }
@@ -285,29 +321,55 @@ class OdooApiClient implements Pingable
             'holiday_status_id',
             'request_date_from',
             'request_date_to',
-            'request_hour_from', // For half-day morning/afternoon
-            'request_hour_to', // For half-day morning/afternoon
-        ]);
+            'request_hour_from',
+            'request_hour_to',
+        ])->map(function ($item) {
+            $requestHourFrom = $item['request_hour_from'];
+            $requestHourTo = $item['request_hour_to'];
+            $requestHourFrom = ($requestHourFrom === false) ? null : (is_numeric($requestHourFrom) ? (float) $requestHourFrom : null);
+            $requestHourTo = ($requestHourTo === false) ? null : (is_numeric($requestHourTo) ? (float) $requestHourTo : null);
+
+            return new OdooLeaveDTO(
+                $item['id'],
+                $item['holiday_type'],
+                $item['date_from'],
+                $item['date_to'],
+                $item['number_of_days'],
+                $item['state'],
+                is_array($item['holiday_status_id']) ? $item['holiday_status_id'][0] : $item['holiday_status_id'],
+                $requestHourFrom,
+                $requestHourTo,
+                isset($item['employee_id'][0]) ? $item['employee_id'][0] : $item['employee_id'],
+                isset($item['category_id'][0]) ? $item['category_id'][0] : $item['category_id'],
+                isset($item['department_id'][0]) ? $item['department_id'][0] : $item['department_id']
+            );
+        });
     }
 
     /**
      * Retrieves all 'resource.calendar' records from Odoo.
      *
      * @param  array  $domain  Optional domain filters.
-     * @return Collection Collection of schedule records.
+     * @return \Illuminate\Support\Collection|OdooScheduleDTO[] Collection of OdooScheduleDTOs.
      */
     public function getSchedules(array $domain = []): Collection
     {
         $fields = ['id', 'name', 'hours_per_day', 'tz'];
 
-        return $this->searchRead('resource.calendar', $domain, $fields);
+        return $this->searchRead('resource.calendar', $domain, $fields)
+            ->map(fn ($item) => new OdooScheduleDTO(
+                $item['id'],
+                $item['name'],
+                $item['hours_per_day'],
+                $item['tz']
+            ));
     }
 
     /**
      * Retrieves schedule details (attendances) from Odoo.
      *
      * @param  array  $domain  Optional domain filters.
-     * @return Collection Collection of schedule detail records.
+     * @return \Illuminate\Support\Collection|OdooScheduleDetailDTO[] Collection of OdooScheduleDetailDTOs.
      */
     public function getScheduleDetails(array $domain = []): Collection
     {
@@ -319,7 +381,16 @@ class OdooApiClient implements Pingable
             'hour_from',
             'hour_to',
             'day_period',
-        ]);
+        ])->map(fn ($item) => new OdooScheduleDetailDTO(
+            $item['id'],
+            is_array($item['calendar_id']) ? $item['calendar_id'][0] : $item['calendar_id'],
+            $item['name'],
+            isset($item['dayofweek']) ? (int) $item['dayofweek'] : $item['dayofweek'],
+            $item['hour_from'],
+            $item['hour_to'],
+            $item['day_period'],
+            $item
+        ));
     }
 
     /**

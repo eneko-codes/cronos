@@ -3,7 +3,6 @@
   'disabled' => false,
   'name' => null,
   'id' => null,
-  'model' => null,
 ])
 
 <label
@@ -23,9 +22,9 @@
     type="checkbox"
     @if($name) name="{{ $name }}" @endif
     @if($id) id="{{ $id }}" @endif
-    @if($model) {{ $model }} @endif
     @checked($checked)
     @disabled($disabled)
+    {{ $attributes }}
     class="sr-only"
     role="switch"
     aria-checked="{{ $checked ? 'true' : 'false' }}"

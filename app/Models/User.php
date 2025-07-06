@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\RoleType;
+use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -203,9 +204,10 @@ class User extends Authenticatable
      * Use this scope in sync operations to exclude users who have opted out of tracking.
      * Example: User::trackable()->where(...)->get();
      */
-    public function scopeTrackable(Builder $query): Builder
+    #[Scope]
+    protected function trackable(Builder $query): void
     {
-        return $query->where('do_not_track', false)->whereNotNull('odoo_id');
+        $query->where('do_not_track', false)->whereNotNull('odoo_id');
     }
 
     /**
@@ -214,9 +216,10 @@ class User extends Authenticatable
      * Use this scope when you specifically need to find users who have opted out of tracking.
      * Example: User::notTrackable()->get();
      */
-    public function scopeNotTrackable(Builder $query): Builder
+    #[Scope]
+    protected function notTrackable(Builder $query): void
     {
-        return $query->where('do_not_track', true);
+        $query->where('do_not_track', true);
     }
 
     /**

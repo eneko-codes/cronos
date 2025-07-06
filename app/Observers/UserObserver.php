@@ -4,21 +4,26 @@ declare(strict_types=1);
 
 namespace App\Observers;
 
+use App\Actions\GetNotificationPreferencesAction;
+use App\Actions\UpdateNotificationPreferencesAction;
 use App\Enums\RoleType;
 use App\Models\User;
 use App\Notifications\AdminPromotionEmail;
 use App\Notifications\UserPromotedToAdminNotification;
 use App\Notifications\WelcomeEmail;
-use App\Services\NotificationPreferenceService;
 
 class UserObserver
 {
-    private NotificationPreferenceService $notificationPreferenceService;
+    private UpdateNotificationPreferencesAction $updatePreferences;
+
+    private GetNotificationPreferencesAction $getPreferences;
 
     public function __construct(
-        NotificationPreferenceService $notificationPreferenceService
+        UpdateNotificationPreferencesAction $updatePreferences,
+        GetNotificationPreferencesAction $getPreferences
     ) {
-        $this->notificationPreferenceService = $notificationPreferenceService;
+        $this->updatePreferences = $updatePreferences;
+        $this->getPreferences = $getPreferences;
     }
 
     /**
@@ -27,11 +32,10 @@ class UserObserver
     public function created(User $user): void
     {
         // Initialize default notification preferences for the new user
-        $this->notificationPreferenceService->initializeUserPreferences($user);
+        $this->updatePreferences->initialize($user);
 
         $welcomeNotification = new WelcomeEmail;
-
-        if ($user->email && $this->notificationPreferenceService->isEligibleForNotification($welcomeNotification->type(), $user)) {
+        if ($user->email && ($this->getPreferences->execute($user)['eligibility'][$welcomeNotification->type()->value] ?? false)) {
             $user->notify($welcomeNotification);
         }
     }
@@ -100,14 +104,14 @@ class UserObserver
                 ->get();
 
             foreach ($adminUsers as $admin) {
-                if ($this->notificationPreferenceService->isEligibleForNotification($adminPromotionEmail->type(), $admin)) {
+                if ($this->getPreferences->execute($admin)['eligibility'][$adminPromotionEmail->type()->value] ?? false) {
                     $admin->notify($adminPromotionEmail);
                 }
             }
 
             // --- Notify the promoted user ---
             $userPromotionNotification = new UserPromotedToAdminNotification;
-            if ($this->notificationPreferenceService->isEligibleForNotification($userPromotionNotification->type(), $user)) {
+            if ($this->getPreferences->execute($user)['eligibility'][$userPromotionNotification->type()->value] ?? false) {
                 $user->notify($userPromotionNotification);
             }
         }

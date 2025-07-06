@@ -379,7 +379,7 @@
           </label>
           <x-toggle-switch
             id="globalNotificationsToggle"
-            :model="'wire:model.change=globalNotificationsEnabled'"
+            wire:model.change="globalNotificationsEnabled"
             :checked="(bool)$globalNotificationsEnabled"
           />
         </div>
@@ -420,8 +420,8 @@
               </label>
               <x-toggle-switch
                 :id="'toggle-' . $type->value"
-                :model="'wire:model.change=notificationTypeStates.' . $type->value"
-                :checked="(bool)($notificationTypeStates[$type->value] ?? false)"
+                wire:model.change="notificationStates.{{ $type->value }}"
+                :checked="(bool)($notificationStates[$type->value] ?? false)"
                 :disabled="!$globalNotificationsEnabled"
               />
             </div>

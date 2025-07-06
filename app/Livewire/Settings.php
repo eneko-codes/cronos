@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire;
 
+use App\Actions\UpdateGlobalNotificationPreferencesAction;
 use App\Clients\DesktimeApiClient;
 use App\Clients\OdooApiClient;
 use App\Clients\ProofhubApiClient;
@@ -15,7 +16,6 @@ use App\Enums\SyncFrequencyType;
 use App\Enums\SyncWindowDays;
 use App\Models\Setting;
 use App\Models\User;
-use App\Services\NotificationPreferenceService;
 use Exception;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Artisan;
@@ -44,7 +44,7 @@ class Settings extends Component
      * Stores the state of global notification type toggles.
      * Key: notification type value, Value: enabled/disabled (bool)
      */
-    public array $notificationTypeStates = [];
+    public array $notificationStates = [];
 
     /** @var array<string, string> Stores the status of recent connection tests ('success', 'failed', 'pending') */
     public array $connectionStatus = [];
@@ -54,10 +54,9 @@ class Settings extends Component
         $user = \Illuminate\Support\Facades\Auth::user();
         if ($user) {
             $this->authorize('accessSettingsPage');
-            $notificationService = app(NotificationPreferenceService::class);
-            $settings = $notificationService->getGlobalSettings($user);
+            $settings = app(\App\Actions\GetNotificationPreferencesAction::class)->execute($user);
             $this->globalNotificationsEnabled = $settings['global_enabled'];
-            $this->notificationTypeStates = $settings['global_types'];
+            $this->notificationStates = $settings['global_types'];
         }
         $this->syncFrequency = Setting::getValue('sync_frequency', 'everyThirtyMinutes');
         $this->syncWindowDays = (int) Setting::getValue('sync_window_days', 1);
@@ -110,7 +109,7 @@ class Settings extends Component
     /**
      * Called when the global notifications master switch is toggled.
      */
-    public function updatedGlobalNotificationsEnabled($value): void
+    public function updatedGlobalNotificationsEnabled($value, UpdateGlobalNotificationPreferencesAction $updateGlobal): void
     {
         $boolValue = (bool) $value;
         $message = $boolValue ? 'Global notifications enabled.' : 'Global notifications disabled.';
@@ -118,8 +117,7 @@ class Settings extends Component
         $user = \Illuminate\Support\Facades\Auth::user();
         if ($user) {
             try {
-                $notificationService = app(NotificationPreferenceService::class);
-                $notificationService->toggleGlobalNotifications($user, $boolValue);
+                $updateGlobal->toggleMaster($user, $boolValue);
                 $this->dispatch('add-toast', message: $message, variant: $variant);
                 $this->dispatch('global-notifications-updated', enabled: $boolValue);
             } catch (\Exception $e) {
@@ -131,7 +129,7 @@ class Settings extends Component
     /**
      * Called when a per-type global notification toggle is changed.
      */
-    public function updatedNotificationTypeStates($value, $key): void
+    public function updatedNotificationStates($value, $key, UpdateGlobalNotificationPreferencesAction $updateGlobal): void
     {
         $boolValue = (bool) $value;
         try {
@@ -142,8 +140,7 @@ class Settings extends Component
             $variant = $boolValue ? 'success' : 'info';
             $user = \Illuminate\Support\Facades\Auth::user();
             if ($user) {
-                $notificationService = app(NotificationPreferenceService::class);
-                $notificationService->toggleGlobalNotificationType($user, $notificationType, $boolValue);
+                $updateGlobal->toggleType($user, $notificationType, $boolValue);
                 $this->dispatch('add-toast', message: $message, variant: $variant);
                 $this->dispatch($key.'-global-setting-updated', enabled: $boolValue);
             }
@@ -212,28 +209,46 @@ class Settings extends Component
             }
         } catch (Exception $e) {
             $this->connectionStatus[$platform] = 'failed';
-            Log::error("Connection test failed for {$platform}: {$e->getMessage()}");
         }
     }
 
     public function pingOdoo(): void
     {
         $this->testConnection('Odoo');
+        $this->dispatchPingToast('Odoo');
     }
 
     public function pingDesktime(): void
     {
         $this->testConnection('DeskTime');
+        $this->dispatchPingToast('DeskTime');
     }
 
     public function pingProofhub(): void
     {
         $this->testConnection('ProofHub');
+        $this->dispatchPingToast('ProofHub');
     }
 
     public function pingSystemPin(): void
     {
         $this->testConnection('SystemPin');
+        $this->dispatchPingToast('SystemPin');
+    }
+
+    /**
+     * Dispatch a toast notification with the result of the last ping for the given platform.
+     */
+    private function dispatchPingToast(string $platform): void
+    {
+        $status = $this->connectionStatus[$platform] ?? 'failed';
+        if ($status === 'success') {
+            $this->dispatch('add-toast', message: "$platform connection successful!", variant: 'success');
+        } elseif ($status === 'pending') {
+            $this->dispatch('add-toast', message: "$platform connection is pending...", variant: 'info');
+        } else {
+            $this->dispatch('add-toast', message: "$platform connection failed.", variant: 'error');
+        }
     }
 
     public function runDataRetention(): void

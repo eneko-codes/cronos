@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -156,24 +158,10 @@ class UserLeave extends Model
         );
     }
 
-    /**
-     * Scope a query to only include active leaves within a date range.
-     *
-     * Active leaves are those with 'validate' status and overlapping with
-     * the specified date range. This is useful for checking availability
-     * or generating reports for a specific period.
-     *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @param  CarbonInterface  $start  Beginning of the date range to check
-     * @param  CarbonInterface  $end  End of the date range to check
-     * @return \Illuminate\Database\Eloquent\Builder
-     */
-    public function scopeActiveBetween(
-        $query,
-        CarbonInterface $start,
-        CarbonInterface $end
-    ) {
-        return $query
+    #[Scope]
+    protected function activeBetween(Builder $query, CarbonInterface $start, CarbonInterface $end): void
+    {
+        $query
             ->where('start_date', '<=', $end)
             ->where('end_date', '>=', $start)
             ->where('status', 'validate');

@@ -373,7 +373,7 @@
               </div>
               <x-toggle-switch
                 id="user-notifications-toggle"
-                :model="'wire:model.change=userNotificationsMuted'"
+                wire:model.change="userNotificationsMuted"
                 :checked="(bool)$userNotificationsMuted"
                 :disabled="!$isGloballyEnabled"
               />
@@ -420,7 +420,7 @@
                   </span>
                   <x-toggle-switch
                     :id="'preference-' . $key"
-                    :model="'wire:model.change=userNotificationStates.' . $key"
+                    wire:model.change="userNotificationStates.{{ $key }}"
                     :checked="(bool)($userNotificationStates[$key] ?? false)"
                     :disabled="$preference['isDisabled']"
                   />

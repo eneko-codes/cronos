@@ -9,8 +9,26 @@ use App\Models\Setting;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Action to determine if a sync batch should be run based on configured frequency and last run time.
+ *
+ * Used by:
+ * - Console scheduler (routes/console.php) to decide if a sync should be dispatched
+ *
+ * Logic:
+ * - Checks the configured sync frequency (from settings)
+ * - Looks up the most recent sync batch in job_batches
+ * - Returns true if enough time has passed since the last batch, false otherwise
+ */
 class ShouldRunSyncBatchAction
 {
+    /**
+     * Returns true if a sync batch should be run now, based on frequency and last run.
+     *
+     * Called by the scheduler closure in routes/console.php.
+     *
+     * @return bool True if a sync batch should be run now, false otherwise.
+     */
     public function __invoke(): bool
     {
         $frequency = Setting::getValue('sync_frequency');

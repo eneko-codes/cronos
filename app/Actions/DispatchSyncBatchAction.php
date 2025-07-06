@@ -24,8 +24,27 @@ use App\Models\Setting;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Action to dispatch a full batch of data synchronization jobs for all platforms.
+ *
+ * Used by:
+ * - SyncCommand (artisan command for manual sync)
+ * - Console scheduler (scheduled syncs via routes/console.php)
+ * - Livewire SyncButton component (manual sync from UI)
+ *
+ * This action:
+ * - Resolves API clients for Odoo, ProofHub, DeskTime, and SystemPin
+ * - Prepares job chains for each platform and merges them into a single batch
+ * - Dispatches the jobs as a single chain to enforce strict order
+ * - Logs the batch dispatch for auditability
+ */
 class DispatchSyncBatchAction
 {
+    /**
+     * Dispatches a batch of sync jobs for all platforms and data types.
+     *
+     * Called by artisan command, scheduler, or UI.
+     */
     public function __invoke(): void
     {
         $windowDays = (int) Setting::getValue('sync_window_days', 1);

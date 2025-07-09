@@ -52,8 +52,33 @@ Below are the Odoo models and fields accessed by this app, with their types and 
   - `active` (boolean)
   - `department_id` (many2one → hr.department, returns `[id, name]`)
   - `category_ids` (many2many → hr.employee.category, returns list of `[id, name]`)
+  - `resource_calendar_id` (many2one → resource.calendar, returns `[id, name]`)
+  - `job_title` (string)
+  - `parent_id` (many2one → hr.employee, returns `[id, name]`)
 
-**Reference:** [Odoo 13 hr.employee](https://www.odoo.com/documentation/13.0/reference/addons/hr/hr.employee.html)
+**Example Response:**
+
+```json
+{
+  "id": 1,
+  "work_email": "john.doe@company.com",
+  "name": "John Doe",
+  "tz": "Europe/Madrid",
+  "active": true,
+  "department_id": [2, "Engineering"],
+  "category_ids": [
+    [1, "Full Time"],
+    [2, "Remote"]
+  ],
+  "resource_calendar_id": [1, "Standard 40h"],
+  "job_title": "Developer",
+  "parent_id": [3, "Jane Manager"]
+}
+```
+
+- **Field Types:**
+  - `department_id`, `resource_calendar_id`, `parent_id`: `[id, name]` array
+  - `category_ids`: array of `[id, name]` arrays
 
 ### 3.2. `hr.department` (Department)
 
@@ -64,7 +89,20 @@ Below are the Odoo models and fields accessed by this app, with their types and 
   - `manager_id` (many2one → hr.employee, returns `[id, name]`)
   - `parent_id` (many2one → hr.department, returns `[id, name]`)
 
-**Reference:** [Odoo 13 hr.department](https://www.odoo.com/documentation/13.0/reference/addons/hr/hr.department.html)
+**Example Response:**
+
+```json
+{
+  "id": 2,
+  "name": "Engineering",
+  "active": true,
+  "manager_id": [3, "Jane Manager"],
+  "parent_id": [1, "Company"]
+}
+```
+
+- **Field Types:**
+  - `manager_id`, `parent_id`: `[id, name]` array
 
 ### 3.3. `hr.employee.category` (Employee Category)
 
@@ -73,7 +111,15 @@ Below are the Odoo models and fields accessed by this app, with their types and 
   - `name` (string)
   - `active` (boolean)
 
-**Reference:** [Odoo 13 hr.employee.category](https://www.odoo.com/documentation/13.0/reference/addons/hr/hr.employee.category.html)
+**Example Response:**
+
+```json
+{
+  "id": 1,
+  "name": "Full Time",
+  "active": true
+}
+```
 
 ### 3.4. `hr.leave.type` (Leave Type)
 
@@ -84,7 +130,17 @@ Below are the Odoo models and fields accessed by this app, with their types and 
   - `allocation_type` (selection: 'fixed', 'proportional', ...)
   - `validation_type` (selection: 'manager', 'both', ...)
 
-**Reference:** [Odoo 13 hr.leave.type](https://www.odoo.com/documentation/13.0/reference/addons/hr/hr.leave.type.html)
+**Example Response:**
+
+```json
+{
+  "id": 1,
+  "name": "Paid Time Off",
+  "active": true,
+  "allocation_type": "fixed",
+  "validation_type": "manager"
+}
+```
 
 ### 3.5. `hr.leave` (Leave)
 
@@ -98,8 +154,31 @@ Below are the Odoo models and fields accessed by this app, with their types and 
   - `state` (selection: 'draft', 'confirm', 'validate', ...)
   - `number_of_days` (float)
   - `category_id` (many2one → hr.employee.category, returns `[id, name]`)
+  - `department_id` (many2one → hr.department, returns `[id, name]`)
+  - `request_hour_from` (float)
+  - `request_hour_to` (float)
 
-**Reference:** [Odoo 13 hr.leave](https://www.odoo.com/documentation/13.0/reference/addons/hr/hr.leave.html)
+**Example Response:**
+
+```json
+{
+  "id": 10,
+  "holiday_type": "employee",
+  "date_from": "2024-07-01 09:00:00",
+  "date_to": "2024-07-05 18:00:00",
+  "employee_id": [1, "John Doe"],
+  "holiday_status_id": [1, "Paid Time Off"],
+  "state": "validate",
+  "number_of_days": 5.0,
+  "category_id": [1, "Full Time"],
+  "department_id": [2, "Engineering"],
+  "request_hour_from": 9.0,
+  "request_hour_to": 18.0
+}
+```
+
+- **Field Types:**
+  - `employee_id`, `holiday_status_id`, `category_id`, `department_id`: `[id, name]` array
 
 ### 3.6. `resource.calendar` (Work Schedule)
 
@@ -109,19 +188,47 @@ Below are the Odoo models and fields accessed by this app, with their types and 
   - `active` (boolean)
   - `attendance_ids` (one2many → resource.calendar.attendance, returns list of IDs)
 
-**Reference:** [Odoo 13 resource.calendar](https://www.odoo.com/documentation/13.0/reference/addons/resource/resource.calendar.html)
+**Example Response:**
+
+```json
+{
+  "id": 1,
+  "name": "Standard 40h",
+  "active": true,
+  "attendance_ids": [1, 2, 3]
+}
+```
+
+- **Field Types:**
+  - `attendance_ids`: array of int
 
 ### 3.7. `resource.calendar.attendance` (Schedule Detail)
 
 - **Fields used:**
   - `id` (integer)
+  - `calendar_id` (many2one → resource.calendar, returns `[id, name]`)
   - `name` (string)
   - `dayofweek` (selection: '0'-'6')
   - `hour_from` (float)
   - `hour_to` (float)
-  - `calendar_id` (many2one → resource.calendar, returns `[id, name]`)
+  - `day_period` (string)
 
-**Reference:** [Odoo 13 resource.calendar.attendance](https://www.odoo.com/documentation/13.0/reference/addons/resource/resource.calendar.attendance.html)
+**Example Response:**
+
+```json
+{
+  "id": 1,
+  "calendar_id": [1, "Standard 40h"],
+  "name": "Monday Morning",
+  "dayofweek": "0",
+  "hour_from": 9.0,
+  "hour_to": 13.0,
+  "day_period": "morning"
+}
+```
+
+- **Field Types:**
+  - `calendar_id`: `[id, name]` array
 
 ---
 

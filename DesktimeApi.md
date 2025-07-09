@@ -1,7 +1,5 @@
 # DeskTime API Documentation
 
-Welcome to the DeskTime API documentation. With the DeskTime API, you can create custom tools and applications that access DeskTime data. This allows you to analyze and interpret the data in unique ways and integrate it into your existing workflows.
-
 To use the DeskTime API, you'll need to use the unique API key that is connected to your DeskTime account. With this key, you'll be able to authenticate your requests and access the data you need.
 
 This documentation provides all the necessary information to get started, including details on available endpoints, query parameters, and response formats. Whether you're a developer or simply looking to extend your use of DeskTime, we hope this documentation will be a valuable resource for you.
@@ -155,6 +153,12 @@ Get tracking and attendance data for a single employee for a specific date.
 }
 ```
 
+- **Field Types:**
+  - `notes`: object
+  - `activeProject`: array/object
+  - `apps`: object
+  - `projects`: array of objects
+
 ---
 
 ### 4. Get All Employees (with Attendance Data)
@@ -249,16 +253,20 @@ Get all employees and their attendance for a specific day or month.
 }
 ```
 
-- The top-level `employees` object is keyed by date, then by employee ID.
-- Each employee object contains attendance fields like `desktimeTime`, `productiveTime`, etc.
+- **Field Types:**
+  - `notes`: object
+  - `activeProject`: array/object
 
 ---
 
-## Notes
+## Data Types and Field Conventions
 
-- All timestamps are in UTC.
-- You can use the `period=month` parameter to get all days in a month, starting from the given date.
-- For more details, see the official [DeskTime API documentation](https://desktime.com/api/v2/json/ping).
+- **integer:** Numeric ID
+- **string:** Text field
+- **boolean:** true/false
+- **float:** Decimal number
+- **object:** JSON object
+- **array:** JSON array
 
 ---
 

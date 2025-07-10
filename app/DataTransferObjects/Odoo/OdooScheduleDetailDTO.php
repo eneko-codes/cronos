@@ -13,18 +13,20 @@ final readonly class OdooScheduleDetailDTO
 {
     /**
      * @param  int|null  $id  Odoo schedule detail ID
-     * @param  int|null  $calendar_id  Odoo calendar ID this detail belongs to
+     *
+     * @property array|null $calendar_id Odoo calendar as [id, name] or null
+     *
      * @param  string|null  $name  Name/label for this schedule detail
-     * @param  int|null  $dayofweek  Day of the week (0=Monday, 6=Sunday)
+     * @param  string|null  $dayofweek  Day of the week (0=Monday, 6=Sunday)
      * @param  float|null  $hour_from  Hour the schedule starts
      * @param  float|null  $hour_to  Hour the schedule ends
      * @param  string|null  $day_period  Period of the day (e.g., 'morning', 'afternoon')
      */
     public function __construct(
         public ?int $id = null,
-        public ?int $calendar_id = null,
+        public ?array $calendar_id = null,
         public ?string $name = null,
-        public ?int $dayofweek = null,
+        public ?string $dayofweek = null,
         public ?float $hour_from = null,
         public ?float $hour_to = null,
         public ?string $day_period = null

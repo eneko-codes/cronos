@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services\Dashboard\Calculators;
 
-use App\DataTransferObjects\DashboardTotals;
-use App\DataTransferObjects\PeriodDayData;
 use Illuminate\Support\Collection;
 
 /**
@@ -16,9 +14,9 @@ class TotalsCalculator
     /**
      * Calculate totals from period data.
      *
-     * @param  Collection<string, PeriodDayData>  $periodData  The period data to calculate totals from
+     * @param  Collection<string, array>  $periodData  The period data to calculate totals from
      */
-    public function calculateTotals(Collection $periodData): DashboardTotals
+    public function calculateTotals(Collection $periodData): array
     {
         $totals = [
             'scheduled' => 0,
@@ -28,18 +26,13 @@ class TotalsCalculator
         ];
 
         foreach ($periodData as $dayData) {
-            $totals['scheduled'] += $this->timeToMinutes($dayData->scheduled->duration ?? '0h 0m');
-            $totals['attendance'] += $this->timeToMinutes($dayData->attendance->duration ?? '0h 0m');
-            $totals['worked'] += $this->timeToMinutes($dayData->worked->duration ?? '0h 0m');
-            $totals['leave'] += $this->timeToMinutes($dayData->leave->duration ?? '0h 0m');
+            $totals['scheduled'] += $this->timeToMinutes($dayData['scheduled']['duration'] ?? '0h 0m');
+            $totals['attendance'] += $this->timeToMinutes($dayData['attendance']['duration'] ?? '0h 0m');
+            $totals['worked'] += $this->timeToMinutes($dayData['worked']['duration'] ?? '0h 0m');
+            $totals['leave'] += $this->timeToMinutes($dayData['leave']['duration'] ?? '0h 0m');
         }
 
-        return new DashboardTotals(
-            scheduled: $totals['scheduled'],
-            attendance: $totals['attendance'],
-            worked: $totals['worked'],
-            leave: $totals['leave']
-        );
+        return $totals;
     }
 
     /**

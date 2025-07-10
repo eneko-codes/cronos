@@ -18,12 +18,15 @@ final readonly class OdooLeaveDTO
      * @param  string|null  $date_to  End date/time of the leave (UTC)
      * @param  float|null  $number_of_days  Number of days for the leave
      * @param  string|null  $state  State of the leave (e.g., 'validate', 'draft')
-     * @param  int|null  $holiday_status_id  Odoo leave type ID (holiday_status_id)
+     *
+     * @property array|null $holiday_status_id Odoo leave type as [id, name] or null
+     *
      * @param  float|null  $request_hour_from  Hour the leave starts (if partial day)
      * @param  float|null  $request_hour_to  Hour the leave ends (if partial day)
-     * @param  int|null  $employee_id  Odoo employee ID for this leave
-     * @param  int|null  $category_id  Odoo category ID for this leave
-     * @param  int|null  $department_id  Odoo department ID for this leave
+     *
+     * @property array|null $employee_id Odoo employee as [id, name] or null
+     * @property array|null $category_id Odoo category as [id, name] or null
+     * @property array|null $department_id Odoo department as [id, name] or null
      */
     public function __construct(
         public ?int $id = null,
@@ -32,11 +35,11 @@ final readonly class OdooLeaveDTO
         public ?string $date_to = null,
         public ?float $number_of_days = null,
         public ?string $state = null,
-        public ?int $holiday_status_id = null,
+        public ?array $holiday_status_id = null,
         public ?float $request_hour_from = null,
         public ?float $request_hour_to = null,
-        public ?int $employee_id = null,
-        public ?int $category_id = null,
-        public ?int $department_id = null
+        public ?array $employee_id = null,
+        public ?array $category_id = null,
+        public ?array $department_id = null
     ) {}
 }

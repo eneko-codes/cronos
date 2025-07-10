@@ -4,13 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services\Dashboard\Calculators;
 
-use App\DataTransferObjects\DailyAttendanceData;
-use App\DataTransferObjects\DailyLeaveData;
-use App\DataTransferObjects\DailyScheduleData;
-use App\DataTransferObjects\DailyWorkedData;
-use App\DataTransferObjects\DashboardTotals;
-use App\DataTransferObjects\DeviationDetail;
-use App\DataTransferObjects\DeviationMetrics;
 use Carbon\CarbonInterval;
 
 /**
@@ -21,73 +14,79 @@ class DeviationCalculator
     /**
      * Calculate daily deviations between schedule, attendance, and worked time.
      *
-     * @param  DailyScheduleData  $schedule  The schedule data for the day
-     * @param  DailyAttendanceData  $attendance  The attendance data for the day
-     * @param  DailyWorkedData  $worked  The worked time data for the day
-     * @param  DailyLeaveData  $leave  The leave data for the day
+     * @param  mixed  $schedule  The schedule data for the day
+     * @param  mixed  $attendance  The attendance data for the day
+     * @param  mixed  $worked  The worked time data for the day
+     * @param  mixed|null  $leave  The leave data for the day
+     * @return array The calculated deviations
      */
     public function calculateDailyDeviations(
-        DailyScheduleData $schedule,
-        DailyAttendanceData $attendance,
-        DailyWorkedData $worked,
-        DailyLeaveData $leave
-    ): DeviationMetrics {
+        $schedule,
+        $attendance,
+        $worked,
+        $leave = null
+    ) {
+        $attendanceDuration = $attendance['duration'] ?? '0h 0m';
+        $scheduleDuration = $schedule['duration'] ?? '0h 0m';
+        $workedDuration = $worked['duration'] ?? '0h 0m';
+        $isHalfDay = $leave['isHalfDay'] ?? false;
+
         $attendanceVsSchedule = $this->calculateDeviation(
-            $attendance->duration,
-            $schedule->duration,
-            $leave->isHalfDay
+            $attendanceDuration,
+            $scheduleDuration,
+            $isHalfDay
         );
 
         $workedVsSchedule = $this->calculateDeviation(
-            $worked->duration,
-            $schedule->duration,
-            $leave->isHalfDay
+            $workedDuration,
+            $scheduleDuration,
+            $isHalfDay
         );
 
         $workedVsAttendance = $this->calculateDeviation(
-            $worked->duration,
-            $attendance->duration,
-            $leave->isHalfDay
+            $workedDuration,
+            $attendanceDuration,
+            $isHalfDay
         );
 
-        return new DeviationMetrics(
-            attendanceVsScheduled: $attendanceVsSchedule,
-            workedVsScheduled: $workedVsSchedule,
-            workedVsAttendance: $workedVsAttendance
-        );
+        return [
+            'attendanceVsScheduled' => $attendanceVsSchedule,
+            'workedVsScheduled' => $workedVsSchedule,
+            'workedVsAttendance' => $workedVsAttendance,
+        ];
     }
 
     /**
      * Calculate overall deviations for a period.
      *
-     * @param  DashboardTotals  $totals  The totals for the period
-     * @return DeviationMetrics The calculated overall deviations
+     * @param  array  $totals  The totals for the period
+     * @return array The calculated overall deviations
      */
-    public function calculateOverallDeviations(DashboardTotals $totals): DeviationMetrics
+    public function calculateOverallDeviations(array $totals)
     {
         $attendanceVsSchedule = $this->calculateDeviation(
-            CarbonInterval::minutes($totals->attendance)->cascade()->format('%hh %dm'),
-            CarbonInterval::minutes($totals->scheduled)->cascade()->format('%hh %dm'),
+            \Carbon\CarbonInterval::minutes($totals['attendance'])->cascade()->format('%hh %dm'),
+            \Carbon\CarbonInterval::minutes($totals['scheduled'])->cascade()->format('%hh %dm'),
             false
         );
 
         $workedVsSchedule = $this->calculateDeviation(
-            CarbonInterval::minutes($totals->worked)->cascade()->format('%hh %dm'),
-            CarbonInterval::minutes($totals->scheduled)->cascade()->format('%hh %dm'),
+            \Carbon\CarbonInterval::minutes($totals['worked'])->cascade()->format('%hh %dm'),
+            \Carbon\CarbonInterval::minutes($totals['scheduled'])->cascade()->format('%hh %dm'),
             false
         );
 
         $workedVsAttendance = $this->calculateDeviation(
-            CarbonInterval::minutes($totals->worked)->cascade()->format('%hh %dm'),
-            CarbonInterval::minutes($totals->attendance)->cascade()->format('%hh %dm'),
+            \Carbon\CarbonInterval::minutes($totals['worked'])->cascade()->format('%hh %dm'),
+            \Carbon\CarbonInterval::minutes($totals['attendance'])->cascade()->format('%hh %dm'),
             false
         );
 
-        return new DeviationMetrics(
-            attendanceVsScheduled: $attendanceVsSchedule,
-            workedVsScheduled: $workedVsSchedule,
-            workedVsAttendance: $workedVsAttendance
-        );
+        return [
+            'attendanceVsScheduled' => $attendanceVsSchedule,
+            'workedVsScheduled' => $workedVsSchedule,
+            'workedVsAttendance' => $workedVsAttendance,
+        ];
     }
 
     /**
@@ -96,9 +95,9 @@ class DeviationCalculator
      * @param  string  $actual  The actual time value (e.g., "Xh Ym")
      * @param  string  $expected  The expected time value (e.g., "Xh Ym")
      * @param  bool  $isHalfDay  Whether the day is a half day
-     * @return DeviationDetail The calculated deviation details
+     * @return array The calculated deviation details
      */
-    protected function calculateDeviation(string $actual, string $expected, bool $isHalfDay): DeviationDetail
+    protected function calculateDeviation(string $actual, string $expected, bool $isHalfDay): array
     {
         $actualMinutes = CarbonInterval::fromString($actual)->totalMinutes;
         $expectedMinutes = CarbonInterval::fromString($expected)->totalMinutes;
@@ -110,12 +109,12 @@ class DeviationCalculator
         $difference = (int) ($actualMinutes - $expectedMinutes);
         $percentage = $expectedMinutes > 0 ? ($difference / $expectedMinutes) * 100 : 0;
 
-        return new DeviationDetail(
-            percentage: (int) round($percentage),
-            differenceMinutes: abs($difference),
-            tooltip: $this->formatDeviationTooltip($difference),
-            shouldDisplay: true
-        );
+        return [
+            'percentage' => (int) round($percentage),
+            'differenceMinutes' => abs($difference),
+            'tooltip' => $this->formatDeviationTooltip($difference),
+            'shouldDisplay' => true,
+        ];
     }
 
     /**

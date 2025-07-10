@@ -41,14 +41,21 @@ class SyncDesktimeUsers extends BaseSyncJob
      */
     protected function execute(): void
     {
-        Log::info(class_basename(static::class).' Started', ['job' => class_basename(static::class)]);
+        $stats = [
+            'received' => 0,
+            'skipped' => 0,
+            'updated' => 0,
+            'created' => 0,
+            'deleted' => 0,
+        ];
         // Step 1: Fetch and process DeskTime users
         $validUsers = $this->getValidDesktimeUsers();
+        $stats['received'] = $validUsers->count();
         // Step 2: Update users with DeskTime IDs
-        $this->updateUserDesktimeIds($validUsers);
+        $this->updateUserDesktimeIds($validUsers, $stats);
         // Step 3: Clear DeskTime IDs for users no longer in DeskTime
-        $this->clearObsoleteDesktimeIds($validUsers);
-        Log::info(class_basename(static::class).' Finished', ['job' => class_basename(static::class), 'processed_count' => $validUsers->count()]);
+        $stats['deleted'] = $this->clearObsoleteDesktimeIds($validUsers);
+        Log::info(class_basename(static::class).' Sync stats', $stats);
     }
 
     /**
@@ -68,14 +75,19 @@ class SyncDesktimeUsers extends BaseSyncJob
      *
      * @param  Collection|DesktimeEmployeeDTO[]  $validUsers  Collection of valid DeskTime DesktimeEmployeeDTOs.
      */
-    private function updateUserDesktimeIds(Collection $validUsers): void
+    private function updateUserDesktimeIds(Collection $validUsers, array &$stats): void
     {
-        $validUsers->each(function (DesktimeEmployeeDTO $user): void {
+        $validUsers->each(function (DesktimeEmployeeDTO $user) use (&$stats): void {
             $email = strtolower(trim($user->email));
             $updated = User::where('email', $email)->update([
-                'desktime_id' => $user->id,
+                'desktime_id' => $user->id ? (int) $user->id : null,
             ]);
-            if (! $updated) {
+            if ($updated) {
+                $stats['updated']++;
+            } else {
+                $created = User::where('email', $email)->exists() ? 0 : 1;
+                $stats['created'] += $created;
+                $stats['skipped'] += (1 - $created);
                 Log::warning(class_basename(static::class).' Skipping: user not found', [
                     'job' => class_basename(static::class),
                     'entity' => 'user',
@@ -91,11 +103,13 @@ class SyncDesktimeUsers extends BaseSyncJob
      *
      * @param  Collection|DesktimeEmployeeDTO[]  $validUsers  Collection of valid DeskTime DesktimeEmployeeDTOs.
      */
-    private function clearObsoleteDesktimeIds(Collection $validUsers): void
+    private function clearObsoleteDesktimeIds(Collection $validUsers): int
     {
         $emails = $validUsers->map(fn (DesktimeEmployeeDTO $user) => strtolower(trim($user->email)));
-        User::whereNotIn('email', $emails)
+        $deleted = User::whereNotIn('email', $emails)
             ->whereNotNull('desktime_id')
             ->update(['desktime_id' => null]);
+
+        return $deleted;
     }
 }

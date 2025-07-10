@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Jobs\Sync\SystemPin;
 
 use App\Jobs\Sync\BaseSyncJob;
-use Illuminate\Support\Facades\Log;
 
 /**
  * Job to synchronize SystemPin user information with the local database.
@@ -34,8 +33,6 @@ class SyncSystempinUsers extends BaseSyncJob
      */
     protected function execute(): void
     {
-        Log::info(class_basename(static::class).' Started', ['job' => class_basename(static::class)]);
         // Implement the synchronization logic here.
-        Log::info(class_basename(static::class).' Finished', ['job' => class_basename(static::class)]);
     }
 }

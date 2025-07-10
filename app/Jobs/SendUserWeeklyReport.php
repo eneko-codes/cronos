@@ -42,7 +42,6 @@ class SendUserWeeklyReport implements ShouldQueue
      */
     public function handle(GetNotificationPreferencesAction $getPreferences): void
     {
-        Log::info('SendUserWeeklyReport Job started.');
 
         // Define the date range for the previous week
         $endDate = Carbon::now()->startOfWeek()->subSecond();
@@ -103,7 +102,5 @@ class SendUserWeeklyReport implements ShouldQueue
             }
         }
 
-        $summary = "SendUserWeeklyReport Job finished. Processed {$users->count()} users, queued {$sentCount} notifications.";
-        Log::info($summary);
     }
 }

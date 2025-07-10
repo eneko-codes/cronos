@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  *
  * Represents a project synchronized from ProofHub.
  *
- * @property string $proofhub_project_id
+ * @property int $proofhub_project_id
  * @property string $name
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
@@ -68,7 +68,23 @@ class Project extends Model
      *
      * @var list<string>
      */
-    protected $fillable = ['proofhub_project_id', 'name'];
+    protected $fillable = [
+        'proofhub_project_id',
+        'name',
+        'status',
+        'description',
+        'proofhub_created_at',
+        'proofhub_updated_at',
+        'proofhub_owner_id',
+    ];
+
+    protected $casts = [
+        'proofhub_project_id' => 'integer',
+        'status' => 'array',
+        'proofhub_created_at' => 'datetime',
+        'proofhub_updated_at' => 'datetime',
+        'proofhub_owner_id' => 'integer',
+    ];
 
     /**
      * The users that belong to the project.

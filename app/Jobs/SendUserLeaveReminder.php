@@ -125,7 +125,5 @@ class SendUserLeaveReminder implements ShouldQueue
                 );
             }
         }
-        $summary = "SendUserLeaveReminder Job finished. Processed {$upcomingLeaves->count()} leaves, queued $sentCount notifications.";
-        Log::info($summary);
     }
 }

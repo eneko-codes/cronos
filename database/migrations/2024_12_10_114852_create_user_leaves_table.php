@@ -8,12 +8,12 @@ class CreateUserLeavesTable extends Migration
 {
     public function up(): void
     {
-        Schema::create('user_leaves', function (Blueprint $table) {
+        Schema::create('user_leaves', function (Blueprint $table): void {
             $table->comment(
                 'Stores user leaves fetched from Odoo, using odoo_leave_id as unique identifier.'
             );
             $table->id();
-            $table->string('odoo_leave_id')->unique();
+            $table->unsignedBigInteger('odoo_leave_id')->unique();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             $table->datetime('start_date');
             $table->datetime('end_date');

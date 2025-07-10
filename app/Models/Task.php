@@ -15,8 +15,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  *
  * Represents a task synchronized from ProofHub.
  *
- * @property string $proofhub_task_id
- * @property string $proofhub_project_id
+ * @property int $proofhub_task_id
+ * @property int $proofhub_project_id
  * @property string $name
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
@@ -71,7 +71,24 @@ class Task extends Model
      *
      * @var list<string>
      */
-    protected $fillable = ['proofhub_task_id', 'proofhub_project_id', 'name'];
+    protected $fillable = [
+        'proofhub_task_id',
+        'proofhub_project_id',
+        'name',
+        'status',
+        'due_date',
+        'description',
+        'tags',
+        'priority',
+        'proofhub_created_at',
+        'proofhub_updated_at',
+    ];
+
+    protected $casts = [
+        'due_date' => 'date',
+        'proofhub_created_at' => 'datetime',
+        'proofhub_updated_at' => 'datetime',
+    ];
 
     /**
      * The users that belong to the task.

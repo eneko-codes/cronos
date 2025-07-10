@@ -10,10 +10,10 @@ use App\Clients\ProofhubApiClient;
 use App\Clients\SystemPinApiClient;
 use App\Jobs\Sync\Desktime\SyncDesktimeAttendances;
 use App\Jobs\Sync\Desktime\SyncDesktimeUsers;
-use App\Jobs\Sync\Odoo\SyncOdooCategories;
-use App\Jobs\Sync\Odoo\SyncOdooDepartments;
+use App\Jobs\Sync\Odoo\SyncOdooCategoriesJob;
+use App\Jobs\Sync\Odoo\SyncOdooDepartmentsJob;
 use App\Jobs\Sync\Odoo\SyncOdooLeaves;
-use App\Jobs\Sync\Odoo\SyncOdooLeaveTypes;
+use App\Jobs\Sync\Odoo\SyncOdooLeaveTypesJob;
 use App\Jobs\Sync\Odoo\SyncOdooSchedules;
 use App\Jobs\Sync\Odoo\SyncOdooUsers;
 use App\Jobs\Sync\Proofhub\SyncProofhubProjects;
@@ -27,12 +27,6 @@ use Illuminate\Support\Facades\Log;
 /**
  * Action to dispatch a full batch of data synchronization jobs for all platforms.
  *
- * Used by:
- * - SyncCommand (artisan command for manual sync)
- * - Console scheduler (scheduled syncs via routes/console.php)
- * - Livewire SyncButton component (manual sync from UI)
- *
- * This action:
  * - Resolves API clients for Odoo, ProofHub, DeskTime, and SystemPin
  * - Prepares job chains for each platform and merges them into a single batch
  * - Dispatches the jobs as a single chain to enforce strict order
@@ -43,7 +37,7 @@ class DispatchSyncBatchAction
     /**
      * Dispatches a batch of sync jobs for all platforms and data types.
      *
-     * Called by artisan command, scheduler, or UI.
+     * Called by artisan command or scheduler.
      */
     public function __invoke(): void
     {
@@ -60,9 +54,9 @@ class DispatchSyncBatchAction
 
         // Prepare job chains for each platform (order and chaining as in SyncService)
         $odooChain = [
-            new SyncOdooDepartments($odooApi),
-            new SyncOdooCategories($odooApi),
-            new SyncOdooLeaveTypes($odooApi),
+            new SyncOdooDepartmentsJob($odooApi->getDepartments()),
+            new SyncOdooCategoriesJob($odooApi->getCategories()),
+            new SyncOdooLeaveTypesJob($odooApi->getLeaveTypes()),
             new SyncOdooSchedules($odooApi),
             new SyncOdooUsers($odooApi),
             new SyncOdooLeaves($odooApi, $fromDate, $toDate),
@@ -94,9 +88,9 @@ class DispatchSyncBatchAction
             "Dispatching sync batch for {$windowDays} day window: {$fromDate} to {$toDate}"
         );
 
-        // Dispatch as a single chain to ensure strict order
-        Bus::chain($allJobs)
+        // Dispatch as a batch (jobs will run sequentially with a single worker)
+        Bus::batch($allJobs)
+            ->name($batchName)
             ->dispatch();
-
     }
 }

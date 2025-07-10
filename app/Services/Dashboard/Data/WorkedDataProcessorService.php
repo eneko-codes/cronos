@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services\Dashboard\Data;
 
-use App\DataTransferObjects\DailyWorkedData;
-use App\DataTransferObjects\ProjectTaskSummaryData;
-use App\DataTransferObjects\WorkedTimeEntry;
 use App\Exceptions\DataTransferObjectException;
 use App\Models\TimeEntry;
 use Carbon\CarbonInterval;
@@ -23,28 +20,21 @@ class WorkedDataProcessorService
      *
      * @param  string  $date  The date to process data for
      * @param  int  $userId  The user ID to process data for
-     * @return DailyWorkedData The processed worked time data
-     *
-     * @throws DataTransferObjectException If there's an error processing the worked data
+     * @return array The processed worked time data as an array
      */
-    public function processWorkedData(string $date, int $userId): DailyWorkedData
+    public function processWorkedData(string $date, int $userId): array
     {
         try {
             $entries = $this->findEntriesForDate($date, $userId);
             $durationInfo = $this->calculateDurationInfo($entries);
             $projectSummaries = $this->generateProjectSummaries($entries);
 
-            return new DailyWorkedData(
-                duration: $durationInfo['formatted'],
-                projects: collect($projectSummaries),
-                detailedEntries: $entries->map(fn (TimeEntry $entry) => new WorkedTimeEntry(
-                    project: $entry->project->name,
-                    task: $entry->task?->name,
-                    description: $entry->description ?? '',
-                    duration: CarbonInterval::minutes((int) round($entry->duration_seconds / 60))->cascade()->format('%hh %dm'),
-                    status: $entry->status
-                ))
-            );
+            return [
+                'entries' => $entries,
+                'duration' => $durationInfo['formatted'],
+                'projects' => collect($projectSummaries),
+                'detailedEntries' => $entries,
+            ];
         } catch (\Exception $e) {
             Log::error('Error processing worked data', [
                 'date' => $date,
@@ -97,7 +87,7 @@ class WorkedDataProcessorService
      * Generate summaries of worked time by project.
      *
      * @param  Collection<TimeEntry>  $entries  The time entries to summarize
-     * @return array<ProjectTaskSummaryData> The project summaries
+     * @return array<int, array{name: string, tasks: array}>
      */
     protected function generateProjectSummaries(Collection $entries): array
     {
@@ -112,10 +102,10 @@ class WorkedDataProcessorService
                 ->values()
                 ->toArray();
 
-            $summaries[] = new ProjectTaskSummaryData(
-                name: $project->name,
-                tasks: collect($uniqueTaskNames)
-            );
+            $summaries[] = [
+                'name' => $project->name,
+                'tasks' => $uniqueTaskNames,
+            ];
         }
 
         return $summaries;

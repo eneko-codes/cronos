@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services\Dashboard;
 
-use App\DataTransferObjects\DailyLeaveData;
-use App\DataTransferObjects\DashboardTotals;
-use App\DataTransferObjects\DeviationMetrics;
-use App\DataTransferObjects\PeriodDayData;
 use App\Models\User;
 use App\Services\Dashboard\Calculators\DeviationCalculator;
 use App\Services\Dashboard\Calculators\TotalsCalculator;
@@ -37,7 +33,7 @@ class DashboardDataAggregatorService
      * @param  Carbon  $startDate  The start date of the period.
      * @param  Carbon  $endDate  The end date of the period.
      * @param  bool  $showDeviations  Flag to indicate if deviation details should be calculated.
-     * @return array{periodData: Collection<string, PeriodDayData>, dashboardTotals: DashboardTotals, totalDeviationsDetails: DeviationMetrics|null}
+     * @return array{periodData: Collection<string, array>, dashboardTotals: array, totalDeviationsDetails: array|null}
      */
     public function aggregatePeriodData(
         User $user,
@@ -47,14 +43,11 @@ class DashboardDataAggregatorService
     ): array {
         $rawData = $user->getDataForDateRange($startDate, $endDate);
 
-        /** @var Collection<string, PeriodDayData> */
+        /** @var Collection<string, array> */
         $periodData = $this->processPeriodData($rawData, $startDate, $endDate, $showDeviations, $user);
-        /** @var DashboardTotals */
         $totals = $this->totalsCalculator->calculateTotals($periodData);
-        /** @var DeviationMetrics|null */
         $deviations = $showDeviations ? $this->deviationCalculator->calculateOverallDeviations($totals) : null;
 
-        /** @var array{periodData: Collection<string, PeriodDayData>, dashboardTotals: DashboardTotals, totalDeviationsDetails: DeviationMetrics|null} */
         $result = [
             'periodData' => $periodData,
             'dashboardTotals' => $totals,
@@ -78,7 +71,7 @@ class DashboardDataAggregatorService
      * @param  Carbon  $end  End date of the period
      * @param  bool  $showDeviations  Whether to calculate deviations
      * @param  User  $user  The user to process data for
-     * @return Collection<string, PeriodDayData>
+     * @return Collection<string, array>
      */
     protected function processPeriodData(
         array $data,
@@ -87,51 +80,34 @@ class DashboardDataAggregatorService
         bool $showDeviations,
         User $user
     ): Collection {
-        /** @var Collection<string, PeriodDayData> */
         $dates = new Collection;
         $cursor = $start->copy();
 
         while ($cursor->lte($end)) {
             $dateString = $cursor->toDateString();
 
-            $scheduleDto = $this->scheduleProcessor->processScheduleData($data['schedules'], $dateString);
-            $leaveDto = $this->leaveProcessor->processLeaveData($data['leaves'], $dateString, $data['schedules']);
-            $attendanceDto = $this->attendanceProcessor->processAttendanceData($data['attendances'], $dateString);
-            $workedDto = $this->workedProcessor->processWorkedData($dateString, $user->id);
+            $scheduleArr = $this->scheduleProcessor->processScheduleData($data['schedules'], $dateString);
+            $leaveArr = $this->leaveProcessor->processLeaveData($data['leaves'], $dateString, $data['schedules']);
+            $attendanceArr = $this->attendanceProcessor->processAttendanceData($data['attendances'], $dateString);
+            $workedArr = $this->workedProcessor->processWorkedData($dateString, $user->id);
 
-            $dailyDeviationDetailsDto = $showDeviations
+            $dailyDeviationDetailsArr = $showDeviations
                 ? $this->deviationCalculator->calculateDailyDeviations(
-                    $scheduleDto,
-                    $attendanceDto,
-                    $workedDto,
-                    $leaveDto ?? new DailyLeaveData(
-                        type: '',
-                        context: '',
-                        leaveType: '',
-                        duration: '0h 0m',
-                        durationHours: '0h 0m',
-                        durationDays: 0,
-                        status: '',
-                        isHalfDay: false,
-                        timePeriod: 'full-day',
-                        timeRange: '',
-                        halfDayTime: null,
-                        startTime: '',
-                        endTime: '',
-                        actualMinutes: 0,
-                        leaveTypeDescription: null
-                    )
+                    $scheduleArr,
+                    $attendanceArr,
+                    $workedArr,
+                    $leaveArr ?? []
                 )
                 : null;
 
-            $dates->put($dateString, new PeriodDayData(
-                date: $dateString,
-                scheduled: $scheduleDto,
-                leave: $leaveDto,
-                attendance: $attendanceDto,
-                worked: $workedDto,
-                deviationDetails: $dailyDeviationDetailsDto
-            ));
+            $dates->put($dateString, [
+                'date' => $dateString,
+                'scheduled' => $scheduleArr,
+                'leave' => $leaveArr,
+                'attendance' => $attendanceArr,
+                'worked' => $workedArr,
+                'deviationDetails' => $dailyDeviationDetailsArr,
+            ]);
 
             $cursor->addDay();
         }

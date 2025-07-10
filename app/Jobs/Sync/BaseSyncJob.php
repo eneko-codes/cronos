@@ -16,19 +16,16 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
  * Abstract base class for all sync jobs.
  *
- * Provides standardized logging, database transaction handling, error handling, and API health checks for all sync jobs.
+ * Provides API health checks for all sync jobs.
  * Implements the Template Method pattern: the handle() method defines the job lifecycle, while child classes implement the execute() method for specific sync logic.
  *
  * Benefits:
- * - Ensures correct integration with Laravel's queue system for all sync jobs.
- * - Centralizes common functionality (logging, transactions, error handling, etc.).
+ * - Ensures correct integration with Laravel\'s queue system for all sync jobs.
  * - Allows child classes to focus solely on business logic.
  */
 abstract class BaseSyncJob implements ShouldBeEncrypted, ShouldQueue
@@ -53,12 +50,12 @@ abstract class BaseSyncJob implements ShouldBeEncrypted, ShouldQueue
     /**
      * Maximum number of job attempts before failing.
      */
-    public int $tries = 3;
+    public int $tries = 2;
 
     /**
      * Maximum number of exceptions allowed before failing.
      */
-    public int $maxExceptions = 3;
+    public int $maxExceptions = 1;
 
     /**
      * Job timeout in seconds.
@@ -68,39 +65,18 @@ abstract class BaseSyncJob implements ShouldBeEncrypted, ShouldQueue
     /**
      * Backoff times (in seconds) between retries.
      */
-    public array $backoff = [10, 30, 60];
+    public array $backoff = [10, 30];
 
     /**
      * Main entry point for the job.
      *
-     * Wraps the job's execution logic in a database transaction, logs the process, and handles errors.
      * Calls the abstract execute() method, which must be implemented by child classes.
      *
      * @throws Exception If the job fails during execution.
      */
     public function handle(): void
     {
-        $jobName = class_basename($this);
-
-        Log::info("{$jobName}: Starting database transaction.");
-
-        try {
-            // Wrap the execution logic in a database transaction
-            DB::transaction(function (): void {
-                $this->execute();
-            });
-
-            Log::info("{$jobName}: Database transaction committed successfully.");
-        } catch (Throwable $e) {
-            // Catch any throwable error/exception
-            Log::error("{$jobName}: Database transaction rolled back due to error.", [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            // Re-throw the exception to ensure Laravel's queue worker handles the failure
-            throw $e;
-        }
+        $this->execute();
     }
 
     /**

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -19,8 +20,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * @property int $proofhub_time_entry_id Primary key (imported from ProofHub)
  * @property int $user_id Foreign key to users table (who logged the time)
- * @property string $proofhub_project_id Foreign key to projects table (which project the time was spent on)
- * @property string|null $proofhub_task_id Foreign key to tasks table (which task the time was spent on, if any)
+ * @property int $proofhub_project_id Foreign key to projects table (which project the time was spent on)
+ * @property int|null $proofhub_task_id Foreign key to tasks table (which task the time was spent on, if any)
  * @property string $status Status of the time entry in ProofHub
  * @property string $description Description of the work performed
  * @property \Carbon\Carbon $date Date when the work was performed (stored in UTC timezone)
@@ -94,6 +95,10 @@ class TimeEntry extends Model
         'date',
         'duration_seconds',
         'proofhub_created_at',
+        'proofhub_updated_at',
+        'billable',
+        'comments',
+        'tags',
     ];
 
     /**
@@ -108,6 +113,9 @@ class TimeEntry extends Model
         'date' => 'date',
         'duration_seconds' => 'integer',
         'proofhub_created_at' => 'datetime',
+        'proofhub_updated_at' => 'datetime',
+        'billable' => 'boolean',
+        'tags' => 'array',
     ];
 
     /**
@@ -171,5 +179,29 @@ class TimeEntry extends Model
             'proofhub_task_id',
             'proofhub_task_id'
         );
+    }
+
+    /**
+     * Scope a query to only include records between two dates (inclusive).
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  string  $from  Start date (Y-m-d)
+     * @param  string  $to  End date (Y-m-d)
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeBetweenDates($query, $from, $to)
+    {
+        return $query->whereBetween('date', [$from, $to]);
+    }
+
+    public function scopeForUser($query, $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
+
+    #[Scope]
+    public function status($query, $status)
+    {
+        return $query->where('status', $status);
     }
 }

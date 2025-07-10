@@ -13,7 +13,7 @@ class CreateTimeEntriesTable extends Migration
      */
     public function up(): void
     {
-        Schema::create('time_entries', function (Blueprint $table) {
+        Schema::create('time_entries', function (Blueprint $table): void {
             $table
                 ->unsignedBigInteger('proofhub_time_entry_id')
                 ->primary()
@@ -46,6 +46,10 @@ class CreateTimeEntriesTable extends Migration
                 ->timestamp('proofhub_created_at')
                 ->nullable()
                 ->comment('Original creation time in ProofHub');
+            $table->timestamp('proofhub_updated_at')->nullable()->comment('Last update time in ProofHub');
+            $table->boolean('billable')->nullable()->comment('Whether the time entry is billable');
+            $table->text('comments')->nullable()->comment('Comments from ProofHub');
+            $table->json('tags')->nullable()->comment('Tags from ProofHub, stored as JSON array');
             $table->timestamps();
         });
     }

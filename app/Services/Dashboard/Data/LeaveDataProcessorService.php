@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services\Dashboard\Data;
 
-use App\DataTransferObjects\DailyLeaveData;
 use App\Exceptions\DataTransferObjectException;
 use App\Models\UserLeave;
 use Carbon\Carbon;
@@ -24,11 +23,11 @@ class LeaveDataProcessorService
      * @param  Collection  $leaves  Collection of UserLeave models
      * @param  string  $dateString  The date to process leave for (Y-m-d)
      * @param  Collection|null  $schedules  Optional collection of schedules for duration calculation
-     * @return DailyLeaveData|null The processed leave data or null if no leave exists
+     * @return array|null The processed leave data as an array, or null if no leave exists
      *
      * @throws DataTransferObjectException If there's an error processing the leave data
      */
-    public function processLeaveData(Collection $leaves, string $dateString, ?Collection $schedules = null): ?DailyLeaveData
+    public function processLeaveData(Collection $leaves, string $dateString, ?Collection $schedules = null): ?array
     {
         try {
             $leave = $this->findActiveLeave($leaves, $dateString);
@@ -40,23 +39,24 @@ class LeaveDataProcessorService
             $timeInfo = $this->calculateTimeInfo($leave);
             $durationInfo = $this->calculateDurationInfo($leave, $dateString, $schedules);
 
-            return new DailyLeaveData(
-                type: $leave->type,
-                context: $contextInfo,
-                leaveType: $leave->leaveType->name ?? '[No Type Set]',
-                duration: $durationInfo['text'],
-                durationHours: $durationInfo['hours'],
-                durationDays: $leave->duration_days,
-                status: $leave->status ?? 'validate',
-                isHalfDay: $leave->isHalfDay(),
-                timePeriod: $leave->isMorningLeave() ? 'morning' : ($leave->isAfternoonLeave() ? 'afternoon' : 'full-day'),
-                timeRange: $timeInfo['range'],
-                halfDayTime: $timeInfo['halfDay'],
-                startTime: $timeInfo['start'],
-                endTime: $timeInfo['end'],
-                actualMinutes: $durationInfo['minutes'],
-                leaveTypeDescription: null,
-            );
+            return [
+                'model' => $leave,
+                'type' => $leave->type,
+                'context' => $contextInfo,
+                'leaveType' => $leave->leaveType->name ?? '[No Type Set]',
+                'duration' => $durationInfo['text'],
+                'durationHours' => $durationInfo['hours'],
+                'durationDays' => $leave->duration_days,
+                'status' => $leave->status ?? 'validate',
+                'isHalfDay' => $leave->isHalfDay(),
+                'timePeriod' => $leave->isMorningLeave() ? 'morning' : ($leave->isAfternoonLeave() ? 'afternoon' : 'full-day'),
+                'timeRange' => $timeInfo['range'],
+                'halfDayTime' => $timeInfo['halfDay'],
+                'startTime' => $timeInfo['start'],
+                'endTime' => $timeInfo['end'],
+                'actualMinutes' => $durationInfo['minutes'],
+                'leaveTypeDescription' => null,
+            ];
         } catch (\Exception $e) {
             Log::error('Error processing leave data', [
                 'date' => $dateString,

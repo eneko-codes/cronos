@@ -10,13 +10,22 @@ describe('OdooDepartmentDTO', function (): void {
             id: 10,
             name: 'HR',
             active: true,
-            manager_id: 11,
-            parent_id: 12
+            manager_id: [11, 'Jane Manager'],
+            parent_id: [12, 'Company']
         );
         expect($dto->id)->toBeInt()->toBe(10);
         expect($dto->name)->toBeString()->toBe('HR');
         expect($dto->active)->toBeBool()->toBeTrue();
-        expect($dto->manager_id)->toBeInt()->toBe(11);
-        expect($dto->parent_id)->toBeInt()->toBe(12);
+        expect($dto->manager_id)->toBeArray()->toBe([11, 'Jane Manager']);
+        expect($dto->parent_id)->toBeArray()->toBe([12, 'Company']);
+    });
+
+    it('OdooDepartmentDTO can be constructed with all fields null', function (): void {
+        $dto = new App\DataTransferObjects\Odoo\OdooDepartmentDTO;
+        expect($dto->id)->toBeNull();
+        expect($dto->name)->toBeNull();
+        expect($dto->active)->toBeNull();
+        expect($dto->manager_id)->toBeNull();
+        expect($dto->parent_id)->toBeNull();
     });
 });

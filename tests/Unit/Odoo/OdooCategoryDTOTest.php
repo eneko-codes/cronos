@@ -15,4 +15,11 @@ describe('OdooCategoryDTO', function (): void {
         expect($dto->name)->toBeString()->toBe('Category');
         expect($dto->active)->toBeBool()->toBeFalse();
     });
+
+    it('OdooCategoryDTO can be constructed with all fields null', function (): void {
+        $dto = new App\DataTransferObjects\Odoo\OdooCategoryDTO;
+        expect($dto->id)->toBeNull();
+        expect($dto->name)->toBeNull();
+        expect($dto->active)->toBeNull();
+    });
 });

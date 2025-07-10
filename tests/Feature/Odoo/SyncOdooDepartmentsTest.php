@@ -21,7 +21,7 @@ describe('SyncOdooDepartments job', function (): void {
             id: 1,
             name: 'Engineering',
             active: true,
-            manager_id: 2,
+            manager_id: [2, 'Jane Manager'],
             parent_id: null
         );
         $mockOdoo = Mockery::mock(OdooApiClient::class);
@@ -48,8 +48,8 @@ describe('SyncOdooDepartments job', function (): void {
             id: 2,
             name: 'New',
             active: true,
-            manager_id: 3,
-            parent_id: 1
+            manager_id: [3, 'John Smith'],
+            parent_id: [1, 'Parent Department']
         );
         $mockOdoo = Mockery::mock(OdooApiClient::class);
         $mockOdoo->shouldReceive('getDepartments')->once()->andReturn(collect([$dto]));

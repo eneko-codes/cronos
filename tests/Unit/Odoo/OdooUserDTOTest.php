@@ -12,21 +12,21 @@ describe('OdooUserDTO', function (): void {
             name: 'Test User',
             tz: 'Europe/Madrid',
             active: false,
-            department_id: 2,
-            category_ids: [3, 4],
-            resource_calendar_id: 5,
+            department_id: [2, 'Engineering'],
+            category_ids: [[3, 'Full Time'], [4, 'Remote']],
+            resource_calendar_id: [5, 'Standard 40h'],
             job_title: 'Engineer',
-            parent_id: 6
+            parent_id: [6, 'Jane Manager']
         );
         expect($dto->id)->toBeInt()->toBe(1);
         expect($dto->work_email)->toBeString()->toBe('user@example.com');
         expect($dto->name)->toBeString()->toBe('Test User');
         expect($dto->tz)->toBeString()->toBe('Europe/Madrid');
         expect($dto->active)->toBeBool()->toBeFalse();
-        expect($dto->department_id)->toBeInt()->toBe(2);
-        expect($dto->category_ids)->toBeArray()->toBe([3, 4]);
-        expect($dto->resource_calendar_id)->toBeInt()->toBe(5);
+        expect($dto->department_id)->toBeArray()->toBe([2, 'Engineering']);
+        expect($dto->category_ids)->toBeArray()->toBe([[3, 'Full Time'], [4, 'Remote']]);
+        expect($dto->resource_calendar_id)->toBeArray()->toBe([5, 'Standard 40h']);
         expect($dto->job_title)->toBeString()->toBe('Engineer');
-        expect($dto->parent_id)->toBeInt()->toBe(6);
+        expect($dto->parent_id)->toBeArray()->toBe([6, 'Jane Manager']);
     });
 });

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Jobs\Sync\Desktime;
 
 use App\Clients\DesktimeApiClient;
-use App\DataTransferObjects\Desktime\DesktimeEmployeeDTO;
 use App\Jobs\Sync\BaseSyncJob;
 use App\Models\User;
 use App\Models\UserAttendance;
@@ -68,26 +67,29 @@ class SyncDesktimeAttendances extends BaseSyncJob
      */
     protected function execute(): void
     {
-        Log::info(class_basename(static::class).' Started', ['job' => class_basename(static::class)]);
-        // Step 1: Determine the date range to process
+        $stats = [
+            'received' => 0,
+            'skipped' => 0,
+            'updated' => 0,
+            'created' => 0,
+            'deleted' => 0,
+        ];
         $dateRange = $this->getDatesRange();
-        // Step 2: Process attendance data for each date
-        collect($dateRange)->each(function ($date): void {
-            $this->processAttendanceForDate($date->format('Y-m-d'));
+        collect($dateRange)->each(function ($date) use (&$stats): void {
+            Log::debug('DeskTime sync: Requesting date', ['date' => $date->format('Y-m-d')]);
+            $this->processAttendanceForDate($date->format('Y-m-d'), $stats);
         });
-        // Log the actual date range of the data received
         $dates = collect($dateRange)->map(fn ($date) => $date->format('Y-m-d'))->filter();
         if ($dates->isNotEmpty()) {
             $minDate = $dates->min();
             $maxDate = $dates->max();
             Log::info(class_basename(static::class).' Data range', [
-                'job' => class_basename(static::class),
                 'min_date' => $minDate,
                 'max_date' => $maxDate,
                 'attendance_days_count' => $dates->count(),
             ]);
         }
-        Log::info(class_basename(static::class).' Finished', ['job' => class_basename(static::class), 'days_processed' => $dates->count()]);
+        Log::info(class_basename(static::class).' Sync stats', $stats);
     }
 
     /**
@@ -111,15 +113,14 @@ class SyncDesktimeAttendances extends BaseSyncJob
      *
      * @param  string  $date  Date in Y-m-d format.
      */
-    private function processAttendanceForDate(string $date): void
+    private function processAttendanceForDate(string $date, array &$stats): void
     {
-        // Get users to sync (either a specific user or all trackable users with desktime_id)
         $users = $this->getUsers();
-
+        $stats['received'] += $users->count();
         if ($this->userId) {
-            $this->processSingleUserMode($users, $date);
+            $this->processSingleUserMode($users, $date, $stats);
         } else {
-            $this->processBulkMode($users, $date);
+            $this->processBulkMode($users, $date, $stats);
         }
     }
 
@@ -145,19 +146,17 @@ class SyncDesktimeAttendances extends BaseSyncJob
      * @param  Collection  $users  Users to process (should be just one).
      * @param  string  $date  Date in Y-m-d format.
      */
-    private function processSingleUserMode(Collection $users, string $date): void
+    private function processSingleUserMode(Collection $users, string $date, array &$stats): void
     {
-        $users->each(function ($user) use ($date): void {
+        $users->each(function ($user) use ($date, &$stats): void {
             $attendance = $this->desktime->getSingleEmployee(
                 $user->desktime_id,
                 $date
             );
-            // $attendance is now an AttendanceDTO
             $attendanceData = collect([
                 'desktimeTime' => $attendance->desktimeTime,
-                // Add more fields if needed from AttendanceDTO
             ]);
-            $this->processAttendanceRecord($user, $date, $attendanceData);
+            $this->processAttendanceRecord($user, $date, $attendanceData, $stats);
         });
     }
 
@@ -167,26 +166,36 @@ class SyncDesktimeAttendances extends BaseSyncJob
      * @param  Collection  $users  Users to process.
      * @param  string  $date  Date in Y-m-d format.
      */
-    private function processBulkMode(Collection $users, string $date): void
+    private function processBulkMode(Collection $users, string $date, array &$stats): void
     {
-        $employeesData = $this->desktime->getAllEmployees($date, 'day');
-        $dateEmployees = collect($employeesData->get($date, []));
-        $users->each(function ($user) use ($dateEmployees, $date): void {
-            $employeeDTO = $dateEmployees->first(fn (DesktimeEmployeeDTO $dto) => $dto->id === $user->desktime_id);
-            if (! $employeeDTO) {
-                Log::warning(class_basename(static::class).' Skipping: user not found in employees data', [
-                    'job' => class_basename(static::class),
-                    'entity' => 'user',
-                    'entity_id' => $user->id,
-                    'desktime_id' => $user->desktime_id,
-                    'email' => $user->email,
-                    'date' => $date,
-                ]);
+        $attendanceDTOs = $this->desktime->getAllAttendanceForDate($date);
+        \Log::debug('DeskTime API response', ['date' => $date, 'attendanceDTOs' => $attendanceDTOs]);
+        $users->each(function ($user) use ($attendanceDTOs, $date, &$stats): void {
+            $dto = $attendanceDTOs->get($user->desktime_id);
+            if (! $dto) {
+                $stats['skipped']++;
 
                 return;
             }
-            $attendanceData = collect(['desktimeTime' => $employeeDTO->desktimeTime ?? 0]);
-            $this->processAttendanceRecord($user, $date, $attendanceData);
+            $attendanceData = collect([
+                'desktimeTime' => $dto->desktimeTime,
+                'productiveTime' => $dto->productiveTime,
+                'arrived' => $dto->arrived,
+                'left' => $dto->left,
+                'late' => $dto->late,
+                'onlineTime' => $dto->onlineTime,
+                'offlineTime' => $dto->offlineTime,
+                'atWorkTime' => $dto->atWorkTime,
+                'afterWorkTime' => $dto->afterWorkTime,
+                'beforeWorkTime' => $dto->beforeWorkTime,
+                'productivity' => $dto->productivity,
+                'efficiency' => $dto->efficiency,
+                'work_starts' => $dto->work_starts,
+                'work_ends' => $dto->work_ends,
+                'notes' => $dto->notes,
+                'activeProject' => $dto->activeProject,
+            ]);
+            $this->processAttendanceRecord($user, $date, $attendanceData, $stats);
         });
     }
 
@@ -200,17 +209,33 @@ class SyncDesktimeAttendances extends BaseSyncJob
     private function processAttendanceRecord(
         User $user,
         string $date,
-        Collection $attendance
+        Collection $attendance,
+        array &$stats
     ): void {
         // Case 1: No DeskTime data - Delete any existing remote record for this day
         if ($attendance->isEmpty() || $attendance->get('desktimeTime', 0) === 0) {
-            $this->deleteRemoteAttendance($user->id, $date);
+            $deleted = $this->deleteRemoteAttendance($user->id, $date);
+            if ($deleted) {
+                $stats['deleted']++;
+            } else {
+                $stats['skipped']++;
+            }
 
             return;
         }
 
         // Case 2: There is DeskTime data - Create or update record
-        $this->createOrUpdateAttendance($user->id, $date, $attendance);
+        $presenceSeconds = $attendance->get('desktimeTime', 0);
+        $start = is_string($attendance->get('arrived')) ? $attendance->get('arrived') : null;
+        $end = is_string($attendance->get('left')) ? $attendance->get('left') : null;
+        $result = $this->createOrUpdateAttendance($user->id, $date, $attendance);
+        if ($result === 'created') {
+            $stats['created']++;
+        } elseif ($result === 'updated') {
+            $stats['updated']++;
+        } else {
+            $stats['skipped']++;
+        }
     }
 
     /**
@@ -219,12 +244,13 @@ class SyncDesktimeAttendances extends BaseSyncJob
      * @param  int  $userId  User ID
      * @param  string  $date  Date in Y-m-d format
      */
-    private function deleteRemoteAttendance(int $userId, string $date): void
+    private function deleteRemoteAttendance(int $userId, string $date): bool
     {
-        UserAttendance::where('user_id', $userId)
+        $deleted = UserAttendance::where('user_id', $userId)
             ->whereDate('date', $date)
-            ->where('is_remote', true)
             ->delete();
+
+        return $deleted > 0;
     }
 
     /**
@@ -238,7 +264,7 @@ class SyncDesktimeAttendances extends BaseSyncJob
         int $userId,
         string $date,
         Collection $attendance
-    ): void {
+    ): string {
         $presenceSeconds = $attendance->get('desktimeTime', 0);
         if (empty($date)) {
             Log::warning(class_basename(static::class).' Skipping: missing required fields', [
@@ -248,19 +274,34 @@ class SyncDesktimeAttendances extends BaseSyncJob
                 'attendance' => $attendance,
             ]);
 
-            return;
+            return 'skipped';
         }
-        UserAttendance::updateOrCreate(
-            [
+        $start = is_string($attendance->get('arrived')) ? $attendance->get('arrived') : null;
+        $end = is_string($attendance->get('left')) ? $attendance->get('left') : null;
+        $isRemote = empty($start) && empty($end); // true if both are empty/null, false otherwise
+        $existing = UserAttendance::where('user_id', $userId)
+            ->whereDate('date', $date)
+            ->first();
+        if ($existing) {
+            $existing->update([
+                'presence_seconds' => $presenceSeconds,
+                'start' => $start,
+                'end' => $end,
+                'is_remote' => $isRemote,
+            ]);
+
+            return 'updated';
+        } else {
+            UserAttendance::create([
                 'user_id' => $userId,
                 'date' => $date,
-                'is_remote' => true,
-            ],
-            [
+                'is_remote' => $isRemote,
                 'presence_seconds' => $presenceSeconds,
-                'start' => null,
-                'end' => null,
-            ]
-        );
+                'start' => $start,
+                'end' => $end,
+            ]);
+
+            return 'created';
+        }
     }
 }

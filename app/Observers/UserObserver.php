@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Notifications\AdminPromotionEmail;
 use App\Notifications\UserPromotedToAdminNotification;
 use App\Notifications\WelcomeEmail;
+use Illuminate\Support\Facades\Log;
 
 class UserObserver
 {
@@ -31,6 +32,11 @@ class UserObserver
      */
     public function created(User $user): void
     {
+        Log::info('User created', [
+            'id' => $user->id,
+            'attributes' => $user->getAttributes(),
+        ]);
+
         // Initialize default notification preferences for the new user
         $this->updatePreferences->initialize($user);
 
@@ -93,6 +99,20 @@ class UserObserver
      */
     public function updated(User $user): void
     {
+        $changes = $user->getChanges();
+        if (! empty($changes)) {
+            $old = [];
+            foreach (array_keys($changes) as $field) {
+                $old[$field] = $user->getOriginal($field);
+            }
+            Log::info('User updated', [
+                'id' => $user->id,
+                'changed_fields' => $changes,
+                'old_values' => $old,
+                'new_values' => $changes,
+            ]);
+        }
+
         // Check if the user was just promoted to admin
         if ($user->wasChanged('user_type') && $user->isAdmin()) {
 
@@ -170,7 +190,10 @@ class UserObserver
      */
     public function deleted(User $user): void
     {
-        //
+        Log::info('User deleted', [
+            'id' => $user->id,
+            'attributes' => $user->getOriginal(),
+        ]);
     }
 
     /**

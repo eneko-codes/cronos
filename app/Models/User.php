@@ -189,6 +189,10 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'desktime_id' => 'integer',
+        'proofhub_created_at' => 'datetime',
+        'proofhub_updated_at' => 'datetime',
+        'proofhub_id' => 'integer',
     ];
 
     /**

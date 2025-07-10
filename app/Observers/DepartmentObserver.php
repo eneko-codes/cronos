@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Observers;
 
 use App\Models\Department;
+use Illuminate\Support\Facades\Log;
 
 class DepartmentObserver
 {
@@ -18,6 +19,39 @@ class DepartmentObserver
             $user->department_id = null;
             $user->save();
         }
+    }
+
+    public function created($department)
+    {
+        Log::info('Department created', [
+            'odoo_department_id' => $department->odoo_department_id,
+            'attributes' => $department->getAttributes(),
+        ]);
+    }
+
+    public function updated($department)
+    {
+        $changes = $department->getChanges();
+        if (! empty($changes)) {
+            $old = [];
+            foreach (array_keys($changes) as $field) {
+                $old[$field] = $department->getOriginal($field);
+            }
+            Log::info('Department updated', [
+                'odoo_department_id' => $department->odoo_department_id,
+                'changed_fields' => $changes,
+                'old_values' => $old,
+                'new_values' => $changes,
+            ]);
+        }
+    }
+
+    public function deleted($department)
+    {
+        Log::info('Department deleted', [
+            'odoo_department_id' => $department->odoo_department_id,
+            'attributes' => $department->getOriginal(),
+        ]);
     }
 
     // Add other event methods if needed: created, updated, deleted, restored, forceDeleted

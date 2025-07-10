@@ -21,12 +21,12 @@ describe('SyncOdooSchedules job', function (): void {
         $scheduleDto = new OdooScheduleDTO(
             id: 1,
             name: 'Standard',
-            hours_per_day: 8.0,
-            tz: 'Europe/Madrid'
+            active: true,
+            attendance_ids: [10, 11]
         );
         $detailDto = new OdooScheduleDetailDTO(
             id: 10,
-            calendar_id: 1,
+            calendar_id: [1, 'Standard'],
             name: 'Monday Morning',
             dayofweek: 1,
             hour_from: 9.0,
@@ -61,8 +61,8 @@ describe('SyncOdooSchedules job', function (): void {
         $scheduleDto = new OdooScheduleDTO(
             id: 2,
             name: 'New',
-            hours_per_day: 8.5,
-            tz: 'UTC'
+            active: false,
+            attendance_ids: [12, 13]
         );
         $mockOdoo = Mockery::mock(OdooApiClient::class);
         $mockOdoo->shouldReceive('getSchedules')->once()->andReturn(collect([$scheduleDto]));

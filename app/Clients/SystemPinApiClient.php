@@ -61,6 +61,11 @@ class SystemPinApiClient implements Pingable
                 'Authorization' => 'Bearer '.$this->apiKey,
             ])->get($this->baseUrl.'/health'); // Example endpoint
 
+            Log::debug('SystemPin API Response', [
+                'url' => $this->baseUrl.'/health',
+                'response' => $response->json(),
+            ]);
+
             if ($response->successful()) {
                 return [
                     'success' => true,

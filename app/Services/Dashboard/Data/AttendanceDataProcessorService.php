@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services\Dashboard\Data;
 
-use App\DataTransferObjects\DailyAttendanceData;
 use App\Exceptions\DataTransferObjectException;
 use App\Models\UserAttendance;
 use Carbon\Carbon;
@@ -23,31 +22,30 @@ class AttendanceDataProcessorService
      *
      * @param  Collection  $attendances  Collection of UserAttendance models
      * @param  string  $dateString  The date to process attendance for (Y-m-d)
-     * @return DailyAttendanceData The processed attendance data
-     *
-     * @throws DataTransferObjectException If there's an error processing the attendance data
+     * @return array|null The processed attendance data as an array, or null if no attendance exists
      */
-    public function processAttendanceData(Collection $attendances, string $dateString): DailyAttendanceData
+    public function processAttendanceData(Collection $attendances, string $dateString): ?array
     {
         try {
             $attendance = $this->findAttendanceForDate($attendances, $dateString);
 
             if (! $attendance) {
-                return new DailyAttendanceData(
-                    duration: '0h 0m',
-                    isRemote: false,
-                    times: []
-                );
+                return null;
             }
 
             $durationInfo = $this->calculateDurationInfo($attendance);
             $times = $this->getAttendanceTimes($attendance);
+            $start = $attendance->start ? Carbon::parse($attendance->start)->toDateTimeString() : null;
+            $end = $attendance->end ? Carbon::parse($attendance->end)->toDateTimeString() : null;
 
-            return new DailyAttendanceData(
-                duration: $durationInfo['formatted'],
-                isRemote: $attendance->is_remote,
-                times: $times
-            );
+            return [
+                'model' => $attendance,
+                'duration' => $durationInfo['formatted'],
+                'is_remote' => $attendance->is_remote,
+                'times' => $times,
+                'start' => $start,
+                'end' => $end,
+            ];
         } catch (\Exception $e) {
             Log::error('Error processing attendance data', [
                 'date' => $dateString,

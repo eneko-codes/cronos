@@ -51,7 +51,6 @@ class SyncProofhubTasks extends BaseSyncJob
      */
     protected function execute(): void
     {
-        Log::info(class_basename(static::class).' Started', ['job' => class_basename(static::class)]);
         $allTasks = $this->proofhub->getTasks();
         $allSyncedProofhubTaskIds = collect();
         foreach ($allTasks as $task) {
@@ -75,7 +74,6 @@ class SyncProofhubTasks extends BaseSyncJob
             $allSyncedProofhubTaskIds = $allSyncedProofhubTaskIds->merge($subtaskIds);
         }
         $this->removeObsoleteTasks($allSyncedProofhubTaskIds->unique());
-        Log::info(class_basename(static::class).' Finished', ['job' => class_basename(static::class)]);
     }
 
     /**
@@ -140,6 +138,13 @@ class SyncProofhubTasks extends BaseSyncJob
             [
                 'proofhub_project_id' => $projectId,
                 'name' => $taskName,
+                'status' => $taskData->status,
+                'due_date' => $taskData->due_date,
+                'description' => $taskData->description,
+                'tags' => $taskData->tags,
+                'priority' => $taskData->priority,
+                'proofhub_created_at' => $taskData->proofhub_created_at,
+                'proofhub_updated_at' => $taskData->proofhub_updated_at,
             ]
         );
     }

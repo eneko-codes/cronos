@@ -36,6 +36,7 @@ class UserFactory extends Factory
             'user_type' => RoleType::User,
             'do_not_track' => false,
             'remember_token' => Str::random(10),
+            'muted_notifications' => false,
         ];
     }
 

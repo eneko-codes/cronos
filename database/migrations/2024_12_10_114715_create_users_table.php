@@ -14,9 +14,9 @@ class CreateUsersTable extends Migration
             $table->id();
             $table->string('name')->index();
             $table->string('email')->unique()->index();
-            $table->string('odoo_id')->nullable()->unique();
-            $table->string('proofhub_id')->nullable()->unique();
-            $table->string('desktime_id')->nullable()->unique();
+            $table->unsignedBigInteger('odoo_id')->nullable()->unique();
+            $table->unsignedBigInteger('proofhub_id')->nullable()->unique();
+            $table->unsignedBigInteger('desktime_id')->nullable()->unique();
             $table->string('systempin_id')->nullable()->unique();
             $table->unsignedBigInteger('department_id')->nullable();
             $table->string('timezone')->nullable();
@@ -25,7 +25,7 @@ class CreateUsersTable extends Migration
             $table->boolean('muted_notifications')->default(false);
             $table->boolean('is_active')->default(true)->after('muted_notifications')->comment('Reflects the active status from Odoo');
             $table->string('job_title')->nullable()->after('department_id');
-            $table->string('odoo_manager_id')->nullable()->after('job_title');
+            $table->unsignedBigInteger('odoo_manager_id')->nullable()->after('job_title');
             $table->rememberToken()->nullable();
 
             $table

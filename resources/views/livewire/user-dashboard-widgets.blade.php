@@ -24,21 +24,30 @@
     </div>
     @if ($todaysSchedule)
       <div class="flex flex-col">
-        @if ($todaysSchedule->duration !== '0h 0m')
+        @if ($todaysSchedule['duration'] !== '0h 0m')
           {{-- Display Duration and Name for working days --}}
           <span class="text-lg font-bold text-gray-800 dark:text-gray-100">
-            {{ $todaysSchedule->duration }}
+            {{ $todaysSchedule['duration'] }}
           </span>
           <span class="text-xs text-gray-500 dark:text-gray-400">
-            {{ $todaysSchedule->name }}
+            {{ $todaysSchedule['name'] }}
           </span>
+          @if (! empty($todaysSchedule['slots']))
+            <div class="mt-1 flex flex-col gap-0.5">
+              @foreach ($todaysSchedule['slots'] as $slot)
+                <span class="text-xs text-gray-400">
+                  Start: {{ $slot['start'] }} - End: {{ $slot['end'] }}
+                </span>
+              @endforeach
+            </div>
+          @endif
         @else
           {{-- Display Day Off Message --}}
           <span class="text-lg font-semibold text-gray-700 dark:text-gray-200">
             Scheduled Day Off
           </span>
           <span class="text-xs text-gray-500 dark:text-gray-400">
-            ({{ $todaysSchedule->name }})
+            ({{ $todaysSchedule['name'] }})
           </span>
         @endif
       </div>
@@ -75,19 +84,25 @@
     </div>
     @if ($todaysAttendance)
       <div class="flex flex-col">
-        <span class="text-lg font-bold text-gray-800 dark:text-gray-100">
-          {{ $todaysAttendance->status }}
-        </span>
-        @if ($todaysAttendance->timeInfo)
-          <span class="text-xs text-gray-500 dark:text-gray-400">
-            {{ $todaysAttendance->timeInfo }}
+        <div class="flex items-baseline gap-2">
+          <span class="text-lg font-bold text-gray-800 dark:text-gray-100">
+            {{ $todaysAttendance['duration'] ?? '-' }}
           </span>
-        @endif
-
-        <span class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          Duration: {{ $todaysAttendance->duration }}
-        </span>
-        @if ($todaysAttendance->clockedIn)
+          <span class="text-lg font-bold text-gray-800 dark:text-gray-100">
+            {{ $todaysAttendance['is_remote'] ? 'Remote' : 'Office' }}
+          </span>
+        </div>
+        <div class="mt-1 flex flex-col gap-0.5">
+          <span class="text-xs text-gray-400">
+            Start:
+            {{ $todaysAttendance['start'] ? \Carbon\Carbon::parse($todaysAttendance['start'])->format('H:i') : '-' }}
+          </span>
+          <span class="text-xs text-gray-400">
+            End:
+            {{ $todaysAttendance['end'] ? \Carbon\Carbon::parse($todaysAttendance['end'])->format('H:i') : '-' }}
+          </span>
+        </div>
+        @if ($todaysAttendance['clockedIn'] ?? false)
           <span
             class="mt-1 text-xs font-medium text-green-600 dark:text-green-500"
           >

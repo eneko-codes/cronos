@@ -59,13 +59,14 @@ class SyncOdooSchedules extends BaseSyncJob
      */
     protected function execute(): void
     {
-        Log::info(class_basename(static::class).' Started', ['job' => class_basename(static::class)]);
         try {
             // Step 1: Fetch all schedules and their time slots from Odoo
             $odooSchedules = $this->odoo->getSchedules();
             $odooTimeSlots = $this->odoo->getScheduleDetails();
             // Group time slots by their calendar_id for efficient lookup per schedule
-            $odooTimeSlotsGrouped = $odooTimeSlots->groupBy(fn (OdooScheduleDetailDTO $d) => $d->calendar_id);
+            $odooTimeSlotsGrouped = $odooTimeSlots->groupBy(function (OdooScheduleDetailDTO $d) {
+                return is_array($d->calendar_id) ? $d->calendar_id[0] : null;
+            });
 
             // Step 2: Create or update local schedules based on Odoo data
             $odooSchedules->each(function (OdooScheduleDTO $scheduleData): void {
@@ -290,7 +291,6 @@ class SyncOdooSchedules extends BaseSyncJob
                 throw $e; // Re-throw other exceptions to allow retries
             }
         }
-        Log::info(class_basename(static::class).' Finished', ['job' => class_basename(static::class)]);
     }
 
     /**

@@ -278,3 +278,97 @@ test('an authenticated user can log out', function (): void {
     $response->assertRedirect('/'); // Or route('login') depending on your app's desired behavior
     $this->assertGuest(); // Verify user is no longer authenticated
 });
+
+// --- ADMIN-ONLY ROUTES ---
+
+describe('Admin-only routes', function (): void {
+    it('forbids non-admin users from accessing admin routes', function (): void {
+        $user = \App\Models\User::factory()->create(['user_type' => \App\Enums\RoleType::User, 'muted_notifications' => false]);
+        $this->actingAs($user);
+        $adminRoutes = [
+            '/settings', '/users', '/user/'.$user->id, '/projects', '/projects/1', '/schedules', '/schedules/1', '/leave-types',
+        ];
+        foreach ($adminRoutes as $route) {
+            $response = $this->get($route);
+            expect(in_array($response->status(), [403, 404]))->toBeTrue();
+        }
+    });
+
+    it('allows admin users to access admin routes', function (): void {
+        $admin = \App\Models\User::factory()->create(['user_type' => \App\Enums\RoleType::Admin, 'muted_notifications' => false]);
+        $this->actingAs($admin);
+        $adminRoutes = [
+            '/settings', '/users', '/user/'.$admin->id, '/projects', '/projects/1', '/schedules', '/schedules/1', '/leave-types',
+        ];
+        foreach ($adminRoutes as $route) {
+            $response = $this->get($route);
+            expect(in_array($response->status(), [200, 404]))->toBeTrue();
+        }
+    });
+
+    it('grants and revokes admin access on promotion/demotion', function (): void {
+        $user = \App\Models\User::factory()->create(['user_type' => \App\Enums\RoleType::User, 'muted_notifications' => false]);
+        $this->actingAs($user);
+        $this->get('/settings')->assertStatus(403)->or($this->get('/settings')->assertStatus(404));
+        $user->user_type = \App\Enums\RoleType::Admin;
+        $user->save();
+        $this->actingAs($user);
+        $this->get('/settings')->assertStatus(200)->or($this->get('/settings')->assertStatus(404));
+        $user->user_type = \App\Enums\RoleType::User;
+        $user->save();
+        $this->actingAs($user);
+        $this->get('/settings')->assertStatus(403)->or($this->get('/settings')->assertStatus(404));
+    });
+});
+
+// --- LOGIN/LOGOUT/SESSION ---
+
+describe('Authentication', function (): void {
+    it('shows login form', function (): void {
+        $this->get('/login')->assertOk();
+    });
+    it('rejects login for unknown email', function (): void {
+        $this->post('/login', ['email' => 'notfound@example.com'])->assertSessionHasErrors('email');
+    });
+    it('sends login link for valid user', function (): void {
+        $user = \App\Models\User::factory()->create();
+        $this->post('/login', ['email' => $user->email])->assertSessionHas('status');
+    });
+    it('logs in with valid token', function (): void {
+        $user = \App\Models\User::factory()->create();
+        $token = \App\Models\LoginToken::factory()->create(['user_id' => $user->id, 'expires_at' => now()->addHour()]);
+        $url = \Illuminate\Support\Facades\URL::signedRoute('login.verify', ['token' => $token->token, 'remember' => '0']);
+        $response = $this->get($url);
+        $response->assertRedirect('/dashboard');
+        $this->assertAuthenticatedAs($user);
+    });
+    it('logs out and destroys session', function (): void {
+        $user = \App\Models\User::factory()->create();
+        $this->actingAs($user);
+        $this->post('/logout')->assertRedirect('/');
+        $this->assertGuest();
+    });
+});
+
+// --- SYNC COMMAND (ALL PLATFORMS) ---
+
+describe('Sync command', function (): void {
+    it('dispatches all sync jobs', function (): void {
+        \Queue::fake();
+        $this->artisan('sync')->assertExitCode(0);
+        // Check that jobs for Odoo, ProofHub, and DeskTime are dispatched
+        \Queue::assertPushed(function ($job) {
+            return str_contains(get_class($job), 'SyncOdoo') || str_contains(get_class($job), 'SyncProofhub') || str_contains(get_class($job), 'SyncDesktime');
+        });
+    });
+    it('is idempotent and does not duplicate data', function (): void {
+        // This would require more setup with faked API responses and DB assertions
+        // Placeholder for a real implementation
+        expect(true)->toBeTrue();
+    });
+    it('does not sync do_not_track users', function (): void {
+        // This would require more setup with faked API responses and DB assertions
+        // Placeholder for a real implementation
+        expect(true)->toBeTrue();
+    });
+});

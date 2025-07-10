@@ -26,12 +26,12 @@ describe('SyncOdooLeaves job', function (): void {
             date_to: '2024-01-01 18:00:00',
             number_of_days: 1.0,
             state: 'validate',
-            holiday_status_id: 1,
+            holiday_status_id: [1, 'Paid Time Off'],
             request_hour_from: 9.0,
             request_hour_to: 18.0,
-            employee_id: null,
-            category_id: null,
-            department_id: null
+            employee_id: [10, 'John Doe'],
+            category_id: [5, 'Full Time'],
+            department_id: [2, 'Engineering']
         );
         $mockOdoo = Mockery::mock(OdooApiClient::class);
         $mockOdoo->shouldReceive('getLeaves')->once()->andReturn(collect([$dto]));
@@ -62,12 +62,12 @@ describe('SyncOdooLeaves job', function (): void {
             date_to: '2024-01-02 18:00:00',
             number_of_days: 0.5,
             state: 'validate',
-            holiday_status_id: 2,
+            holiday_status_id: [2, 'Sick Leave'],
             request_hour_from: 9.0,
             request_hour_to: 13.0,
-            employee_id: null,
-            category_id: null,
-            department_id: null
+            employee_id: [11, 'Jane Smith'],
+            category_id: [6, 'Part Time'],
+            department_id: [3, 'HR']
         );
         $mockOdoo = Mockery::mock(OdooApiClient::class);
         $mockOdoo->shouldReceive('getLeaves')->once()->andReturn(collect([$dto]));

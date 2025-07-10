@@ -86,6 +86,13 @@ class ProofhubApiClient implements Pingable
                 ->timeout(60) // Consider making this configurable
                 ->get($url, $params);
 
+            Log::debug('ProofHub API Response', [
+                'url' => $url,
+                'params' => $params,
+                'endpoint' => $endpointName,
+                'response' => $response->json(),
+            ]);
+
             if ($response->failed()) {
                 throw new ApiConnectionException(
                     "ProofHub API call to {$url} failed: {$response->status()}"
@@ -237,15 +244,29 @@ class ProofhubApiClient implements Pingable
             $url = $this->baseUrl.'people';
             $params = ['page' => $currentPage];
             $pageResult = $this->callPage($url, $params, 'people');
-            $allResults = $allResults->merge($pageResult['data']);
+            $allResults = $allResults->merge($pageResult['data']->map(function ($item) {
+                return new ProofhubUserDTO(
+                    $item['id'] ?? null,
+                    $item['email'] ?? null,
+                    $item['name'] ?? null,
+                    $item['verified'] ?? null,
+                    $item['groups'] ?? null,
+                    $item['timezone'] ?? null,
+                    $item['initials'] ?? null,
+                    $item['profile_color'] ?? null,
+                    $item['image_url'] ?? null,
+                    $item['language'] ?? null,
+                    $item['suspended'] ?? null,
+                    $item['last_active'] ?? null,
+                    $item['role'] ?? null,
+                    $item['proofhub_created_at'] ?? null,
+                    $item['proofhub_updated_at'] ?? null
+                );
+            }));
             $currentPage++;
         } while ($pageResult['data']->isNotEmpty() && $pageResult['nextPageUrl'] === null ? false : $pageResult['nextPageUrl'] !== null);
 
-        return $allResults->map(fn ($item) => new ProofhubUserDTO(
-            $item['id'],
-            isset($item['email']) ? strtolower(trim($item['email'])) : $item['email'],
-            isset($item['name']) ? $item['name'] : null
-        ));
+        return $allResults;
     }
 
     /**
@@ -264,16 +285,25 @@ class ProofhubApiClient implements Pingable
             $url = $this->baseUrl.'projects';
             $params = ['page' => $currentPage];
             $pageResult = $this->callPage($url, $params, 'projects');
-            $allResults = $allResults->merge($pageResult['data']);
+            $allResults = $allResults->merge($pageResult['data']->map(function ($item) {
+                return new ProofhubProjectDTO(
+                    $item['id'] ?? null,
+                    $item['name'] ?? null,
+                    $item['title'] ?? null,
+                    $item['assigned'] ?? null,
+                    $item['status'] ?? null,
+                    $item['description'] ?? null,
+                    $item['created_at'] ?? null,
+                    $item['updated_at'] ?? null,
+                    $item['owner_id'] ?? null,
+                    $item['proofhub_created_at'] ?? null,
+                    $item['proofhub_updated_at'] ?? null
+                );
+            }));
             $currentPage++;
         } while ($pageResult['data']->isNotEmpty() && $pageResult['nextPageUrl'] === null ? false : $pageResult['nextPageUrl'] !== null);
 
-        return $allResults->map(fn ($item) => new ProofhubProjectDTO(
-            $item['id'],
-            isset($item['name']) ? $item['name'] : null,
-            $item['title'],
-            $item['assigned']
-        ));
+        return $allResults;
     }
 
     /**
@@ -292,19 +322,30 @@ class ProofhubApiClient implements Pingable
             $url = $this->baseUrl.'alltodo';
             $params = ['page' => $currentPage];
             $pageResult = $this->callPage($url, $params, 'alltodo');
-            $allResults = $allResults->merge($pageResult['data']);
+            $allResults = $allResults->merge($pageResult['data']->map(function ($item) {
+                return new ProofhubTaskDTO(
+                    $item['id'] ?? null,
+                    $item['name'] ?? null,
+                    $item['project_id'] ?? null,
+                    $item['project'] ?? null,
+                    $item['assigned'] ?? null,
+                    $item['title'] ?? null,
+                    $item['subtasks'] ?? null,
+                    $item['status'] ?? null,
+                    $item['due_date'] ?? null,
+                    $item['description'] ?? null,
+                    $item['tags'] ?? null,
+                    $item['priority'] ?? null,
+                    $item['created_by'] ?? null,
+                    $item['updated_by'] ?? null,
+                    $item['proofhub_created_at'] ?? null,
+                    $item['proofhub_updated_at'] ?? null
+                );
+            }));
             $currentPage++;
         } while ($pageResult['data']->isNotEmpty() && $pageResult['nextPageUrl'] === null ? false : $pageResult['nextPageUrl'] !== null);
 
-        return $allResults->map(fn ($item) => new ProofhubTaskDTO(
-            $item['id'],
-            isset($item['name']) ? $item['name'] : null,
-            isset($item['project_id']) ? $item['project_id'] : null,
-            isset($item['project']) ? $item['project'] : null,
-            isset($item['assigned']) ? $item['assigned'] : null,
-            isset($item['title']) ? $item['title'] : null,
-            isset($item['subtasks']) ? $item['subtasks'] : null
-        ));
+        return $allResults;
     }
 
     /**
@@ -322,19 +363,30 @@ class ProofhubApiClient implements Pingable
         $currentPage = 1;
         do {
             $url = $this->baseUrl.'alltime';
-            $paramsWithPage = array_merge($params, ['page' => $currentPage]);
-            $pageResult = $this->callPage($url, $paramsWithPage, 'alltime');
-            $allResults = $allResults->merge($pageResult['data']);
+            $params['page'] = $currentPage;
+            $pageResult = $this->callPage($url, $params, 'alltime');
+            $allResults = $allResults->merge($pageResult['data']->map(function ($item) {
+                return new ProofhubTimeEntryDTO(
+                    $item['id'] ?? null,
+                    $item['user_id'] ?? null,
+                    $item['project_id'] ?? null,
+                    $item['task_id'] ?? null,
+                    $item['duration'] ?? null,
+                    $item['date'] ?? null,
+                    $item['created_at'] ?? null,
+                    $item['user_email'] ?? null,
+                    $item['task_title'] ?? null,
+                    $item['status'] ?? null,
+                    $item['description'] ?? null,
+                    $item['proofhub_updated_at'] ?? null,
+                    $item['billable'] ?? null,
+                    $item['comments'] ?? null,
+                    $item['tags'] ?? null
+                );
+            }));
             $currentPage++;
         } while ($pageResult['data']->isNotEmpty() && $pageResult['nextPageUrl'] === null ? false : $pageResult['nextPageUrl'] !== null);
 
-        return $allResults->map(fn ($item) => new ProofhubTimeEntryDTO(
-            $item['id'],
-            isset($item['user_id']) ? $item['user_id'] : null,
-            isset($item['project_id']) ? $item['project_id'] : null,
-            isset($item['task_id']) ? $item['task_id'] : null,
-            isset($item['duration']) ? $item['duration'] : null,
-            isset($item['date']) ? $item['date'] : null
-        ));
+        return $allResults;
     }
 }

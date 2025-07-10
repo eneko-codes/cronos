@@ -19,6 +19,7 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Handles all interactions with the Odoo API, including authentication, data retrieval, and health checks.
@@ -145,6 +146,13 @@ class OdooApiClient implements Pingable
 
             $responseBody = $response->json();
 
+            Log::debug('Odoo API Raw Response', [
+                'service' => $service,
+                'method' => $method,
+                'args' => $args,
+                'response' => $responseBody,
+            ]);
+
             // Check for HTTP or Odoo-level errors
             if ($response->failed() || isset($responseBody['error'])) {
                 throw new ApiResponseException(
@@ -205,11 +213,10 @@ class OdooApiClient implements Pingable
      */
     public function getUsers(array $domain = []): Collection
     {
-        // Fetch users and map to DTOs
         return $this->searchRead('hr.employee', $domain, [
             'id',
-            'name',
             'work_email',
+            'name',
             'tz',
             'active',
             'department_id',
@@ -218,16 +225,16 @@ class OdooApiClient implements Pingable
             'job_title',
             'parent_id',
         ])->map(fn ($item) => new OdooUserDTO(
-            $item['id'],
-            isset($item['work_email']) ? strtolower(trim($item['work_email'])) : null,
-            isset($item['name']) ? $item['name'] : null,
-            isset($item['tz']) ? $item['tz'] : null,
-            isset($item['active']) ? $item['active'] : null,
-            (isset($item['department_id'][0]) && is_int($item['department_id'][0])) ? $item['department_id'][0] : (is_int($item['department_id']) ? $item['department_id'] : null),
-            isset($item['category_ids']) ? $item['category_ids'] : [],
-            (isset($item['resource_calendar_id'][0]) && is_int($item['resource_calendar_id'][0])) ? $item['resource_calendar_id'][0] : (is_int($item['resource_calendar_id']) ? $item['resource_calendar_id'] : null),
-            (isset($item['job_title']) && is_string($item['job_title'])) ? $item['job_title'] : null,
-            (isset($item['parent_id'][0]) && is_int($item['parent_id'][0])) ? $item['parent_id'][0] : (is_int($item['parent_id']) ? $item['parent_id'] : null)
+            $item['id'] ?? null,
+            $item['work_email'] ?? null,
+            $item['name'] ?? null,
+            $item['tz'] ?? null,
+            $item['active'] ?? null,
+            ($item['department_id'] === false ? null : $item['department_id']),
+            $item['category_ids'] ?? [],
+            ($item['resource_calendar_id'] === false ? null : $item['resource_calendar_id']),
+            $item['job_title'] === false ? null : $item['job_title'],
+            ($item['parent_id'] === false ? null : $item['parent_id'])
         ));
     }
 
@@ -241,7 +248,6 @@ class OdooApiClient implements Pingable
      */
     public function getDepartments(array $domain = []): Collection
     {
-        // Fetch departments and map to DTOs
         return $this->searchRead('hr.department', $domain, [
             'id',
             'name',
@@ -249,11 +255,11 @@ class OdooApiClient implements Pingable
             'manager_id',
             'parent_id',
         ])->map(fn ($item) => new OdooDepartmentDTO(
-            $item['id'],
-            $item['name'],
-            $item['active'],
-            (isset($item['manager_id'][0]) && is_int($item['manager_id'][0])) ? $item['manager_id'][0] : (is_int($item['manager_id']) ? $item['manager_id'] : null),
-            (isset($item['parent_id'][0]) && is_int($item['parent_id'][0])) ? $item['parent_id'][0] : (is_int($item['parent_id']) ? $item['parent_id'] : null)
+            $item['id'] ?? null,
+            $item['name'] ?? null,
+            $item['active'] ?? null,
+            is_array($item['manager_id'] ?? null) ? $item['manager_id'] : null,
+            is_array($item['parent_id'] ?? null) ? $item['parent_id'] : null
         ));
     }
 
@@ -267,15 +273,14 @@ class OdooApiClient implements Pingable
      */
     public function getCategories(array $domain = []): Collection
     {
-        // Fetch categories and map to DTOs
         return $this->searchRead('hr.employee.category', $domain, [
             'id',
             'name',
             'active',
         ])->map(fn ($item) => new OdooCategoryDTO(
-            $item['id'],
-            $item['name'],
-            isset($item['active']) ? $item['active'] : null
+            $item['id'] ?? null,
+            $item['name'] ?? null,
+            $item['active'] ?? null
         ));
     }
 
@@ -289,23 +294,18 @@ class OdooApiClient implements Pingable
      */
     public function getLeaveTypes(array $domain = []): Collection
     {
-        // Fetch leave types and map to DTOs
         return $this->searchRead('hr.leave.type', $domain, [
             'id',
             'name',
             'active',
             'allocation_type',
             'validation_type',
-            'request_unit',
-            'unpaid',
         ])->map(fn ($item) => new OdooLeaveTypeDTO(
-            $item['id'],
-            isset($item['name']) ? $item['name'] : null,
-            isset($item['active']) ? $item['active'] : null,
-            isset($item['allocation_type']) ? $item['allocation_type'] : null,
-            isset($item['validation_type']) ? $item['validation_type'] : null,
-            isset($item['request_unit']) ? $item['request_unit'] : null,
-            isset($item['unpaid']) ? $item['unpaid'] : null
+            $item['id'] ?? null,
+            $item['name'] ?? null,
+            $item['active'] ?? null,
+            $item['allocation_type'] ?? null,
+            $item['validation_type'] ?? null
         ));
     }
 
@@ -338,40 +338,30 @@ class OdooApiClient implements Pingable
         return $this->searchRead('hr.leave', array_merge($baseFilters, $domain), [
             'id',
             'holiday_type',
-            'employee_id',
-            'category_id',
-            'department_id',
             'date_from',
             'date_to',
-            'number_of_days',
-            'state',
+            'employee_id',
             'holiday_status_id',
-            'request_date_from',
-            'request_date_to',
+            'state',
+            'number_of_days',
+            'category_id',
+            'department_id',
             'request_hour_from',
             'request_hour_to',
-        ])->map(function ($item) {
-            // Handle possible false/null/numeric for request_hour_from and request_hour_to
-            $requestHourFrom = isset($item['request_hour_from']) ? $item['request_hour_from'] : null;
-            $requestHourTo = isset($item['request_hour_to']) ? $item['request_hour_to'] : null;
-            $requestHourFrom = ($requestHourFrom === false) ? null : (is_numeric($requestHourFrom) ? (float) $requestHourFrom : null);
-            $requestHourTo = ($requestHourTo === false) ? null : (is_numeric($requestHourTo) ? (float) $requestHourTo : null);
-
-            return new OdooLeaveDTO(
-                $item['id'],
-                isset($item['holiday_type']) ? $item['holiday_type'] : null,
-                isset($item['date_from']) ? $item['date_from'] : null,
-                isset($item['date_to']) ? $item['date_to'] : null,
-                isset($item['number_of_days']) ? $item['number_of_days'] : null,
-                isset($item['state']) ? $item['state'] : null,
-                (isset($item['holiday_status_id']) && is_array($item['holiday_status_id'])) ? $item['holiday_status_id'][0] : (isset($item['holiday_status_id']) ? $item['holiday_status_id'] : null),
-                $requestHourFrom,
-                $requestHourTo,
-                (isset($item['employee_id'][0]) && is_int($item['employee_id'][0])) ? $item['employee_id'][0] : (isset($item['employee_id']) && is_int($item['employee_id']) ? $item['employee_id'] : null),
-                (isset($item['category_id'][0]) && is_int($item['category_id'][0])) ? $item['category_id'][0] : (isset($item['category_id']) && is_int($item['category_id']) ? $item['category_id'] : null),
-                (isset($item['department_id'][0]) && is_int($item['department_id'][0])) ? $item['department_id'][0] : (isset($item['department_id']) && is_int($item['department_id']) ? $item['department_id'] : null)
-            );
-        });
+        ])->map(fn ($item) => new OdooLeaveDTO(
+            $item['id'] ?? null,
+            $item['holiday_type'] ?? null,
+            $item['date_from'] ?? null,
+            $item['date_to'] ?? null,
+            $item['number_of_days'] ?? null,
+            $item['state'] ?? null,
+            is_array($item['holiday_status_id'] ?? null) ? $item['holiday_status_id'] : null,
+            ($item['request_hour_from'] ?? null) === false ? null : ($item['request_hour_from'] ?? null),
+            ($item['request_hour_to'] ?? null) === false ? null : ($item['request_hour_to'] ?? null),
+            is_array($item['employee_id'] ?? null) ? $item['employee_id'] : null,
+            is_array($item['category_id'] ?? null) ? $item['category_id'] : null,
+            is_array($item['department_id'] ?? null) ? $item['department_id'] : null
+        ));
     }
 
     /**
@@ -384,16 +374,17 @@ class OdooApiClient implements Pingable
      */
     public function getSchedules(array $domain = []): Collection
     {
-        $fields = ['id', 'name', 'hours_per_day', 'tz'];
-
-        // Fetch schedules and map to DTOs
-        return $this->searchRead('resource.calendar', $domain, $fields)
-            ->map(fn ($item) => new OdooScheduleDTO(
-                $item['id'],
-                isset($item['name']) ? $item['name'] : null,
-                isset($item['hours_per_day']) ? $item['hours_per_day'] : null,
-                isset($item['tz']) ? $item['tz'] : null
-            ));
+        return $this->searchRead('resource.calendar', $domain, [
+            'id',
+            'name',
+            'active',
+            'attendance_ids',
+        ])->map(fn ($item) => new OdooScheduleDTO(
+            $item['id'] ?? null,
+            $item['name'] ?? null,
+            $item['active'] ?? null,
+            $item['attendance_ids'] ?? []
+        ));
     }
 
     /**
@@ -406,7 +397,6 @@ class OdooApiClient implements Pingable
      */
     public function getScheduleDetails(array $domain = []): Collection
     {
-        // Fetch schedule details and map to DTOs
         return $this->searchRead('resource.calendar.attendance', $domain, [
             'id',
             'calendar_id',
@@ -416,13 +406,13 @@ class OdooApiClient implements Pingable
             'hour_to',
             'day_period',
         ])->map(fn ($item) => new OdooScheduleDetailDTO(
-            $item['id'],
-            (isset($item['calendar_id'][0]) && is_int($item['calendar_id'][0])) ? $item['calendar_id'][0] : (is_int($item['calendar_id']) ? $item['calendar_id'] : null),
-            isset($item['name']) ? $item['name'] : null,
-            isset($item['dayofweek']) ? (int) $item['dayofweek'] : null,
-            isset($item['hour_from']) ? $item['hour_from'] : null,
-            isset($item['hour_to']) ? $item['hour_to'] : null,
-            isset($item['day_period']) ? $item['day_period'] : null
+            $item['id'] ?? null,
+            is_array($item['calendar_id'] ?? null) ? $item['calendar_id'] : null,
+            $item['name'] ?? null,
+            $item['dayofweek'] ?? null,
+            $item['hour_from'] ?? null,
+            $item['hour_to'] ?? null,
+            $item['day_period'] ?? null
         ));
     }
 

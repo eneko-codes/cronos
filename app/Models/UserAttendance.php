@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -115,5 +116,21 @@ class UserAttendance extends Model
               ? $value->setTimezone('UTC')->toDateString()
               : Carbon::parse($value)->setTimezone('UTC')->toDateString()
         );
+    }
+
+    public function scopeBetweenDates($query, $from, $to)
+    {
+        return $query->whereBetween('date', [$from, $to]);
+    }
+
+    public function scopeForUser($query, $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
+
+    #[Scope]
+    public function status($query, $status)
+    {
+        return $query->where('status', $status);
     }
 }

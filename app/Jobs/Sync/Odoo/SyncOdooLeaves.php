@@ -67,26 +67,23 @@ class SyncOdooLeaves extends BaseSyncJob
      */
     protected function execute(): void
     {
+        $stats = [
+            'received' => 0,
+            'skipped' => 0,
+            'updated' => 0,
+            'created' => 0,
+            'deleted' => 0,
+        ];
         // Fetch leaves from Odoo API with optional date filtering
         $odooLeaves = $this->odoo->getLeaves($this->startDate, $this->endDate);
-
+        $stats['received'] = $odooLeaves->count();
         // Get valid leave type IDs from local database (used to validate incoming leaves)
         $validLeaveTypeIds = LeaveType::pluck('odoo_leave_type_id');
-
         // Remove leaves that no longer exist in Odoo (clean up local records)
-        $this->removeObsoleteLeaves($odooLeaves->pluck('id'));
-
+        $stats['deleted'] = $this->removeObsoleteLeaves($odooLeaves->pluck('id'));
         // Process and update local leaves based on Odoo data
-        $this->syncLeaves($odooLeaves, $validLeaveTypeIds);
-
-        // Optionally, you may want to log or audit the actual date range of the data received
-        // $fromDates = $odooLeaves->pluck('date_from')->filter();
-        // $toDates = $odooLeaves->pluck('date_to')->filter();
-        // if ($fromDates->isNotEmpty() && $toDates->isNotEmpty()) {
-        //     $minFrom = $fromDates->min();
-        //     $maxTo = $toDates->max();
-        //     // Use $minFrom and $maxTo as needed
-        // }
+        $this->syncLeaves($odooLeaves, $validLeaveTypeIds, $stats);
+        Log::info(class_basename(static::class).' Sync stats', $stats);
     }
 
     /**
@@ -97,10 +94,9 @@ class SyncOdooLeaves extends BaseSyncJob
      *
      * @param  Collection  $currentOdooLeaveIds  Collection of leave IDs from Odoo.
      */
-    private function removeObsoleteLeaves(Collection $currentOdooLeaveIds): void
+    private function removeObsoleteLeaves(Collection $currentOdooLeaveIds): int
     {
         $deleteQuery = UserLeave::query();
-        // If a date range is provided, restrict deletion to that range
         if ($this->startDate && $this->endDate) {
             $deleteQuery->where(function ($query): void {
                 $query
@@ -108,11 +104,13 @@ class SyncOdooLeaves extends BaseSyncJob
                     ->where('end_date', '>=', $this->startDate.' 00:00:00');
             });
         }
-        // Delete leaves not in the current Odoo dataset
-        $deleteQuery
+        $toDelete = $deleteQuery
             ->whereNotIn('odoo_leave_id', $currentOdooLeaveIds)
-            ->get()
-            ->each->delete();
+            ->get();
+        $deleted = $toDelete->count();
+        $toDelete->each->delete();
+
+        return $deleted;
     }
 
     /**
@@ -130,17 +128,21 @@ class SyncOdooLeaves extends BaseSyncJob
      */
     private function syncLeaves(
         Collection $odooLeaves,
-        Collection $validLeaveTypeIds
+        Collection $validLeaveTypeIds,
+        array &$stats
     ): void {
-        $odooLeaves->each(function (OdooLeaveDTO $leave) use ($validLeaveTypeIds): void {
+        $odooLeaves->each(function (OdooLeaveDTO $leave) use ($validLeaveTypeIds, &$stats): void {
             // Skip leaves with missing required fields
             if (! $this->validateLeaveFields($leave)) {
+                $stats['skipped']++;
+
                 return;
             }
-            // Skip leaves with invalid leave type
-            $leaveTypeId = $leave->holiday_status_id;
+            // Extract the id from [id, name] arrays for many2one fields
+            $leaveTypeId = is_array($leave->holiday_status_id) ? $leave->holiday_status_id[0] ?? null : null;
             if (! $validLeaveTypeIds->contains($leaveTypeId)) {
-                $this->logInvalidLeaveType($leave, $leaveTypeId);
+                $this->logInvalidLeaveType($leave, (int) $leaveTypeId);
+                $stats['skipped']++;
 
                 return;
             }
@@ -149,7 +151,14 @@ class SyncOdooLeaves extends BaseSyncJob
             // Prepare the data for local storage
             $leaveData = $this->prepareLeaveData($leave);
             // Create or update the leave record in the local database
-            UserLeave::updateOrCreate(['odoo_leave_id' => $leave->id], $leaveData);
+            $existing = UserLeave::where('odoo_leave_id', $leave->id)->first();
+            if ($existing) {
+                $existing->update($leaveData);
+                $stats['updated']++;
+            } else {
+                UserLeave::create(array_merge(['odoo_leave_id' => $leave->id], $leaveData));
+                $stats['created']++;
+            }
         });
     }
 
@@ -253,10 +262,10 @@ class SyncOdooLeaves extends BaseSyncJob
             'end_date' => $leave->date_to, // stored as UTC
             'status' => $leave->state,
             'duration_days' => $leave->number_of_days,
-            'leave_type_id' => $leave->holiday_status_id ?? null,
+            'leave_type_id' => is_array($leave->holiday_status_id) ? $leave->holiday_status_id[0] ?? null : null,
             'user_id' => null,
-            'department_id' => null,
-            'category_id' => null,
+            'department_id' => is_array($leave->department_id) ? $leave->department_id[0] ?? null : null,
+            'category_id' => is_array($leave->category_id) ? $leave->category_id[0] ?? null : null,
             'request_hour_from' => $leave->request_hour_from ?? null,
             'request_hour_to' => $leave->request_hour_to ?? null,
         ];
@@ -266,10 +275,10 @@ class SyncOdooLeaves extends BaseSyncJob
                 $this->assignEmployeeToLeave($leave, $data);
                 break;
             case 'department':
-                $data['department_id'] = $leave->department_id ?? null;
+                $data['department_id'] = $leave->department_id[0] ?? null;
                 break;
             case 'category':
-                $data['category_id'] = $leave->category_id ?? null;
+                $data['category_id'] = $leave->category_id[0] ?? null;
                 break;
         }
 
@@ -287,12 +296,13 @@ class SyncOdooLeaves extends BaseSyncJob
      */
     private function assignEmployeeToLeave(OdooLeaveDTO $leave, array &$data): void
     {
-        $user = User::where('odoo_id', $leave->employee_id)->first();
+        $employeeOdooId = is_array($leave->employee_id) ? $leave->employee_id[0] ?? null : null;
+        $user = $employeeOdooId ? User::where('odoo_id', $employeeOdooId)->first() : null;
         if (! $user) {
             Log::warning(class_basename(static::class).' Skipping: user not found for leave assignment', [
                 'job' => class_basename(static::class),
                 'entity' => 'user',
-                'entity_id' => $leave->employee_id,
+                'entity_id' => $employeeOdooId,
                 'leave_id' => $leave->id,
             ]);
             $data['user_id'] = null;

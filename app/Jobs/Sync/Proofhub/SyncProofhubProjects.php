@@ -50,7 +50,6 @@ class SyncProofhubProjects extends BaseSyncJob
      */
     protected function execute(): void
     {
-        Log::info(class_basename(static::class).' Started', ['job' => class_basename(static::class)]);
         $allProjects = $this->proofhub->getProjects();
         $allSyncedProofhubProjectIds = collect();
         foreach ($allProjects as $project) {
@@ -63,13 +62,19 @@ class SyncProofhubProjects extends BaseSyncJob
             $assignedUserIds = $project->assigned ?? [];
             $projectModel = Project::updateOrCreate(
                 ['proofhub_project_id' => $projectId],
-                ['name' => $projectName]
+                [
+                    'name' => $projectName,
+                    'status' => $project->status,
+                    'description' => $project->description,
+                    'proofhub_created_at' => $project->proofhub_created_at,
+                    'proofhub_updated_at' => $project->proofhub_updated_at,
+                    'proofhub_owner_id' => $project->owner_id,
+                ]
             );
             $this->syncProjectUsers($projectModel, $assignedUserIds);
             $allSyncedProofhubProjectIds->push($projectId);
         }
         $this->removeObsoleteProjects($allSyncedProofhubProjectIds->unique());
-        Log::info(class_basename(static::class).' Finished', ['job' => class_basename(static::class)]);
     }
 
     /**

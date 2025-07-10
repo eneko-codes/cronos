@@ -44,11 +44,9 @@ class SyncProofhubUsers extends BaseSyncJob
      */
     protected function execute(): void
     {
-        Log::info(class_basename(static::class).' Started', ['job' => class_basename(static::class)]);
         $allUsers = $this->proofhub->getUsers();
         $allProofhubEmails = $this->processUserPage($allUsers);
         $this->clearObsoleteProofhubIds($allProofhubEmails->unique());
-        Log::info(class_basename(static::class).' Finished', ['job' => class_basename(static::class)]);
     }
 
     /**
@@ -65,11 +63,13 @@ class SyncProofhubUsers extends BaseSyncJob
             ->filter(fn (ProofhubUserDTO $user) => isset($user->email) && isset($user->id))
             ->each(function (ProofhubUserDTO $user) use ($emailsOnPage): void {
                 $email = strtolower($user->email);
-                $proofhubId = (string) $user->id;
+                $proofhubId = $user->id ? (int) $user->id : null;
                 $emailsOnPage->push($email);
 
                 // Update local user record
-                User::where('email', $email)->update(['proofhub_id' => $proofhubId]);
+                User::where('email', $email)->update([
+                    'proofhub_id' => $proofhubId,
+                ]);
             });
 
         Log::debug('Processed user page.', [

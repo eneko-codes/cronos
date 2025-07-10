@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  * Represents the pivot model between Project and User.
  *
  * @property int $user_id
- * @property string $proofhub_project_id
+ * @property int $proofhub_project_id
  * @property int $id
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at

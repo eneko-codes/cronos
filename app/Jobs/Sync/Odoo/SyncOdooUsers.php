@@ -55,22 +55,27 @@ class SyncOdooUsers extends BaseSyncJob
      */
     protected function execute(): void
     {
+        $stats = [
+            'received' => 0,
+            'skipped' => 0,
+            'updated' => 0,
+            'created' => 0,
+            'deleted' => 0,
+        ];
         // Fetch all employees from Odoo API as a Collection of UserDTOs
         $odooEmployees = $this->odoo->getUsers();
-
+        $stats['received'] = $odooEmployees->count();
         // Log employees who are missing email addresses for audit/debugging
         $this->logEmployeesWithoutEmail($odooEmployees);
-
         // Filter to keep only employees with valid emails (required for local user creation)
         $validEmployees = $odooEmployees->filter(function (OdooUserDTO $employee) {
             return filled($employee->work_email);
         });
-
         // Create or update users and their relationships (department, categories, schedule)
-        $this->syncValidEmployees($validEmployees);
-
+        $this->syncValidEmployees($validEmployees, $stats);
         // Deactivate users not present in Odoo (mark as inactive locally)
-        $this->deactivateObsoleteUsers($validEmployees->pluck('id'));
+        $stats['deleted'] = $this->deactivateObsoleteUsers($validEmployees->pluck('id'));
+        Log::info(class_basename(static::class).' Sync stats', $stats);
     }
 
     /**
@@ -113,11 +118,12 @@ class SyncOdooUsers extends BaseSyncJob
      *
      * @param  Collection|OdooUserDTO[]  $validEmployees  Collection of valid employees from Odoo.
      */
-    private function syncValidEmployees(Collection $validEmployees): void
+    private function syncValidEmployees(Collection $validEmployees, array &$stats): void
     {
-        $validEmployees->each(function (OdooUserDTO $employee): void {
+        $validEmployees->each(function (OdooUserDTO $employee) use (&$stats): void {
             // Skip if required fields are missing
             if (empty($employee->name) || empty($employee->work_email)) {
+                $stats['skipped']++;
                 Log::warning(class_basename(static::class).' Skipping user with missing required fields', [
                     'job' => class_basename(static::class),
                     'entity' => 'user',
@@ -127,22 +133,37 @@ class SyncOdooUsers extends BaseSyncJob
                 return;
             }
             // Create or update the user record
-            $user = User::updateOrCreate(
-                ['odoo_id' => $employee->id],
-                [
+            $user = User::where('odoo_id', $employee->id)->first();
+            if ($user) {
+                $user->update([
                     'name' => $employee->name,
                     'email' => \Str::lower($employee->work_email),
                     'timezone' => $employee->tz ?? 'UTC',
-                    'is_active' => $employee->active ?? true, // Sync active status
-                    'department_id' => $employee->department_id, // Sync department
-                    'job_title' => $employee->job_title ?? null, // Sync job title
-                    'odoo_manager_id' => $employee->parent_id, // Sync manager Odoo ID
-                ]
-            );
+                    'is_active' => $employee->active ?? true,
+                    'department_id' => $employee->department_id !== null ? $employee->department_id[0] ?? null : null,
+                    'job_title' => $employee->job_title ?? null,
+                    'odoo_manager_id' => $employee->parent_id !== null ? $employee->parent_id[0] ?? null : null,
+                ]);
+                $stats['updated']++;
+            } else {
+                User::create([
+                    'odoo_id' => $employee->id,
+                    'name' => $employee->name,
+                    'email' => \Str::lower($employee->work_email),
+                    'timezone' => $employee->tz ?? 'UTC',
+                    'is_active' => $employee->active ?? true,
+                    'department_id' => $employee->department_id !== null ? $employee->department_id[0] ?? null : null,
+                    'job_title' => $employee->job_title ?? null,
+                    'odoo_manager_id' => $employee->parent_id !== null ? $employee->parent_id[0] ?? null : null,
+                ]);
+                $stats['created']++;
+            }
             // Sync user categories (many-to-many)
-            $this->syncUserCategories($user, $employee->category_ids ?? []);
+            $this->syncUserCategories($user ?? User::where('odoo_id', $employee->id)->first(), array_map(fn ($c) => is_array($c) ? $c[0] : $c, $employee->category_ids));
+            // Extract schedule ID from resource_calendar_id ([id, name] or null)
+            $scheduleId = $employee->resource_calendar_id !== null ? $employee->resource_calendar_id[0] ?? null : null;
             // Sync user schedule (one-to-many, with effective dates)
-            $this->syncUserSchedule($user, $employee->resource_calendar_id);
+            $this->syncUserSchedule($user ?? User::where('odoo_id', $employee->id)->first(), $scheduleId);
         });
     }
 
@@ -209,20 +230,13 @@ class SyncOdooUsers extends BaseSyncJob
      *
      * @param  Collection  $currentOdooIds  Collection of current Odoo employee IDs.
      */
-    private function deactivateObsoleteUsers(Collection $currentOdooIds): void
+    private function deactivateObsoleteUsers(Collection $currentOdooIds): int
     {
-        // Find users in DB (with odoo_id) not in the current Odoo list
-        User::whereNotNull('odoo_id')
-            ->whereNotIn('odoo_id', $currentOdooIds)
-            ->where('is_active', true) // Only deactivate those currently active
-            ->get()
-            ->each(function (User $user): void {
-                Log::info(class_basename(static::class).': Deactivating user no longer found in Odoo sync.', [
-                    'user_id' => $user->id,
-                    'odoo_id' => $user->odoo_id,
-                    'name' => $user->name,
-                ]);
-                $user->update(['is_active' => false]);
-            });
+        $deleted = User::whereNotIn('odoo_id', $currentOdooIds)
+            ->whereNotNull('odoo_id')
+            ->where('is_active', true)
+            ->update(['is_active' => false]);
+
+        return $deleted;
     }
 }

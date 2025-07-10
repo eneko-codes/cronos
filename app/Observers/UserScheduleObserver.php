@@ -8,6 +8,7 @@ use App\Actions\GetNotificationPreferencesAction;
 use App\Models\User;
 use App\Models\UserSchedule;
 use App\Notifications\ScheduleChangeNotification;
+use Illuminate\Support\Facades\Log;
 
 class UserScheduleObserver
 {
@@ -23,7 +24,10 @@ class UserScheduleObserver
      */
     public function created(UserSchedule $userSchedule): void
     {
-        //
+        Log::info('UserSchedule created', [
+            'id' => $userSchedule->id,
+            'attributes' => $userSchedule->getAttributes(),
+        ]);
     }
 
     /**
@@ -33,6 +37,20 @@ class UserScheduleObserver
      */
     public function updated(UserSchedule $userSchedule): void
     {
+        $changes = $userSchedule->getChanges();
+        if (! empty($changes)) {
+            $old = [];
+            foreach (array_keys($changes) as $field) {
+                $old[$field] = $userSchedule->getOriginal($field);
+            }
+            Log::info('UserSchedule updated', [
+                'id' => $userSchedule->id,
+                'changed_fields' => $changes,
+                'old_values' => $old,
+                'new_values' => $changes,
+            ]);
+        }
+
         // Check if the schedule assignment just ended (effective_until was changed FROM null TO a date)
         if ($userSchedule->wasChanged('effective_until') && ! is_null($userSchedule->effective_until)) {
             // Eager load relationships if not already loaded
@@ -51,7 +69,6 @@ class UserScheduleObserver
                 $user->notify($notification);
             }
         }
-
     }
 
     /**
@@ -59,7 +76,10 @@ class UserScheduleObserver
      */
     public function deleted(UserSchedule $userSchedule): void
     {
-        //
+        Log::info('UserSchedule deleted', [
+            'id' => $userSchedule->id,
+            'attributes' => $userSchedule->getOriginal(),
+        ]);
     }
 
     /**

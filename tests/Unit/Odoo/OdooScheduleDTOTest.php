@@ -9,12 +9,20 @@ describe('OdooScheduleDTO', function (): void {
         $dto = new OdooScheduleDTO(
             id: 50,
             name: 'Standard',
-            hours_per_day: 8.0,
-            tz: 'Europe/Madrid'
+            active: true,
+            attendance_ids: [1, 2, 3]
         );
         expect($dto->id)->toBeInt()->toBe(50);
         expect($dto->name)->toBeString()->toBe('Standard');
-        expect($dto->hours_per_day)->toBeFloat()->toBe(8.0);
-        expect($dto->tz)->toBeString()->toBe('Europe/Madrid');
+        expect($dto->active)->toBeTrue();
+        expect($dto->attendance_ids)->toBeArray()->toBe([1, 2, 3]);
+    });
+
+    it('OdooScheduleDTO can be constructed with all fields null', function (): void {
+        $dto = new OdooScheduleDTO;
+        expect($dto->id)->toBeNull();
+        expect($dto->name)->toBeNull();
+        expect($dto->active)->toBeNull();
+        expect($dto->attendance_ids)->toBeArray()->toBe([]);
     });
 });

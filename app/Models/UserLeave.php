@@ -251,4 +251,20 @@ class UserLeave extends Model
             $toMin
         );
     }
+
+    public function scopeBetweenDates($query, $from, $to)
+    {
+        return $query->whereBetween('date', [$from, $to]);
+    }
+
+    public function scopeForUser($query, $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
+
+    #[Scope]
+    public function status($query, $status)
+    {
+        return $query->where('status', $status);
+    }
 }

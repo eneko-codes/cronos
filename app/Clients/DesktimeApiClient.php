@@ -11,6 +11,7 @@ use App\Exceptions\ApiConnectionException;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Handles all communication with the DeskTime API, including authentication, data retrieval, and health checks.
@@ -73,6 +74,12 @@ class DesktimeApiClient implements Pingable
                 );
             }
 
+            Log::debug('DeskTime API Response', [
+                'endpoint' => $endpoint,
+                'params' => $params,
+                'response' => $response->json(),
+            ]);
+
             return $response->json();
         } catch (\Exception $e) {
             throw new ApiConnectionException($e->getMessage(), $e->getCode(), $e);
@@ -106,9 +113,31 @@ class DesktimeApiClient implements Pingable
         // Flatten all employees into a single collection of DesktimeEmployeeDTOs
         return collect($data['employees'])
             ->flatMap(fn ($dateUsers) => collect($dateUsers)->map(fn ($user) => new DesktimeEmployeeDTO(
-                $user['id'],
-                isset($user['email']) ? strtolower(trim($user['email'])) : null,
-                isset($user['name']) ? $user['name'] : null
+                $user['id'] ?? null,
+                $user['email'] ?? null,
+                $user['name'] ?? null,
+                $user['groupId'] ?? null,
+                $user['group'] ?? null,
+                $user['profileUrl'] ?? null,
+                $user['isOnline'] ?? null,
+                $user['arrived'] ?? null,
+                $user['left'] ?? null,
+                $user['late'] ?? null,
+                $user['onlineTime'] ?? null,
+                $user['offlineTime'] ?? null,
+                $user['desktimeTime'] ?? null,
+                $user['atWorkTime'] ?? null,
+                $user['afterWorkTime'] ?? null,
+                $user['beforeWorkTime'] ?? null,
+                $user['productiveTime'] ?? null,
+                $user['productivity'] ?? null,
+                $user['efficiency'] ?? null,
+                $user['work_starts'] === false ? null : $user['work_starts'] ?? null,
+                $user['work_ends'] === false ? null : $user['work_ends'] ?? null,
+                $user['notes'] ?? null,
+                $user['activeProject'] ?? null,
+                $user['apps'] ?? null,
+                $user['projects'] ?? null
             )))
             ->values();
     }
@@ -118,14 +147,14 @@ class DesktimeApiClient implements Pingable
      *
      * @param  int  $userId  DeskTime user ID.
      * @param  string|null  $date  Date in 'Y-m-d' format. Defaults to today.
-     * @return DesktimeAttendanceDTO Employee attendance DTO.
+     * @return DesktimeEmployeeDTO Employee attendance DTO.
      *
      * @throws ApiConnectionException If the API request fails.
      */
     public function getSingleEmployee(
         int $userId,
         ?string $date = null
-    ): DesktimeAttendanceDTO {
+    ): DesktimeEmployeeDTO {
         $date = $date ?? Carbon::today()->toDateString();
 
         $data = $this->call('/employee', [
@@ -133,10 +162,32 @@ class DesktimeApiClient implements Pingable
             'date' => $date,
         ]);
 
-        return new DesktimeAttendanceDTO(
-            $data['id'],
-            $date,
-            isset($data['desktimeTime']) ? $data['desktimeTime'] : null
+        return new DesktimeEmployeeDTO(
+            $data['id'] ?? null,
+            $data['email'] ?? null,
+            $data['name'] ?? null,
+            $data['groupId'] ?? null,
+            $data['group'] ?? null,
+            $data['profileUrl'] ?? null,
+            $data['isOnline'] ?? null,
+            $data['arrived'] === false ? null : $data['arrived'] ?? null,
+            $data['left'] === false ? null : $data['left'] ?? null,
+            $data['late'] ?? null,
+            $data['onlineTime'] ?? null,
+            $data['offlineTime'] ?? null,
+            $data['desktimeTime'] ?? null,
+            $data['atWorkTime'] ?? null,
+            $data['afterWorkTime'] ?? null,
+            $data['beforeWorkTime'] ?? null,
+            $data['productiveTime'] ?? null,
+            $data['productivity'] ?? null,
+            $data['efficiency'] ?? null,
+            $data['work_starts'] === false ? null : $data['work_starts'] ?? null,
+            $data['work_ends'] === false ? null : $data['work_ends'] ?? null,
+            $data['notes'] ?? null,
+            $data['activeProject'] ?? null,
+            $data['apps'] ?? null,
+            $data['projects'] ?? null
         );
     }
 
@@ -179,5 +230,58 @@ class DesktimeApiClient implements Pingable
                 'message' => 'Failed to connect to DeskTime API: '.$e->getMessage(),
             ];
         }
+    }
+
+    /**
+     * Retrieves all attendance records for all employees for a specific date.
+     *
+     * @param  string  $date  Date in 'Y-m-d' format.
+     * @return Collection<int, DesktimeAttendanceDTO> Collection keyed by user ID.
+     */
+    public function getAllAttendanceForDate(string $date): Collection
+    {
+        $data = $this->call('/employees', [
+            'date' => $date,
+            'period' => 'day',
+        ]);
+
+        $attendance = collect();
+        if (! isset($data['employees'][$date]) || ! is_array($data['employees'][$date])) {
+            return $attendance;
+        }
+
+        foreach ($data['employees'][$date] as $user) {
+            $dto = new DesktimeAttendanceDTO(
+                $user['id'] ?? null,
+                $user['name'] ?? null,
+                $user['email'] ?? null,
+                $user['groupId'] ?? null,
+                $user['group'] ?? null,
+                $user['profileUrl'] ?? null,
+                $user['isOnline'] ?? null,
+                $user['arrived'] === false ? null : $user['arrived'] ?? null,
+                $user['left'] === false ? null : $user['left'] ?? null,
+                $user['late'] ?? null,
+                $user['onlineTime'] ?? null,
+                $user['offlineTime'] ?? null,
+                $user['desktimeTime'] ?? null,
+                $user['atWorkTime'] ?? null,
+                $user['afterWorkTime'] ?? null,
+                $user['beforeWorkTime'] ?? null,
+                $user['productiveTime'] ?? null,
+                $user['productivity'] ?? null,
+                $user['efficiency'] ?? null,
+                $user['work_starts'] === false ? null : $user['work_starts'] ?? null,
+                $user['work_ends'] === false ? null : $user['work_ends'] ?? null,
+                $user['notes'] ?? null,
+                $user['activeProject'] ?? null,
+                $user['apps'] ?? null,
+                $user['projects'] ?? null,
+                $date
+            );
+            $attendance[$user['id']] = $dto;
+        }
+
+        return $attendance;
     }
 }

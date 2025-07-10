@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services\Dashboard\Data;
 
-use App\DataTransferObjects\DailyScheduleData;
 use App\Exceptions\DataTransferObjectException;
 use App\Models\UserSchedule;
 use Carbon\Carbon;
@@ -23,21 +22,15 @@ class ScheduleDataProcessorService
      *
      * @param  Collection  $schedules  Collection of UserSchedule models
      * @param  string  $dateString  The date to process schedule for (Y-m-d)
-     * @return DailyScheduleData The processed schedule data
-     *
-     * @throws DataTransferObjectException If there's an error processing the schedule data
+     * @return array|null The processed schedule data as an array, or null if no schedule exists
      */
-    public function processScheduleData(Collection $schedules, string $dateString): DailyScheduleData
+    public function processScheduleData(Collection $schedules, string $dateString): ?array
     {
         try {
             $schedule = $this->findScheduleForDate($schedules, $dateString);
 
             if (! $schedule) {
-                return new DailyScheduleData(
-                    duration: '0h 0m',
-                    slots: [],
-                    scheduleName: null
-                );
+                return null;
             }
 
             $weekday = (Carbon::parse($dateString)->dayOfWeek + 6) % 7;
@@ -78,11 +71,12 @@ class ScheduleDataProcessorService
                 $slots[] = ucfirst($detail->day_period).": {$start->format('H:i')} - {$end->format('H:i')}";
             }
 
-            return new DailyScheduleData(
-                duration: CarbonInterval::minutes((int) round($totalMinutes))->cascade()->format('%hh %dm'),
-                slots: $slots,
-                scheduleName: $schedule->schedule->description ?? null
-            );
+            return [
+                'model' => $schedule,
+                'duration' => CarbonInterval::minutes((int) round($totalMinutes))->cascade()->format('%hh %dm'),
+                'slots' => $slots,
+                'scheduleName' => $schedule->schedule->description ?? null,
+            ];
         } catch (\Exception $e) {
             Log::error('Error processing schedule data', [
                 'date' => $dateString,

@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace App\Livewire;
 
-use App\DataTransferObjects\DashboardTotals;
-use App\DataTransferObjects\DeviationMetrics;
-use App\DataTransferObjects\PeriodDayData;
 use App\Models\User;
 use App\Services\Dashboard\DashboardDataAggregatorService;
 use Carbon\Carbon;
@@ -42,12 +39,12 @@ class UserTimeSheetTable extends Component
     #[Url]
     public bool $showDeviations = false;
 
-    /** @var Collection<string, PeriodDayData> */
+    /** @var Collection<string, array> */
     public Collection $periodData;
 
-    public ?DashboardTotals $dashboardTotals = null;
+    public ?array $dashboardTotals = null;
 
-    public ?DeviationMetrics $totalDeviationsDetails = null;
+    public ?array $totalDeviationsDetails = null;
 
     public function mount(User $user): void
     {

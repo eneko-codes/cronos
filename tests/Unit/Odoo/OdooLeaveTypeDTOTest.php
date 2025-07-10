@@ -23,4 +23,15 @@ describe('OdooLeaveTypeDTO', function (): void {
         expect($dto->request_unit)->toBeString()->toBe('day');
         expect($dto->unpaid)->toBeBool()->toBeFalse();
     });
+
+    it('OdooLeaveTypeDTO can be constructed with all fields null', function (): void {
+        $dto = new App\DataTransferObjects\Odoo\OdooLeaveTypeDTO;
+        expect($dto->id)->toBeNull();
+        expect($dto->name)->toBeNull();
+        expect($dto->active)->toBeNull();
+        expect($dto->allocation_type)->toBeNull();
+        expect($dto->validation_type)->toBeNull();
+        expect($dto->request_unit)->toBeNull();
+        expect($dto->unpaid)->toBeNull();
+    });
 });

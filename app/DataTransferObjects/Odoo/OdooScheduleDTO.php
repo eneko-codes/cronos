@@ -14,13 +14,13 @@ final readonly class OdooScheduleDTO
     /**
      * @param  int|null  $id  Odoo schedule/calendar ID
      * @param  string|null  $name  Schedule name
-     * @param  float|null  $hours_per_day  Number of hours per day
-     * @param  string|null  $tz  Timezone for the schedule
+     * @param  bool|null  $active  Whether the schedule is active
+     * @param  array  $attendance_ids  Array of attendance IDs
      */
     public function __construct(
         public ?int $id = null,
         public ?string $name = null,
-        public ?float $hours_per_day = null,
-        public ?string $tz = null
+        public ?bool $active = null,
+        public array $attendance_ids = []
     ) {}
 }

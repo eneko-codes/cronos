@@ -236,7 +236,7 @@ Below are the Odoo models and fields accessed by this app, with their types and 
 
 - **integer:** Numeric ID
 - **string:** Text field
-- **boolean:** true/false
+- **boolean:** true/false (Note: If `null` is received from Odoo API for boolean fields like `active`, it is interpreted as `true`.)
 - **float:** Decimal number
 - **datetime:** String in 'YYYY-MM-DD HH:MM:SS' format
 - **many2one:** Returns `[id, name]` array; use `id` for foreign key
@@ -254,6 +254,7 @@ Below are the Odoo models and fields accessed by this app, with their types and 
 - For `many2one` and `many2many`, extract the `id` (and `name` if needed for display).
 - Handle timezones and datetime strings carefully.
 - Validate all data before saving to your database.
+- Be aware that boolean fields (like `active`) may be `null` in Odoo's API response, in which case they are treated as `true`.
 - Reference the [Odoo 13 External API docs](https://www.odoo.com/documentation/13.0/developer/reference/external_api.html) for advanced usage.
 
 ---

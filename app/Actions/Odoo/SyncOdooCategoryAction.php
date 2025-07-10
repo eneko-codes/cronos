@@ -31,12 +31,12 @@ final class SyncOdooCategoryAction
     {
         $validator = Validator::make(
             [
+                'id' => $categoryDto->id,
                 'name' => $categoryDto->name,
-                'active' => $categoryDto->active,
             ],
             [
+                'id' => 'required',
                 'name' => 'required',
-                'active' => 'required',
             ]
         );
 
@@ -55,7 +55,7 @@ final class SyncOdooCategoryAction
                 ['odoo_category_id' => $categoryDto->id],
                 [
                     'name' => $categoryDto->name,
-                    'active' => $categoryDto->active,
+                    'active' => $categoryDto->active ?? true,
                 ]
             );
         });

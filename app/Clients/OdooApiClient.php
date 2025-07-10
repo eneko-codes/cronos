@@ -280,7 +280,7 @@ class OdooApiClient implements Pingable
         ])->map(fn ($item) => new OdooCategoryDTO(
             $item['id'] ?? null,
             $item['name'] ?? null,
-            $item['active'] ?? null
+            $item['active'] ?? true
         ));
     }
 

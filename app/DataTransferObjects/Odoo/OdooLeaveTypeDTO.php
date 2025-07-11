@@ -23,7 +23,7 @@ final readonly class OdooLeaveTypeDTO
     public function __construct(
         public ?int $id = null,
         public ?string $name = null,
-        public ?bool $active = null,
+        public ?bool $active = true,
         public ?string $allocation_type = null,
         public ?string $validation_type = null,
         public ?string $request_unit = null,

@@ -20,7 +20,7 @@ final readonly class OdooScheduleDTO
     public function __construct(
         public ?int $id = null,
         public ?string $name = null,
-        public ?bool $active = null,
+        public ?bool $active = true,
         public array $attendance_ids = []
     ) {}
 }

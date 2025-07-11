@@ -28,7 +28,7 @@ final readonly class OdooUserDTO
         public ?string $work_email = null,
         public ?string $name = null,
         public ?string $tz = null,
-        public ?bool $active = null,
+        public ?bool $active = true,
         public ?array $department_id = null,
         public array $category_ids = [],
         public ?array $resource_calendar_id = null,

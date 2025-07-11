@@ -55,7 +55,7 @@ final class SyncOdooDepartmentAction
                 ['odoo_department_id' => $departmentDto->id],
                 [
                     'name' => $departmentDto->name,
-                    'active' => $departmentDto->active,
+                    'active' => $departmentDto->active ?? true,
                     'odoo_manager_employee_id' => is_array($departmentDto->manager_id) ? $departmentDto->manager_id[0] ?? null : null,
                     'odoo_parent_department_id' => is_array($departmentDto->parent_id) ? $departmentDto->parent_id[0] ?? null : null,
                 ]

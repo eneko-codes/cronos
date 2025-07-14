@@ -61,8 +61,6 @@ final class SyncOdooScheduleAction
                     'active' => $scheduleDto->active ?? true,
                     'odoo_created_at' => $scheduleDto->odoo_created_at,
                     'odoo_updated_at' => $scheduleDto->odoo_updated_at,
-                    'odoo_created_by' => is_array($scheduleDto->odoo_created_by) ? ($scheduleDto->odoo_created_by[0] ?? null) : null,
-                    'odoo_last_updated_by' => is_array($scheduleDto->odoo_last_updated_by) ? ($scheduleDto->odoo_last_updated_by[0] ?? null) : null,
                 ]
             );
         });

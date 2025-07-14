@@ -6,6 +6,7 @@ namespace App\Actions\Odoo;
 
 use App\DataTransferObjects\Odoo\OdooDepartmentDTO;
 use App\Models\Department;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -56,8 +57,8 @@ final class SyncOdooDepartmentAction
                 [
                     'name' => $departmentDto->name,
                     'active' => $departmentDto->active ?? true,
-                    'odoo_manager_id' => is_array($departmentDto->manager_id) ? $departmentDto->manager_id[0] ?? null : null,
-                    'odoo_parent_department_id' => is_array($departmentDto->parent_id) ? $departmentDto->parent_id[0] ?? null : null,
+                    'odoo_manager_id' => Arr::get($departmentDto->manager_id, 0),
+                    'odoo_parent_department_id' => Arr::get($departmentDto->parent_id, 0),
                 ]
             );
         });

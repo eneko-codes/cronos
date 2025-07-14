@@ -7,10 +7,10 @@ namespace App\Actions\Odoo;
 use App\DataTransferObjects\Odoo\OdooScheduleDetailDTO;
 use App\Models\ScheduleDetail;
 use Carbon\Carbon;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
 
 /**
  * Action to synchronize a single Odoo schedule detail (resource.calendar.attendance)
@@ -67,11 +67,11 @@ final class SyncOdooScheduleDetailAction
             ScheduleDetail::updateOrCreate(
                 [
                     'odoo_detail_id' => $scheduleDetailDto->id,
-                    'odoo_schedule_id' => is_array($scheduleDetailDto->calendar_id) ? ($scheduleDetailDto->calendar_id[0] ?? null) : null,
+                    'odoo_schedule_id' => Arr::get($scheduleDetailDto->calendar_id, 0),
                 ],
                 [
-                    'weekday' => isset($scheduleDetailDto->dayofweek) ? (int) $scheduleDetailDto->dayofweek : null,
-                    'day_period' => Str::lower($scheduleDetailDto->day_period ?? 'morning'),
+                    'weekday' => $scheduleDetailDto->dayofweek !== null ? (int) $scheduleDetailDto->dayofweek : null,
+                    'day_period' => $scheduleDetailDto->day_period,
                     'week_type' => $scheduleDetailDto->week_type ?? 0,
                     'date_from' => $scheduleDetailDto->date_from,
                     'date_to' => $scheduleDetailDto->date_to,
@@ -79,10 +79,8 @@ final class SyncOdooScheduleDetailAction
                     'end' => $end,
                     'odoo_created_at' => $scheduleDetailDto->create_date,
                     'odoo_updated_at' => $scheduleDetailDto->write_date,
-                    'odoo_created_by' => is_array($scheduleDetailDto->create_uid) ? ($scheduleDetailDto->create_uid[0] ?? null) : null,
-                    'odoo_last_updated_by' => is_array($scheduleDetailDto->write_uid) ? ($scheduleDetailDto->write_uid[0] ?? null) : null,
                     'name' => $scheduleDetailDto->name,
-                    'active' => $scheduleDetailDto->active !== null ? (bool) $scheduleDetailDto->active : true,
+                    'active' => (bool) ($scheduleDetailDto->active ?? true),
                 ]
             );
         });

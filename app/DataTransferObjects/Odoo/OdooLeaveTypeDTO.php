@@ -18,8 +18,6 @@ final readonly class OdooLeaveTypeDTO
      * @param  bool|null  $active  If leave type is active
      * @param  string|null  $create_date  Creation timestamp (UTC)
      * @param  string|null  $write_date  Last modification timestamp (UTC)
-     * @param  array|null  $create_uid  User who created the record (Many2one)
-     * @param  array|null  $write_uid  Last user to modify (Many2one)
      */
     public function __construct(
         public ?int $id = null,
@@ -27,8 +25,6 @@ final readonly class OdooLeaveTypeDTO
         public ?string $request_unit = null,
         public ?bool $active = null,
         public ?string $create_date = null,
-        public ?string $write_date = null,
-        public ?array $create_uid = null,
-        public ?array $write_uid = null
+        public ?string $write_date = null
     ) {}
 }

@@ -25,8 +25,6 @@ final readonly class OdooScheduleDetailDTO
      * @param  bool|null  $active  Whether the schedule detail is active (from Odoo)
      * @param  string|null  $create_date  Creation date of the record in Odoo (UTC datetime string).
      * @param  string|null  $write_date  Last write date of the record in Odoo (UTC datetime string).
-     * @param  array|null  $create_uid  Creator as [id, name] or null
-     * @param  array|null  $write_uid  Last updater as [id, name] or null
      */
     public function __construct(
         public ?int $id = null,
@@ -42,7 +40,5 @@ final readonly class OdooScheduleDetailDTO
         public ?bool $active = null,
         public ?string $create_date = null,
         public ?string $write_date = null,
-        public ?array $create_uid = null,
-        public ?array $write_uid = null,
     ) {}
 }

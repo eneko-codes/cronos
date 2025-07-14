@@ -12,8 +12,9 @@ use App\Jobs\Sync\Desktime\SyncDesktimeAttendances;
 use App\Jobs\Sync\Desktime\SyncDesktimeUsers;
 use App\Jobs\Sync\Odoo\SyncOdooCategoriesJob;
 use App\Jobs\Sync\Odoo\SyncOdooDepartmentsJob;
-use App\Jobs\Sync\Odoo\SyncOdooLeaves;
+use App\Jobs\Sync\Odoo\SyncOdooLeavesJob;
 use App\Jobs\Sync\Odoo\SyncOdooLeaveTypesJob;
+use App\Jobs\Sync\Odoo\SyncOdooScheduleDetailsJob;
 use App\Jobs\Sync\Odoo\SyncOdooSchedulesJob;
 use App\Jobs\Sync\Odoo\SyncOdooUsers;
 use App\Jobs\Sync\Proofhub\SyncProofhubProjects;
@@ -57,9 +58,10 @@ class DispatchSyncBatchAction
             new SyncOdooDepartmentsJob($odooApi->getDepartments()),
             new SyncOdooCategoriesJob($odooApi->getCategories()),
             new SyncOdooLeaveTypesJob($odooApi->getLeaveTypes()),
+            new SyncOdooSchedulesJob($odooApi->getSchedules()),
+            new SyncOdooScheduleDetailsJob($odooApi->getScheduleDetails()),
             new SyncOdooUsers($odooApi),
-            new SyncOdooSchedulesJob($odooApi->getSchedules(), $odooApi->getScheduleDetails()),
-            new SyncOdooLeaves($odooApi, $fromDate, $toDate),
+            new SyncOdooLeavesJob($odooApi->getLeaves($fromDate, $toDate)),
         ];
 
         $proofhubChain = [

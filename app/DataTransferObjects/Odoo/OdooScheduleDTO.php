@@ -22,8 +22,6 @@ final readonly class OdooScheduleDTO
      * @param  bool|null  $flexible_hours  Whether the calendar allows flexible start/end times
      * @param  string|null  $odoo_created_at  Creation date of the record in Odoo (UTC datetime string).
      * @param  string|null  $odoo_updated_at  Last write date of the record in Odoo (UTC datetime string).
-     * @param  array|null  $odoo_created_by  Creator as [id, name] or null
-     * @param  array|null  $odoo_last_updated_by  Last updater as [id, name] or null
      */
     public function __construct(
         public ?int $id = null,
@@ -36,7 +34,5 @@ final readonly class OdooScheduleDTO
         public ?bool $flexible_hours = null,
         public ?string $odoo_created_at = null,
         public ?string $odoo_updated_at = null,
-        public ?array $odoo_created_by = null,
-        public ?array $odoo_last_updated_by = null,
     ) {}
 }

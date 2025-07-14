@@ -27,8 +27,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property bool $active Whether the schedule is active
  * @property \Carbon\Carbon|null $odoo_created_at Creation date of the record in Odoo
  * @property \Carbon\Carbon|null $odoo_updated_at Last update date of the record in Odoo
- * @property int|null $odoo_created_by ID of the user who created the record in Odoo
- * @property int|null $odoo_last_updated_by ID of the user who last updated the record in Odoo
  * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\ScheduleDetail[] $scheduleDetails Daily time slots in this schedule
  * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\UserSchedule[] $userSchedules User assignments to this schedule
  * @property-read int|null $schedule_details_count
@@ -44,9 +42,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Schedule whereCreatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Schedule whereDescription($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Schedule whereOdooCreatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Schedule whereOdooCreatedBy($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Schedule whereOdooLastUpdatedBy($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Schedule whereOdooScheduleId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Schedule whereOdooUpdatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Schedule whereUpdatedAt($value)
  *
@@ -101,8 +96,6 @@ class Schedule extends Model
         'flexible_hours',
         'odoo_created_at',
         'odoo_updated_at',
-        'odoo_created_by',
-        'odoo_last_updated_by',
         'active',
     ];
 
@@ -118,8 +111,6 @@ class Schedule extends Model
         'flexible_hours' => 'boolean',
         'odoo_created_at' => 'datetime',
         'odoo_updated_at' => 'datetime',
-        'odoo_created_by' => 'integer',
-        'odoo_last_updated_by' => 'integer',
         'active' => 'boolean',
     ];
 
@@ -153,21 +144,5 @@ class Schedule extends Model
             'odoo_schedule_id',
             'odoo_schedule_id'
         );
-    }
-
-    /**
-     * Get the local user who created this schedule (via Odoo user ID).
-     */
-    public function createdByUser()
-    {
-        return $this->belongsTo(User::class, 'odoo_created_by', 'odoo_id');
-    }
-
-    /**
-     * Get the local user who last updated this schedule (via Odoo user ID).
-     */
-    public function lastUpdatedByUser()
-    {
-        return $this->belongsTo(User::class, 'odoo_last_updated_by', 'odoo_id');
     }
 }

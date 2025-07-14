@@ -15,8 +15,6 @@ describe('OdooScheduleDTO', function (): void {
             flexible_hours: false,
             odoo_created_at: '2024-01-01T00:00:00Z',
             odoo_updated_at: '2024-01-02T00:00:00Z',
-            odoo_created_by: [42, 'Admin'],
-            odoo_last_updated_by: [43, 'User'],
         );
         expect($dto->id)->toBeInt()->toBe(1);
         expect($dto->description)->toBeString()->toBe('Test Schedule');
@@ -28,8 +26,6 @@ describe('OdooScheduleDTO', function (): void {
         expect($dto->flexible_hours)->toBeFalse();
         expect($dto->odoo_created_at)->toBeString()->toBe('2024-01-01T00:00:00Z');
         expect($dto->odoo_updated_at)->toBeString()->toBe('2024-01-02T00:00:00Z');
-        expect($dto->odoo_created_by)->toBeArray()->toBe([42, 'Admin']);
-        expect($dto->odoo_last_updated_by)->toBeArray()->toBe([43, 'User']);
     });
 
     it('OdooScheduleDTO can be constructed with all fields null', function (): void {
@@ -44,7 +40,5 @@ describe('OdooScheduleDTO', function (): void {
         expect($dto->flexible_hours)->toBeNull();
         expect($dto->odoo_created_at)->toBeNull();
         expect($dto->odoo_updated_at)->toBeNull();
-        expect($dto->odoo_created_by)->toBeNull();
-        expect($dto->odoo_last_updated_by)->toBeNull();
     });
 });

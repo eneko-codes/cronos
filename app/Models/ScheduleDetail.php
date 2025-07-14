@@ -25,8 +25,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property \Carbon\Carbon|null $odoo_created_at Creation date of the record in Odoo
  * @property \Carbon\Carbon|null $odoo_updated_at Last update date of the record in Odoo
- * @property int|null $odoo_created_by ID of the user who created the record in Odoo
- * @property int|null $odoo_last_updated_by ID of the user who last updated the record in Odoo
  * @property-read \App\Models\Schedule $schedule
  * @property bool $has_duplicates Dynamically added in ScheduleDetailView to mark duplicate entries
  * @property bool|null $active Whether the schedule detail is active (from Odoo)
@@ -43,7 +41,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail whereEnd($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail whereId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail whereOdooCreatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail whereOdooCreatedBy($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail whereOdooDetailId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail whereOdooScheduleId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail whereOdooUpdatedAt($value)
@@ -82,8 +79,6 @@ class ScheduleDetail extends Model
         'end',
         'odoo_created_at',
         'odoo_updated_at',
-        'odoo_created_by',
-        'odoo_last_updated_by',
         'name',
         'active',
     ];
@@ -102,8 +97,6 @@ class ScheduleDetail extends Model
         'end' => 'datetime:H:i:s',
         'odoo_created_at' => 'datetime',
         'odoo_updated_at' => 'datetime',
-        'odoo_created_by' => 'integer',
-        'odoo_last_updated_by' => 'integer',
         'active' => 'boolean',
     ];
 
@@ -117,21 +110,5 @@ class ScheduleDetail extends Model
             'odoo_schedule_id',
             'odoo_schedule_id'
         );
-    }
-
-    /**
-     * Get the local user who created this schedule detail (via Odoo user ID).
-     */
-    public function createdByUser()
-    {
-        return $this->belongsTo(User::class, 'odoo_created_by', 'odoo_id');
-    }
-
-    /**
-     * Get the local user who last updated this schedule detail (via Odoo user ID).
-     */
-    public function lastUpdatedByUser()
-    {
-        return $this->belongsTo(User::class, 'odoo_last_updated_by', 'odoo_id');
     }
 }

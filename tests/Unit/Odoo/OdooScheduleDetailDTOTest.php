@@ -18,8 +18,6 @@ describe('OdooScheduleDetailDTO', function (): void {
             active: true,
             create_date: '2024-01-01T09:00:00Z',
             write_date: '2024-01-10T09:00:00Z',
-            create_uid: [1, 'Admin'],
-            write_uid: [2, 'User'],
         );
         expect($dto->id)->toBeInt()->toBe(60);
         expect($dto->calendar_id)->toBeArray()->toBe([61, 'Standard 40h']);
@@ -34,8 +32,6 @@ describe('OdooScheduleDetailDTO', function (): void {
         expect($dto->active)->toBeTrue();
         expect($dto->create_date)->toBeString()->toBe('2024-01-01T09:00:00Z');
         expect($dto->write_date)->toBeString()->toBe('2024-01-10T09:00:00Z');
-        expect($dto->create_uid)->toBeArray()->toBe([1, 'Admin']);
-        expect($dto->write_uid)->toBeArray()->toBe([2, 'User']);
     });
 
     it('OdooScheduleDetailDTO can be constructed with all fields null', function (): void {
@@ -53,7 +49,5 @@ describe('OdooScheduleDetailDTO', function (): void {
         expect($dto->active)->toBeNull();
         expect($dto->create_date)->toBeNull();
         expect($dto->write_date)->toBeNull();
-        expect($dto->create_uid)->toBeNull();
-        expect($dto->write_uid)->toBeNull();
     });
 });

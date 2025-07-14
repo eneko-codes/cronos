@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use App\Clients\OdooApiClient;
 use App\DataTransferObjects\Odoo\OdooScheduleDetailDTO;
 use App\DataTransferObjects\Odoo\OdooScheduleDTO;
+use App\Jobs\Sync\Odoo\SyncOdooScheduleDetailsJob;
 use App\Jobs\Sync\Odoo\SyncOdooSchedulesJob;
 use App\Models\Schedule;
 use App\Models\ScheduleDetail;
@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 
 // Professional, robust feature test for Odoo schedule sync
 
-describe('SyncOdooSchedulesJob', function (): void {
+describe('Odoo Schedule Sync Jobs', function (): void {
     beforeEach(function (): void {
         DB::beginTransaction();
     });
@@ -33,8 +33,6 @@ describe('SyncOdooSchedulesJob', function (): void {
             flexible_hours: false,
             odoo_created_at: '2024-01-01T08:00:00Z',
             odoo_updated_at: '2024-01-02T08:00:00Z',
-            odoo_created_by: [1, 'Admin'],
-            odoo_last_updated_by: [2, 'Updater'],
         );
         $detailDto = new OdooScheduleDetailDTO(
             id: 200,
@@ -50,16 +48,13 @@ describe('SyncOdooSchedulesJob', function (): void {
             active: true,
             create_date: '2024-01-01T08:00:00Z',
             write_date: '2024-01-02T08:00:00Z',
-            create_uid: [1, 'Admin'],
-            write_uid: [2, 'Updater'],
         );
-        $mockOdoo = Mockery::mock(OdooApiClient::class);
-        $mockOdoo->shouldReceive('getSchedules')->once()->andReturn(collect([$scheduleDto]));
-        $mockOdoo->shouldReceive('getScheduleDetails')->once()->andReturn(collect([$detailDto]));
 
         // Act
-        $job = new SyncOdooSchedulesJob($mockOdoo->getSchedules(), $mockOdoo->getScheduleDetails());
-        $job->handle();
+        $scheduleJob = new SyncOdooSchedulesJob(collect([$scheduleDto]));
+        $scheduleJob->handle();
+        $detailJob = new SyncOdooScheduleDetailsJob(collect([$detailDto]));
+        $detailJob->handle();
 
         // Assert
         $schedule = Schedule::where('odoo_schedule_id', 100)->first();
@@ -107,8 +102,6 @@ describe('SyncOdooSchedulesJob', function (): void {
             flexible_hours: true,
             odoo_created_at: '2024-02-01T08:00:00Z',
             odoo_updated_at: '2024-02-02T08:00:00Z',
-            odoo_created_by: [3, 'Creator'],
-            odoo_last_updated_by: [4, 'Updater'],
         );
         $detailDto = new OdooScheduleDetailDTO(
             id: 201,
@@ -124,16 +117,13 @@ describe('SyncOdooSchedulesJob', function (): void {
             active: false,
             create_date: '2024-02-01T08:00:00Z',
             write_date: '2024-02-02T08:00:00Z',
-            create_uid: [3, 'Creator'],
-            write_uid: [4, 'Updater'],
         );
-        $mockOdoo = Mockery::mock(OdooApiClient::class);
-        $mockOdoo->shouldReceive('getSchedules')->once()->andReturn(collect([$scheduleDto]));
-        $mockOdoo->shouldReceive('getScheduleDetails')->once()->andReturn(collect([$detailDto]));
 
         // Act
-        $job = new SyncOdooSchedulesJob($mockOdoo->getSchedules(), $mockOdoo->getScheduleDetails());
-        $job->handle();
+        $scheduleJob = new SyncOdooSchedulesJob(collect([$scheduleDto]));
+        $scheduleJob->handle();
+        $detailJob = new SyncOdooScheduleDetailsJob(collect([$detailDto]));
+        $detailJob->handle();
 
         // Assert
         $schedule->refresh();

@@ -19,18 +19,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property bool $active
  * @property string|null $odoo_created_at
  * @property string|null $odoo_updated_at
- * @property int|null $odoo_created_by
- * @property int|null $odoo_updated_by
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property bool $limit
  * @property bool $is_unpaid
  * @property string|null $create_date
  * @property string|null $write_date
- * @property int|null $create_uid
- * @property int|null $write_uid
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\UserLeave> $leaves
- * @property-read int|null $leaves_count
  *
  * @method static \Database\Factories\LeaveTypeFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|LeaveType newModelQuery()
@@ -91,8 +85,6 @@ class LeaveType extends Model
         'active',
         'odoo_created_at',
         'odoo_updated_at',
-        'odoo_created_by',
-        'odoo_updated_by',
     ];
 
     /**
@@ -105,8 +97,6 @@ class LeaveType extends Model
         'name' => 'string',
         'request_unit' => 'string',
         'active' => 'boolean',
-        'odoo_created_by' => 'integer',
-        'odoo_updated_by' => 'integer',
     ];
 
     /**

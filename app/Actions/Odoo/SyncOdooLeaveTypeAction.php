@@ -60,8 +60,6 @@ final class SyncOdooLeaveTypeAction
                     'active' => $leaveTypeDto->active ?? false,
                     'odoo_created_at' => $leaveTypeDto->create_date,
                     'odoo_updated_at' => $leaveTypeDto->write_date,
-                    'odoo_created_by' => is_array($leaveTypeDto->create_uid) ? ($leaveTypeDto->create_uid[0] ?? null) : null,
-                    'odoo_updated_by' => is_array($leaveTypeDto->write_uid) ? ($leaveTypeDto->write_uid[0] ?? null) : null,
                 ]
             );
         });

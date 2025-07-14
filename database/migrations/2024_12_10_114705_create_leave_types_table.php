@@ -14,8 +14,6 @@ class CreateLeaveTypesTable extends Migration
             $table->string('name');
             $table->string('request_unit')->nullable()->comment('Odoo request unit (e.g., day, half_day, hour)');
             $table->boolean('active')->default(true);
-            $table->unsignedBigInteger('odoo_created_by')->nullable();
-            $table->unsignedBigInteger('odoo_updated_by')->nullable();
             $table->string('odoo_created_at')->nullable();
             $table->string('odoo_updated_at')->nullable();
             $table->timestamps();

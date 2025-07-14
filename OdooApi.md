@@ -187,6 +187,14 @@ Below are the Odoo models and fields accessed by this app, with their types and 
   - `name` (string)
   - `active` (boolean)
   - `attendance_ids` (one2many → resource.calendar.attendance, returns list of IDs)
+  - `hours_per_day` (float)
+  - `two_weeks_calendar` (boolean)
+  - `two_weeks_explanation` (string)
+  - `flexible_hours` (boolean)
+  - `create_date` (datetime string)
+  - `write_date` (datetime string)
+  - `create_uid` (many2one → res.users, returns [id, name])
+  - `write_uid` (many2one → res.users, returns [id, name])
 
 **Example Response:**
 
@@ -195,23 +203,63 @@ Below are the Odoo models and fields accessed by this app, with their types and 
   "id": 1,
   "name": "Standard 40h",
   "active": true,
-  "attendance_ids": [1, 2, 3]
+  "attendance_ids": [1, 2, 3],
+  "hours_per_day": 8.0,
+  "two_weeks_calendar": false,
+  "two_weeks_explanation": null,
+  "flexible_hours": false,
+  "create_date": "2024-01-01 09:00:00",
+  "write_date": "2024-01-10 09:00:00",
+  "create_uid": [1, "Admin"],
+  "write_uid": [1, "Admin"]
 }
 ```
-
-- **Field Types:**
-  - `attendance_ids`: array of int
 
 ### 3.7. `resource.calendar.attendance` (Schedule Detail)
 
 - **Fields used:**
   - `id` (integer)
-  - `calendar_id` (many2one → resource.calendar, returns `[id, name]`)
+  - `calendar_id` (many2one → resource.calendar, returns [id, name])
   - `name` (string)
   - `dayofweek` (selection: '0'-'6')
   - `hour_from` (float)
   - `hour_to` (float)
   - `day_period` (string)
+  - `week_type` (integer)
+  - `date_from` (date)
+  - `date_to` (date)
+  - `display_type` (string)
+  - `resource_id` (many2one → resource.resource, returns [id, name])
+  - `active` (boolean)
+  - `create_date` (datetime string)
+  - `write_date` (datetime string)
+  - `create_uid` (many2one → res.users, returns [id, name])
+  - `write_uid` (many2one → res.users, returns [id, name])
+
+> **About `week_type`:**
+>
+> - The `week_type` field is used for bi-weekly (two-week) work schedules.
+> - **Values:**
+>   - `0`: Applies to both weeks (default; slot is present every week)
+>   - `1`: Applies to week 1 (odd weeks only)
+>   - `2`: Applies to week 2 (even weeks only)
+>
+> **Examples:**
+>
+> - Standard weekly slot (every Monday):
+>   ```json
+>   { "dayofweek": "0", "hour_from": 9.0, "hour_to": 13.0, "week_type": 0 }
+>   ```
+> - Bi-weekly slot, week 1 only:
+>   ```json
+>   { "dayofweek": "0", "hour_from": 9.0, "hour_to": 13.0, "week_type": 1 }
+>   ```
+> - Bi-weekly slot, week 2 only:
+>   ```json
+>   { "dayofweek": "4", "hour_from": 14.0, "hour_to": 18.0, "week_type": 2 }
+>   ```
+>
+> If you do not use bi-weekly schedules, this field will always be `0`.
 
 **Example Response:**
 
@@ -223,7 +271,17 @@ Below are the Odoo models and fields accessed by this app, with their types and 
   "dayofweek": "0",
   "hour_from": 9.0,
   "hour_to": 13.0,
-  "day_period": "morning"
+  "day_period": "morning",
+  "week_type": 0,
+  "date_from": "2024-01-01",
+  "date_to": "2024-06-30",
+  "display_type": null,
+  "resource_id": null,
+  "active": true,
+  "create_date": "2024-01-01 09:00:00",
+  "write_date": "2024-01-10 09:00:00",
+  "create_uid": [1, "Admin"],
+  "write_uid": [1, "Admin"]
 }
 ```
 

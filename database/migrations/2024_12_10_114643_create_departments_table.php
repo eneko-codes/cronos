@@ -16,8 +16,8 @@ class CreateDepartmentsTable extends Migration
             $table->unsignedBigInteger('odoo_department_id')->primary();
             $table->string('name');
             $table->boolean('active')->default(true);
-            $table->unsignedBigInteger('odoo_manager_employee_id')->nullable()->after('active')->comment('Odoo ID of the manager employee');
-            $table->unsignedBigInteger('odoo_parent_department_id')->nullable()->after('odoo_manager_employee_id')->comment('Odoo ID of the parent department');
+            $table->unsignedBigInteger('odoo_manager_id')->nullable()->comment('Odoo ID of the manager employee');
+            $table->unsignedBigInteger('odoo_parent_department_id')->nullable()->comment('Odoo ID of the parent department');
             $table->timestamps();
         });
     }

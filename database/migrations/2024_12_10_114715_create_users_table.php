@@ -23,9 +23,9 @@ class CreateUsersTable extends Migration
             $table->string('user_type')->default(RoleType::User->value);
             $table->boolean('do_not_track')->default(false);
             $table->boolean('muted_notifications')->default(false);
-            $table->boolean('is_active')->default(true)->after('muted_notifications')->comment('Reflects the active status from Odoo');
-            $table->string('job_title')->nullable()->after('department_id');
-            $table->unsignedBigInteger('odoo_manager_id')->nullable()->after('job_title');
+            $table->boolean('is_active')->default(true)->comment('Reflects the active status from Odoo');
+            $table->string('job_title')->nullable();
+            $table->unsignedBigInteger('odoo_manager_id')->nullable();
             $table->rememberToken()->nullable();
 
             $table

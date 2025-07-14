@@ -52,23 +52,16 @@ final class SyncOdooLeaveTypeAction
         }
 
         DB::transaction(function () use ($leaveTypeDto): void {
-            // Map allocation_type to requires_allocation for compatibility if needed
-            $requiresAllocation = match ($leaveTypeDto->allocation_type ?? 'no') {
-                'fixed_allocation', 'fixed' => true,
-                default => false,
-            };
-
-            // Create or update the leave type record
             LeaveType::updateOrCreate(
                 ['odoo_leave_type_id' => $leaveTypeDto->id],
                 [
                     'name' => $leaveTypeDto->name,
-                    'validation_type' => $leaveTypeDto->validation_type ?? null,
-                    'request_unit' => $leaveTypeDto->request_unit ?? null,
-                    'limit' => false,
-                    'requires_allocation' => $requiresAllocation,
-                    'active' => $leaveTypeDto->active ?? true,
-                    'is_unpaid' => $leaveTypeDto->unpaid ?? false,
+                    'request_unit' => $leaveTypeDto->request_unit,
+                    'active' => $leaveTypeDto->active ?? false,
+                    'odoo_created_at' => $leaveTypeDto->create_date,
+                    'odoo_updated_at' => $leaveTypeDto->write_date,
+                    'odoo_created_by' => is_array($leaveTypeDto->create_uid) ? ($leaveTypeDto->create_uid[0] ?? null) : null,
+                    'odoo_updated_by' => is_array($leaveTypeDto->write_uid) ? ($leaveTypeDto->write_uid[0] ?? null) : null,
                 ]
             );
         });

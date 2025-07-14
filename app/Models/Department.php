@@ -6,6 +6,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -21,7 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property \Carbon\Carbon|null $created_at When record was created locally
  * @property \Carbon\Carbon|null $updated_at When record was last updated locally
  * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\User[] $users Employees in this department
- * @property int|null $odoo_manager_employee_id
+ * @property int|null $odoo_manager_id
  * @property int|null $odoo_parent_department_id
  * @property-read int|null $users_count
  *
@@ -89,7 +90,7 @@ class Department extends Model
         'odoo_department_id',
         'name',
         'active',
-        'odoo_manager_employee_id',
+        'odoo_manager_id',
         'odoo_parent_department_id',
     ];
 
@@ -101,7 +102,7 @@ class Department extends Model
     protected $casts = [
         'odoo_department_id' => 'integer',
         'active' => 'boolean',
-        'odoo_manager_employee_id' => 'integer',
+        'odoo_manager_id' => 'integer',
         'odoo_parent_department_id' => 'integer',
     ];
 
@@ -115,5 +116,13 @@ class Department extends Model
     public function users(): HasMany
     {
         return $this->hasMany(User::class, 'department_id', 'odoo_department_id');
+    }
+
+    /**
+     * Get the manager (User) for the department via odoo_manager_id.
+     */
+    public function manager(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'odoo_manager_id', 'odoo_id');
     }
 }

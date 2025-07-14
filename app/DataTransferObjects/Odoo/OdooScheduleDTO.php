@@ -13,14 +13,30 @@ final readonly class OdooScheduleDTO
 {
     /**
      * @param  int|null  $id  Odoo schedule/calendar ID
-     * @param  string|null  $name  Schedule name
+     * @param  string|null  $description  Schedule description
      * @param  bool|null  $active  Whether the schedule is active
-     * @param  array  $attendance_ids  Array of attendance IDs
+     * @param  array  $attendance_ids  Array of attendance IDs (raw from Odoo)
+     * @param  float|null  $hours_per_day  Average working hours per day (from Odoo)
+     * @param  bool|null  $two_weeks_calendar  Indicates if the calendar has a bi-weekly rotation
+     * @param  string|null  $two_weeks_explanation  Human-readable explanation of the two-week rotation
+     * @param  bool|null  $flexible_hours  Whether the calendar allows flexible start/end times
+     * @param  string|null  $odoo_created_at  Creation date of the record in Odoo (UTC datetime string).
+     * @param  string|null  $odoo_updated_at  Last write date of the record in Odoo (UTC datetime string).
+     * @param  array|null  $odoo_created_by  Creator as [id, name] or null
+     * @param  array|null  $odoo_last_updated_by  Last updater as [id, name] or null
      */
     public function __construct(
         public ?int $id = null,
-        public ?string $name = null,
-        public ?bool $active = true,
-        public array $attendance_ids = []
+        public ?string $description = null,
+        public ?bool $active = null,
+        public array $attendance_ids = [],
+        public ?float $hours_per_day = null,
+        public ?bool $two_weeks_calendar = null,
+        public ?string $two_weeks_explanation = null,
+        public ?bool $flexible_hours = null,
+        public ?string $odoo_created_at = null,
+        public ?string $odoo_updated_at = null,
+        public ?array $odoo_created_by = null,
+        public ?array $odoo_last_updated_by = null,
     ) {}
 }

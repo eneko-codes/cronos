@@ -2,27 +2,49 @@
 
 declare(strict_types=1);
 
-use App\DataTransferObjects\Odoo\OdooScheduleDTO;
-
 describe('OdooScheduleDTO', function (): void {
-    it('constructs OdooScheduleDTO with correct types and defaults', function (): void {
-        $dto = new OdooScheduleDTO(
-            id: 50,
-            name: 'Standard',
+    it('constructs OdooScheduleDTO with correct types and all fields', function (): void {
+        $dto = new App\DataTransferObjects\Odoo\OdooScheduleDTO(
+            id: 1,
+            description: 'Test Schedule',
             active: true,
-            attendance_ids: [1, 2, 3]
+            attendance_ids: [1, 2, 3],
+            hours_per_day: 8.0,
+            two_weeks_calendar: true,
+            two_weeks_explanation: 'Odd/Even weeks',
+            flexible_hours: false,
+            odoo_created_at: '2024-01-01T00:00:00Z',
+            odoo_updated_at: '2024-01-02T00:00:00Z',
+            odoo_created_by: [42, 'Admin'],
+            odoo_last_updated_by: [43, 'User'],
         );
-        expect($dto->id)->toBeInt()->toBe(50);
-        expect($dto->name)->toBeString()->toBe('Standard');
+        expect($dto->id)->toBeInt()->toBe(1);
+        expect($dto->description)->toBeString()->toBe('Test Schedule');
         expect($dto->active)->toBeTrue();
         expect($dto->attendance_ids)->toBeArray()->toBe([1, 2, 3]);
+        expect($dto->hours_per_day)->toBeFloat()->toBe(8.0);
+        expect($dto->two_weeks_calendar)->toBeTrue();
+        expect($dto->two_weeks_explanation)->toBeString()->toBe('Odd/Even weeks');
+        expect($dto->flexible_hours)->toBeFalse();
+        expect($dto->odoo_created_at)->toBeString()->toBe('2024-01-01T00:00:00Z');
+        expect($dto->odoo_updated_at)->toBeString()->toBe('2024-01-02T00:00:00Z');
+        expect($dto->odoo_created_by)->toBeArray()->toBe([42, 'Admin']);
+        expect($dto->odoo_last_updated_by)->toBeArray()->toBe([43, 'User']);
     });
 
     it('OdooScheduleDTO can be constructed with all fields null', function (): void {
-        $dto = new OdooScheduleDTO;
+        $dto = new App\DataTransferObjects\Odoo\OdooScheduleDTO;
         expect($dto->id)->toBeNull();
-        expect($dto->name)->toBeNull();
-        expect($dto->active)->toBeNull();
+        expect($dto->description)->toBeNull();
+        expect($dto->active)->toBeTrue(); // default is true
         expect($dto->attendance_ids)->toBeArray()->toBe([]);
+        expect($dto->hours_per_day)->toBeNull();
+        expect($dto->two_weeks_calendar)->toBeNull();
+        expect($dto->two_weeks_explanation)->toBeNull();
+        expect($dto->flexible_hours)->toBeNull();
+        expect($dto->odoo_created_at)->toBeNull();
+        expect($dto->odoo_updated_at)->toBeNull();
+        expect($dto->odoo_created_by)->toBeNull();
+        expect($dto->odoo_last_updated_by)->toBeNull();
     });
 });

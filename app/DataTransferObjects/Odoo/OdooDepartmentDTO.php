@@ -22,7 +22,7 @@ final readonly class OdooDepartmentDTO
     public function __construct(
         public ?int $id = null,
         public ?string $name = null,
-        public ?bool $active = true,
+        public ?bool $active = null,
         public ?array $manager_id = null,
         public ?array $parent_id = null
     ) {}

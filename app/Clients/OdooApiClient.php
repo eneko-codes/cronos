@@ -17,6 +17,7 @@ use App\Exceptions\ApiRequestException;
 use App\Exceptions\ApiResponseException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -225,16 +226,16 @@ class OdooApiClient implements Pingable
             'job_title',
             'parent_id',
         ])->map(fn ($item) => new OdooUserDTO(
-            $item['id'] ?? null,
-            $item['work_email'] ?? null,
-            $item['name'] ?? null,
-            $item['tz'] ?? null,
-            $item['active'] ?? null,
-            ($item['department_id'] === false ? null : $item['department_id']),
-            $item['category_ids'] ?? [],
-            ($item['resource_calendar_id'] === false ? null : $item['resource_calendar_id']),
-            $item['job_title'] === false ? null : $item['job_title'],
-            ($item['parent_id'] === false ? null : $item['parent_id'])
+            Arr::get($item, 'id', null),
+            Arr::get($item, 'work_email', null) !== false ? Arr::get($item, 'work_email', null) : null,
+            Arr::get($item, 'name', null) !== false ? Arr::get($item, 'name', null) : null,
+            Arr::get($item, 'tz', null) !== false ? Arr::get($item, 'tz', null) : null,
+            Arr::get($item, 'active', null),
+            Arr::get($item, 'department_id', null) !== false ? Arr::get($item, 'department_id', null) : null,
+            Arr::get($item, 'category_ids', null) !== false ? Arr::get($item, 'category_ids', null) : [],
+            Arr::get($item, 'resource_calendar_id', null) !== false ? Arr::get($item, 'resource_calendar_id', null) : null,
+            Arr::get($item, 'job_title', null) !== false ? Arr::get($item, 'job_title', null) : null,
+            Arr::get($item, 'parent_id', null) !== false ? Arr::get($item, 'parent_id', null) : null
         ));
     }
 
@@ -255,11 +256,11 @@ class OdooApiClient implements Pingable
             'manager_id',
             'parent_id',
         ])->map(fn ($item) => new OdooDepartmentDTO(
-            $item['id'] ?? null,
-            $item['name'] ?? null,
-            $item['active'] ?? null,
-            is_array($item['manager_id'] ?? null) ? $item['manager_id'] : null,
-            is_array($item['parent_id'] ?? null) ? $item['parent_id'] : null
+            Arr::get($item, 'id', null),
+            Arr::get($item, 'name', null) !== false ? Arr::get($item, 'name', null) : null,
+            Arr::get($item, 'active', null),
+            Arr::get($item, 'manager_id', null) !== false ? Arr::get($item, 'manager_id', null) : null,
+            Arr::get($item, 'parent_id', null) !== false ? Arr::get($item, 'parent_id', null) : null
         ));
     }
 
@@ -278,9 +279,9 @@ class OdooApiClient implements Pingable
             'name',
             'active',
         ])->map(fn ($item) => new OdooCategoryDTO(
-            $item['id'] ?? null,
-            $item['name'] ?? null,
-            $item['active'] ?? true
+            Arr::get($item, 'id', null),
+            Arr::get($item, 'name', null) !== false ? Arr::get($item, 'name', null) : null,
+            Arr::get($item, 'active', null)
         ));
     }
 
@@ -297,15 +298,21 @@ class OdooApiClient implements Pingable
         return $this->searchRead('hr.leave.type', $domain, [
             'id',
             'name',
+            'request_unit',
             'active',
-            'allocation_type',
-            'validation_type',
+            'create_date',
+            'write_date',
+            'create_uid',
+            'write_uid',
         ])->map(fn ($item) => new OdooLeaveTypeDTO(
-            $item['id'] ?? null,
-            $item['name'] ?? null,
-            $item['active'] ?? null,
-            $item['allocation_type'] ?? null,
-            $item['validation_type'] ?? null
+            Arr::get($item, 'id', null),
+            Arr::get($item, 'name', null) !== false ? Arr::get($item, 'name', null) : null,
+            Arr::get($item, 'request_unit', null) !== false ? Arr::get($item, 'request_unit', null) : null,
+            Arr::get($item, 'active', null),
+            Arr::get($item, 'create_date', null) !== false ? Arr::get($item, 'create_date', null) : null,
+            Arr::get($item, 'write_date', null) !== false ? Arr::get($item, 'write_date', null) : null,
+            Arr::get($item, 'create_uid', null) !== false ? Arr::get($item, 'create_uid', null) : null,
+            Arr::get($item, 'write_uid', null) !== false ? Arr::get($item, 'write_uid', null) : null
         ));
     }
 
@@ -349,18 +356,18 @@ class OdooApiClient implements Pingable
             'request_hour_from',
             'request_hour_to',
         ])->map(fn ($item) => new OdooLeaveDTO(
-            $item['id'] ?? null,
-            $item['holiday_type'] ?? null,
-            $item['date_from'] ?? null,
-            $item['date_to'] ?? null,
-            $item['number_of_days'] ?? null,
-            $item['state'] ?? null,
-            is_array($item['holiday_status_id'] ?? null) ? $item['holiday_status_id'] : null,
-            ($item['request_hour_from'] ?? null) === false ? null : ($item['request_hour_from'] ?? null),
-            ($item['request_hour_to'] ?? null) === false ? null : ($item['request_hour_to'] ?? null),
-            is_array($item['employee_id'] ?? null) ? $item['employee_id'] : null,
-            is_array($item['category_id'] ?? null) ? $item['category_id'] : null,
-            is_array($item['department_id'] ?? null) ? $item['department_id'] : null
+            Arr::get($item, 'id', null),
+            Arr::get($item, 'holiday_type', null) !== false ? Arr::get($item, 'holiday_type', null) : null,
+            Arr::get($item, 'date_from', null) !== false ? Arr::get($item, 'date_from', null) : null,
+            Arr::get($item, 'date_to', null) !== false ? Arr::get($item, 'date_to', null) : null,
+            Arr::get($item, 'number_of_days', null) !== false ? Arr::get($item, 'number_of_days', null) : null,
+            Arr::get($item, 'state', null) !== false ? Arr::get($item, 'state', null) : null,
+            Arr::get($item, 'holiday_status_id', null) !== false ? Arr::get($item, 'holiday_status_id', null) : null,
+            Arr::get($item, 'request_hour_from', null) !== false ? Arr::get($item, 'request_hour_from', null) : null,
+            Arr::get($item, 'request_hour_to', null) !== false ? Arr::get($item, 'request_hour_to', null) : null,
+            Arr::get($item, 'employee_id', null) !== false ? Arr::get($item, 'employee_id', null) : null,
+            Arr::get($item, 'category_id', null) !== false ? Arr::get($item, 'category_id', null) : null,
+            Arr::get($item, 'department_id', null) !== false ? Arr::get($item, 'department_id', null) : null
         ));
     }
 
@@ -379,16 +386,32 @@ class OdooApiClient implements Pingable
             'name',
             'active',
             'attendance_ids',
+            'hours_per_day',
+            'two_weeks_calendar',
+            'two_weeks_explanation',
+            'flexible_hours',
+            'create_date',
+            'write_date',
+            'create_uid',
+            'write_uid',
         ])->map(fn ($item) => new OdooScheduleDTO(
-            $item['id'] ?? null,
-            $item['name'] ?? null,
-            $item['active'] ?? null,
-            $item['attendance_ids'] ?? []
+            Arr::get($item, 'id', null),
+            Arr::get($item, 'name', null) !== false ? Arr::get($item, 'name', null) : null,
+            Arr::get($item, 'active', null),
+            Arr::get($item, 'attendance_ids', null) !== false ? Arr::get($item, 'attendance_ids', null) : [],
+            Arr::get($item, 'hours_per_day', null) !== false ? Arr::get($item, 'hours_per_day', null) : null,
+            Arr::get($item, 'two_weeks_calendar', null) !== false ? Arr::get($item, 'two_weeks_calendar', null) : null,
+            Arr::get($item, 'two_weeks_explanation', null) !== false ? Arr::get($item, 'two_weeks_explanation', null) : null,
+            Arr::get($item, 'flexible_hours', null),
+            Arr::get($item, 'create_date', null) !== false ? Arr::get($item, 'create_date', null) : null,
+            Arr::get($item, 'write_date', null) !== false ? Arr::get($item, 'write_date', null) : null,
+            Arr::get($item, 'create_uid', null) !== false ? Arr::get($item, 'create_uid', null) : null,
+            Arr::get($item, 'write_uid', null) !== false ? Arr::get($item, 'write_uid', null) : null
         ));
     }
 
     /**
-     * Retrieves schedule details (attendances) from Odoo.
+     * Retrieves schedule details from Odoo.
      *
      * Maps each record to an OdooScheduleDetailDTO. Handles conversion of nested/array fields and type casting.
      *
@@ -405,14 +428,30 @@ class OdooApiClient implements Pingable
             'hour_from',
             'hour_to',
             'day_period',
+            'week_type',
+            'date_from',
+            'date_to',
+            'active',
+            'create_date',
+            'write_date',
+            'create_uid',
+            'write_uid',
         ])->map(fn ($item) => new OdooScheduleDetailDTO(
-            $item['id'] ?? null,
-            is_array($item['calendar_id'] ?? null) ? $item['calendar_id'] : null,
-            $item['name'] ?? null,
-            $item['dayofweek'] ?? null,
-            $item['hour_from'] ?? null,
-            $item['hour_to'] ?? null,
-            $item['day_period'] ?? null
+            Arr::get($item, 'id', null),
+            Arr::get($item, 'calendar_id', null) !== false ? Arr::get($item, 'calendar_id', null) : null,
+            Arr::get($item, 'name', null) !== false ? Arr::get($item, 'name', null) : null,
+            Arr::get($item, 'dayofweek', null) !== false ? Arr::get($item, 'dayofweek', null) : null,
+            Arr::get($item, 'hour_from', null) !== false ? Arr::get($item, 'hour_from', null) : null,
+            Arr::get($item, 'hour_to', null) !== false ? Arr::get($item, 'hour_to', null) : null,
+            Arr::get($item, 'day_period', null) !== false ? Arr::get($item, 'day_period', null) : null,
+            Arr::get($item, 'week_type', null) !== false ? Arr::get($item, 'week_type', null) : null,
+            Arr::get($item, 'date_from', null) !== false ? Arr::get($item, 'date_from', null) : null,
+            Arr::get($item, 'date_to', null) !== false ? Arr::get($item, 'date_to', null) : null,
+            Arr::get($item, 'active', null),
+            Arr::get($item, 'create_date', null) !== false ? Arr::get($item, 'create_date', null) : null,
+            Arr::get($item, 'write_date', null) !== false ? Arr::get($item, 'write_date', null) : null,
+            Arr::get($item, 'create_uid', null) !== false ? Arr::get($item, 'create_uid', null) : null,
+            Arr::get($item, 'write_uid', null) !== false ? Arr::get($item, 'write_uid', null) : null
         ));
     }
 

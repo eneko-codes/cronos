@@ -606,4 +606,36 @@ class User extends Authenticatable
     {
         return '';
     }
+
+    /**
+     * Get all schedules created by this user (via Odoo user ID).
+     */
+    public function createdSchedules()
+    {
+        return $this->hasMany(Schedule::class, 'odoo_created_by', 'odoo_id');
+    }
+
+    /**
+     * Get all schedules last updated by this user (via Odoo user ID).
+     */
+    public function updatedSchedules()
+    {
+        return $this->hasMany(Schedule::class, 'odoo_last_updated_by', 'odoo_id');
+    }
+
+    /**
+     * Get all schedule details created by this user (via Odoo user ID).
+     */
+    public function createdScheduleDetails()
+    {
+        return $this->hasMany(ScheduleDetail::class, 'odoo_created_by', 'odoo_id');
+    }
+
+    /**
+     * Get all schedule details last updated by this user (via Odoo user ID).
+     */
+    public function updatedScheduleDetails()
+    {
+        return $this->hasMany(ScheduleDetail::class, 'odoo_last_updated_by', 'odoo_id');
+    }
 }

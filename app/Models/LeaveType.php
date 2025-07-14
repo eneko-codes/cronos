@@ -15,14 +15,20 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  *
  * @property int $odoo_leave_type_id
  * @property string $name
- * @property bool $limit
- * @property bool $requires_allocation
+ * @property string|null $request_unit
  * @property bool $active
+ * @property string|null $odoo_created_at
+ * @property string|null $odoo_updated_at
+ * @property int|null $odoo_created_by
+ * @property int|null $odoo_updated_by
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
- * @property string|null $validation_type
- * @property string|null $request_unit
+ * @property bool $limit
  * @property bool $is_unpaid
+ * @property string|null $create_date
+ * @property string|null $write_date
+ * @property int|null $create_uid
+ * @property int|null $write_uid
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\UserLeave> $leaves
  * @property-read int|null $leaves_count
  *
@@ -37,9 +43,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|LeaveType whereName($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|LeaveType whereOdooLeaveTypeId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|LeaveType whereRequestUnit($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|LeaveType whereRequiresAllocation($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|LeaveType whereUpdatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|LeaveType whereValidationType($value)
  *
  * @mixin \Eloquent
  */
@@ -83,12 +87,12 @@ class LeaveType extends Model
     protected $fillable = [
         'odoo_leave_type_id',
         'name',
-        'validation_type',
         'request_unit',
-        'limit',
-        'requires_allocation',
         'active',
-        'is_unpaid',
+        'odoo_created_at',
+        'odoo_updated_at',
+        'odoo_created_by',
+        'odoo_updated_by',
     ];
 
     /**
@@ -98,10 +102,11 @@ class LeaveType extends Model
      */
     protected $casts = [
         'odoo_leave_type_id' => 'integer',
-        'limit' => 'boolean',
-        'requires_allocation' => 'boolean',
+        'name' => 'string',
+        'request_unit' => 'string',
         'active' => 'boolean',
-        'is_unpaid' => 'boolean',
+        'odoo_created_by' => 'integer',
+        'odoo_updated_by' => 'integer',
     ];
 
     /**

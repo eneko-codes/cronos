@@ -19,6 +19,6 @@ final readonly class OdooCategoryDTO
     public function __construct(
         public ?int $id = null,
         public ?string $name = null,
-        public ?bool $active = true
+        public ?bool $active = null
     ) {}
 }

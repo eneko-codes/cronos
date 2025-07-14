@@ -14,7 +14,7 @@ use App\Jobs\Sync\Odoo\SyncOdooCategoriesJob;
 use App\Jobs\Sync\Odoo\SyncOdooDepartmentsJob;
 use App\Jobs\Sync\Odoo\SyncOdooLeaves;
 use App\Jobs\Sync\Odoo\SyncOdooLeaveTypesJob;
-use App\Jobs\Sync\Odoo\SyncOdooSchedules;
+use App\Jobs\Sync\Odoo\SyncOdooSchedulesJob;
 use App\Jobs\Sync\Odoo\SyncOdooUsers;
 use App\Jobs\Sync\Proofhub\SyncProofhubProjects;
 use App\Jobs\Sync\Proofhub\SyncProofhubTasks;
@@ -57,8 +57,8 @@ class DispatchSyncBatchAction
             new SyncOdooDepartmentsJob($odooApi->getDepartments()),
             new SyncOdooCategoriesJob($odooApi->getCategories()),
             new SyncOdooLeaveTypesJob($odooApi->getLeaveTypes()),
-            new SyncOdooSchedules($odooApi),
             new SyncOdooUsers($odooApi),
+            new SyncOdooSchedulesJob($odooApi->getSchedules(), $odooApi->getScheduleDetails()),
             new SyncOdooLeaves($odooApi, $fromDate, $toDate),
         ];
 

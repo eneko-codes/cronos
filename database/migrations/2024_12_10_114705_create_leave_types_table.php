@@ -12,12 +12,12 @@ class CreateLeaveTypesTable extends Migration
             $table->comment('Stores the leave types fetched from Odoo using odoo_leave_type_id as primary key.');
             $table->unsignedBigInteger('odoo_leave_type_id')->primary();
             $table->string('name');
-            $table->string('validation_type')->nullable()->after('name')->comment('Odoo validation type (e.g., hr, manager, both)');
-            $table->string('request_unit')->nullable()->after('validation_type')->comment('Odoo request unit (e.g., day, half_day, hour)');
-            $table->boolean('limit')->default(false);
-            $table->boolean('requires_allocation')->default(false);
+            $table->string('request_unit')->nullable()->comment('Odoo request unit (e.g., day, half_day, hour)');
             $table->boolean('active')->default(true);
-            $table->boolean('is_unpaid')->default(false)->after('active')->comment('Whether the leave type is unpaid in Odoo');
+            $table->unsignedBigInteger('odoo_created_by')->nullable();
+            $table->unsignedBigInteger('odoo_updated_by')->nullable();
+            $table->string('odoo_created_at')->nullable();
+            $table->string('odoo_updated_at')->nullable();
             $table->timestamps();
         });
     }

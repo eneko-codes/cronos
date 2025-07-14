@@ -17,13 +17,22 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $odoo_schedule_id
  * @property int $weekday
  * @property string $day_period
+ * @property string|null $name Name/label for this schedule detail
  * @property string $start
  * @property string $end
  * @property int $odoo_detail_id
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property \Carbon\Carbon|null $odoo_created_at Creation date of the record in Odoo
+ * @property \Carbon\Carbon|null $odoo_updated_at Last update date of the record in Odoo
+ * @property int|null $odoo_created_by ID of the user who created the record in Odoo
+ * @property int|null $odoo_last_updated_by ID of the user who last updated the record in Odoo
  * @property-read \App\Models\Schedule $schedule
  * @property bool $has_duplicates Dynamically added in ScheduleDetailView to mark duplicate entries
+ * @property bool|null $active Whether the schedule detail is active (from Odoo)
+ * @property int $week_type Determines whether the attendance applies to both weeks (0), week 1 (1), or week 2 (2)
+ * @property string|null $date_from Optional start date for when the attendance is active
+ * @property string|null $date_to Optional end date for when the attendance is active
  *
  * @method static \Database\Factories\ScheduleDetailFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail newModelQuery()
@@ -33,8 +42,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail whereDayPeriod($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail whereEnd($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail whereOdooCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail whereOdooCreatedBy($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail whereOdooDetailId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail whereOdooScheduleId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail whereOdooUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail whereName($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail whereStart($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail whereUpdatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail whereWeekday($value)
@@ -62,8 +75,17 @@ class ScheduleDetail extends Model
         'odoo_detail_id',
         'weekday',
         'day_period',
+        'week_type',
+        'date_from',
+        'date_to',
         'start',
         'end',
+        'odoo_created_at',
+        'odoo_updated_at',
+        'odoo_created_by',
+        'odoo_last_updated_by',
+        'name',
+        'active',
     ];
 
     /**
@@ -73,8 +95,16 @@ class ScheduleDetail extends Model
      */
     protected $casts = [
         'weekday' => 'integer',
+        'week_type' => 'integer',
+        'date_from' => 'date',
+        'date_to' => 'date',
         'start' => 'datetime:H:i:s',
         'end' => 'datetime:H:i:s',
+        'odoo_created_at' => 'datetime',
+        'odoo_updated_at' => 'datetime',
+        'odoo_created_by' => 'integer',
+        'odoo_last_updated_by' => 'integer',
+        'active' => 'boolean',
     ];
 
     /**
@@ -87,5 +117,21 @@ class ScheduleDetail extends Model
             'odoo_schedule_id',
             'odoo_schedule_id'
         );
+    }
+
+    /**
+     * Get the local user who created this schedule detail (via Odoo user ID).
+     */
+    public function createdByUser()
+    {
+        return $this->belongsTo(User::class, 'odoo_created_by', 'odoo_id');
+    }
+
+    /**
+     * Get the local user who last updated this schedule detail (via Odoo user ID).
+     */
+    public function lastUpdatedByUser()
+    {
+        return $this->belongsTo(User::class, 'odoo_last_updated_by', 'odoo_id');
     }
 }

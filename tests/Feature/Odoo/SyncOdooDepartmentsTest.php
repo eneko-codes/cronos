@@ -34,7 +34,7 @@ describe('SyncOdooDepartments job', function (): void {
         expect($department)->not()->toBeNull();
         expect($department->name)->toBe('Engineering');
         expect($department->active)->toBeTrue();
-        expect($department->odoo_manager_employee_id)->toBe(2);
+        expect($department->odoo_manager_id)->toBe(2);
         expect($department->odoo_parent_department_id)->toBeNull();
     });
 
@@ -60,7 +60,7 @@ describe('SyncOdooDepartments job', function (): void {
         $department->refresh();
         expect($department->name)->toBe('New');
         expect($department->active)->toBeTrue();
-        expect($department->odoo_manager_employee_id)->toBe(3);
+        expect($department->odoo_manager_id)->toBe(3);
         expect($department->odoo_parent_department_id)->toBe(1);
     });
 });

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs\Sync\Desktime;
 
+use App\Actions\Desktime\CheckDesktimeHealthAction;
 use App\Clients\DesktimeApiClient;
 use App\DataTransferObjects\Desktime\DesktimeEmployeeDTO;
 use App\Jobs\Sync\BaseSyncJob;
@@ -23,6 +24,8 @@ class SyncDesktimeUsers extends BaseSyncJob
      */
     public int $priority = 1;
 
+    protected DesktimeApiClient $desktime;
+
     /**
      * Constructs a new SyncDesktimeUsers job instance.
      *
@@ -30,7 +33,6 @@ class SyncDesktimeUsers extends BaseSyncJob
      */
     public function __construct(DesktimeApiClient $desktime)
     {
-        // Assign to parent's protected $desktime
         $this->desktime = $desktime;
     }
 
@@ -39,7 +41,7 @@ class SyncDesktimeUsers extends BaseSyncJob
      *
      * Fetches users from DeskTime, updates local users with DeskTime IDs, and clears DeskTime IDs for users no longer present in DeskTime.
      */
-    protected function execute(): void
+    public function handle(): void
     {
         $stats = [
             'received' => 0,
@@ -111,5 +113,10 @@ class SyncDesktimeUsers extends BaseSyncJob
             ->update(['desktime_id' => null]);
 
         return $deleted;
+    }
+
+    public function failed(): void
+    {
+        app(CheckDesktimeHealthAction::class)($this->desktime);
     }
 }

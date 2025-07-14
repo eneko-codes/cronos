@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs\Sync\Desktime;
 
+use App\Actions\Desktime\CheckDesktimeHealthAction;
 use App\Clients\DesktimeApiClient;
 use App\Jobs\Sync\BaseSyncJob;
 use App\Models\User;
@@ -33,6 +34,8 @@ class SyncDesktimeAttendances extends BaseSyncJob
      * @var string|null Optional start date (Y-m-d).
      * @var string|null Optional end date (Y-m-d).
      */
+    protected DesktimeApiClient $desktime;
+
     private ?int $userId;
 
     private ?string $fromDate;
@@ -65,7 +68,7 @@ class SyncDesktimeAttendances extends BaseSyncJob
      *
      * @throws Exception If any part of the synchronization process fails.
      */
-    protected function execute(): void
+    public function handle(): void
     {
         $stats = [
             'received' => 0,
@@ -303,5 +306,10 @@ class SyncDesktimeAttendances extends BaseSyncJob
 
             return 'created';
         }
+    }
+
+    public function failed(): void
+    {
+        app(CheckDesktimeHealthAction::class)($this->desktime);
     }
 }

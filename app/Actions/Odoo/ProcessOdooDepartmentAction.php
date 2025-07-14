@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Validator;
  * This class encapsulates the business logic for creating or updating a department record.
  * It performs validation on the incoming DTO and ensures the database operation is atomic.
  */
-final class SyncOdooDepartmentAction
+final class ProcessOdooDepartmentAction
 {
     /**
      * Executes the synchronization logic for a single Odoo Department DTO.

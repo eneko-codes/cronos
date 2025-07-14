@@ -4,18 +4,22 @@ declare(strict_types=1);
 
 namespace App\Jobs\Sync\Odoo;
 
-use App\Actions\Odoo\SyncOdooScheduleAction;
+use App\Actions\Odoo\CheckOdooHealthAction;
+use App\Actions\Odoo\ProcessOdooScheduleAction;
+use App\Clients\OdooApiClient;
 use App\DataTransferObjects\Odoo\OdooScheduleDTO;
 use App\Jobs\Sync\BaseSyncJob;
 use Exception;
-use Illuminate\Support\Collection;
 
 /**
  * Job to synchronize Odoo schedule data (resource.calendar) with the local schedules table.
  *
- * Ensures the local schedules database reflects the current state of Odoo, including:
- * - Creating or updating schedules
- * - Logging and preserving schedules that no longer exist in Odoo
+ * This job fetches all schedules from Odoo using the provided OdooApiClient
+ * and processes each one to ensure the local database reflects the current state of Odoo.
+ *
+ * Responsibilities:
+ * - Fetch all schedules from Odoo
+ * - Create or update local schedules
  */
 class SyncOdooSchedulesJob extends BaseSyncJob
 {
@@ -24,27 +28,35 @@ class SyncOdooSchedulesJob extends BaseSyncJob
      */
     public int $priority = 2;
 
+    protected OdooApiClient $odoo;
+
     /**
-     * Constructs a new SyncOdooSchedules job instance.
+     * Constructs a new SyncOdooSchedulesJob instance.
      *
-     * @param  Collection<int, OdooScheduleDTO>  $schedules  The collection of OdooScheduleDTOs to sync.
+     * @param  OdooApiClient  $odoo  The Odoo API client to use for fetching schedules.
      */
-    public function __construct(
-        private Collection $schedules
-    ) {}
+    public function __construct(OdooApiClient $odoo)
+    {
+        $this->odoo = $odoo;
+    }
 
     /**
      * Main entry point for the job's sync logic.
      *
-     * Creates or updates local schedules based on Odoo data.
+     * Fetches schedules from Odoo and processes each one.
      *
      * @throws Exception If any part of the synchronization process fails.
      */
-    protected function execute(): void
+    public function handle(): void
     {
-        // Create or update local schedules (ensures local DB matches Odoo)
-        $this->schedules->each(function (OdooScheduleDTO $schedulesDto): void {
-            (new SyncOdooScheduleAction)->execute($schedulesDto);
+        $schedules = $this->odoo->getSchedules();
+        $schedules->each(function (OdooScheduleDTO $schedulesDto): void {
+            (new ProcessOdooScheduleAction)->execute($schedulesDto);
         });
+    }
+
+    public function failed(): void
+    {
+        app(CheckOdooHealthAction::class)($this->odoo);
     }
 }

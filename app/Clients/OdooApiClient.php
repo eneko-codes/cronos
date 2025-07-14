@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Clients;
 
-use App\Contracts\Pingable;
 use App\DataTransferObjects\Odoo\OdooCategoryDTO;
 use App\DataTransferObjects\Odoo\OdooDepartmentDTO;
 use App\DataTransferObjects\Odoo\OdooLeaveDTO;
@@ -29,7 +28,7 @@ use Illuminate\Support\Facades\Log;
  *
  * Note: Odoo 13 stores 'date_from' and 'date_to' in 'hr.leave' as UTC datetime fields.
  */
-class OdooApiClient implements Pingable
+class OdooApiClient
 {
     /**
      * The base URL for the Odoo API (e.g., https://odoo.company.com).

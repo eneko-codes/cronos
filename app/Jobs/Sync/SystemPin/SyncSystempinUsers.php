@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Jobs\Sync\SystemPin;
 
+use App\Actions\SystemPin\CheckSystemPinHealthAction;
+use App\Clients\SystemPinApiClient;
 use App\Jobs\Sync\BaseSyncJob;
 
 /**
@@ -18,12 +20,14 @@ class SyncSystempinUsers extends BaseSyncJob
      */
     public int $priority = 1;
 
+    protected SystemPinApiClient $systempin;
+
     /**
      * Constructs a new SyncSystempinUsers job instance.
      */
-    public function __construct()
+    public function __construct(SystemPinApiClient $systempin)
     {
-        // No dependencies required for this job.
+        $this->systempin = $systempin;
     }
 
     /**
@@ -31,8 +35,13 @@ class SyncSystempinUsers extends BaseSyncJob
      *
      * Synchronizes SystemPin users with the local database.
      */
-    protected function execute(): void
+    public function handle(): void
     {
         // Implement the synchronization logic here.
+    }
+
+    public function failed(): void
+    {
+        (new CheckSystemPinHealthAction)($this->systempin);
     }
 }

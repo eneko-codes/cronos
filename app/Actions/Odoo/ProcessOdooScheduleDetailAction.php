@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Validator;
  * - Updating an existing schedule detail record if it does exist.
  * - Formatting Odoo time values to a consistent format.
  */
-final class SyncOdooScheduleDetailAction
+final class ProcessOdooScheduleDetailAction
 {
     /**
      * Synchronizes a single Odoo schedule detail with the local database.

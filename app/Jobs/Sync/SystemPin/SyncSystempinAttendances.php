@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Jobs\Sync\SystemPin;
 
+use App\Actions\SystemPin\CheckSystemPinHealthAction;
+use App\Clients\SystemPinApiClient;
 use App\Jobs\Sync\BaseSyncJob;
 
 /**
@@ -18,21 +20,28 @@ class SyncSystempinAttendances extends BaseSyncJob
      */
     public int $priority = 2;
 
+    protected SystemPinApiClient $systempin;
+
     /**
      * SyncSystempinAttendances constructor.
      *
      * @return void
      */
-    public function __construct()
+    public function __construct(SystemPinApiClient $systempin)
     {
-        // Initialize any required properties or dependencies
+        $this->systempin = $systempin;
     }
 
     /**
      * Executes the synchronization process.
      */
-    protected function execute(): void
+    public function handle(): void
     {
         // Implement the synchronization logic here.
+    }
+
+    public function failed(): void
+    {
+        (new CheckSystemPinHealthAction)($this->systempin);
     }
 }

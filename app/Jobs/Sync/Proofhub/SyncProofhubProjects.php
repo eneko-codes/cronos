@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs\Sync\Proofhub;
 
+use App\Actions\Proofhub\CheckProofhubHealthAction;
 use App\Clients\ProofhubApiClient;
 use App\DataTransferObjects\Proofhub\ProofhubProjectDTO;
 use App\Jobs\Sync\BaseSyncJob;
@@ -28,6 +29,8 @@ class SyncProofhubProjects extends BaseSyncJob
      */
     public int $priority = 2;
 
+    protected ProofhubApiClient $proofhub;
+
     /**
      * Constructs a new SyncProofhubProjects job instance.
      *
@@ -48,7 +51,7 @@ class SyncProofhubProjects extends BaseSyncJob
      *
      * @throws Exception If any part of the synchronization process fails.
      */
-    protected function execute(): void
+    public function handle(): void
     {
         $allProjects = $this->proofhub->getProjects();
         $allSyncedProofhubProjectIds = collect();
@@ -153,5 +156,10 @@ class SyncProofhubProjects extends BaseSyncJob
             ->with(['users', 'tasks.timeEntries', 'timeEntries']) // Eager load for observer
             ->get()
             ->each(fn (Project $p) => $p->delete());
+    }
+
+    public function failed(): void
+    {
+        app(CheckProofhubHealthAction::class)($this->proofhub);
     }
 }

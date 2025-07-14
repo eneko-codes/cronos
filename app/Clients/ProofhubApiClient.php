@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Clients;
 
-use App\Contracts\Pingable;
 use App\DataTransferObjects\Proofhub\ProofhubProjectDTO;
 use App\DataTransferObjects\Proofhub\ProofhubTaskDTO;
 use App\DataTransferObjects\Proofhub\ProofhubTimeEntryDTO;
@@ -21,7 +20,7 @@ use Illuminate\Support\Facades\Log;
  * Handles all communication with the ProofHub API, including authentication, data retrieval, and pagination.
  * Provides methods to fetch users, projects, tasks, and time entries, and to check API health.
  */
-class ProofhubApiClient implements Pingable
+class ProofhubApiClient
 {
     /**
      * The base URL for the ProofHub API (e.g., https://company.proofhub.com/api/v3/).
@@ -194,41 +193,6 @@ class ProofhubApiClient implements Pingable
     }
 
     /**
-     * Checks connectivity to the ProofHub API by performing a lightweight GET request.
-     *
-     * @return array Associative array indicating success status and a message.
-     */
-    public function ping(): array
-    {
-        try {
-            // We do a GET on 'people' page 1 as a simple "ping"
-            // We don't need the full paginated result here.
-            $url = "{$this->baseUrl}people";
-            $response = Http::withHeaders([
-                'X-API-KEY' => $this->apiKey,
-                'Accept' => 'application/json',
-                'User-Agent' => 'CronosApp',
-            ])
-                ->timeout(15) // Shorter timeout for ping
-                ->get($url, ['page' => 1]); // Explicitly request page 1
-
-            if ($response->failed()) {
-                throw new ApiConnectionException("ProofHub API ping failed: {$response->status()}");
-            }
-
-            return [
-                'success' => true,
-                'message' => 'ProofHub API is reachable.',
-            ];
-        } catch (ApiConnectionException $e) {
-            return [
-                'success' => false,
-                'message' => 'Failed to connect to ProofHub API: '.$e->getMessage(),
-            ];
-        }
-    }
-
-    /**
      * Retrieves all users from ProofHub, handling pagination to return a complete collection.
      * Endpoint: GET /people
      *
@@ -388,5 +352,40 @@ class ProofhubApiClient implements Pingable
         } while ($pageResult['data']->isNotEmpty() && $pageResult['nextPageUrl'] === null ? false : $pageResult['nextPageUrl'] !== null);
 
         return $allResults;
+    }
+
+    /**
+     * Checks connectivity to the ProofHub API by performing a lightweight GET request.
+     *
+     * @return array Associative array indicating success status and a message.
+     */
+    public function ping(): array
+    {
+        try {
+            // We do a GET on 'people' page 1 as a simple "ping"
+            // We don't need the full paginated result here.
+            $url = "{$this->baseUrl}people";
+            $response = Http::withHeaders([
+                'X-API-KEY' => $this->apiKey,
+                'Accept' => 'application/json',
+                'User-Agent' => 'CronosApp',
+            ])
+                ->timeout(15) // Shorter timeout for ping
+                ->get($url, ['page' => 1]); // Explicitly request page 1
+
+            if ($response->failed()) {
+                throw new ApiConnectionException("ProofHub API ping failed: {$response->status()}");
+            }
+
+            return [
+                'success' => true,
+                'message' => 'ProofHub API is reachable.',
+            ];
+        } catch (ApiConnectionException $e) {
+            return [
+                'success' => false,
+                'message' => 'Failed to connect to ProofHub API: '.$e->getMessage(),
+            ];
+        }
     }
 }

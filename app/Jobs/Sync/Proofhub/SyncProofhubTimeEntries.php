@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs\Sync\Proofhub;
 
+use App\Actions\Proofhub\CheckProofhubHealthAction;
 use App\Clients\ProofhubApiClient;
 use App\DataTransferObjects\Proofhub\ProofhubTimeEntryDTO;
 use App\Jobs\Sync\BaseSyncJob;
@@ -34,6 +35,8 @@ class SyncProofhubTimeEntries extends BaseSyncJob
     /**
      * Date range parameters to limit the scope of the sync.
      */
+    protected ProofhubApiClient $proofhub;
+
     protected ?string $startDate;
 
     protected ?string $endDate;
@@ -51,7 +54,6 @@ class SyncProofhubTimeEntries extends BaseSyncJob
         ?string $endDate = null
     ) {
         $this->proofhub = $proofhub;
-        // Ensure dates are stored internally for use in deletion logic
         $this->startDate = $startDate ?: now()->format('Y-m-d');
         $this->endDate = $endDate ?: now()->format('Y-m-d');
     }
@@ -66,7 +68,7 @@ class SyncProofhubTimeEntries extends BaseSyncJob
      *
      * @throws Exception If any part of the synchronization process fails.
      */
-    protected function execute(): void
+    public function handle(): void
     {
         $stats = [
             'received' => 0,
@@ -397,5 +399,10 @@ class SyncProofhubTimeEntries extends BaseSyncJob
         $toDelete->each->delete();
 
         return $deleted;
+    }
+
+    public function failed(): void
+    {
+        app(CheckProofhubHealthAction::class)($this->proofhub);
     }
 }

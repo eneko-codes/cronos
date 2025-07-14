@@ -4,18 +4,23 @@ declare(strict_types=1);
 
 namespace App\Jobs\Sync\Odoo;
 
-use App\Actions\Odoo\SyncOdooDepartmentAction;
+use App\Actions\Odoo\CheckOdooHealthAction;
+use App\Actions\Odoo\ProcessOdooDepartmentAction;
+use App\Clients\OdooApiClient;
 use App\DataTransferObjects\Odoo\OdooDepartmentDTO;
 use App\Jobs\Sync\BaseSyncJob;
 use Exception;
-use Illuminate\Support\Collection;
 
 /**
  * Job to synchronize Odoo department data (hr.department) with the local departments table.
  *
- * Ensures the local departments database reflects the current state of Odoo, including:
- * - Creating new departments and updating existing ones
- * - Updating users' department assignments as needed
+ * This job fetches all departments from Odoo using the provided OdooApiClient
+ * and processes each one to ensure the local database reflects the current state of Odoo.
+ *
+ * Responsibilities:
+ * - Fetch all departments from Odoo
+ * - Create or update local departments
+ * - Update users' department assignments as needed
  */
 class SyncOdooDepartmentsJob extends BaseSyncJob
 {
@@ -24,28 +29,35 @@ class SyncOdooDepartmentsJob extends BaseSyncJob
      */
     public int $priority = 1;
 
+    protected OdooApiClient $odoo;
+
     /**
      * Constructs a new SyncOdooDepartmentsJob instance.
      *
-     * @param  Collection|OdooDepartmentDTO[]  $departments  The collection of Odoo Department DTOs.
+     * @param  OdooApiClient  $odoo  The Odoo API client to use for fetching departments.
      */
-    public function __construct(private Collection $departments) {}
+    public function __construct(OdooApiClient $odoo)
+    {
+        $this->odoo = $odoo;
+    }
 
     /**
      * Main entry point for the job's sync logic.
      *
-     * Performs the following operations:
-     * 1. Iterates through the provided OdooDepartmentDTOs.
-     * 2. Uses SyncOdooDepartmentAction to create or update local departments based on Odoo data.
+     * Fetches departments from Odoo and processes each one.
      *
      * @throws Exception If any part of the synchronization process fails.
      */
-    protected function execute(): void
+    public function handle(): void
     {
-        // Create or update local departments based on Odoo data
-        $this->departments->each(function (OdooDepartmentDTO $departmentDto): void {
-            (new SyncOdooDepartmentAction)->execute($departmentDto);
+        $departments = $this->odoo->getDepartments();
+        $departments->each(function (OdooDepartmentDTO $departmentDto): void {
+            (new ProcessOdooDepartmentAction)->execute($departmentDto);
         });
+    }
 
+    public function failed(): void
+    {
+        app(CheckOdooHealthAction::class)($this->odoo);
     }
 }

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Clients;
 
-use App\Contracts\Pingable;
 use App\Exceptions\ApiConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -13,7 +12,7 @@ use Illuminate\Support\Facades\Log;
  * Handles all communication with the SystemPin API, including authentication, health checks, and (future) data retrieval.
  * Provides a method to check API connectivity and is designed for easy extension with additional API methods.
  */
-class SystemPinApiClient implements Pingable
+class SystemPinApiClient
 {
     /**
      * The base URL for the SystemPin API.

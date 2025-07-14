@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Validator;
  * - Creating a new schedule record if it doesn\'t exist
  * - Updating an existing schedule record if it does exist
  */
-final class SyncOdooScheduleAction
+final class ProcessOdooScheduleAction
 {
     /**
      * Executes the synchronization for a single Odoo schedule.

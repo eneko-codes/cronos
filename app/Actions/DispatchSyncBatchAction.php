@@ -16,7 +16,7 @@ use App\Jobs\Sync\Odoo\SyncOdooLeavesJob;
 use App\Jobs\Sync\Odoo\SyncOdooLeaveTypesJob;
 use App\Jobs\Sync\Odoo\SyncOdooScheduleDetailsJob;
 use App\Jobs\Sync\Odoo\SyncOdooSchedulesJob;
-use App\Jobs\Sync\Odoo\SyncOdooUsers;
+use App\Jobs\Sync\Odoo\SyncOdooUsersJob;
 use App\Jobs\Sync\Proofhub\SyncProofhubProjects;
 use App\Jobs\Sync\Proofhub\SyncProofhubTasks;
 use App\Jobs\Sync\Proofhub\SyncProofhubTimeEntries;
@@ -53,15 +53,15 @@ class DispatchSyncBatchAction
         $proofhubApi = app(ProofhubApiClient::class);
         $systempinApi = app(SystemPinApiClient::class);
 
-        // Prepare job chains for each platform (order and chaining as in SyncService)
+        // Prepare job chains for each platform (DO NOT CHANGE THE ORDER OF JOBS BECAUSE THE MIGRATION AND MODEL CONSTRAINTS WILL CAUSE EXCEPTIONS)
         $odooChain = [
-            new SyncOdooDepartmentsJob($odooApi->getDepartments()),
-            new SyncOdooCategoriesJob($odooApi->getCategories()),
-            new SyncOdooLeaveTypesJob($odooApi->getLeaveTypes()),
-            new SyncOdooSchedulesJob($odooApi->getSchedules()),
-            new SyncOdooScheduleDetailsJob($odooApi->getScheduleDetails()),
-            new SyncOdooUsers($odooApi),
-            new SyncOdooLeavesJob($odooApi->getLeaves($fromDate, $toDate)),
+            new SyncOdooDepartmentsJob($odooApi),
+            new SyncOdooCategoriesJob($odooApi),
+            new SyncOdooLeaveTypesJob($odooApi),
+            new SyncOdooSchedulesJob($odooApi),
+            new SyncOdooScheduleDetailsJob($odooApi),
+            new SyncOdooUsersJob($odooApi),
+            new SyncOdooLeavesJob($odooApi, $fromDate, $toDate),
         ];
 
         $proofhubChain = [

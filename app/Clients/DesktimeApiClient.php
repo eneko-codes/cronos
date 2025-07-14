@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Clients;
 
-use App\Contracts\Pingable;
 use App\DataTransferObjects\Desktime\DesktimeAttendanceDTO;
 use App\DataTransferObjects\Desktime\DesktimeEmployeeDTO;
 use App\Exceptions\ApiConnectionException;
@@ -17,7 +16,7 @@ use Illuminate\Support\Facades\Log;
  * Handles all communication with the DeskTime API, including authentication, data retrieval, and health checks.
  * Provides methods to fetch users, attendance data, and account timezone, and to check API health.
  */
-class DesktimeApiClient implements Pingable
+class DesktimeApiClient
 {
     /**
      * The base URL for the DeskTime API.

@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Validator;
  * This class encapsulates the business logic for creating or updating a leave record.
  * It performs validation on the incoming DTO and ensures the database operation is atomic.
  */
-final class SyncOdooLeavesAction
+final class ProcessOdooLeavesAction
 {
     /**
      * Executes the synchronization logic for a single Odoo leave DTO.

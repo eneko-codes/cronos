@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs\Sync\Proofhub;
 
+use App\Actions\Proofhub\CheckProofhubHealthAction;
 use App\Clients\ProofhubApiClient;
 use App\DataTransferObjects\Proofhub\ProofhubUserDTO;
 use App\Jobs\Sync\BaseSyncJob;
@@ -24,6 +25,8 @@ class SyncProofhubUsers extends BaseSyncJob
      */
     public int $priority = 1;
 
+    protected ProofhubApiClient $proofhub;
+
     /**
      * Constructs a new SyncProofhubUsers job instance.
      *
@@ -42,7 +45,7 @@ class SyncProofhubUsers extends BaseSyncJob
      *
      * @throws Exception If any part of the synchronization process fails.
      */
-    protected function execute(): void
+    public function handle(): void
     {
         $allUsers = $this->proofhub->getUsers();
         $allProofhubEmails = $this->processUserPage($allUsers);
@@ -108,5 +111,10 @@ class SyncProofhubUsers extends BaseSyncJob
         } else {
             Log::info('No obsolete ProofHub user IDs to clear.');
         }
+    }
+
+    public function failed(): void
+    {
+        app(CheckProofhubHealthAction::class)($this->proofhub);
     }
 }

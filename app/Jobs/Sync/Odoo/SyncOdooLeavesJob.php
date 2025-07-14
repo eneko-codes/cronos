@@ -4,18 +4,22 @@ declare(strict_types=1);
 
 namespace App\Jobs\Sync\Odoo;
 
-use App\Actions\Odoo\SyncOdooLeavesAction;
+use App\Actions\Odoo\CheckOdooHealthAction;
+use App\Actions\Odoo\ProcessOdooLeavesAction;
+use App\Clients\OdooApiClient;
 use App\DataTransferObjects\Odoo\OdooLeaveDTO;
 use App\Jobs\Sync\BaseSyncJob;
 use Exception;
-use Illuminate\Support\Collection;
 
 /**
  * Job to synchronize Odoo leave data (hr.leave) with the local user_leaves table.
  *
- * This job receives a collection of OdooLeaveDTOs and dispatches
- * SyncOdooLeavesAction for each to ensure data integrity and
- * updates the local user_leaves database to reflect the current state of Odoo.
+ * This job fetches all leaves from Odoo for a given date range using the provided OdooApiClient
+ * and processes each one to ensure the local database reflects the current state of Odoo.
+ *
+ * Responsibilities:
+ * - Fetch all leaves from Odoo for the specified date range
+ * - Create or update local user leaves
  */
 class SyncOdooLeavesJob extends BaseSyncJob
 {
@@ -25,24 +29,51 @@ class SyncOdooLeavesJob extends BaseSyncJob
     public int $priority = 2;
 
     /**
+     * Odoo API client instance used to fetch leave data.
+     */
+    protected OdooApiClient $odoo;
+
+    /**
+     * The start date (Y-m-d) for fetching leaves from Odoo.
+     */
+    protected string $fromDate;
+
+    /**
+     * The end date (Y-m-d) for fetching leaves from Odoo.
+     */
+    protected string $toDate;
+
+    /**
      * Constructs a new SyncOdooLeavesJob instance.
      *
-     * @param  Collection<int, OdooLeaveDTO>  $leaves  The collection of OdooLeaveDTOs to sync.
+     * @param  OdooApiClient  $odoo  The Odoo API client to use for fetching leaves.
+     * @param  string  $fromDate  The start date for fetching leaves (Y-m-d).
+     * @param  string  $toDate  The end date for fetching leaves (Y-m-d).
      */
-    public function __construct(private Collection $leaves) {}
+    public function __construct(OdooApiClient $odoo, string $fromDate, string $toDate)
+    {
+        $this->odoo = $odoo;
+        $this->fromDate = $fromDate;
+        $this->toDate = $toDate;
+    }
 
     /**
      * Main entry point for the job's sync logic.
      *
-     * Iterates through the provided collection of OdooLeaveDTOs and dispatches
-     * SyncOdooLeavesAction for each, handling the creation or update of local leaves.
+     * Fetches leaves from Odoo for the specified date range and processes each one.
      *
      * @throws Exception If any part of the synchronization process fails.
      */
-    protected function execute(): void
+    public function handle(): void
     {
-        $this->leaves->each(function (OdooLeaveDTO $leaveDto): void {
-            (new SyncOdooLeavesAction)->execute($leaveDto);
+        $leaves = $this->odoo->getLeaves($this->fromDate, $this->toDate);
+        $leaves->each(function (OdooLeaveDTO $leaveDto): void {
+            (new ProcessOdooLeavesAction)->execute($leaveDto);
         });
+    }
+
+    public function failed(): void
+    {
+        app(CheckOdooHealthAction::class)($this->odoo);
     }
 }

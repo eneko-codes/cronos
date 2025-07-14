@@ -4,20 +4,22 @@ declare(strict_types=1);
 
 namespace App\Jobs\Sync\Odoo;
 
-use App\Actions\Odoo\SyncOdooCategoryAction;
+use App\Actions\Odoo\CheckOdooHealthAction;
+use App\Actions\Odoo\ProcessOdooCategoryAction;
+use App\Clients\OdooApiClient;
 use App\DataTransferObjects\Odoo\OdooCategoryDTO;
 use App\Jobs\Sync\BaseSyncJob;
 use Exception;
-use Illuminate\Support\Collection;
 
 /**
  * Job to synchronize Odoo employee category data (hr.employee.category) with the local categories table.
  *
- * This job orchestrates the synchronization of categories by fetching them from Odoo
- * and then using `SyncOdooCategoryAction` to process each category individually.
+ * This job fetches all categories from Odoo using the provided OdooApiClient
+ * and processes each one to ensure the local database reflects the current state of Odoo.
  *
- * Ensures the local categories database reflects the current state of Odoo, including:
- * - Creating new categories and updating existing ones
+ * Responsibilities:
+ * - Fetch all categories from Odoo
+ * - Create or update local categories
  */
 class SyncOdooCategoriesJob extends BaseSyncJob
 {
@@ -26,27 +28,35 @@ class SyncOdooCategoriesJob extends BaseSyncJob
      */
     public int $priority = 1;
 
+    protected OdooApiClient $odoo;
+
     /**
-     * Constructs a new SyncOdooCategories job instance.
+     * Constructs a new SyncOdooCategoriesJob instance.
      *
-     * @param  Collection<int, OdooCategoryDTO>  $categories  The collection of OdooCategoryDTOs to sync.
+     * @param  OdooApiClient  $odoo  The Odoo API client to use for fetching categories.
      */
-    public function __construct(private Collection $categories) {}
+    public function __construct(OdooApiClient $odoo)
+    {
+        $this->odoo = $odoo;
+    }
 
     /**
      * Main entry point for the job's sync logic.
      *
-     * Iterates through the provided collection of OdooCategoryDTOs and dispatches
-     * `SyncOdooCategoryAction` for each, handling the creation or update of local categories.
+     * Fetches categories from Odoo and processes each one.
      *
      * @throws Exception If any part of the synchronization process fails.
      */
-    protected function execute(): void
+    public function handle(): void
     {
-        // Create or update local categories (ensures local DB matches Odoo)
-        $this->categories->each(function (OdooCategoryDTO $categoryDto): void {
-            (new SyncOdooCategoryAction)->execute($categoryDto);
+        $categories = $this->odoo->getCategories();
+        $categories->each(function (OdooCategoryDTO $categoryDto): void {
+            (new ProcessOdooCategoryAction)->execute($categoryDto);
         });
+    }
 
+    public function failed(): void
+    {
+        app(CheckOdooHealthAction::class)($this->odoo);
     }
 }

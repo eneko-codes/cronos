@@ -15,15 +15,6 @@ use Illuminate\Support\Str;
 
 /**
  * Action to synchronize Odoo user data (hr.employee) with the local users table.
- *
- * This action encapsulates all business logic for creating or updating a user record
- * from a single OdooUserDTO, including validation, logging, category and schedule sync.
- *
- * The static syncAll method can be used to orchestrate a full batch sync, handling:
- * - Logging users with missing emails
- * - Filtering for valid users
- * - Syncing each user
- * - Deactivating users not present in the current batch
  */
 final class ProcessOdooUserAction
 {
@@ -35,8 +26,6 @@ final class ProcessOdooUserAction
     /**
      * Synchronizes a single Odoo user DTO with the local database.
      *
-     * - If the DTO has active=false, the user will be created/updated as inactive (is_active=false).
-     * - Users are NEVER deleted by this action.
      *
      * @param  OdooUserDTO  $userDto  The OdooUserDTO to sync.
      */
@@ -95,15 +84,19 @@ final class ProcessOdooUserAction
      * This method updates the pivot table (category_user) to match the categories
      * provided by the OdooUserDTO. It will add and remove links as needed.
      *
+     *
      * @param  User  $user  The local user model.
      */
     private function syncUserCategories(User $user): void
     {
-        $categoryIds = collect($this->dto->category_ids)
-            ->filter()
-            ->unique();
-        $validLocalCategoryIds = Category::whereIn('odoo_category_id', $categoryIds)->pluck('odoo_category_id');
-        $user->categories()->sync($validLocalCategoryIds);
+        DB::transaction(function () use ($user): void {
+            $categoryIds = collect($this->dto->category_ids)
+                ->filter()
+                ->unique();
+            // Use odoo_category_id as the primary key for Category
+            $validLocalCategoryIds = Category::whereIn('odoo_category_id', $categoryIds)->pluck('odoo_category_id');
+            $user->categories()->sync($validLocalCategoryIds);
+        });
     }
 
     /**

@@ -40,6 +40,12 @@ class SyncSystempinUsers extends BaseSyncJob
         // Implement the synchronization logic here.
     }
 
+    /**
+     * Handle a job failure.
+     *
+     * This method is called automatically by Laravel if the job fails after all retry attempts.
+     * It triggers a health check for the SystemPin API and notifies admins if the API is down.
+     */
     public function failed(): void
     {
         (new CheckSystemPinHealthAction)($this->systempin);

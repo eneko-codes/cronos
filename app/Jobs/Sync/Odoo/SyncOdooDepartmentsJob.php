@@ -56,6 +56,12 @@ class SyncOdooDepartmentsJob extends BaseSyncJob
         });
     }
 
+    /**
+     * Handle a job failure.
+     *
+     * This method is called automatically by Laravel if the job fails after all retry attempts.
+     * It triggers a health check for the Odoo API and notifies admins if the API is down.
+     */
     public function failed(): void
     {
         app(CheckOdooHealthAction::class)($this->odoo);

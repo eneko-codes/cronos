@@ -158,6 +158,12 @@ class SyncProofhubProjects extends BaseSyncJob
             ->each(fn (Project $p) => $p->delete());
     }
 
+    /**
+     * Handle a job failure.
+     *
+     * This method is called automatically by Laravel if the job fails after all retry attempts.
+     * It triggers a health check for the ProofHub API and notifies admins if the API is down.
+     */
     public function failed(): void
     {
         app(CheckProofhubHealthAction::class)($this->proofhub);

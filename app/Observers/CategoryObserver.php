@@ -16,7 +16,7 @@ class CategoryObserver
     {
         // Detach each user individually to emit model events
         foreach ($category->users as $user) {
-            $category->users()->detach($user->id);
+            $category->users()->detach($category->odoo_category_id);
         }
     }
 

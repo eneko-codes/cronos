@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
- * Class Category
+ * Category model.
  *
  * Represents categories synchronized from Odoo.
  *
@@ -46,7 +46,7 @@ class Category extends Model
     protected $table = 'categories';
 
     /**
-     * The primary key for the model.
+     * The primary key associated with the table.
      *
      * @var string
      */

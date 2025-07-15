@@ -337,7 +337,8 @@ class User extends Authenticatable
             'category_id',
             'id',
             'odoo_category_id'
-        );
+        )
+            ->withTimestamps();
     }
 
     /**

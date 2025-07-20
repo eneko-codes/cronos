@@ -18,8 +18,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $weekday
  * @property string $day_period
  * @property string|null $name Name/label for this schedule detail
- * @property string $start
- * @property string $end
+ * @property \Carbon\Carbon $start
+ * @property \Carbon\Carbon $end
  * @property int $odoo_detail_id
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
@@ -29,8 +29,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property bool $has_duplicates Dynamically added in ScheduleDetailView to mark duplicate entries
  * @property bool|null $active Whether the schedule detail is active (from Odoo)
  * @property int $week_type Determines whether the attendance applies to both weeks (0), week 1 (1), or week 2 (2)
- * @property string|null $date_from Optional start date for when the attendance is active
- * @property string|null $date_to Optional end date for when the attendance is active
+ * @property \Carbon\Carbon|null $date_from Optional start date for when the attendance is active
+ * @property \Carbon\Carbon|null $date_to Optional end date for when the attendance is active
  *
  * @method static \Database\Factories\ScheduleDetailFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail newModelQuery()
@@ -93,8 +93,8 @@ class ScheduleDetail extends Model
         'week_type' => 'integer',
         'date_from' => 'date',
         'date_to' => 'date',
-        'start' => 'datetime:H:i:s',
-        'end' => 'datetime:H:i:s',
+        'start' => 'datetime',
+        'end' => 'datetime',
         'odoo_created_at' => 'datetime',
         'odoo_updated_at' => 'datetime',
         'active' => 'boolean',

@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Log;
  * Handles all communication with the ProofHub API, including authentication, data retrieval, and pagination.
  * Provides methods to fetch users, projects, tasks, and time entries, and to check API health.
  */
-readonly class ProofhubApiClient
+class ProofhubApiClient
 {
     /**
      * The base URL for the ProofHub API (e.g., https://company.proofhub.com/api/v3/).
@@ -42,14 +42,13 @@ readonly class ProofhubApiClient
      */
     public function __construct(string $companyUrl, string $apiKey)
     {
-        $this->apiKey = $apiKey;
-
-        if (empty($companyUrl) || empty($this->apiKey)) {
+        if (empty($companyUrl) || empty($apiKey)) {
             throw new ApiConnectionException(
                 'ProofHub API configuration is incomplete. Please check your config/services.php and .env files.'
             );
         }
 
+        $this->apiKey = $apiKey;
         // Construct the base URL using the company URL and API v3
         $this->baseUrl = "https://{$companyUrl}.proofhub.com/api/v3/";
     }

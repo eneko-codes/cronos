@@ -1,0 +1,30 @@
+[
+  {
+    "id": 10,
+    "holiday_type": "employee",
+    "date_from": "2024-07-01 09:00:00",
+    "date_to": "2024-07-05 18:00:00",
+    "employee_id": [1, "John Doe"],
+    "holiday_status_id": [1, "Paid Time Off"],
+    "state": "validate",
+    "number_of_days": 5.0,
+    "category_id": false,
+    "department_id": false,
+    "request_hour_from": 9.0,
+    "request_hour_to": 18.0
+  },
+  {
+    "id": 11,
+    "holiday_type": "category",
+    "date_from": "2024-07-15 14:00:00",
+    "date_to": "2024-07-15 18:00:00",
+    "employee_id": false,
+    "holiday_status_id": [2, "Sick Leave"],
+    "state": "confirm",
+    "number_of_days": 0.5,
+    "category_id": [1, "Full Time"],
+    "department_id": false,
+    "request_hour_from": 14.0,
+    "request_hour_to": 18.0
+  }
+]

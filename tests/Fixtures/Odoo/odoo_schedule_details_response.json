@@ -1,0 +1,31 @@
+[
+  {
+    "id": 1,
+    "calendar_id": [1, "Standard 40h"],
+    "name": "Monday Morning",
+    "dayofweek": "0",
+    "hour_from": 9.0,
+    "hour_to": 13.0,
+    "day_period": "morning",
+    "date_from": "2024-01-01",
+    "date_to": "2024-12-31",
+    "active": true,
+    "create_date": "2024-01-01 09:00:00",
+    "write_date": "2024-01-10 09:00:00"
+  },
+  {
+    "id": 2,
+    "calendar_id": [2, "Bi-weekly Flexible"],
+    "name": "Tuesday - Week 1",
+    "dayofweek": "1",
+    "hour_from": 8.0,
+    "hour_to": 16.0,
+    "day_period": "morning",
+    "week_type": 1,
+    "date_from": "2024-01-01",
+    "date_to": "2024-06-30",
+    "active": true,
+    "create_date": "2024-01-01 09:00:00",
+    "write_date": "2024-01-15 14:30:00"
+  }
+]

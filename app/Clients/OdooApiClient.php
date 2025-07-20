@@ -27,7 +27,7 @@ use Illuminate\Support\Facades\Log;
  *
  * Note: Odoo 13 stores 'date_from' and 'date_to' in 'hr.leave' as UTC datetime fields.
  */
-readonly class OdooApiClient
+class OdooApiClient
 {
     /**
      * The base URL for the Odoo API (e.g., https://odoo.company.com).
@@ -68,20 +68,20 @@ readonly class OdooApiClient
         string $username,
         string $password
     ) {
+        // Ensure all required parameters are provided
+        if (
+            empty($baseUrl) ||
+            empty($database) ||
+            empty($username) ||
+            empty($password)
+        ) {
+            throw new ApiConnectionException('Odoo API configuration is incomplete.');
+        }
+
         $this->baseUrl = $baseUrl;
         $this->database = $database;
         $this->username = $username;
         $this->password = $password;
-
-        // Ensure all required parameters are provided
-        if (
-            empty($this->baseUrl) ||
-            empty($this->database) ||
-            empty($this->username) ||
-            empty($this->password)
-        ) {
-            throw new ApiConnectionException('Odoo API configuration is incomplete.');
-        }
     }
 
     /**

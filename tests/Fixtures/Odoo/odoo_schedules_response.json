@@ -1,0 +1,22 @@
+[
+  {
+    "id": 1,
+    "name": "Standard 40h",
+    "active": true,
+    "attendance_ids": [1, 2, 3, 4, 5],
+    "hours_per_day": 8.0,
+    "create_date": "2024-01-01 09:00:00",
+    "write_date": "2024-01-10 09:00:00"
+  },
+  {
+    "id": 2,
+    "name": "Flexible 35h",
+    "attendance_ids": [6, 7, 8],
+    "hours_per_day": 7.0,
+    "two_weeks_calendar": true,
+    "two_weeks_explanation": "Alternating week schedule",
+    "flexible_hours": true,
+    "create_date": "2024-01-01 09:00:00",
+    "write_date": "2024-02-01 12:00:00"
+  }
+]

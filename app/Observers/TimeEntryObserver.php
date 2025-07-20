@@ -9,7 +9,7 @@ class TimeEntryObserver
 {
     public function created(TimeEntry $entry)
     {
-        Log::info('TimeEntry created', [
+        Log::debug('TimeEntry created', [
             'proofhub_time_entry_id' => $entry->proofhub_time_entry_id,
             'attributes' => $entry->getAttributes(),
         ]);
@@ -23,7 +23,7 @@ class TimeEntryObserver
             foreach (array_keys($changes) as $field) {
                 $old[$field] = $entry->getOriginal($field);
             }
-            Log::info('TimeEntry updated', [
+            Log::debug('TimeEntry updated', [
                 'proofhub_time_entry_id' => $entry->proofhub_time_entry_id,
                 'changed_fields' => $changes,
                 'old_values' => $old,
@@ -34,7 +34,7 @@ class TimeEntryObserver
 
     public function deleted(TimeEntry $entry)
     {
-        Log::info('TimeEntry deleted', [
+        Log::debug('TimeEntry deleted', [
             'proofhub_time_entry_id' => $entry->proofhub_time_entry_id,
             'attributes' => $entry->getOriginal(),
         ]);

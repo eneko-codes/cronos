@@ -9,7 +9,7 @@ class UserLeaveObserver
 {
     public function created(UserLeave $leave)
     {
-        Log::info('UserLeave created', [
+        Log::debug('UserLeave created', [
             'id' => $leave->id,
             'attributes' => $leave->getAttributes(),
         ]);
@@ -23,7 +23,7 @@ class UserLeaveObserver
             foreach (array_keys($changes) as $field) {
                 $old[$field] = $leave->getOriginal($field);
             }
-            Log::info('UserLeave updated', [
+            Log::debug('UserLeave updated', [
                 'id' => $leave->id,
                 'changed_fields' => $changes,
                 'old_values' => $old,
@@ -34,7 +34,7 @@ class UserLeaveObserver
 
     public function deleted(UserLeave $leave)
     {
-        Log::info('UserLeave deleted', [
+        Log::debug('UserLeave deleted', [
             'id' => $leave->id,
             'attributes' => $leave->getOriginal(),
         ]);

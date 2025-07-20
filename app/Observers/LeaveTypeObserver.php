@@ -22,7 +22,7 @@ class LeaveTypeObserver
 
     public function created($leaveType)
     {
-        Log::info('LeaveType created', [
+        Log::debug('LeaveType created', [
             'odoo_leave_type_id' => $leaveType->odoo_leave_type_id,
             'attributes' => $leaveType->getAttributes(),
         ]);
@@ -36,7 +36,7 @@ class LeaveTypeObserver
             foreach (array_keys($changes) as $field) {
                 $old[$field] = $leaveType->getOriginal($field);
             }
-            Log::info('LeaveType updated', [
+            Log::debug('LeaveType updated', [
                 'odoo_leave_type_id' => $leaveType->odoo_leave_type_id,
                 'changed_fields' => $changes,
                 'old_values' => $old,
@@ -47,7 +47,7 @@ class LeaveTypeObserver
 
     public function deleted($leaveType)
     {
-        Log::info('LeaveType deleted', [
+        Log::debug('LeaveType deleted', [
             'odoo_leave_type_id' => $leaveType->odoo_leave_type_id,
             'attributes' => $leaveType->getOriginal(),
         ]);

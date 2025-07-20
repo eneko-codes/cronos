@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Log;
  * Handles all communication with the ProofHub API, including authentication, data retrieval, and pagination.
  * Provides methods to fetch users, projects, tasks, and time entries, and to check API health.
  */
-class ProofhubApiClient
+readonly class ProofhubApiClient
 {
     /**
      * The base URL for the ProofHub API (e.g., https://company.proofhub.com/api/v3/).

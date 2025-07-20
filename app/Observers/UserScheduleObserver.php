@@ -24,7 +24,7 @@ class UserScheduleObserver
      */
     public function created(UserSchedule $userSchedule): void
     {
-        Log::info('UserSchedule created', [
+        Log::debug('UserSchedule created', [
             'id' => $userSchedule->id,
             'attributes' => $userSchedule->getAttributes(),
         ]);
@@ -43,7 +43,7 @@ class UserScheduleObserver
             foreach (array_keys($changes) as $field) {
                 $old[$field] = $userSchedule->getOriginal($field);
             }
-            Log::info('UserSchedule updated', [
+            Log::debug('UserSchedule updated', [
                 'id' => $userSchedule->id,
                 'changed_fields' => $changes,
                 'old_values' => $old,
@@ -76,7 +76,7 @@ class UserScheduleObserver
      */
     public function deleted(UserSchedule $userSchedule): void
     {
-        Log::info('UserSchedule deleted', [
+        Log::debug('UserSchedule deleted', [
             'id' => $userSchedule->id,
             'attributes' => $userSchedule->getOriginal(),
         ]);

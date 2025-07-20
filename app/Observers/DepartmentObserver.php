@@ -23,7 +23,7 @@ class DepartmentObserver
 
     public function created($department)
     {
-        Log::info('Department created', [
+        Log::debug('Department created', [
             'odoo_department_id' => $department->odoo_department_id,
             'attributes' => $department->getAttributes(),
         ]);
@@ -37,7 +37,7 @@ class DepartmentObserver
             foreach (array_keys($changes) as $field) {
                 $old[$field] = $department->getOriginal($field);
             }
-            Log::info('Department updated', [
+            Log::debug('Department updated', [
                 'odoo_department_id' => $department->odoo_department_id,
                 'changed_fields' => $changes,
                 'old_values' => $old,
@@ -48,7 +48,7 @@ class DepartmentObserver
 
     public function deleted($department)
     {
-        Log::info('Department deleted', [
+        Log::debug('Department deleted', [
             'odoo_department_id' => $department->odoo_department_id,
             'attributes' => $department->getOriginal(),
         ]);

@@ -31,17 +31,17 @@ final class ProcessOdooScheduleAction
         $validator = Validator::make(
             [
                 'id' => $scheduleDto->id,
-                'description' => $scheduleDto->description,
+                'name' => $scheduleDto->name,
             ],
             [
                 'id' => 'required',
-                'description' => 'required',
+                'name' => 'required',
             ]
         );
 
         if ($validator->fails()) {
             Log::warning(class_basename(self::class).' Skipping schedule due to validation errors', [
-                'category' => $scheduleDto,
+                'schedule' => $scheduleDto,
                 'errors' => $validator->errors()->all(),
             ]);
 
@@ -53,14 +53,14 @@ final class ProcessOdooScheduleAction
             Schedule::updateOrCreate(
                 ['odoo_schedule_id' => $scheduleDto->id],
                 [
-                    'description' => $scheduleDto->description,
+                    'description' => $scheduleDto->name,
                     'average_hours_day' => $scheduleDto->hours_per_day,
                     'two_weeks_calendar' => $scheduleDto->two_weeks_calendar ?? false,
                     'two_weeks_explanation' => $scheduleDto->two_weeks_explanation,
                     'flexible_hours' => $scheduleDto->flexible_hours ?? false,
                     'active' => $scheduleDto->active ?? true,
-                    'odoo_created_at' => $scheduleDto->odoo_created_at,
-                    'odoo_updated_at' => $scheduleDto->odoo_updated_at,
+                    'odoo_created_at' => $scheduleDto->create_date,
+                    'odoo_updated_at' => $scheduleDto->write_date,
                 ]
             );
         });

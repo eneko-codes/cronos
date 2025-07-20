@@ -32,7 +32,7 @@ class UserObserver
      */
     public function created(User $user): void
     {
-        Log::info('User created', [
+        Log::debug('User created', [
             'id' => $user->id,
             'attributes' => $user->getAttributes(),
         ]);
@@ -105,7 +105,7 @@ class UserObserver
             foreach (array_keys($changes) as $field) {
                 $old[$field] = $user->getOriginal($field);
             }
-            Log::info('User updated', [
+            Log::debug('User updated', [
                 'id' => $user->id,
                 'changed_fields' => $changes,
                 'old_values' => $old,
@@ -190,7 +190,7 @@ class UserObserver
      */
     public function deleted(User $user): void
     {
-        Log::info('User deleted', [
+        Log::debug('User deleted', [
             'id' => $user->id,
             'attributes' => $user->getOriginal(),
         ]);

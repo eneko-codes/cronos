@@ -27,7 +27,7 @@ class ScheduleObserver
 
     public function created($schedule)
     {
-        Log::info('Schedule created', [
+        Log::debug('Schedule created', [
             'odoo_schedule_id' => $schedule->odoo_schedule_id,
             'attributes' => $schedule->getAttributes(),
         ]);
@@ -41,7 +41,7 @@ class ScheduleObserver
             foreach (array_keys($changes) as $field) {
                 $old[$field] = $schedule->getOriginal($field);
             }
-            Log::info('Schedule updated', [
+            Log::debug('Schedule updated', [
                 'odoo_schedule_id' => $schedule->odoo_schedule_id,
                 'changed_fields' => $changes,
                 'old_values' => $old,
@@ -52,7 +52,7 @@ class ScheduleObserver
 
     public function deleted($schedule)
     {
-        Log::info('Schedule deleted', [
+        Log::debug('Schedule deleted', [
             'odoo_schedule_id' => $schedule->odoo_schedule_id,
             'attributes' => $schedule->getOriginal(),
         ]);

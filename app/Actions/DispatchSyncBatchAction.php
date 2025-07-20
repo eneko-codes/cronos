@@ -46,6 +46,7 @@ class DispatchSyncBatchAction
         $now = now();
         $toDate = $now->format('Y-m-d');
         $fromDate = $now->copy()->subDays($windowDays - 1)->format('Y-m-d');
+        $futureToDate = $now->copy()->addMonth()->format('Y-m-d');
 
         // Resolve API clients from the container
         $desktimeApi = app(DesktimeApiClient::class);
@@ -61,7 +62,7 @@ class DispatchSyncBatchAction
             new SyncOdooSchedulesJob($odooApi),
             new SyncOdooScheduleDetailsJob($odooApi),
             new SyncOdooUsersJob($odooApi),
-            new SyncOdooLeavesJob($odooApi, $fromDate, $toDate),
+            new SyncOdooLeavesJob($odooApi, $fromDate, $futureToDate),
         ];
 
         $proofhubChain = [

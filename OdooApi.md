@@ -1,60 +1,63 @@
-# Odoo API Integration Guide (Odoo v13, Cronos)
+# Odoo API Integration Reference (Odoo v13)
 
-This document explains how the Odoo **v13** API is used in the Cronos application, focusing **only on the endpoints, models, and fields** that are actually consumed by our codebase. It is intended to help developers understand the data flows, field types, and integration points for maintenance and extension.
+This document describes the **Odoo v13 API endpoints** used by the Cronos application. It focuses only on the specific endpoints, fields, and behaviors that our application consumes.
 
----
+## Authentication
 
-## 1. Authentication
-
-All Odoo API calls require authentication using the `common.authenticate` method via JSON-RPC:
+All API calls use JSON-RPC with the `common.authenticate` method:
 
 - **Endpoint:** `POST /jsonrpc`
 - **Service:** `common`
 - **Method:** `authenticate`
 - **Params:** `[database, username, password, {}]`
-- **Returns:** Odoo user ID (integer) if successful.
+- **Returns:** `int` - Odoo user ID if successful
 
-**Reference:** [Odoo 13 External API Authentication](https://www.odoo.com/documentation/13.0/developer/reference/external_api.html#authentication)
+## Data Retrieval Pattern
 
----
-
-## 2. Data Access: search_read
-
-All data is accessed using the `object.execute_kw` method with the `search_read` operation:
+All data endpoints use the same pattern:
 
 - **Endpoint:** `POST /jsonrpc`
 - **Service:** `object`
 - **Method:** `execute_kw`
-- **Params:**
-  - `db` (string): Database name
-  - `uid` (int): Authenticated user ID
-  - `password` (string): User password
-  - `model` (string): Odoo model name (see below)
-  - `method` (string): Always `search_read`
-  - `args` (array): Search domain (e.g., `[["active", "=", true]]`)
-  - `kwargs` (dict): `{fields: ["field1", "field2", ...]}`
-
-**Reference:** [Odoo 13 search_read](https://www.odoo.com/documentation/13.0/developer/reference/external_api.html#search-and-read)
+- **Params:** `[db, uid, password, model, "search_read", [domain], {fields: [...]}]`
 
 ---
 
-## 3. Odoo Models and Fields Used
+## API Endpoints
 
-Below are the Odoo models and fields accessed by this app, with their types and meaning as per Odoo 13 documentation.
+### 1. `hr.employee` - Employee Data
 
-### 3.1. `hr.employee` (Employee)
+**Purpose:** Retrieve employee/user information including department, categories, and work schedule assignments.
 
-- **Fields used:**
-  - `id` (integer)
-  - `work_email` (string)
-  - `name` (string)
-  - `tz` (string)
-  - `active` (boolean)
-  - `department_id` (many2one → hr.department, returns `[id, name]`)
-  - `category_ids` (many2many → hr.employee.category, returns list of `[id, name]`)
-  - `resource_calendar_id` (many2one → resource.calendar, returns `[id, name]`)
-  - `job_title` (string)
-  - `parent_id` (many2one → hr.employee, returns `[id, name]`)
+**Fields Requested:**
+
+```php
+[
+    'id',                    // int
+    'work_email',           // string|false
+    'name',                 // string
+    'tz',                   // string|false
+    'active',               // bool|null
+    'department_id',        // [int, string]|false
+    'category_ids',         // int[]
+    'resource_calendar_id', // [int, string]|false
+    'job_title',            // string|false
+    'parent_id'             // [int, string]|false
+]
+```
+
+**Return Types:**
+
+- `id`: `int` - Always present
+- `work_email`: `string|false` - Employee email or false if not set
+- `name`: `string` - Always present, employee full name
+- `tz`: `string|false` - Timezone (e.g., "Europe/Madrid") or false
+- `active`: `bool|null` - Active status, defaults to true if null
+- `department_id`: `[int, string]|false` - `[id, name]` array or false
+- `category_ids`: `int[]` - Array of category IDs (not `[id, name]` arrays)
+- `resource_calendar_id`: `[int, string]|false` - `[id, name]` array or false
+- `job_title`: `string|false` - Job title or false
+- `parent_id`: `[int, string]|false` - Manager `[id, name]` array or false
 
 **Example Response:**
 
@@ -66,28 +69,38 @@ Below are the Odoo models and fields accessed by this app, with their types and 
   "tz": "Europe/Madrid",
   "active": true,
   "department_id": [2, "Engineering"],
-  "category_ids": [
-    [1, "Full Time"],
-    [2, "Remote"]
-  ],
+  "category_ids": [1, 3],
   "resource_calendar_id": [1, "Standard 40h"],
   "job_title": "Developer",
-  "parent_id": [3, "Jane Manager"]
+  "parent_id": [5, "Jane Manager"]
 }
 ```
 
-- **Field Types:**
-  - `department_id`, `resource_calendar_id`, `parent_id`: `[id, name]` array
-  - `category_ids`: array of `[id, name]` arrays
+---
 
-### 3.2. `hr.department` (Department)
+### 2. `hr.department` - Department Data
 
-- **Fields used:**
-  - `id` (integer)
-  - `name` (string)
-  - `active` (boolean)
-  - `manager_id` (many2one → hr.employee, returns `[id, name]`)
-  - `parent_id` (many2one → hr.department, returns `[id, name]`)
+**Purpose:** Retrieve organizational department structure and hierarchy.
+
+**Fields Requested:**
+
+```php
+[
+    'id',         // int
+    'name',       // string
+    'active',     // bool|null
+    'manager_id', // [int, string]|false
+    'parent_id'   // [int, string]|false
+]
+```
+
+**Return Types:**
+
+- `id`: `int` - Always present
+- `name`: `string` - Always present, department name
+- `active`: `bool|null` - Active status, defaults to true if null
+- `manager_id`: `[int, string]|false` - Manager employee `[id, name]` or false
+- `parent_id`: `[int, string]|false` - Parent department `[id, name]` or false
 
 **Example Response:**
 
@@ -96,20 +109,32 @@ Below are the Odoo models and fields accessed by this app, with their types and 
   "id": 2,
   "name": "Engineering",
   "active": true,
-  "manager_id": [3, "Jane Manager"],
+  "manager_id": [5, "Jane Manager"],
   "parent_id": [1, "Company"]
 }
 ```
 
-- **Field Types:**
-  - `manager_id`, `parent_id`: `[id, name]` array
+---
 
-### 3.3. `hr.employee.category` (Employee Category)
+### 3. `hr.employee.category` - Employee Categories
 
-- **Fields used:**
-  - `id` (integer)
-  - `name` (string)
-  - `active` (boolean)
+**Purpose:** Retrieve employee classification categories (e.g., "Full Time", "Part Time").
+
+**Fields Requested:**
+
+```php
+[
+    'id',     // int
+    'name',   // string
+    'active'  // bool|null
+]
+```
+
+**Return Types:**
+
+- `id`: `int` - Always present
+- `name`: `string` - Always present, category name
+- `active`: `bool|null` - Active status, defaults to true if null
 
 **Example Response:**
 
@@ -121,14 +146,33 @@ Below are the Odoo models and fields accessed by this app, with their types and 
 }
 ```
 
-### 3.4. `hr.leave.type` (Leave Type)
+---
 
-- **Fields used:**
-  - `id` (integer)
-  - `name` (string)
-  - `active` (boolean)
-  - `allocation_type` (selection: 'fixed', 'proportional', ...)
-  - `validation_type` (selection: 'manager', 'both', ...)
+### 4. `hr.leave.type` - Leave Types
+
+**Purpose:** Retrieve available leave/time-off types and their configuration.
+
+**Fields Requested:**
+
+```php
+[
+    'id',           // int
+    'name',         // string
+    'request_unit', // string|false
+    'active',       // bool|null
+    'create_date',  // string|false
+    'write_date'    // string|false
+]
+```
+
+**Return Types:**
+
+- `id`: `int` - Always present
+- `name`: `string` - Always present, leave type name
+- `request_unit`: `string|false` - "day", "half_day", "hour", or false
+- `active`: `bool|null` - Active status, defaults to true if null
+- `create_date`: `string|false` - ISO datetime string or false
+- `write_date`: `string|false` - ISO datetime string or false
 
 **Example Response:**
 
@@ -136,27 +180,61 @@ Below are the Odoo models and fields accessed by this app, with their types and 
 {
   "id": 1,
   "name": "Paid Time Off",
+  "request_unit": "day",
   "active": true,
-  "allocation_type": "fixed",
-  "validation_type": "manager"
+  "create_date": "2024-01-01 09:00:00",
+  "write_date": "2024-01-15 14:30:00"
 }
 ```
 
-### 3.5. `hr.leave` (Leave)
+---
 
-- **Fields used:**
-  - `id` (integer)
-  - `holiday_type` (selection: 'employee', 'category', ...)
-  - `date_from` (datetime string, e.g. '2024-01-01 09:00:00')
-  - `date_to` (datetime string)
-  - `employee_id` (many2one → hr.employee, returns `[id, name]`)
-  - `holiday_status_id` (many2one → hr.leave.type, returns `[id, name]`)
-  - `state` (selection: 'draft', 'confirm', 'validate', ...)
-  - `number_of_days` (float)
-  - `category_id` (many2one → hr.employee.category, returns `[id, name]`)
-  - `department_id` (many2one → hr.department, returns `[id, name]`)
-  - `request_hour_from` (float)
-  - `request_hour_to` (float)
+### 5. `hr.leave` - Leave Records
+
+**Purpose:** Retrieve employee leave/time-off requests and approvals.
+
+**Domain Filters Applied:**
+
+```php
+[
+    ['state', 'in', ['validate', 'validate1', 'refuse', 'cancel', 'draft', 'confirm']],
+    ['holiday_type', 'in', ['employee', 'category', 'department']]
+]
+```
+
+**Fields Requested:**
+
+```php
+[
+    'id',                // int
+    'holiday_type',      // string
+    'date_from',         // string
+    'date_to',           // string
+    'employee_id',       // [int, string]|false
+    'holiday_status_id', // [int, string]|false
+    'state',             // string
+    'number_of_days',    // float|false
+    'category_id',       // [int, string]|false
+    'department_id',     // [int, string]|false
+    'request_hour_from', // float|false
+    'request_hour_to'    // float|false
+]
+```
+
+**Return Types:**
+
+- `id`: `int` - Always present
+- `holiday_type`: `string` - "employee", "category", or "department"
+- `date_from`: `string` - UTC datetime string (YYYY-MM-DD HH:MM:SS)
+- `date_to`: `string` - UTC datetime string
+- `employee_id`: `[int, string]|false` - Employee `[id, name]` or false
+- `holiday_status_id`: `[int, string]|false` - Leave type `[id, name]` or false
+- `state`: `string` - "draft", "confirm", "validate", "validate1", "refuse", "cancel"
+- `number_of_days`: `float|false` - Number of days or false
+- `category_id`: `[int, string]|false` - Category `[id, name]` or false
+- `department_id`: `[int, string]|false` - Department `[id, name]` or false
+- `request_hour_from`: `float|false` - Start hour (24h format) or false
+- `request_hour_to`: `float|false` - End hour (24h format) or false
 
 **Example Response:**
 
@@ -170,31 +248,48 @@ Below are the Odoo models and fields accessed by this app, with their types and 
   "holiday_status_id": [1, "Paid Time Off"],
   "state": "validate",
   "number_of_days": 5.0,
-  "category_id": [1, "Full Time"],
-  "department_id": [2, "Engineering"],
+  "category_id": false,
+  "department_id": false,
   "request_hour_from": 9.0,
   "request_hour_to": 18.0
 }
 ```
 
-- **Field Types:**
-  - `employee_id`, `holiday_status_id`, `category_id`, `department_id`: `[id, name]` array
+---
 
-### 3.6. `resource.calendar` (Work Schedule)
+### 6. `resource.calendar` - Work Schedules
 
-- **Fields used:**
-  - `id` (integer)
-  - `name` (string)
-  - `active` (boolean)
-  - `attendance_ids` (one2many → resource.calendar.attendance, returns list of IDs)
-  - `hours_per_day` (float)
-  - `two_weeks_calendar` (boolean)
-  - `two_weeks_explanation` (string)
-  - `flexible_hours` (boolean)
-  - `create_date` (datetime string)
-  - `write_date` (datetime string)
-  - `create_uid` (many2one → res.users, returns [id, name])
-  - `write_uid` (many2one → res.users, returns [id, name])
+**Purpose:** Retrieve work schedule templates that define working hours patterns.
+
+**Fields Requested:**
+
+```php
+[
+    'id',                    // int
+    'name',                  // string
+    'active',                // bool|null
+    'attendance_ids',        // int[]
+    'hours_per_day',         // float|false
+    'two_weeks_calendar',    // bool|false (optional)
+    'two_weeks_explanation', // string|false (optional)
+    'flexible_hours',        // bool|false (optional)
+    'create_date',           // string|false
+    'write_date'             // string|false
+]
+```
+
+**Return Types:**
+
+- `id`: `int` - Always present
+- `name`: `string` - Always present, schedule name
+- `active`: `bool|null` - Active status, defaults to true if null
+- `attendance_ids`: `int[]` - Array of attendance detail IDs
+- `hours_per_day`: `float|false` - Standard hours per day or false
+- `two_weeks_calendar`: `bool|false` - Bi-weekly schedule flag (optional field)
+- `two_weeks_explanation`: `string|false` - Bi-weekly description (optional field)
+- `flexible_hours`: `bool|false` - Flexible hours flag (optional field)
+- `create_date`: `string|false` - ISO datetime string or false
+- `write_date`: `string|false` - ISO datetime string or false
 
 **Example Response:**
 
@@ -203,63 +298,54 @@ Below are the Odoo models and fields accessed by this app, with their types and 
   "id": 1,
   "name": "Standard 40h",
   "active": true,
-  "attendance_ids": [1, 2, 3],
+  "attendance_ids": [1, 2, 3, 4, 5],
   "hours_per_day": 8.0,
-  "two_weeks_calendar": false,
-  "two_weeks_explanation": null,
-  "flexible_hours": false,
   "create_date": "2024-01-01 09:00:00",
-  "write_date": "2024-01-10 09:00:00",
-  "create_uid": [1, "Admin"],
-  "write_uid": [1, "Admin"]
+  "write_date": "2024-01-10 09:00:00"
 }
 ```
 
-### 3.7. `resource.calendar.attendance` (Schedule Detail)
+---
 
-- **Fields used:**
-  - `id` (integer)
-  - `calendar_id` (many2one → resource.calendar, returns [id, name])
-  - `name` (string)
-  - `dayofweek` (selection: '0'-'6')
-  - `hour_from` (float)
-  - `hour_to` (float)
-  - `day_period` (string)
-  - `week_type` (integer)
-  - `date_from` (date)
-  - `date_to` (date)
-  - `display_type` (string)
-  - `resource_id` (many2one → resource.resource, returns [id, name])
-  - `active` (boolean)
-  - `create_date` (datetime string)
-  - `write_date` (datetime string)
-  - `create_uid` (many2one → res.users, returns [id, name])
-  - `write_uid` (many2one → res.users, returns [id, name])
+### 7. `resource.calendar.attendance` - Schedule Time Slots
 
-> **About `week_type`:**
->
-> - The `week_type` field is used for bi-weekly (two-week) work schedules.
-> - **Values:**
->   - `0`: Applies to both weeks (default; slot is present every week)
->   - `1`: Applies to week 1 (odd weeks only)
->   - `2`: Applies to week 2 (even weeks only)
->
-> **Examples:**
->
-> - Standard weekly slot (every Monday):
->   ```json
->   { "dayofweek": "0", "hour_from": 9.0, "hour_to": 13.0, "week_type": 0 }
->   ```
-> - Bi-weekly slot, week 1 only:
->   ```json
->   { "dayofweek": "0", "hour_from": 9.0, "hour_to": 13.0, "week_type": 1 }
->   ```
-> - Bi-weekly slot, week 2 only:
->   ```json
->   { "dayofweek": "4", "hour_from": 14.0, "hour_to": 18.0, "week_type": 2 }
->   ```
->
-> If you do not use bi-weekly schedules, this field will always be `0`.
+**Purpose:** Retrieve individual time slots that make up work schedules (e.g., "Monday 9-13").
+
+**Fields Requested:**
+
+```php
+[
+    'id',           // int
+    'calendar_id',  // [int, string]|false
+    'name',         // string|false
+    'dayofweek',    // string
+    'hour_from',    // float|false
+    'hour_to',      // float|false
+    'day_period',   // string|false
+    'week_type',    // int|false (optional)
+    'date_from',    // string|false
+    'date_to',      // string|false
+    'active',       // bool|null
+    'create_date',  // string|false
+    'write_date'    // string|false
+]
+```
+
+**Return Types:**
+
+- `id`: `int` - Always present
+- `calendar_id`: `[int, string]|false` - Schedule `[id, name]` or false
+- `name`: `string|false` - Time slot name or false
+- `dayofweek`: `string` - "0" (Monday) to "6" (Sunday)
+- `hour_from`: `float|false` - Start hour (24h format, e.g., 9.0 = 9:00 AM)
+- `hour_to`: `float|false` - End hour (24h format, e.g., 13.5 = 1:30 PM)
+- `day_period`: `string|false` - "morning", "afternoon", etc. or false
+- `week_type`: `int|false` - 0=both weeks, 1=week 1, 2=week 2 (optional field)
+- `date_from`: `string|false` - Start date (YYYY-MM-DD) or false
+- `date_to`: `string|false` - End date (YYYY-MM-DD) or false
+- `active`: `bool|null` - Active status, defaults to true if null
+- `create_date`: `string|false` - ISO datetime string or false
+- `write_date`: `string|false` - ISO datetime string or false
 
 **Example Response:**
 
@@ -272,84 +358,54 @@ Below are the Odoo models and fields accessed by this app, with their types and 
   "hour_from": 9.0,
   "hour_to": 13.0,
   "day_period": "morning",
-  "week_type": 0,
   "date_from": "2024-01-01",
-  "date_to": "2024-06-30",
-  "display_type": null,
-  "resource_id": null,
+  "date_to": "2024-12-31",
   "active": true,
   "create_date": "2024-01-01 09:00:00",
-  "write_date": "2024-01-10 09:00:00",
-  "create_uid": [1, "Admin"],
-  "write_uid": [1, "Admin"]
-}
-```
-
-- **Field Types:**
-  - `calendar_id`: `[id, name]` array
-
----
-
-## 4. Data Types and Field Conventions
-
-- **integer:** Numeric ID
-- **string:** Text field
-- **boolean:** true/false (Note: If `null` is received from Odoo API for boolean fields like `active`, it is interpreted as `true`.)
-- **float:** Decimal number
-- **datetime:** String in 'YYYY-MM-DD HH:MM:SS' format
-- **many2one:** Returns `[id, name]` array; use `id` for foreign key
-- **many2many:** Returns list of `[id, name]` arrays; use list of `id`s
-- **selection:** Returns string value of the selected option
-
-**Reference:** [Odoo 13 ORM Field Types](https://www.odoo.com/documentation/13.0/reference/orm.html#fields)
-
----
-
-## 5. Best Practices for Odoo API Integration
-
-- Always use `search_read` with explicit `fields` for performance and clarity.
-- Use correct data types when mapping to DTOs and Eloquent models.
-- For `many2one` and `many2many`, extract the `id` (and `name` if needed for display).
-- Handle timezones and datetime strings carefully.
-- Validate all data before saving to your database.
-- Be aware that boolean fields (like `active`) may be `null` in Odoo's API response, in which case they are treated as `true`.
-- Reference the [Odoo 13 External API docs](https://www.odoo.com/documentation/13.0/developer/reference/external_api.html) for advanced usage.
-
----
-
-## 6. Example JSON-RPC Request (search_read)
-
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "call",
-  "params": {
-    "service": "object",
-    "method": "execute_kw",
-    "args": [
-      "my_db", // database
-      2, // uid
-      "password", // password
-      "hr.employee", // model
-      "search_read", // method
-      [[["active", "=", true]]], // domain
-      { "fields": ["id", "name", "work_email", "department_id"] }
-    ]
-  },
-  "id": 1
+  "write_date": "2024-01-10 09:00:00"
 }
 ```
 
 ---
 
-## 7. References
+## Odoo API Quirks & Important Notes
 
-- [Odoo 13 External API Documentation](https://www.odoo.com/documentation/13.0/developer/reference/external_api.html)
-- [Odoo 13 ORM Field Reference](https://www.odoo.com/documentation/13.0/reference/orm.html)
-- [Odoo 13 hr.employee Model](https://www.odoo.com/documentation/13.0/reference/addons/hr/hr.employee.html)
-- [Odoo 13 hr.department Model](https://www.odoo.com/documentation/13.0/reference/addons/hr/hr.department.html)
-- [Odoo 13 hr.leave Model](https://www.odoo.com/documentation/13.0/reference/addons/hr/hr.leave.html)
+### 1. **False vs Null Values**
 
----
+- Odoo returns `false` (not `null`) for empty fields
+- Always check `!== false` instead of using null coalescing `??`
+- Example: `$email = ($item['work_email'] !== false) ? $item['work_email'] : null;`
 
-This guide is specific to Odoo v13 and the Cronos app. For any changes in Odoo version or new fields/models, consult the official documentation and update this file accordingly.
+### 2. **Boolean Field Defaults**
+
+- Boolean fields like `active` may be `null` in responses
+- When `null`, they should be treated as `true` by default
+- Example: `(bool) ($item['active'] ?? true)`
+
+### 3. **Many2one Field Format**
+
+- Many2one fields return `[id, name]` arrays when set
+- Return `false` when not set (never `null`)
+- Example: `"department_id": [2, "Engineering"]` or `"department_id": false`
+
+### 4. **Many2many Field Format**
+
+- Many2many fields return arrays of IDs only (not `[id, name]` arrays)
+- Example: `"category_ids": [1, 3, 5]`
+
+### 5. **Datetime Fields**
+
+- All datetime fields are in UTC
+- Format: `"YYYY-MM-DD HH:MM:SS"`
+- Can be `false` if not set
+
+### 6. **Optional Fields**
+
+- Some fields (marked above) may not exist in responses unless specific features are enabled
+- Always check `isset()` before accessing optional fields
+- Example: `$twoWeeks = isset($item['two_weeks_calendar']) ? $item['two_weeks_calendar'] : false;`
+
+### 7. **Hour Format**
+
+- Hours are floats in 24-hour format
+- Example: `9.5` = 9:30 AM, `13.75` = 1:45 PM

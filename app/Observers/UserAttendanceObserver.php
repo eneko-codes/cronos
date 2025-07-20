@@ -9,7 +9,7 @@ class UserAttendanceObserver
 {
     public function created(UserAttendance $attendance)
     {
-        Log::info('UserAttendance created', [
+        Log::debug('UserAttendance created', [
             'id' => $attendance->id,
             'attributes' => $attendance->getAttributes(),
         ]);
@@ -23,7 +23,7 @@ class UserAttendanceObserver
             foreach (array_keys($changes) as $field) {
                 $old[$field] = $attendance->getOriginal($field);
             }
-            Log::info('UserAttendance updated', [
+            Log::debug('UserAttendance updated', [
                 'id' => $attendance->id,
                 'changed_fields' => $changes,
                 'old_values' => $old,
@@ -34,7 +34,7 @@ class UserAttendanceObserver
 
     public function deleted(UserAttendance $attendance)
     {
-        Log::info('UserAttendance deleted', [
+        Log::debug('UserAttendance deleted', [
             'id' => $attendance->id,
             'attributes' => $attendance->getOriginal(),
         ]);

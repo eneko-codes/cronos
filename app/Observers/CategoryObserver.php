@@ -22,7 +22,7 @@ class CategoryObserver
 
     public function created($category)
     {
-        Log::info('Category created', [
+        Log::debug('Category created', [
             'odoo_category_id' => $category->odoo_category_id,
             'attributes' => $category->getAttributes(),
         ]);
@@ -36,7 +36,7 @@ class CategoryObserver
             foreach (array_keys($changes) as $field) {
                 $old[$field] = $category->getOriginal($field);
             }
-            Log::info('Category updated', [
+            Log::debug('Category updated', [
                 'odoo_category_id' => $category->odoo_category_id,
                 'changed_fields' => $changes,
                 'old_values' => $old,
@@ -47,7 +47,7 @@ class CategoryObserver
 
     public function deleted($category)
     {
-        Log::info('Category deleted', [
+        Log::debug('Category deleted', [
             'odoo_category_id' => $category->odoo_category_id,
             'attributes' => $category->getOriginal(),
         ]);

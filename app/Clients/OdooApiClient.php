@@ -16,7 +16,6 @@ use App\Exceptions\ApiRequestException;
 use App\Exceptions\ApiResponseException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -28,7 +27,7 @@ use Illuminate\Support\Facades\Log;
  *
  * Note: Odoo 13 stores 'date_from' and 'date_to' in 'hr.leave' as UTC datetime fields.
  */
-class OdooApiClient
+readonly class OdooApiClient
 {
     /**
      * The base URL for the Odoo API (e.g., https://odoo.company.com).
@@ -225,16 +224,16 @@ class OdooApiClient
             'job_title',
             'parent_id',
         ])->map(fn ($item) => new OdooUserDTO(
-            Arr::get($item, 'id', null),
-            Arr::get($item, 'work_email', null) !== false ? Arr::get($item, 'work_email', null) : null,
-            Arr::get($item, 'name', null) !== false ? Arr::get($item, 'name', null) : null,
-            Arr::get($item, 'tz', null) !== false ? Arr::get($item, 'tz', null) : null,
-            Arr::get($item, 'active', null),
-            Arr::get($item, 'department_id', null) !== false ? Arr::get($item, 'department_id', null) : null,
-            Arr::get($item, 'category_ids', null) !== false ? Arr::get($item, 'category_ids', null) : [],
-            Arr::get($item, 'resource_calendar_id', null) !== false ? Arr::get($item, 'resource_calendar_id', null) : null,
-            Arr::get($item, 'job_title', null) !== false ? Arr::get($item, 'job_title', null) : null,
-            Arr::get($item, 'parent_id', null) !== false ? Arr::get($item, 'parent_id', null) : null
+            $item['id'],
+            $this->extractStringOrNull($item, 'work_email'),
+            $item['name'],
+            $this->extractStringOrNull($item, 'tz'),
+            (bool) ($item['active'] ?? true),
+            $this->extractRelationArray($item, 'department_id'),
+            is_array($item['category_ids']) ? $item['category_ids'] : [],
+            $this->extractRelationArray($item, 'resource_calendar_id'),
+            $this->extractStringOrNull($item, 'job_title'),
+            $this->extractRelationArray($item, 'parent_id')
         ));
     }
 
@@ -255,11 +254,11 @@ class OdooApiClient
             'manager_id',
             'parent_id',
         ])->map(fn ($item) => new OdooDepartmentDTO(
-            Arr::get($item, 'id', null),
-            Arr::get($item, 'name', null) !== false ? Arr::get($item, 'name', null) : null,
-            Arr::get($item, 'active', null),
-            Arr::get($item, 'manager_id', null) !== false ? Arr::get($item, 'manager_id', null) : null,
-            Arr::get($item, 'parent_id', null) !== false ? Arr::get($item, 'parent_id', null) : null
+            $item['id'],
+            $item['name'],
+            (bool) ($item['active'] ?? true),
+            $this->extractRelationArray($item, 'manager_id'),
+            $this->extractRelationArray($item, 'parent_id')
         ));
     }
 
@@ -278,9 +277,9 @@ class OdooApiClient
             'name',
             'active',
         ])->map(fn ($item) => new OdooCategoryDTO(
-            Arr::get($item, 'id', null),
-            Arr::get($item, 'name', null) !== false ? Arr::get($item, 'name', null) : null,
-            Arr::get($item, 'active', null)
+            $item['id'],
+            $item['name'],
+            (bool) ($item['active'] ?? true)
         ));
     }
 
@@ -302,12 +301,12 @@ class OdooApiClient
             'create_date',
             'write_date',
         ])->map(fn ($item) => new OdooLeaveTypeDTO(
-            Arr::get($item, 'id', null),
-            Arr::get($item, 'name', null) !== false ? Arr::get($item, 'name', null) : null,
-            Arr::get($item, 'request_unit', null) !== false ? Arr::get($item, 'request_unit', null) : null,
-            Arr::get($item, 'active', null),
-            Arr::get($item, 'create_date', null) !== false ? Arr::get($item, 'create_date', null) : null,
-            Arr::get($item, 'write_date', null) !== false ? Arr::get($item, 'write_date', null) : null
+            $item['id'],
+            $item['name'],
+            $this->extractStringOrNull($item, 'request_unit'),
+            (bool) ($item['active'] ?? true),
+            $this->extractStringOrNull($item, 'create_date'),
+            $this->extractStringOrNull($item, 'write_date')
         ));
     }
 
@@ -351,18 +350,18 @@ class OdooApiClient
             'request_hour_from',
             'request_hour_to',
         ])->map(fn ($item) => new OdooLeaveDTO(
-            Arr::get($item, 'id', null),
-            Arr::get($item, 'holiday_type', null) !== false ? Arr::get($item, 'holiday_type', null) : null,
-            Arr::get($item, 'date_from', null) !== false ? Arr::get($item, 'date_from', null) : null,
-            Arr::get($item, 'date_to', null) !== false ? Arr::get($item, 'date_to', null) : null,
-            Arr::get($item, 'number_of_days', null) !== false ? Arr::get($item, 'number_of_days', null) : null,
-            Arr::get($item, 'state', null) !== false ? Arr::get($item, 'state', null) : null,
-            Arr::get($item, 'holiday_status_id', null) !== false ? Arr::get($item, 'holiday_status_id', null) : null,
-            Arr::get($item, 'request_hour_from', null) !== false ? Arr::get($item, 'request_hour_from', null) : null,
-            Arr::get($item, 'request_hour_to', null) !== false ? Arr::get($item, 'request_hour_to', null) : null,
-            Arr::get($item, 'employee_id', null) !== false ? Arr::get($item, 'employee_id', null) : null,
-            Arr::get($item, 'category_id', null) !== false ? Arr::get($item, 'category_id', null) : null,
-            Arr::get($item, 'department_id', null) !== false ? Arr::get($item, 'department_id', null) : null
+            $item['id'],
+            $item['holiday_type'],
+            $item['date_from'],
+            $item['date_to'],
+            $this->extractFloatOrNull($item, 'number_of_days'),
+            $item['state'],
+            $this->extractRelationArray($item, 'holiday_status_id'),
+            $this->extractFloatOrNull($item, 'request_hour_from'),
+            $this->extractFloatOrNull($item, 'request_hour_to'),
+            $this->extractRelationArray($item, 'employee_id'),
+            $this->extractRelationArray($item, 'category_id'),
+            $this->extractRelationArray($item, 'department_id')
         ));
     }
 
@@ -388,16 +387,16 @@ class OdooApiClient
             'create_date',
             'write_date',
         ])->map(fn ($item) => new OdooScheduleDTO(
-            Arr::get($item, 'id', null),
-            Arr::get($item, 'name', null) !== false ? Arr::get($item, 'name', null) : null,
-            Arr::get($item, 'active', null),
-            Arr::get($item, 'attendance_ids', null) !== false ? Arr::get($item, 'attendance_ids', null) : [],
-            Arr::get($item, 'hours_per_day', null) !== false ? Arr::get($item, 'hours_per_day', null) : null,
-            Arr::get($item, 'two_weeks_calendar', null) !== false ? Arr::get($item, 'two_weeks_calendar', null) : null,
-            Arr::get($item, 'two_weeks_explanation', null) !== false ? Arr::get($item, 'two_weeks_explanation', null) : null,
-            Arr::get($item, 'flexible_hours', null),
-            Arr::get($item, 'create_date', null) !== false ? Arr::get($item, 'create_date', null) : null,
-            Arr::get($item, 'write_date', null) !== false ? Arr::get($item, 'write_date', null) : null
+            $item['id'],
+            $item['name'],
+            (bool) ($item['active'] ?? true),
+            is_array($item['attendance_ids']) ? $item['attendance_ids'] : [],
+            $this->extractFloatOrNull($item, 'hours_per_day'),
+            $this->extractBooleanOrNull($item, 'two_weeks_calendar'),
+            $this->extractStringOrNull($item, 'two_weeks_explanation'),
+            $this->extractBooleanOrNull($item, 'flexible_hours'),
+            $this->extractStringOrNull($item, 'create_date'),
+            $this->extractStringOrNull($item, 'write_date')
         ));
     }
 
@@ -426,20 +425,71 @@ class OdooApiClient
             'create_date',
             'write_date',
         ])->map(fn ($item) => new OdooScheduleDetailDTO(
-            Arr::get($item, 'id', null),
-            Arr::get($item, 'calendar_id', null) !== false ? Arr::get($item, 'calendar_id', null) : null,
-            Arr::get($item, 'name', null) !== false ? Arr::get($item, 'name', null) : null,
-            Arr::get($item, 'dayofweek', null) !== false ? Arr::get($item, 'dayofweek', null) : null,
-            Arr::get($item, 'hour_from', null) !== false ? Arr::get($item, 'hour_from', null) : null,
-            Arr::get($item, 'hour_to', null) !== false ? Arr::get($item, 'hour_to', null) : null,
-            Arr::get($item, 'day_period', null) !== false ? Arr::get($item, 'day_period', null) : null,
-            Arr::get($item, 'week_type', null) !== false ? Arr::get($item, 'week_type', null) : null,
-            Arr::get($item, 'date_from', null) !== false ? Arr::get($item, 'date_from', null) : null,
-            Arr::get($item, 'date_to', null) !== false ? Arr::get($item, 'date_to', null) : null,
-            Arr::get($item, 'active', null),
-            Arr::get($item, 'create_date', null) !== false ? Arr::get($item, 'create_date', null) : null,
-            Arr::get($item, 'write_date', null) !== false ? Arr::get($item, 'write_date', null) : null
+            $item['id'],
+            $this->extractRelationArray($item, 'calendar_id'),
+            $this->extractStringOrNull($item, 'name'),
+            $item['dayofweek'],
+            $this->extractFloatOrNull($item, 'hour_from'),
+            $this->extractFloatOrNull($item, 'hour_to'),
+            $this->extractStringOrNull($item, 'day_period'),
+            $this->extractIntOrNull($item, 'week_type'),
+            $this->extractStringOrNull($item, 'date_from'),
+            $this->extractStringOrNull($item, 'date_to'),
+            (bool) ($item['active'] ?? true),
+            $this->extractStringOrNull($item, 'create_date'),
+            $this->extractStringOrNull($item, 'write_date')
         ));
+    }
+
+    /**
+     * Helper method to extract float values from Odoo API response, handling false values.
+     */
+    private function extractFloatOrNull(array $item, string $key): ?float
+    {
+        $value = $item[$key] ?? null;
+
+        return ($value !== false && is_numeric($value)) ? (float) $value : null;
+    }
+
+    /**
+     * Helper method to extract integer values from Odoo API response, handling false values.
+     */
+    private function extractIntOrNull(array $item, string $key): ?int
+    {
+        $value = $item[$key] ?? null;
+
+        return ($value !== false && is_numeric($value)) ? (int) $value : null;
+    }
+
+    /**
+     * Helper method to extract string values from Odoo API response, handling false values.
+     */
+    private function extractStringOrNull(array $item, string $key): ?string
+    {
+        $value = $item[$key] ?? null;
+
+        return ($value !== false && $value !== null) ? (string) $value : null;
+    }
+
+    /**
+     * Helper method to extract boolean values from Odoo API response, handling false values.
+     */
+    private function extractBooleanOrNull(array $item, string $key): ?bool
+    {
+        $value = $item[$key] ?? null;
+
+        return ($value !== null) ? (bool) $value : null;
+    }
+
+    /**
+     * Helper method to extract relation arrays (Many2one fields) from Odoo API response.
+     * Many2one fields return [id, name] arrays or false.
+     */
+    private function extractRelationArray(array $item, string $key): ?array
+    {
+        $value = $item[$key] ?? null;
+
+        return (is_array($value) && count($value) >= 2) ? $value : null;
     }
 
     /**

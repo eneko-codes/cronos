@@ -27,7 +27,7 @@ class TaskObserver
 
     public function created($task)
     {
-        Log::info('Task created', [
+        Log::debug('Task created', [
             'proofhub_task_id' => $task->proofhub_task_id,
             'attributes' => $task->getAttributes(),
         ]);
@@ -41,7 +41,7 @@ class TaskObserver
             foreach (array_keys($changes) as $field) {
                 $old[$field] = $task->getOriginal($field);
             }
-            Log::info('Task updated', [
+            Log::debug('Task updated', [
                 'proofhub_task_id' => $task->proofhub_task_id,
                 'changed_fields' => $changes,
                 'old_values' => $old,
@@ -52,7 +52,7 @@ class TaskObserver
 
     public function deleted($task)
     {
-        Log::info('Task deleted', [
+        Log::debug('Task deleted', [
             'proofhub_task_id' => $task->proofhub_task_id,
             'attributes' => $task->getOriginal(),
         ]);

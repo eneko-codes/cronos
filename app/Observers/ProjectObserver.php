@@ -35,7 +35,7 @@ class ProjectObserver
 
     public function created($project)
     {
-        Log::info('Project created', [
+        Log::debug('Project created', [
             'proofhub_project_id' => $project->proofhub_project_id,
             'attributes' => $project->getAttributes(),
         ]);
@@ -49,7 +49,7 @@ class ProjectObserver
             foreach (array_keys($changes) as $field) {
                 $old[$field] = $project->getOriginal($field);
             }
-            Log::info('Project updated', [
+            Log::debug('Project updated', [
                 'proofhub_project_id' => $project->proofhub_project_id,
                 'changed_fields' => $changes,
                 'old_values' => $old,
@@ -60,7 +60,7 @@ class ProjectObserver
 
     public function deleted($project)
     {
-        Log::info('Project deleted', [
+        Log::debug('Project deleted', [
             'proofhub_project_id' => $project->proofhub_project_id,
             'attributes' => $project->getOriginal(),
         ]);

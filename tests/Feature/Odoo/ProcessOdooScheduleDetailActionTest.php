@@ -48,8 +48,8 @@ test('ProcessOdooScheduleDetailAction creates new schedule detail with valid dat
     expect($scheduleDetail->odoo_schedule_id)->toBe(1);
     expect($scheduleDetail->name)->toBe('Monday Morning');
     expect($scheduleDetail->weekday)->toBe(0);
-    expect($scheduleDetail->start?->format('H:i:s'))->toBe('09:00:00');
-    expect($scheduleDetail->end?->format('H:i:s'))->toBe('13:00:00');
+    expect($scheduleDetail->start->format('H:i:s'))->toBe('09:00:00');
+    expect($scheduleDetail->end->format('H:i:s'))->toBe('13:00:00');
     expect($scheduleDetail->day_period)->toBe('morning');
     expect($scheduleDetail->week_type)->toBe(0);
     expect($scheduleDetail->date_from?->format('Y-m-d'))->toBe('2024-01-01');
@@ -96,8 +96,8 @@ test('ProcessOdooScheduleDetailAction updates existing schedule detail', functio
     expect($scheduleDetail)->not->toBeNull();
     expect($scheduleDetail->name)->toBe('Monday Morning');
     expect($scheduleDetail->weekday)->toBe(0);
-    expect($scheduleDetail->start?->format('H:i:s'))->toBe('09:00:00');
-    expect($scheduleDetail->end?->format('H:i:s'))->toBe('13:00:00');
+    expect($scheduleDetail->start->format('H:i:s'))->toBe('09:00:00');
+    expect($scheduleDetail->end->format('H:i:s'))->toBe('13:00:00');
     expect($scheduleDetail->week_type)->toBe(0);
     expect($scheduleDetail->active)->toBe(true);
 
@@ -134,7 +134,7 @@ test('ProcessOdooScheduleDetailAction formats time correctly', function (): void
         $this->action->execute($dto);
 
         $scheduleDetail = ScheduleDetail::where('odoo_detail_id', $index + 1)->first();
-        expect($scheduleDetail->start?->format('H:i:s'))->toBe($testCase['expected']);
+        expect($scheduleDetail->start->format('H:i:s'))->toBe($testCase['expected']);
     }
 });
 
@@ -376,6 +376,6 @@ test('ProcessOdooScheduleDetailAction handles fractional minutes correctly', fun
     $scheduleDetail = ScheduleDetail::where('odoo_detail_id', 1)->first();
 
     // Should handle fractional minutes properly
-    expect($scheduleDetail->start?->format('H:i:s'))->toBe('09:07:00'); // Should round down to nearest minute
-    expect($scheduleDetail->end?->format('H:i:s'))->toBe('17:49:00');   // Should round down to nearest minute
+    expect($scheduleDetail->start->format('H:i:s'))->toBe('09:07:00'); // Should round down to nearest minute
+    expect($scheduleDetail->end->format('H:i:s'))->toBe('17:49:00');   // Should round down to nearest minute
 });

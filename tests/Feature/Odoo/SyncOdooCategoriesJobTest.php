@@ -15,6 +15,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
     // Use namedMock to avoid readonly class extension issues
+    /** @var \App\Clients\OdooApiClient&\Mockery\MockInterface */
     $this->odooClient = Mockery::namedMock('MockOdooApiClient', OdooApiClient::class);
     $this->job = new SyncOdooCategoriesJob($this->odooClient);
 });

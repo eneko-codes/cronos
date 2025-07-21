@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Queue;
 uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
-    /** @var OdooApiClient $odooClient */
+    /** @var \App\Clients\OdooApiClient&\Mockery\MockInterface */
     $this->odooClient = Mockery::namedMock('MockOdooApiClient', OdooApiClient::class);
     $this->fromDate = '2024-01-01';
     $this->toDate = '2024-12-31';

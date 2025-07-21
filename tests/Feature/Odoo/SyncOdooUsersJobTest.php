@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Queue;
 uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
+    /** @var \App\Clients\OdooApiClient&\Mockery\MockInterface */
     $this->odooClient = Mockery::namedMock('MockOdooApiClient', OdooApiClient::class);
     $this->job = new SyncOdooUsersJob($this->odooClient);
 

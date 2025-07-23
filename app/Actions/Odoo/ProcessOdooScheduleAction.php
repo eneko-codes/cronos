@@ -50,9 +50,10 @@ final class ProcessOdooScheduleAction
 
         DB::transaction(function () use ($scheduleDto): void {
             // Create or update the schedule record
-            Schedule::updateOrCreate(
-                ['odoo_schedule_id' => $scheduleDto->id],
-                [
+            $schedule = Schedule::where('odoo_schedule_id', $scheduleDto->id)->first();
+
+            if ($schedule) {
+                $schedule->update([
                     'description' => $scheduleDto->name,
                     'average_hours_day' => $scheduleDto->hours_per_day,
                     'two_weeks_calendar' => $scheduleDto->two_weeks_calendar ?? false,
@@ -61,8 +62,20 @@ final class ProcessOdooScheduleAction
                     'active' => $scheduleDto->active ?? true,
                     'odoo_created_at' => $scheduleDto->create_date,
                     'odoo_updated_at' => $scheduleDto->write_date,
-                ]
-            );
+                ]);
+            } else {
+                Schedule::create([
+                    'odoo_schedule_id' => $scheduleDto->id,
+                    'description' => $scheduleDto->name,
+                    'average_hours_day' => $scheduleDto->hours_per_day,
+                    'two_weeks_calendar' => $scheduleDto->two_weeks_calendar ?? false,
+                    'two_weeks_explanation' => $scheduleDto->two_weeks_explanation,
+                    'flexible_hours' => $scheduleDto->flexible_hours ?? false,
+                    'active' => $scheduleDto->active ?? true,
+                    'odoo_created_at' => $scheduleDto->create_date,
+                    'odoo_updated_at' => $scheduleDto->write_date,
+                ]);
+            }
         });
     }
 }

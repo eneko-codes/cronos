@@ -58,22 +58,37 @@ class SyncProofhubProjects extends BaseSyncJob
         foreach ($allProjects as $project) {
             /** @var ProofhubProjectDTO $project */
             $projectId = $project->id;
-            if (! $projectId) {
+            $projectName = $project->title;
+            if (! $projectId || ! $projectName) {
                 continue;
             }
-            $projectName = $project->title;
             $assignedUserIds = $project->assigned ?? [];
-            $projectModel = Project::updateOrCreate(
-                ['proofhub_project_id' => $projectId],
-                [
-                    'name' => $projectName,
-                    'status' => $project->status,
+
+            $projectModel = Project::where('proofhub_project_id', $projectId)->first();
+
+            if ($projectModel) {
+                $projectModel->update([
+                    'title' => $projectName,
+                    'status' => $project->status['name'] ?? null,
                     'description' => $project->description,
                     'proofhub_created_at' => $project->proofhub_created_at,
                     'proofhub_updated_at' => $project->proofhub_updated_at,
-                    'proofhub_owner_id' => $project->owner_id,
-                ]
-            );
+                    'proofhub_creator_id' => $project->creator['id'] ?? null,
+                    'proofhub_manager_id' => $project->manager['id'] ?? null,
+                ]);
+            } else {
+                $projectModel = Project::create([
+                    'proofhub_project_id' => $projectId,
+                    'title' => $projectName,
+                    'status' => $project->status['name'] ?? null,
+                    'description' => $project->description,
+                    'proofhub_created_at' => $project->proofhub_created_at,
+                    'proofhub_updated_at' => $project->proofhub_updated_at,
+                    'proofhub_creator_id' => $project->creator['id'] ?? null,
+                    'proofhub_manager_id' => $project->manager['id'] ?? null,
+                ]);
+            }
+
             $this->syncProjectUsers($projectModel, $assignedUserIds);
             $allSyncedProofhubProjectIds->push($projectId);
         }

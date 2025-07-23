@@ -52,15 +52,24 @@ final class ProcessOdooDepartmentAction
 
         DB::transaction(function () use ($departmentDto): void {
             // Create or update the department record
-            Department::updateOrCreate(
-                ['odoo_department_id' => $departmentDto->id],
-                [
+            $department = Department::where('odoo_department_id', $departmentDto->id)->first();
+
+            if ($department) {
+                $department->update([
                     'name' => $departmentDto->name,
                     'active' => $departmentDto->active ?? true,
                     'odoo_manager_id' => Arr::get($departmentDto->manager_id, 0),
                     'odoo_parent_department_id' => Arr::get($departmentDto->parent_id, 0),
-                ]
-            );
+                ]);
+            } else {
+                Department::create([
+                    'odoo_department_id' => $departmentDto->id,
+                    'name' => $departmentDto->name,
+                    'active' => $departmentDto->active ?? true,
+                    'odoo_manager_id' => Arr::get($departmentDto->manager_id, 0),
+                    'odoo_parent_department_id' => Arr::get($departmentDto->parent_id, 0),
+                ]);
+            }
         });
     }
 }

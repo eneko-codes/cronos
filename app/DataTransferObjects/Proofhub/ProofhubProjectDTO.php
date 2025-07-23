@@ -14,14 +14,14 @@ final readonly class ProofhubProjectDTO
 {
     public function __construct(
         public ?int $id = null,
-        public ?string $name = null,
         public ?string $title = null,
         public ?array $assigned = null,
         public ?array $status = null,
         public ?string $description = null,
         public ?string $created_at = null,
         public ?string $updated_at = null,
-        public ?int $owner_id = null,
+        public ?array $creator = null,
+        public ?array $manager = null,
         public ?string $proofhub_created_at = null,
         public ?string $proofhub_updated_at = null
     ) {}

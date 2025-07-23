@@ -52,16 +52,26 @@ final class ProcessOdooLeaveTypeAction
         }
 
         DB::transaction(function () use ($leaveTypeDto): void {
-            LeaveType::updateOrCreate(
-                ['odoo_leave_type_id' => $leaveTypeDto->id],
-                [
+            $leaveType = LeaveType::where('odoo_leave_type_id', $leaveTypeDto->id)->first();
+
+            if ($leaveType) {
+                $leaveType->update([
                     'name' => $leaveTypeDto->name,
                     'request_unit' => $leaveTypeDto->request_unit,
                     'active' => $leaveTypeDto->active ?? false,
                     'odoo_created_at' => $leaveTypeDto->create_date,
                     'odoo_updated_at' => $leaveTypeDto->write_date,
-                ]
-            );
+                ]);
+            } else {
+                LeaveType::create([
+                    'odoo_leave_type_id' => $leaveTypeDto->id,
+                    'name' => $leaveTypeDto->name,
+                    'request_unit' => $leaveTypeDto->request_unit,
+                    'active' => $leaveTypeDto->active ?? false,
+                    'odoo_created_at' => $leaveTypeDto->create_date,
+                    'odoo_updated_at' => $leaveTypeDto->write_date,
+                ]);
+            }
         });
     }
 }

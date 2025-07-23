@@ -25,14 +25,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $status Status of the time entry in ProofHub
  * @property string $description Description of the work performed
  * @property \Carbon\Carbon $date Date when the work was performed (stored in UTC timezone)
- * @property int $seconds Duration of work in seconds
+ * @property int $duration_seconds
  * @property \Carbon\Carbon $proofhub_created_at When the entry was created in ProofHub
  * @property \Carbon\Carbon|null $created_at When record was created locally
  * @property \Carbon\Carbon|null $updated_at When record was last updated locally
  * @property-read \App\Models\User $user The user who logged this time
  * @property-read \App\Models\Project $project The project this time entry belongs to
  * @property-read \App\Models\Task|null $task The task this time entry is associated with (if any)
- * @property int $duration_seconds
  *
  * @method static \Database\Factories\TimeEntryFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|TimeEntry newModelQuery()

@@ -17,7 +17,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  *
  * @property int $proofhub_task_id
  * @property int $proofhub_project_id
- * @property string $name
+ * @property string $title
+ * @property array|null $status
+ * @property \Illuminate\Support\Carbon|null $due_date
+ * @property string|null $description
+ * @property array|null $tags
+ * @property int|null $proofhub_creator_id
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read \App\Models\Project $project
@@ -38,6 +43,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Task whereProofhubProjectId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Task whereProofhubTaskId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Task whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Task whereDescription($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Task whereDueDate($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Task whereTitle($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Task whereProofhubCreatedAt($value)
  *
  * @mixin \Eloquent
  */
@@ -74,18 +83,28 @@ class Task extends Model
     protected $fillable = [
         'proofhub_task_id',
         'proofhub_project_id',
-        'name',
+        'title',
         'status',
         'due_date',
         'description',
         'tags',
-        'priority',
+        'proofhub_creator_id',
         'proofhub_created_at',
         'proofhub_updated_at',
     ];
 
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
     protected $casts = [
+        'proofhub_task_id' => 'integer',
+        'proofhub_project_id' => 'integer',
         'due_date' => 'date',
+        'tags' => 'array',
+        'status' => 'string',
+        'proofhub_creator_id' => 'integer',
         'proofhub_created_at' => 'datetime',
         'proofhub_updated_at' => 'datetime',
     ];
@@ -103,14 +122,6 @@ class Task extends Model
         )
             ->using(TaskUser::class)
             ->withTimestamps();
-    }
-
-    /**
-     * The projects that the task belongs to.
-     */
-    public function projects(): BelongsToMany
-    {
-        return $this->belongsToMany(Project::class)->withTimestamps();
     }
 
     /**

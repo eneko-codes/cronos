@@ -51,13 +51,20 @@ final class ProcessOdooCategoryAction
 
         DB::transaction(function () use ($categoryDto): void {
             // Create or update the category record
-            Category::updateOrCreate(
-                ['odoo_category_id' => $categoryDto->id],
-                [
+            $category = Category::where('odoo_category_id', $categoryDto->id)->first();
+
+            if ($category) {
+                $category->update([
                     'name' => $categoryDto->name,
                     'active' => $categoryDto->active ?? true,
-                ]
-            );
+                ]);
+            } else {
+                Category::create([
+                    'odoo_category_id' => $categoryDto->id,
+                    'name' => $categoryDto->name,
+                    'active' => $categoryDto->active ?? true,
+                ]);
+            }
         });
     }
 }

@@ -6,6 +6,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -15,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * Represents a project synchronized from ProofHub.
  *
  * @property int $proofhub_project_id
- * @property string $name
+ * @property string $title
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Task> $tasks
@@ -32,7 +33,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Project newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Project query()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Project whereCreatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder<static>|Project whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Project whereTitle($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Project whereProofhubProjectId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Project whereUpdatedAt($value)
  *
@@ -70,12 +71,13 @@ class Project extends Model
      */
     protected $fillable = [
         'proofhub_project_id',
-        'name',
+        'title',
         'status',
         'description',
         'proofhub_created_at',
         'proofhub_updated_at',
-        'proofhub_owner_id',
+        'proofhub_creator_id',
+        'proofhub_manager_id',
     ];
 
     protected $casts = [
@@ -83,7 +85,8 @@ class Project extends Model
         'status' => 'array',
         'proofhub_created_at' => 'datetime',
         'proofhub_updated_at' => 'datetime',
-        'proofhub_owner_id' => 'integer',
+        'proofhub_creator_id' => 'integer',
+        'proofhub_manager_id' => 'integer',
     ];
 
     /**
@@ -99,6 +102,22 @@ class Project extends Model
         )
             ->using(ProjectUser::class)
             ->withTimestamps();
+    }
+
+    /**
+     * The user who created the project.
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'proofhub_creator_id', 'proofhub_id');
+    }
+
+    /**
+     * The user who manages the project.
+     */
+    public function manager(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'proofhub_manager_id', 'proofhub_id');
     }
 
     /**

@@ -64,12 +64,12 @@ final class ProcessOdooScheduleDetailAction
             $end = $this->formatOdooTime($scheduleDetailDto->hour_to);
 
             // Create or update the schedule detail record
-            ScheduleDetail::updateOrCreate(
-                [
-                    'odoo_detail_id' => $scheduleDetailDto->id,
-                    'odoo_schedule_id' => Arr::get($scheduleDetailDto->calendar_id, 0),
-                ],
-                [
+            $scheduleDetail = ScheduleDetail::where('odoo_detail_id', $scheduleDetailDto->id)
+                ->where('odoo_schedule_id', Arr::get($scheduleDetailDto->calendar_id, 0))
+                ->first();
+
+            if ($scheduleDetail) {
+                $scheduleDetail->update([
                     'weekday' => $scheduleDetailDto->dayofweek !== null ? (int) $scheduleDetailDto->dayofweek : null,
                     'day_period' => $scheduleDetailDto->day_period,
                     'week_type' => $scheduleDetailDto->week_type ?? 0,
@@ -81,8 +81,24 @@ final class ProcessOdooScheduleDetailAction
                     'odoo_updated_at' => $scheduleDetailDto->write_date,
                     'name' => $scheduleDetailDto->name,
                     'active' => (bool) ($scheduleDetailDto->active ?? true),
-                ]
-            );
+                ]);
+            } else {
+                ScheduleDetail::create([
+                    'odoo_detail_id' => $scheduleDetailDto->id,
+                    'odoo_schedule_id' => Arr::get($scheduleDetailDto->calendar_id, 0),
+                    'weekday' => $scheduleDetailDto->dayofweek !== null ? (int) $scheduleDetailDto->dayofweek : null,
+                    'day_period' => $scheduleDetailDto->day_period,
+                    'week_type' => $scheduleDetailDto->week_type ?? 0,
+                    'date_from' => $scheduleDetailDto->date_from,
+                    'date_to' => $scheduleDetailDto->date_to,
+                    'start' => $start,
+                    'end' => $end,
+                    'odoo_created_at' => $scheduleDetailDto->create_date,
+                    'odoo_updated_at' => $scheduleDetailDto->write_date,
+                    'name' => $scheduleDetailDto->name,
+                    'active' => (bool) ($scheduleDetailDto->active ?? true),
+                ]);
+            }
         });
     }
 

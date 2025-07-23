@@ -86,9 +86,10 @@ final class ProcessOdooLeavesAction
                 $userId = $user ? $user->id : null;
             }
             // Create or update the UserLeave record using odoo_leave_id as the unique key
-            UserLeave::updateOrCreate(
-                ['odoo_leave_id' => $leaveDto->id],
-                [
+            $leave = UserLeave::where('odoo_leave_id', $leaveDto->id)->first();
+
+            if ($leave) {
+                $leave->update([
                     'type' => $leaveDto->holiday_type,
                     'start_date' => $leaveDto->date_from,
                     'end_date' => $leaveDto->date_to,
@@ -100,8 +101,23 @@ final class ProcessOdooLeavesAction
                     'category_id' => Arr::get($leaveDto->category_id, 0),
                     'request_hour_from' => $leaveDto->request_hour_from ?? null,
                     'request_hour_to' => $leaveDto->request_hour_to ?? null,
-                ]
-            );
+                ]);
+            } else {
+                UserLeave::create([
+                    'odoo_leave_id' => $leaveDto->id,
+                    'type' => $leaveDto->holiday_type,
+                    'start_date' => $leaveDto->date_from,
+                    'end_date' => $leaveDto->date_to,
+                    'status' => $leaveDto->state,
+                    'duration_days' => $leaveDto->number_of_days,
+                    'leave_type_id' => Arr::get($leaveDto->holiday_status_id, 0),
+                    'user_id' => $userId,
+                    'department_id' => Arr::get($leaveDto->department_id, 0),
+                    'category_id' => Arr::get($leaveDto->category_id, 0),
+                    'request_hour_from' => $leaveDto->request_hour_from ?? null,
+                    'request_hour_to' => $leaveDto->request_hour_to ?? null,
+                ]);
+            }
         });
     }
 }

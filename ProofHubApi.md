@@ -33,33 +33,33 @@ This document describes how the ProofHub API is used in this application, includ
   GET https://yourcompany.proofhub.com/api/v3/people?page=1
   X-API-KEY: YOUR_API_KEY
   ```
-- **Response Example:**
+- **Response Example (from official docs):**
   ```json
   [
     {
-      "id": 123,
-      "name": "Jane Doe",
-      "email": "jane@example.com",
-      "verified": "2",
-      "groups": [1504559028],
-      "timezone": 59,
-      "initials": "JD",
-      "profile_color": "#d2d24b",
-      "image_url": "https://...",
+      "id": 12009183,
+      "first_name": "Chris",
+      "last_name": "Wagley",
+      "title": "Manager",
+      "email": "chris@email.com",
+      "role": {
+        "id": 903912753
+      },
+      "groups": [33838231, 33838232],
+      "timezone": 8,
+      "initials": "N",
+      "image_url": null,
+      "profile_color": "#781f1f",
       "language": "en",
       "suspended": false,
-      "last_active": "2024-06-28T12:35:27+00:00",
-      "role": { "id": 1, "name": "Admin" },
-      "proofhub_created_at": "2024-06-01T10:00:00Z",
-      "proofhub_updated_at": "2024-06-10T10:00:00Z"
+      "send_invite": true,
+      "last_active": "2016-09-19T06:17:22+00:00",
+      "created_at": "2016-09-16T10:39:25+00:00",
+      "updated_at": "2016-09-16T10:39:25+00:00",
+      "projects": [23423233, 23423234]
     }
   ]
   ```
-- **Field Types:**
-  - `groups`: array of int
-  - `role`: object `{ id: int, name: string }`
-  - `suspended`: boolean
-  - `last_active`, `proofhub_created_at`, `proofhub_updated_at`: string (ISO date)
 
 ### 2. Get All Projects
 
@@ -74,28 +74,37 @@ This document describes how the ProofHub API is used in this application, includ
   GET https://yourcompany.proofhub.com/api/v3/projects?page=1
   X-API-KEY: YOUR_API_KEY
   ```
-- **Response Example:**
+- **Response Example (from official docs):**
   ```json
   [
     {
-      "id": 456,
-      "name": "Project X",
-      "title": "Project X Title",
-      "assigned": [123],
-      "status": "active",
-      "description": "A project",
-      "created_at": "2024-06-01T10:00:00Z",
-      "updated_at": "2024-06-10T10:00:00Z",
-      "owner_id": 123,
-      "proofhub_created_at": "2024-06-01T10:00:00Z",
-      "proofhub_updated_at": "2024-06-10T10:00:00Z"
+      "id": 23423233,
+      "title": "PH Marketing",
+      "description": "Project description goes here",
+      "archived": false,
+      "status": 12345678,
+      "color": "#41236D",
+      "start_date": "2016-12-10",
+      "end_date": "2016-12-15",
+      "template": false,
+      "sample_project": false,
+      "favourite": false,
+      "favourite_sort": null,
+      "category": {
+        "id": 65707070
+      },
+      "creator": {
+        "id": 11765082
+      },
+      "assigned": [12009183, 11679192],
+      "manager": {
+        "id": 11679192
+      },
+      "created_at": "2016-06-24T12:18:26+00:00",
+      "modified_at": "2016-06-24T12:18:26+00:00"
     }
   ]
   ```
-- **Field Types:**
-  - `assigned`: array of int
-  - `owner_id`: int
-  - `created_at`, `updated_at`, `proofhub_created_at`, `proofhub_updated_at`: string (ISO date)
 
 ### 3. Get All Tasks
 
@@ -110,33 +119,59 @@ This document describes how the ProofHub API is used in this application, includ
   GET https://yourcompany.proofhub.com/api/v3/alltodo?page=1
   X-API-KEY: YOUR_API_KEY
   ```
-- **Response Example:**
+- **Response Example (from official docs):**
   ```json
   [
     {
-      "id": 789,
-      "name": "Task 1",
-      "project_id": 456,
-      "project": { "id": 456, "name": "Project X" },
-      "assigned": [123],
-      "title": "Task Title",
-      "subtasks": [],
-      "status": "open",
-      "due_date": "2024-07-01",
-      "description": "A task",
-      "tags": ["urgent", "backend"],
-      "priority": "high",
-      "created_by": "Jane Doe",
-      "updated_by": "John Smith",
-      "proofhub_created_at": "2024-06-01T10:00:00Z",
-      "proofhub_updated_at": "2024-06-10T10:00:00Z"
+      "ticket": "20842",
+      "id": 985356917305,
+      "title": "Task 1",
+      "description": "Task description",
+      "start_date": null,
+      "due_date": null,
+      "estimated_hours": null,
+      "estimated_mins": null,
+      "logged_hours": null,
+      "logged_mins": null,
+      "updated_at": "2021-03-22T13:13:46+00:00",
+      "created_at": "2021-03-22T13:13:46+00:00",
+      "completed": false,
+      "assigned": [8172598588],
+      "labels": [4766001983],
+      "sub_tasks": 0,
+      "rrule": null,
+      "task_history": null,
+      "percent_progress": 0,
+      "attachments": [],
+      "comments": 0,
+      "by_me": true,
+      "template": false,
+      "form_task": false,
+      "timesheet_id": null,
+      "user_stages": [],
+      "project": {
+        "id": 4469983073,
+        "name": "Castle"
+      },
+      "creator": {
+        "id": 7279827447
+      },
+      "list": {
+        "id": 169808767259,
+        "name": "Test Task List Alpha"
+      },
+      "workflow": {
+        "id": 2747398168,
+        "name": "Basic workflow"
+      },
+      "stage": {
+        "id": 6074498296,
+        "name": "New"
+      },
+      "custom_fields": []
     }
   ]
   ```
-- **Field Types:**
-  - `assigned`, `tags`, `subtasks`: array
-  - `project`: object
-  - `created_by`, `updated_by`: string
 
 ### 4. Get All Time Entries
 
@@ -153,32 +188,36 @@ This document describes how the ProofHub API is used in this application, includ
   GET https://yourcompany.proofhub.com/api/v3/alltime?from_date=2024-07-01&to_date=2024-07-07&page=1
   X-API-KEY: YOUR_API_KEY
   ```
-- **Response Example:**
+- **Response Example (from official docs):**
   ```json
   [
     {
-      "id": 1011,
-      "user_id": 123,
-      "project_id": 456,
-      "task_id": 789,
-      "duration": 3600,
-      "date": "2024-07-01",
-      "created_at": "2024-07-01T10:00:00Z",
-      "user_email": "jane@example.com",
-      "task_title": "Task 1",
-      "status": "completed",
-      "description": "Worked on task",
-      "proofhub_updated_at": "2024-07-01T12:00:00Z",
-      "billable": true,
-      "comments": "Good progress",
-      "tags": ["urgent"]
+      "id": 80870831,
+      "status": "billable",
+      "description": "Brainstorm session with potential users",
+      "date": "2016-10-05",
+      "created_at": "2016-10-05T08:19:01+00:00",
+      "logged_hours": 2,
+      "logged_mins": 30,
+      "timer": false,
+      "today": 1475625600,
+      "sort": 0,
+      "by_me": true,
+      "project": {
+        "id": 23423233,
+        "name": "PH Marketing"
+      },
+      "creator": {
+        "id": 12009183
+      },
+      "task": null,
+      "timesheet": {
+        "id": 23570135,
+        "title": "Prepare training material"
+      }
     }
   ]
   ```
-- **Field Types:**
-  - `tags`: array
-  - `billable`: boolean
-  - `created_at`, `proofhub_updated_at`: string (ISO date)
 
 ---
 
@@ -204,7 +243,7 @@ This document describes how the ProofHub API is used in this application, includ
 
 ## References
 
-- [ProofHub API Docs](https://www.proofhub.com/api)
+- [ProofHub API v3 Docs](https://github.com/ProofHub/api_v3)
 
 ---
 
@@ -221,6 +260,7 @@ do {
         'page' => $page,
     ]);
     // Process $response
-    $page++;
-} while (count($response) > 0);
+    // The v3 API uses the 'Link' header for pagination, not the count of the response.
+    $nextPageUrl = parseNextLinkFromHeader($response->header('Link'));
+} while ($nextPageUrl);
 ```

@@ -17,12 +17,12 @@ class CreateTasksTable extends Migration
             $table->foreign('proofhub_project_id')
                 ->references('proofhub_project_id')
                 ->on('projects');
-            $table->string('name');
+            $table->string('title');
             $table->string('status')->nullable()->comment('Task status from ProofHub');
             $table->date('due_date')->nullable()->comment('Task due date from ProofHub');
             $table->text('description')->nullable()->comment('Task description from ProofHub');
-            $table->json('tags')->nullable()->comment('Tags from ProofHub, stored as JSON array');
-            $table->string('priority')->nullable()->comment('Task priority from ProofHub');
+            $table->json('tags')->nullable()->comment('Task tags from ProofHub');
+            $table->unsignedBigInteger('proofhub_creator_id')->nullable()->comment('ProofHub user ID of the task creator');
             $table->timestamp('proofhub_created_at')->nullable()->comment('Task creation time in ProofHub');
             $table->timestamp('proofhub_updated_at')->nullable()->comment('Task last update time in ProofHub');
             $table->timestamps();

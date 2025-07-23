@@ -30,7 +30,7 @@ use Illuminate\Notifications\Notification;
  * @property int $id Primary key
  * @property string $name Full name of the user
  * @property string $email Email address
- * @property string $timezone User's preferred timezone
+ * @property string|null $timezone User's preferred timezone
  * @property int|null $odoo_id ID of the user in Odoo
  * @property int|null $desktime_id ID of the user in Desktime
  * @property int|null $proofhub_id ID of the user in Proofhub
@@ -190,6 +190,7 @@ class User extends Authenticatable
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'desktime_id' => 'integer',
+        'timezone' => 'string',
         'proofhub_created_at' => 'datetime',
         'proofhub_updated_at' => 'datetime',
         'proofhub_id' => 'integer',

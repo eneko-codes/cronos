@@ -136,20 +136,38 @@ class SyncProofhubTasks extends BaseSyncJob
         }
 
         // Use updateOrCreate to sync the task based on its ProofHub ID
-        return Task::updateOrCreate(
-            ['proofhub_task_id' => $taskId],
-            [
+        $task = Task::where('proofhub_task_id', $taskId)->first();
+
+        if ($task) {
+            $task->update([
                 'proofhub_project_id' => $projectId,
-                'name' => $taskName,
-                'status' => $taskData->status,
+                'title' => $taskName,
+                'status' => $taskData->stage['name'] ?? null,
                 'due_date' => $taskData->due_date,
                 'description' => $taskData->description,
                 'tags' => $taskData->tags,
                 'priority' => $taskData->priority,
+                'proofhub_creator_id' => $taskData->creator['id'] ?? null,
                 'proofhub_created_at' => $taskData->proofhub_created_at,
                 'proofhub_updated_at' => $taskData->proofhub_updated_at,
-            ]
-        );
+            ]);
+        } else {
+            $task = Task::create([
+                'proofhub_task_id' => $taskId,
+                'proofhub_project_id' => $projectId,
+                'title' => $taskName,
+                'status' => $taskData->stage['name'] ?? null,
+                'due_date' => $taskData->due_date,
+                'description' => $taskData->description,
+                'tags' => $taskData->tags,
+                'priority' => $taskData->priority,
+                'proofhub_creator_id' => $taskData->creator['id'] ?? null,
+                'proofhub_created_at' => $taskData->proofhub_created_at,
+                'proofhub_updated_at' => $taskData->proofhub_updated_at,
+            ]);
+        }
+
+        return $task;
     }
 
     /**
@@ -201,11 +219,10 @@ class SyncProofhubTasks extends BaseSyncJob
                 $subtaskArray = is_array($subtask) ? $subtask : (array) $subtask;
                 $subtaskModel = $this->syncTaskRecord(new ProofhubTaskDTO(
                     $subtaskArray['id'] ?? null,
-                    $subtaskArray['name'] ?? '',
+                    $subtaskArray['title'] ?? null,
                     $subtaskArray['project_id'] ?? null,
                     $subtaskArray['project'] ?? null,
                     $subtaskArray['assigned'] ?? [],
-                    $subtaskArray['title'] ?? null,
                     $subtaskArray['subtasks'] ?? []
                 ), $projectId);
 

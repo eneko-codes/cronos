@@ -249,11 +249,19 @@ class SyncDesktimeAttendances extends BaseSyncJob
      */
     private function deleteRemoteAttendance(int $userId, string $date): bool
     {
-        $deleted = UserAttendance::where('user_id', $userId)
+        $attendances = UserAttendance::where('user_id', $userId)
             ->whereDate('date', $date)
-            ->delete();
+            ->get();
 
-        return $deleted > 0;
+        if ($attendances->isEmpty()) {
+            return false;
+        }
+
+        $attendances->each(function (UserAttendance $attendance): void {
+            $attendance->delete();
+        });
+
+        return true;
     }
 
     /**

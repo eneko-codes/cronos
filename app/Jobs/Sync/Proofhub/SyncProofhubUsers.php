@@ -70,9 +70,12 @@ class SyncProofhubUsers extends BaseSyncJob
                 $emailsOnPage->push($email);
 
                 // Update local user record
-                User::where('email', $email)->update([
-                    'proofhub_id' => $proofhubId,
-                ]);
+                $user = User::where('email', $email)->first();
+                if ($user) {
+                    $user->update([
+                        'proofhub_id' => $proofhubId,
+                    ]);
+                }
             });
 
         Log::debug('Processed user page.', [
@@ -99,15 +102,15 @@ class SyncProofhubUsers extends BaseSyncJob
             return;
         }
 
-        $query = User::whereNotIn('email', $currentProofhubEmails)->whereNotNull(
-            'proofhub_id'
-        );
+        $usersToClear = User::whereNotIn('email', $currentProofhubEmails)
+            ->whereNotNull('proofhub_id')
+            ->get();
 
-        $count = $query->count();
-
-        if ($count > 0) {
-            Log::info("Clearing ProofHub ID for {$count} obsolete users.");
-            $query->update(['proofhub_id' => null]);
+        if ($usersToClear->isNotEmpty()) {
+            Log::info("Clearing ProofHub ID for {$usersToClear->count()} obsolete users.");
+            $usersToClear->each(function (User $user): void {
+                $user->update(['proofhub_id' => null]);
+            });
         } else {
             Log::info('No obsolete ProofHub user IDs to clear.');
         }

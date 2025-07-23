@@ -144,7 +144,7 @@ class SyncProofhubTimeEntries extends BaseSyncJob
             return null; // Skip if user not found or trackable
         }
         // Validate project exists
-        $projectId = $entry->project_id;
+        $projectId = $entry->project['id'] ?? null;
         if ($projectId === null || $projectId === 0 || ! $this->validateProject($projectId, (array) $entry)) {
             Log::info(
                 class_basename($this).': Skipping time entry - Project not found or invalid',
@@ -178,8 +178,8 @@ class SyncProofhubTimeEntries extends BaseSyncJob
      */
     private function findUserForTimeEntry(ProofhubTimeEntryDTO $entry): ?User
     {
-        $creatorProofhubId = $entry->user_id;
-        $creatorEmail = $entry->user_email ?? null;
+        $creatorProofhubId = $entry->creator['id'] ?? null;
+        $creatorEmail = $entry->creator['email'] ?? null;
         if (! $creatorProofhubId) {
             Log::warning(
                 class_basename($this).': Skipping: creator ID missing',
@@ -252,8 +252,8 @@ class SyncProofhubTimeEntries extends BaseSyncJob
      */
     private function processTaskInfo(ProofhubTimeEntryDTO $entry, $projectId): array
     {
-        $taskId = $entry->task_id;
-        $taskName = $entry->task_title ?? null;
+        $taskId = $entry->task['task_id'] ?? null;
+        $taskName = $entry->task['task_name'] ?? null;
         if ($taskId) {
             Task::firstOrCreate(
                 ['proofhub_task_id' => $taskId],
@@ -292,19 +292,20 @@ class SyncProofhubTimeEntries extends BaseSyncJob
         array &$stats
     ): ?int {
         $existing = TimeEntry::where('proofhub_time_entry_id', $entry->id)->first();
+        $durationInSeconds = ($entry->logged_hours * 3600) + ($entry->logged_mins * 60);
         $data = [
             'user_id' => $user->id,
             'proofhub_project_id' => $projectId ?: null,
             'proofhub_task_id' => $taskInfo['taskId'] ?? null,
             'date' => $dateUtc->toDateString(),
-            'duration_seconds' => $entry->duration,
+            'duration_seconds' => $durationInSeconds,
             'proofhub_created_at' => $entry->created_at ? Carbon::parse($entry->created_at)->utc() : null,
-            'proofhub_updated_at' => $entry->proofhub_updated_at ? Carbon::parse($entry->proofhub_updated_at)->utc() : null,
+            'proofhub_updated_at' => $entry->timesheet['updated_at'] ?? null,
             'status' => $entry->status,
             'description' => $entry->description,
-            'billable' => $entry->billable,
-            'comments' => $entry->comments,
-            'tags' => $entry->tags,
+            'billable' => $entry->timesheet['billable_status'] ?? false,
+            'comments' => null,
+            'tags' => null,
         ];
         try {
             Log::debug('Attempting to create or update TimeEntry', [

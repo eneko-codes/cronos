@@ -202,32 +202,27 @@ class ProofhubApiClient
     public function getUsers(): Collection
     {
         $allResults = collect();
-        $currentPage = 1;
+        $url = $this->baseUrl.'people';
+
         do {
-            $url = $this->baseUrl.'people';
-            $params = ['page' => $currentPage];
-            $pageResult = $this->callPage($url, $params, 'people');
+            $pageResult = $this->callPage($url, [], 'people');
             $allResults = $allResults->merge($pageResult['data']->map(function ($item) {
                 return new ProofhubUserDTO(
-                    $item['id'] ?? null,
-                    $item['email'] ?? null,
-                    $item['name'] ?? null,
-                    $item['verified'] ?? null,
-                    $item['groups'] ?? null,
-                    $item['timezone'] ?? null,
-                    $item['initials'] ?? null,
-                    $item['profile_color'] ?? null,
-                    $item['image_url'] ?? null,
-                    $item['language'] ?? null,
-                    $item['suspended'] ?? null,
-                    $item['last_active'] ?? null,
-                    $item['role'] ?? null,
-                    $item['proofhub_created_at'] ?? null,
-                    $item['proofhub_updated_at'] ?? null
+                    id: $item['id'] ?? null,
+                    email: $item['email'] ?? null,
+                    first_name: $item['first_name'] ?? null,
+                    last_name: $item['last_name'] ?? null,
+                    verified: $item['verified'] ?? null,
+                    groups: $item['groups'] ?? null,
+                    timezone: $item['timezone'] ?? null,
+                    suspended: $item['suspended'] ?? null,
+                    role: $item['role'] ?? null,
+                    proofhub_created_at: $item['created_at'] ?? null,
+                    proofhub_updated_at: $item['updated_at'] ?? null
                 );
             }));
-            $currentPage++;
-        } while ($pageResult['data']->isNotEmpty() && $pageResult['nextPageUrl'] === null ? false : $pageResult['nextPageUrl'] !== null);
+            $url = $pageResult['nextPageUrl'];
+        } while ($url && $pageResult['data']->isNotEmpty());
 
         return $allResults;
     }
@@ -243,28 +238,27 @@ class ProofhubApiClient
     public function getProjects(): Collection
     {
         $allResults = collect();
-        $currentPage = 1;
+        $url = $this->baseUrl.'projects';
+
         do {
-            $url = $this->baseUrl.'projects';
-            $params = ['page' => $currentPage];
-            $pageResult = $this->callPage($url, $params, 'projects');
+            $pageResult = $this->callPage($url, [], 'projects');
             $allResults = $allResults->merge($pageResult['data']->map(function ($item) {
                 return new ProofhubProjectDTO(
-                    $item['id'] ?? null,
-                    $item['name'] ?? null,
-                    $item['title'] ?? null,
-                    $item['assigned'] ?? null,
-                    $item['status'] ?? null,
-                    $item['description'] ?? null,
-                    $item['created_at'] ?? null,
-                    $item['updated_at'] ?? null,
-                    $item['owner_id'] ?? null,
-                    $item['proofhub_created_at'] ?? null,
-                    $item['proofhub_updated_at'] ?? null
+                    id: $item['id'] ?? null,
+                    title: $item['title'] ?? null,
+                    assigned: $item['assigned'] ?? null,
+                    status: $item['status'] ?? null,
+                    description: $item['description'] ?? null,
+                    created_at: $item['created_at'] ?? null,
+                    updated_at: $item['updated_at'] ?? null,
+                    creator: $item['creator'] ?? null,
+                    manager: $item['manager'] ?? null,
+                    proofhub_created_at: $item['created_at'] ?? null,
+                    proofhub_updated_at: $item['updated_at'] ?? null
                 );
             }));
-            $currentPage++;
-        } while ($pageResult['data']->isNotEmpty() && $pageResult['nextPageUrl'] === null ? false : $pageResult['nextPageUrl'] !== null);
+            $url = $pageResult['nextPageUrl'];
+        } while ($url && $pageResult['data']->isNotEmpty());
 
         return $allResults;
     }
@@ -280,33 +274,29 @@ class ProofhubApiClient
     public function getTasks(): Collection
     {
         $allResults = collect();
-        $currentPage = 1;
+        $url = $this->baseUrl.'alltodo';
+
         do {
-            $url = $this->baseUrl.'alltodo';
-            $params = ['page' => $currentPage];
-            $pageResult = $this->callPage($url, $params, 'alltodo');
+            $pageResult = $this->callPage($url, [], 'alltodo');
             $allResults = $allResults->merge($pageResult['data']->map(function ($item) {
                 return new ProofhubTaskDTO(
-                    $item['id'] ?? null,
-                    $item['name'] ?? null,
-                    $item['project_id'] ?? null,
-                    $item['project'] ?? null,
-                    $item['assigned'] ?? null,
-                    $item['title'] ?? null,
-                    $item['subtasks'] ?? null,
-                    $item['status'] ?? null,
-                    $item['due_date'] ?? null,
-                    $item['description'] ?? null,
-                    $item['tags'] ?? null,
-                    $item['priority'] ?? null,
-                    $item['created_by'] ?? null,
-                    $item['updated_by'] ?? null,
-                    $item['proofhub_created_at'] ?? null,
-                    $item['proofhub_updated_at'] ?? null
+                    id: $item['id'] ?? null,
+                    title: $item['title'] ?? null,
+                    project_id: $item['project_id'] ?? null,
+                    project: $item['project'] ?? null,
+                    assigned: $item['assigned'] ?? null,
+                    subtasks: $item['subtasks'] ?? null,
+                    stage: $item['stage'] ?? null,
+                    due_date: $item['due_date'] ?? null,
+                    description: $item['description'] ?? null,
+                    tags: $item['tags'] ?? null,
+                    creator: $item['creator'] ?? null,
+                    proofhub_created_at: $item['created_at'] ?? null,
+                    proofhub_updated_at: $item['updated_at'] ?? null
                 );
             }));
-            $currentPage++;
-        } while ($pageResult['data']->isNotEmpty() && $pageResult['nextPageUrl'] === null ? false : $pageResult['nextPageUrl'] !== null);
+            $url = $pageResult['nextPageUrl'];
+        } while ($url && $pageResult['data']->isNotEmpty());
 
         return $allResults;
     }
@@ -323,32 +313,28 @@ class ProofhubApiClient
     public function getAllTime(array $params = []): Collection
     {
         $allResults = collect();
-        $currentPage = 1;
+        $url = $this->baseUrl.'alltime';
+
         do {
-            $url = $this->baseUrl.'alltime';
-            $params['page'] = $currentPage;
             $pageResult = $this->callPage($url, $params, 'alltime');
+            $params = []; // Subsequent requests use the full URL from the 'Link' header, so we clear params.
             $allResults = $allResults->merge($pageResult['data']->map(function ($item) {
                 return new ProofhubTimeEntryDTO(
-                    $item['id'] ?? null,
-                    $item['user_id'] ?? null,
-                    $item['project_id'] ?? null,
-                    $item['task_id'] ?? null,
-                    $item['duration'] ?? null,
-                    $item['date'] ?? null,
-                    $item['created_at'] ?? null,
-                    $item['user_email'] ?? null,
-                    $item['task_title'] ?? null,
-                    $item['status'] ?? null,
-                    $item['description'] ?? null,
-                    $item['proofhub_updated_at'] ?? null,
-                    $item['billable'] ?? null,
-                    $item['comments'] ?? null,
-                    $item['tags'] ?? null
+                    id: $item['id'] ?? null,
+                    date: $item['date'] ?? null,
+                    created_at: $item['created_at'] ?? null,
+                    logged_hours: $item['logged_hours'] ?? null,
+                    logged_mins: $item['logged_mins'] ?? null,
+                    timesheet: $item['timesheet'] ?? null,
+                    task: $item['task'] ?? null,
+                    project: $item['project'] ?? null,
+                    creator: $item['creator'] ?? null,
+                    status: $item['status'] ?? null,
+                    description: $item['description'] ?? null,
                 );
             }));
-            $currentPage++;
-        } while ($pageResult['data']->isNotEmpty() && $pageResult['nextPageUrl'] === null ? false : $pageResult['nextPageUrl'] !== null);
+            $url = $pageResult['nextPageUrl'];
+        } while ($url && $pageResult['data']->isNotEmpty());
 
         return $allResults;
     }

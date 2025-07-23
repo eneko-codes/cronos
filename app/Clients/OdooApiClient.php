@@ -145,7 +145,7 @@ class OdooApiClient
 
             $responseBody = $response->json();
 
-            Log::debug('Odoo API Raw Response', [
+            Log::debug('Odoo API Response', [
                 'service' => $service,
                 'method' => $method,
                 'args' => $args,

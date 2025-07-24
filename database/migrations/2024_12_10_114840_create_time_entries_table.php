@@ -24,11 +24,7 @@ class CreateTimeEntriesTable extends Migration
                 ->foreign('proofhub_project_id')
                 ->references('proofhub_project_id')
                 ->on('projects');
-            $table->unsignedBigInteger('proofhub_task_id')->nullable();
-            $table
-                ->foreign('proofhub_task_id')
-                ->references('proofhub_task_id')
-                ->on('tasks');
+            $table->unsignedBigInteger('proofhub_task_id')->nullable()->comment('ProofHub task ID');
             $table
                 ->string('status')
                 ->default('none')

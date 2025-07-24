@@ -214,7 +214,6 @@ class ProofhubApiClient
                     last_name: $item['last_name'] ?? null,
                     verified: $item['verified'] ?? null,
                     groups: $item['groups'] ?? null,
-                    timezone: $item['timezone'] ?? null,
                     suspended: $item['suspended'] ?? null,
                     role: $item['role'] ?? null,
                     proofhub_created_at: $item['created_at'] ?? null,

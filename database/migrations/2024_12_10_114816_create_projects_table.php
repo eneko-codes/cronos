@@ -20,9 +20,7 @@ class CreateProjectsTable extends Migration
             $table->timestamp('proofhub_created_at')->nullable()->comment('Project creation time in ProofHub');
             $table->timestamp('proofhub_updated_at')->nullable()->comment('Project last update time in ProofHub');
             $table->unsignedBigInteger('proofhub_creator_id')->nullable()->comment('ProofHub user ID of the project creator');
-            $table->foreign('proofhub_creator_id')->references('proofhub_id')->on('users');
             $table->unsignedBigInteger('proofhub_manager_id')->nullable()->comment('ProofHub user ID of the project manager');
-            $table->foreign('proofhub_manager_id')->references('proofhub_id')->on('users');
             $table->timestamps();
         });
     }

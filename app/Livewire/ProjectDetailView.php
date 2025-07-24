@@ -137,7 +137,7 @@ class ProjectDetailView extends Component
     #[Title('Project: ')]
     public function title(): string
     {
-        return 'Project: '.$this->project->name;
+        return 'Project: '.$this->project->title;
     }
 
     /**

@@ -5,18 +5,16 @@ declare(strict_types=1);
 namespace App\Jobs\Sync\Proofhub;
 
 use App\Actions\Proofhub\CheckProofhubHealthAction;
+use App\Actions\Proofhub\ProcessProofhubUserAction;
 use App\Clients\ProofhubApiClient;
 use App\DataTransferObjects\Proofhub\ProofhubUserDTO;
 use App\Jobs\Sync\BaseSyncJob;
-use App\Models\User;
-use Exception;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Log;
 
 /**
- * Job to synchronize ProofHub user information with the local database.
+ * Job to synchronize ProofHub users with the local users table.
  *
- * Updates local users with their ProofHub IDs and clears ProofHub IDs for users no longer present in ProofHub.
+ * This job fetches all users from ProofHub and updates the corresponding local users
+ * with their ProofHub ID. It does not create new users, only updates existing ones.
  */
 class SyncProofhubUsers extends BaseSyncJob
 {
@@ -28,7 +26,7 @@ class SyncProofhubUsers extends BaseSyncJob
     protected ProofhubApiClient $proofhub;
 
     /**
-     * Constructs a new SyncProofhubUsers job instance.
+     * Constructs a new SyncProofhubUsers job.
      *
      * @param  ProofhubApiClient  $proofhub  The ProofHub API client.
      */
@@ -38,82 +36,17 @@ class SyncProofhubUsers extends BaseSyncJob
     }
 
     /**
-     * Main entry point for the job.
+     * Main entry point for the job's sync logic.
      *
-     * Fetches users from ProofHub, updates local users with ProofHub IDs, and clears ProofHub IDs for users no longer present in ProofHub.
-     * Logs the process and any errors encountered.
-     *
-     * @throws Exception If any part of the synchronization process fails.
+     * Fetches users from ProofHub and processes each one.
      */
     public function handle(): void
     {
-        $allUsers = $this->proofhub->getUsers();
-        $allProofhubEmails = $this->processUserPage($allUsers);
-        $this->clearObsoleteProofhubIds($allProofhubEmails->unique());
-    }
+        $users = $this->proofhub->getUsers();
 
-    /**
-     * Processes a collection of user DTOs from ProofHub.
-     *
-     * @param  Collection|ProofhubUserDTO[]  $usersPage  Collection of ProofhubUserDTOs from the API.
-     * @return Collection Collection of email addresses found in this batch.
-     */
-    private function processUserPage(Collection $usersPage): Collection
-    {
-        $emailsOnPage = collect();
-
-        $usersPage
-            ->filter(fn (ProofhubUserDTO $user) => isset($user->email) && isset($user->id))
-            ->each(function (ProofhubUserDTO $user) use ($emailsOnPage): void {
-                $email = strtolower($user->email);
-                $proofhubId = $user->id ? (int) $user->id : null;
-                $emailsOnPage->push($email);
-
-                // Update local user record
-                $user = User::where('email', $email)->first();
-                if ($user) {
-                    $user->update([
-                        'proofhub_id' => $proofhubId,
-                    ]);
-                }
-            });
-
-        Log::debug('Processed user page.', [
-            'users_processed' => $usersPage->count(),
-            'emails_found' => $emailsOnPage->count(),
-        ]);
-
-        return $emailsOnPage;
-    }
-
-    /**
-     * Clears ProofHub IDs for users no longer present in ProofHub.
-     *
-     * @param  Collection  $currentProofhubEmails  All unique emails found in ProofHub.
-     */
-    private function clearObsoleteProofhubIds(
-        Collection $currentProofhubEmails
-    ): void {
-        if ($currentProofhubEmails->isEmpty()) {
-            Log::info(
-                'No ProofHub emails found during sync, skipping obsolete ID cleanup.'
-            );
-
-            return;
-        }
-
-        $usersToClear = User::whereNotIn('email', $currentProofhubEmails)
-            ->whereNotNull('proofhub_id')
-            ->get();
-
-        if ($usersToClear->isNotEmpty()) {
-            Log::info("Clearing ProofHub ID for {$usersToClear->count()} obsolete users.");
-            $usersToClear->each(function (User $user): void {
-                $user->update(['proofhub_id' => null]);
-            });
-        } else {
-            Log::info('No obsolete ProofHub user IDs to clear.');
-        }
+        $users->each(function (ProofhubUserDTO $user): void {
+            (new ProcessProofhubUserAction)->execute($user);
+        });
     }
 
     /**

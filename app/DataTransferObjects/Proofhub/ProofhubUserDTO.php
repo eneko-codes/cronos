@@ -13,7 +13,6 @@ final readonly class ProofhubUserDTO
         public ?string $last_name = null,
         public ?string $verified = null,
         public ?array $groups = null,
-        public ?string $timezone = null,
         public ?bool $suspended = null,
         public ?array $role = null,
         public ?string $proofhub_created_at = null,

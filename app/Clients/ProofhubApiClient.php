@@ -309,7 +309,7 @@ class ProofhubApiClient
      *
      * @throws ApiConnectionException|ApiRequestException|ApiResponseException On request failure.
      */
-    public function getAllTime(array $params = []): Collection
+    public function getTimeEntries(array $params = []): Collection
     {
         $allResults = collect();
         $url = $this->baseUrl.'alltime';

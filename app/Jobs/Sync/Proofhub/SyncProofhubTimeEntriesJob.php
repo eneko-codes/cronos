@@ -16,7 +16,7 @@ use App\Jobs\Sync\BaseSyncJob;
  * This job fetches all time entries within a specified date range from ProofHub
  * and processes each one to ensure the local database is up-to-date.
  */
-class SyncProofhubTimeEntries extends BaseSyncJob
+class SyncProofhubTimeEntriesJob extends BaseSyncJob
 {
     /**
      * The priority of the job in the queue.
@@ -30,7 +30,7 @@ class SyncProofhubTimeEntries extends BaseSyncJob
     private ?string $endDate;
 
     /**
-     * Constructs a new SyncProofhubTimeEntries job.
+     * Constructs a new SyncProofhubTimeEntriesJob job.
      *
      * @param  ProofhubApiClient  $proofhub  The ProofHub API client.
      * @param  string|null  $startDate  The start date for the sync (Y-m-d). Defaults to today.
@@ -58,7 +58,7 @@ class SyncProofhubTimeEntries extends BaseSyncJob
             'to_date' => $this->endDate ?: now()->format('Y-m-d'),
         ];
 
-        $timeEntries = $this->proofhub->getAllTime($params);
+        $timeEntries = $this->proofhub->getTimeEntries($params);
 
         $timeEntries->each(function (ProofhubTimeEntryDTO $entry): void {
             (new ProcessProofhubTimeEntryAction)->execute($entry);

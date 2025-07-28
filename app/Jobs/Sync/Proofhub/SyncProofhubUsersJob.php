@@ -16,7 +16,7 @@ use App\Jobs\Sync\BaseSyncJob;
  * This job fetches all users from ProofHub and updates the corresponding local users
  * with their ProofHub ID. It does not create new users, only updates existing ones.
  */
-class SyncProofhubUsers extends BaseSyncJob
+class SyncProofhubUsersJob extends BaseSyncJob
 {
     /**
      * The priority of the job in the queue. Lower numbers indicate higher priority.
@@ -26,7 +26,7 @@ class SyncProofhubUsers extends BaseSyncJob
     protected ProofhubApiClient $proofhub;
 
     /**
-     * Constructs a new SyncProofhubUsers job.
+     * Constructs a new SyncProofhubUsersJob job.
      *
      * @param  ProofhubApiClient  $proofhub  The ProofHub API client.
      */
@@ -43,7 +43,6 @@ class SyncProofhubUsers extends BaseSyncJob
     public function handle(): void
     {
         $users = $this->proofhub->getUsers();
-
         $users->each(function (ProofhubUserDTO $user): void {
             (new ProcessProofhubUserAction)->execute($user);
         });

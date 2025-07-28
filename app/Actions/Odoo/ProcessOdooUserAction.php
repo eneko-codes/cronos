@@ -19,11 +19,6 @@ use Illuminate\Support\Str;
 final class ProcessOdooUserAction
 {
     /**
-     * The Odoo user data transfer object for the current sync operation.
-     */
-    private OdooUserDTO $dto;
-
-    /**
      * Synchronizes a single Odoo user DTO with the local database.
      *
      *
@@ -31,8 +26,6 @@ final class ProcessOdooUserAction
      */
     public function execute(OdooUserDTO $userDto): void
     {
-        $this->dto = $userDto;
-
         $validator = Validator::make(
             [
                 'id' => $userDto->id,
@@ -73,8 +66,8 @@ final class ProcessOdooUserAction
                 ]
             );
             $user = User::where('odoo_id', $userDto->id)->first();
-            $this->syncUserCategories($user);
-            $this->syncUserSchedule($user);
+            $this->syncUserCategories($user, $userDto);
+            $this->syncUserSchedule($user, $userDto);
         });
     }
 
@@ -86,11 +79,12 @@ final class ProcessOdooUserAction
      *
      *
      * @param  User  $user  The local user model.
+     * @param  OdooUserDTO  $userDto  The OdooUserDTO containing category data.
      */
-    private function syncUserCategories(User $user): void
+    private function syncUserCategories(User $user, OdooUserDTO $userDto): void
     {
-        DB::transaction(function () use ($user): void {
-            $categoryIds = collect($this->dto->category_ids)
+        DB::transaction(function () use ($user, $userDto): void {
+            $categoryIds = collect($userDto->category_ids)
                 ->filter()
                 ->unique();
             // Use odoo_category_id as the primary key for Category
@@ -106,11 +100,12 @@ final class ProcessOdooUserAction
      * - Creates a new UserSchedule with effective_from if needed.
      *
      * @param  User  $user  The local user model.
+     * @param  OdooUserDTO  $userDto  The OdooUserDTO containing schedule data.
      */
-    private function syncUserSchedule(User $user): void
+    private function syncUserSchedule(User $user, OdooUserDTO $userDto): void
     {
         $startOfDay = now()->startOfDay();
-        $newOdooScheduleId = $this->dto->resource_calendar_id !== null ? ($this->dto->resource_calendar_id[0] ?? null) : null;
+        $newOdooScheduleId = $userDto->resource_calendar_id !== null ? ($userDto->resource_calendar_id[0] ?? null) : null;
         if (! $newOdooScheduleId || ! Schedule::where('odoo_schedule_id', $newOdooScheduleId)->exists()) {
             return;
         }

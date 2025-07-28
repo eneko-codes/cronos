@@ -17,10 +17,10 @@ use App\Jobs\Sync\Odoo\SyncOdooLeaveTypesJob;
 use App\Jobs\Sync\Odoo\SyncOdooScheduleDetailsJob;
 use App\Jobs\Sync\Odoo\SyncOdooSchedulesJob;
 use App\Jobs\Sync\Odoo\SyncOdooUsersJob;
-use App\Jobs\Sync\Proofhub\SyncProofhubProjects;
-use App\Jobs\Sync\Proofhub\SyncProofhubTasks;
-use App\Jobs\Sync\Proofhub\SyncProofhubTimeEntries;
-use App\Jobs\Sync\Proofhub\SyncProofhubUsers;
+use App\Jobs\Sync\Proofhub\SyncProofhubProjectsJob;
+use App\Jobs\Sync\Proofhub\SyncProofhubTasksJob;
+use App\Jobs\Sync\Proofhub\SyncProofhubTimeEntriesJob;
+use App\Jobs\Sync\Proofhub\SyncProofhubUsersJob;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
@@ -66,10 +66,10 @@ class DispatchSyncBatchAction
         ];
 
         $proofhubChain = [
-            new SyncProofhubUsers($proofhubApi),
-            new SyncProofhubProjects($proofhubApi),
-            new SyncProofhubTasks($proofhubApi),
-            new SyncProofhubTimeEntries($proofhubApi, $fromDate, $toDate),
+            new SyncProofhubUsersJob($proofhubApi),
+            new SyncProofhubProjectsJob($proofhubApi),
+            new SyncProofhubTasksJob($proofhubApi),
+            new SyncProofhubTimeEntriesJob($proofhubApi, $fromDate, $toDate),
         ];
 
         $desktimeChain = [

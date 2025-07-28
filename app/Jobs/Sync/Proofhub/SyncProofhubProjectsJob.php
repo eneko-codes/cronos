@@ -5,28 +5,28 @@ declare(strict_types=1);
 namespace App\Jobs\Sync\Proofhub;
 
 use App\Actions\Proofhub\CheckProofhubHealthAction;
-use App\Actions\Proofhub\ProcessProofhubTaskAction;
+use App\Actions\Proofhub\ProcessProofhubProjectAction;
 use App\Clients\ProofhubApiClient;
-use App\DataTransferObjects\Proofhub\ProofhubTaskDTO;
+use App\DataTransferObjects\Proofhub\ProofhubProjectDTO;
 use App\Jobs\Sync\BaseSyncJob;
 
 /**
- * Job to synchronize ProofHub tasks with the local tasks table.
+ * Job to synchronize ProofHub projects with the local projects table.
  *
- * This job fetches all tasks from ProofHub and processes each one to ensure
+ * This job fetches all projects from ProofHub and processes each one to ensure
  * the local database reflects the current state of ProofHub.
  */
-class SyncProofhubTasks extends BaseSyncJob
+class SyncProofhubProjectsJob extends BaseSyncJob
 {
     /**
      * The priority of the job in the queue.
      */
-    public int $priority = 3;
+    public int $priority = 2;
 
     protected ProofhubApiClient $proofhub;
 
     /**
-     * Constructs a new SyncProofhubTasks job.
+     * Constructs a new SyncProofhubProjectsJob job.
      *
      * @param  ProofhubApiClient  $proofhub  The ProofHub API client.
      */
@@ -38,14 +38,14 @@ class SyncProofhubTasks extends BaseSyncJob
     /**
      * Main entry point for the job's sync logic.
      *
-     * Fetches tasks from ProofHub and processes each one.
+     * Fetches projects from ProofHub and processes each one.
      */
     public function handle(): void
     {
-        $tasks = $this->proofhub->getTasks();
+        $projects = $this->proofhub->getProjects();
 
-        $tasks->each(function (ProofhubTaskDTO $task): void {
-            (new ProcessProofhubTaskAction)->execute($task);
+        $projects->each(function (ProofhubProjectDTO $project): void {
+            (new ProcessProofhubProjectAction)->execute($project);
         });
     }
 

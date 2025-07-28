@@ -54,7 +54,7 @@ class DispatchSyncBatchAction
         $proofhubApi = app(ProofhubApiClient::class);
         $systempinApi = app(SystemPinApiClient::class);
 
-        // Prepare job chains for each platform (DO NOT CHANGE THE ORDER OF JOBS BECAUSE THE MIGRATION AND MODEL CONSTRAINTS WILL CAUSE EXCEPTIONS)
+        // Prepare job chains for each platform
         $odooChain = [
             new SyncOdooDepartmentsJob($odooApi),
             new SyncOdooCategoriesJob($odooApi),
@@ -77,14 +77,18 @@ class DispatchSyncBatchAction
             new SyncDesktimeAttendances($desktimeApi, null, $fromDate, $toDate),
         ];
 
+        $systempinChain = [
+
+        ];
+
         // Merge all jobs into a single array to enforce strict order
+        // DO NOT CHANGE THE ORDER OF JOBS BECAUSE THE MIGRATION AND MODEL CONSTRAINTS WILL CAUSE EXCEPTIONS!
         $allJobs = array_merge(
             $odooChain,
             $proofhubChain,
-            $desktimeChain
+            $desktimeChain,
+            $systempinChain,
         );
-
-        $batchName = "Data Sync Batch ({$windowDays} days: {$fromDate} to {$toDate})";
 
         // Log the batch dispatch
         Log::info(
@@ -92,6 +96,8 @@ class DispatchSyncBatchAction
         );
 
         // Dispatch as a batch (jobs will run sequentially with a single worker)
+        $batchName = "Data Sync Batch ({$windowDays} days: {$fromDate} to {$toDate})";
+
         Bus::batch($allJobs)
             ->name($batchName)
             ->dispatch();

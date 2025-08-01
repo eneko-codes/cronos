@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Validator;
  * Action to synchronize ProofHub user data with the local users table.
  * This action links a local user to their ProofHub ID via email.
  */
-class ProcessProofhubUserAction
+final class ProcessProofhubUserAction
 {
     /**
      * Synchronizes a single ProofHub user DTO with the local database.

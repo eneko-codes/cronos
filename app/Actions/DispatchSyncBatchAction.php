@@ -8,8 +8,8 @@ use App\Clients\DesktimeApiClient;
 use App\Clients\OdooApiClient;
 use App\Clients\ProofhubApiClient;
 use App\Clients\SystemPinApiClient;
-use App\Jobs\Sync\Desktime\SyncDesktimeAttendances;
-use App\Jobs\Sync\Desktime\SyncDesktimeUsers;
+use App\Jobs\Sync\Desktime\SyncDesktimeAttendancesJob;
+use App\Jobs\Sync\Desktime\SyncDesktimeUsersJob;
 use App\Jobs\Sync\Odoo\SyncOdooCategoriesJob;
 use App\Jobs\Sync\Odoo\SyncOdooDepartmentsJob;
 use App\Jobs\Sync\Odoo\SyncOdooLeavesJob;
@@ -73,8 +73,8 @@ class DispatchSyncBatchAction
         ];
 
         $desktimeChain = [
-            new SyncDesktimeUsers($desktimeApi),
-            new SyncDesktimeAttendances($desktimeApi, null, $fromDate, $toDate),
+            new SyncDesktimeUsersJob($desktimeApi),
+            new SyncDesktimeAttendancesJob($desktimeApi, $fromDate, $toDate),
         ];
 
         $systempinChain = [

@@ -8,6 +8,7 @@ use App\DataTransferObjects\Desktime\DesktimeAttendanceDTO;
 use App\DataTransferObjects\Desktime\DesktimeEmployeeDTO;
 use App\Exceptions\ApiConnectionException;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -80,7 +81,7 @@ class DesktimeApiClient
             ]);
 
             return $response->json();
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             throw new ApiConnectionException($e->getMessage(), $e->getCode(), $e);
         }
     }
@@ -142,55 +143,6 @@ class DesktimeApiClient
     }
 
     /**
-     * Retrieves attendance data for a single employee for a given date.
-     *
-     * @param  int  $userId  DeskTime user ID.
-     * @param  string|null  $date  Date in 'Y-m-d' format. Defaults to today.
-     * @return DesktimeEmployeeDTO Employee attendance DTO.
-     *
-     * @throws ApiConnectionException If the API request fails.
-     */
-    public function getSingleEmployee(
-        int $userId,
-        ?string $date = null
-    ): DesktimeEmployeeDTO {
-        $date = $date ?? Carbon::today()->toDateString();
-
-        $data = $this->call('/employee', [
-            'id' => $userId,
-            'date' => $date,
-        ]);
-
-        return new DesktimeEmployeeDTO(
-            $data['id'] ?? null,
-            $data['email'] ?? null,
-            $data['name'] ?? null,
-            $data['groupId'] ?? null,
-            $data['group'] ?? null,
-            $data['profileUrl'] ?? null,
-            $data['isOnline'] ?? null,
-            $data['arrived'] === false ? null : $data['arrived'] ?? null,
-            $data['left'] === false ? null : $data['left'] ?? null,
-            $data['late'] ?? null,
-            $data['onlineTime'] ?? null,
-            $data['offlineTime'] ?? null,
-            $data['desktimeTime'] ?? null,
-            $data['atWorkTime'] ?? null,
-            $data['afterWorkTime'] ?? null,
-            $data['beforeWorkTime'] ?? null,
-            $data['productiveTime'] ?? null,
-            $data['productivity'] ?? null,
-            $data['efficiency'] ?? null,
-            $data['work_starts'] === false ? null : $data['work_starts'] ?? null,
-            $data['work_ends'] === false ? null : $data['work_ends'] ?? null,
-            $data['notes'] ?? null,
-            $data['activeProject'] ?? null,
-            $data['apps'] ?? null,
-            $data['projects'] ?? null
-        );
-    }
-
-    /**
      * Retrieves the account timezone from DeskTime, caching the result after the first call.
      *
      * @return string Timezone identifier.
@@ -205,30 +157,6 @@ class DesktimeApiClient
         }
 
         return $this->accountTimezone;
-    }
-
-    /**
-     * Checks the health of the DeskTime API by performing a lightweight GET request.
-     *
-     * @return array Associative array indicating success status and a message.
-     */
-    public function ping(): array
-    {
-        try {
-            $data = $this->call('/ping');
-
-            return [
-                'success' => isset($data['pong']),
-                'message' => isset($data['pong'])
-                  ? 'DeskTime API is reachable.'
-                  : 'DeskTime API returned unexpected response.',
-            ];
-        } catch (ApiConnectionException $e) {
-            return [
-                'success' => false,
-                'message' => 'Failed to connect to DeskTime API: '.$e->getMessage(),
-            ];
-        }
     }
 
     /**
@@ -282,5 +210,29 @@ class DesktimeApiClient
         }
 
         return $attendance;
+    }
+
+    /**
+     * Checks the health of the DeskTime API by performing a lightweight GET request.
+     *
+     * @return array Associative array indicating success status and a message.
+     */
+    public function ping(): array
+    {
+        try {
+            $data = $this->call('/ping');
+
+            return [
+                'success' => isset($data['pong']),
+                'message' => isset($data['pong'])
+                  ? 'DeskTime API is reachable.'
+                  : 'DeskTime API returned unexpected response.',
+            ];
+        } catch (ApiConnectionException $e) {
+            return [
+                'success' => false,
+                'message' => 'Failed to connect to DeskTime API: '.$e->getMessage(),
+            ];
+        }
     }
 }

@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
-class ProcessProofhubTaskAction
+final class ProcessProofhubTaskAction
 {
     public function execute(ProofhubTaskDTO $taskDto): void
     {

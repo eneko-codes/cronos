@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
-class ProcessProofhubTimeEntryAction
+final class ProcessProofhubTimeEntryAction
 {
     public function execute(ProofhubTimeEntryDTO $timeEntryDto): void
     {

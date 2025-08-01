@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Validator;
 /**
  * Action to synchronize ProofHub project data with the local projects table.
  */
-class ProcessProofhubProjectAction
+final class ProcessProofhubProjectAction
 {
     /**
      * The ProofHub project data transfer object.

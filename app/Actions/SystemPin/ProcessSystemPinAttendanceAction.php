@@ -1,0 +1,200 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Actions\SystemPin;
+
+use App\DataTransferObjects\SystemPin\SystemPinAttendanceDTO;
+use App\Models\User;
+use App\Models\UserAttendance;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
+
+/**
+ * Action to synchronize SystemPin attendance data with the local user_attendances table.
+ * SystemPin attendance is always marked as on-site (is_remote = false) since it's a physical attendance machine.
+ */
+final class ProcessSystemPinAttendanceAction
+{
+    /**
+     * Synchronizes a single SystemPin attendance DTO with the local database.
+     *
+     * @param  SystemPinAttendanceDTO  $attendanceDto  The SystemPinAttendanceDTO to sync.
+     */
+    public function execute(SystemPinAttendanceDTO $attendanceDto): void
+    {
+        $validator = Validator::make(
+            [
+                'InternalEmployeeID' => $attendanceDto->InternalEmployeeID,
+                'Date' => $attendanceDto->Date,
+            ],
+            [
+                'InternalEmployeeID' => 'required|integer',
+                'Date' => 'required|string',
+            ],
+            [
+                'InternalEmployeeID.required' => 'SystemPin attendance is missing an InternalEmployeeID.',
+                'Date.required' => 'SystemPin attendance (InternalEmployeeID: '.$attendanceDto->InternalEmployeeID.') is missing a date.',
+            ]
+        );
+
+        if ($validator->fails()) {
+            Log::warning('Skipping SystemPin attendance due to validation failure.', [
+                'InternalEmployeeID' => $attendanceDto->InternalEmployeeID,
+                'Date' => $attendanceDto->Date,
+                'errors' => $validator->errors()->all(),
+            ]);
+
+            return;
+        }
+
+        DB::transaction(function () use ($attendanceDto): void {
+            // Find user by SystemPin ID
+            $user = User::where('systempin_id', $attendanceDto->InternalEmployeeID)->first();
+
+            if (! $user) {
+                Log::info('Skipping SystemPin attendance, user not found by systempin_id.', [
+                    'systempin_id' => $attendanceDto->InternalEmployeeID,
+                    'date' => $attendanceDto->Date,
+                ]);
+
+                return;
+            }
+
+            // Convert SystemPin date format (YYYYMMDD) to Y-m-d
+            $date = \Carbon\Carbon::createFromFormat('Ymd', $attendanceDto->Date)->format('Y-m-d');
+
+            // Process TimeRecords to calculate attendance
+            $timeRecords = $attendanceDto->TimeRecords ?? [];
+
+            // If no time records, delete any existing record for this day
+            if (empty($timeRecords)) {
+                UserAttendance::where('user_id', $user->id)
+                    ->whereDate('date', $date)
+                    ->where('is_remote', false) // Only delete SystemPin records
+                    ->delete();
+
+                return;
+            }
+
+            // Calculate total worked time and extract first/last times
+            $totalMinutes = 0;
+            $firstClockIn = null;
+            $lastClockOut = null;
+
+            foreach ($timeRecords as $record) {
+                if (isset($record['From'])) {
+                    // Extract first clock in time
+                    if ($firstClockIn === null) {
+                        $firstClockIn = $this->parseSystemPinDateTime($record['From']);
+                    }
+                }
+
+                if (isset($record['From'], $record['to'])) {
+                    // Calculate duration for complete records
+                    $start = \Carbon\Carbon::createFromFormat('YmdHis', $record['From']);
+                    $end = \Carbon\Carbon::createFromFormat('YmdHis', $record['to']);
+                    $totalMinutes += $start->diffInMinutes($end);
+
+                    // Update last clock out
+                    $lastClockOut = $this->parseSystemPinDateTime($record['to']);
+                }
+            }
+
+            // Parse start and end times for database storage
+            $start = $firstClockIn ? $this->parseTime($firstClockIn, $date) : null;
+            $end = $lastClockOut ? $this->parseTime($lastClockOut, $date) : null;
+
+            // Convert minutes to seconds
+            $presenceSeconds = $totalMinutes * 60;
+
+            UserAttendance::updateOrCreate(
+                [
+                    'user_id' => $user->id,
+                    'date' => $date,
+                    'is_remote' => false, // SystemPin is always on-site
+                ],
+                [
+                    'presence_seconds' => $presenceSeconds,
+                    'start' => $start,
+                    'end' => $end,
+                ]
+            );
+        });
+    }
+
+    /**
+     * Parse a time string and combine it with a date to create a full datetime.
+     *
+     * @param  string|null  $timeString  Time in format like "08:30" or "0830"
+     * @param  string  $date  Date in Y-m-d format
+     * @return string|null Full datetime string or null if parsing fails
+     */
+    private function parseTime(?string $timeString, string $date): ?string
+    {
+        if (empty($timeString)) {
+            return null;
+        }
+
+        try {
+            // Handle different time formats that SystemPin might return
+            $cleanTime = str_replace(':', '', $timeString);
+
+            if (strlen($cleanTime) === 4) {
+                // Format: HHMM
+                $hours = substr($cleanTime, 0, 2);
+                $minutes = substr($cleanTime, 2, 2);
+                $timeFormatted = $hours.':'.$minutes.':00';
+            } elseif (strlen($cleanTime) === 6) {
+                // Format: HHMMSS
+                $hours = substr($cleanTime, 0, 2);
+                $minutes = substr($cleanTime, 2, 2);
+                $seconds = substr($cleanTime, 4, 2);
+                $timeFormatted = $hours.':'.$minutes.':'.$seconds;
+            } else {
+                // Try to parse as-is
+                $timeFormatted = $timeString;
+            }
+
+            return Carbon::parse($date.' '.$timeFormatted)->toDateTimeString();
+        } catch (\Exception $e) {
+            Log::warning('Failed to parse SystemPin time', [
+                'time_string' => $timeString,
+                'date' => $date,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Parses SystemPin datetime format (YYYYMMDDHHMMSS) to HH:MM format.
+     *
+     * @param  string  $systemPinDateTime  DateTime in SystemPin format (e.g., "20250804090300")
+     * @return string|null Time in HH:MM format or null if parsing fails
+     */
+    private function parseSystemPinDateTime(string $systemPinDateTime): ?string
+    {
+        try {
+            // SystemPin format: YYYYMMDDHHMMSS (14 characters)
+            if (strlen($systemPinDateTime) !== 14) {
+                return null;
+            }
+
+            $hours = substr($systemPinDateTime, 8, 2);
+            $minutes = substr($systemPinDateTime, 10, 2);
+
+            return $hours.':'.$minutes;
+        } catch (\Exception $e) {
+            Log::warning('Failed to parse SystemPin datetime', [
+                'datetime' => $systemPinDateTime,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+}

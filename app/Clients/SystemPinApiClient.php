@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace App\Clients;
 
+use App\DataTransferObjects\SystemPin\SystemPinAttendanceDTO;
+use App\DataTransferObjects\SystemPin\SystemPinUserDTO;
 use App\Exceptions\ApiConnectionException;
+use Carbon\Carbon;
+use Exception;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Handles all communication with the SystemPin API, including authentication, health checks, and (future) data retrieval.
- * Provides a method to check API connectivity and is designed for easy extension with additional API methods.
+ * Handles all communication with the SystemPin API, including authentication, health checks, and data retrieval.
  */
 class SystemPinApiClient
 {
@@ -27,16 +31,137 @@ class SystemPinApiClient
     /**
      * Constructs a new SystemPinApiClient instance.
      *
-     * @param  string|null  $baseUrl  The base URL for the SystemPin API.
-     * @param  string|null  $apiKey  The API key for SystemPin.
+     * @param  string  $baseUrl  The base URL for the SystemPin API.
+     * @param  string  $apiKey  The API key for SystemPin.
+     *
+     * @throws ApiConnectionException If any configuration argument is empty.
      */
-    public function __construct(?string $baseUrl, ?string $apiKey)
+    public function __construct(string $baseUrl, string $apiKey)
     {
-        $this->baseUrl = $baseUrl ?? '';
-        $this->apiKey = $apiKey ?? '';
+        if (empty($baseUrl) || empty($apiKey)) {
+            throw new ApiConnectionException('SystemPin API configuration is incomplete.');
+        }
 
-        if (! $this->baseUrl || ! $this->apiKey) {
-            Log::warning('SystemPin API URL or Key is not configured.');
+        $this->baseUrl = $baseUrl;
+        $this->apiKey = $apiKey;
+    }
+
+    /**
+     * Makes an HTTP GET request to a SystemPin API endpoint with Bearer token authentication.
+     *
+     * @param  string  $endpoint  API endpoint relative to base URL.
+     * @param  array  $params  Query parameters to include in the request.
+     * @return array Decoded JSON response.
+     *
+     * @throws ApiConnectionException If the API request fails.
+     */
+    private function call(string $endpoint, array $params = []): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer '.$this->apiKey,
+            ])
+                ->withOptions([
+                    'verify' => false, // Disable SSL verification for self-signed certificates
+                    'timeout' => 30,   // Set reasonable timeout
+                ])
+                ->get($this->baseUrl.$endpoint, $params);
+
+            if ($response->failed()) {
+                throw new ApiConnectionException(
+                    "SystemPin API returned error: {$response->status()}"
+                );
+            }
+
+            Log::debug('SystemPin API Response', [
+                'endpoint' => $endpoint,
+                'params' => $params,
+                'response' => $response->json(),
+            ]);
+
+            return $response->json();
+        } catch (Exception $e) {
+            throw new ApiConnectionException($e->getMessage(), $e->getCode(), $e);
+        }
+    }
+
+    /**
+     * Retrieves all employees with email addresses from SystemPin.
+     *
+     * @return Collection|SystemPinUserDTO[] Collection of SystemPinUserDTOs.
+     *
+     * @throws ApiConnectionException If the API request fails.
+     */
+    public function getAllEmployees(): Collection
+    {
+        try {
+            $data = $this->call('/GetDataFromDataBase', [
+                'QueryID' => '13', // Query ID for getting employees with email
+            ]);
+
+            if (! isset($data['data']) || ! is_array($data['data'])) {
+                Log::warning('SystemPin API returned unexpected employee data structure', ['data' => $data]);
+
+                return collect();
+            }
+
+            return collect($data['data'])
+                ->map(fn ($employee) => new SystemPinUserDTO(
+                    $employee['id'] ?? null,
+                    $employee['Nombre'] ?? null,
+                    $employee['Email'] ?? null
+                ))
+                ->filter(fn ($dto) => ! empty($dto->Email))
+                ->values();
+        } catch (ApiConnectionException $e) {
+            Log::error('Failed to fetch SystemPin employees', ['error' => $e->getMessage()]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Retrieves attendance data from SystemPin for a specific date range.
+     *
+     * @param  string  $fromDate  Start date in 'Y-m-d' format.
+     * @param  string  $toDate  End date in 'Y-m-d' format.
+     * @return Collection|SystemPinAttendanceDTO[] Collection of SystemPinAttendanceDTOs.
+     *
+     * @throws ApiConnectionException If the API request fails.
+     */
+    public function getAttendanceData(string $fromDate, string $toDate): Collection
+    {
+        try {
+            // Convert dates to SystemPin format (YYYYMMDD)
+            $systemPinFromDate = Carbon::parse($fromDate)->format('Ymd');
+            $systemPinToDate = Carbon::parse($toDate)->format('Ymd');
+
+            $data = $this->call('/GetDataFromPresenciaPin', [
+                'QueryID' => '1', // Query ID for presence data
+                'EmployeeFilter' => '*', // Get all employees
+                'DateFrom' => $systemPinFromDate,
+                'DateTo' => $systemPinToDate,
+            ]);
+
+            if (empty($data)) {
+                Log::warning('SystemPin API returned empty attendance data', ['data' => $data]);
+
+                return collect();
+            }
+
+            return collect($data)
+                ->map(fn ($attendance) => new SystemPinAttendanceDTO(
+                    $attendance['EmployeeID'] ?? null,
+                    $attendance['InternalEmployeeID'] ?? null,
+                    $attendance['Date'] ?? null,
+                    $attendance['TimeRecords'] ?? [],
+                    $attendance['Schedule'] ?? null,
+                    $attendance['TimeOff'] ?? null,
+                    $attendance['TimeOffHours'] ?? []
+                ))
+                ->values();
+        } catch (ApiConnectionException $e) {
+            Log::error('Failed to fetch SystemPin attendance data', ['error' => $e->getMessage()]);
+            throw $e;
         }
     }
 
@@ -47,34 +172,13 @@ class SystemPinApiClient
      */
     public function ping(): array
     {
-        if (! $this->baseUrl || ! $this->apiKey) {
-            return [
-                'success' => false,
-                'message' => 'SystemPin API URL or Key is not configured.',
-            ];
-        }
-
         try {
-            // TODO: Adjust the endpoint and expected response based on SystemPin API
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer '.$this->apiKey,
-            ])->get($this->baseUrl.'/health'); // Example endpoint
-
-            Log::debug('SystemPin API Response', [
-                'url' => $this->baseUrl.'/health',
-                'response' => $response->json(),
-            ]);
-
-            if ($response->successful()) {
-                return [
-                    'success' => true,
-                    'message' => 'Successfully connected to SystemPin API.',
-                ];
-            }
+            // Use a simple query to check connectivity
+            $this->call('/GetDataFromDataBase', ['QueryID' => '13']);
 
             return [
-                'success' => false,
-                'message' => 'Failed to connect to SystemPin API. Status: '.$response->status(),
+                'success' => true,
+                'message' => 'Successfully connected to SystemPin API.',
             ];
         } catch (ApiConnectionException $e) {
             return [
@@ -83,22 +187,4 @@ class SystemPinApiClient
             ];
         }
     }
-
-    // Add other SystemPin API methods here (e.g., getUsers, getAttendances)
-
-    // Example for future implementers:
-    // use App\DataTransferObjects\SystemPin\UserDTO;
-    // use App\DataTransferObjects\SystemPin\AttendanceDTO;
-    //
-    // public function getUsers(): Collection
-    // {
-    //     // return collect($apiResponse)->map(fn ($item) => new UserDTO(/* ... */));
-    // }
-    //
-    // public function getAttendances(): Collection
-    // {
-    //     // return collect($apiResponse)->map(fn ($item) => new AttendanceDTO(/* ... */));
-    // }
-
-    // When implementing DTO mapping in the future, always check for key existence (isset or null coalescing) and do not store raw API data in DTOs.
 }

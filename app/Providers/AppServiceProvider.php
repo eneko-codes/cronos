@@ -81,13 +81,15 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(SystemPinApiClient::class, function ($app) {
             /** @var ConfigRepository $config */
             $config = $app['config'];
-            // Get config values, allowing them to be null as per original logic
-            $url = $config->get('services.systempin.url');
-            $key = $config->get('services.systempin.key');
+            $systempinConfig = $config->get('services.systempin');
+
+            if (! isset($systempinConfig['base_url'], $systempinConfig['api_key'])) {
+                throw new InvalidArgumentException('SystemPin service configuration is missing or incomplete.');
+            }
 
             return new SystemPinApiClient(
-                baseUrl: $url,
-                apiKey: $key
+                baseUrl: $systempinConfig['base_url'],
+                apiKey: $systempinConfig['api_key']
             );
         });
 

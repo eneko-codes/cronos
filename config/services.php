@@ -50,4 +50,9 @@ return [
         'base_url' => env('DESKTIME_BASE_URL'),
         'api_key' => env('DESKTIME_API_KEY'),
     ],
+
+    'systempin' => [
+        'base_url' => env('SYSTEMPIN_BASE_URL'),
+        'api_key' => env('SYSTEMPIN_API_KEY'),
+    ],
 ];

@@ -97,22 +97,6 @@ class NotificationDetailsModal extends Component
         $this->notificationData = $notification->data;
     }
 
-    //  Method to mark as read directly from the modal
-    public function markAsRead(): void
-    {
-        if ($this->notificationId && ! $this->notificationReadAtDiff) {
-            $user = Auth::user();
-            $notification = $user?->notifications()->find($this->notificationId);
-            if ($notification) {
-                $notification->markAsRead();
-                $this->notificationReadAtDiff = now()->diffForHumans();
-                $this->notificationReadAtFormatted = now()->format('M d, Y H:i:s T');
-                $this->dispatch('add-toast', message: 'Marked as read.', variant: 'success');
-                $this->dispatch('notification-updated'); // Notify sidebar to refresh potentially
-            }
-        }
-    }
-
     // Method to delete directly from the modal
     public function deleteNotification(): void
     {

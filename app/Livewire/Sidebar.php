@@ -334,6 +334,7 @@ class Sidebar extends Component
 
     /**
      * Show the details modal for a notification.
+     * Automatically marks unread notifications as read when opened.
      */
     public function showNotificationDetails(string $notificationId): void
     {
@@ -343,6 +344,13 @@ class Sidebar extends Component
         }
         $notification = $user->notifications()->find($notificationId);
         if ($notification) {
+            // Automatically mark as read if unread
+            if ($notification->unread()) {
+                $notification->markAsRead();
+                // Refresh the notifications list to update the UI
+                unset($this->notifications);
+                $this->dispatchUnreadCountChanged();
+            }
             $this->dispatch('openNotificationDetailsModal', notificationId: $notificationId);
         }
     }

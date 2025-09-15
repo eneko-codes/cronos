@@ -202,29 +202,6 @@
                         </p>
                       </div>
                       <div class="ml-2 flex flex-shrink-0 gap-1">
-                        @if ($notification->unread())
-                          <x-tooltip text="Mark as Read">
-                            <button
-                              wire:click.stop="markAsRead('{{ $notification->id }}')"
-                              class="inline-flex items-center rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-                            >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="currentColor"
-                                class="size-3"
-                                viewBox="0 0 16 16"
-                              >
-                                <path
-                                  d="M2.5 8a5.5 5.5 0 0 1 8.25-4.764.5.5 0 0 0 .5-.866A6.5 6.5 0 1 0 14.5 8a.5.5 0 0 0-1 0 5.5 5.5 0 1 1-11 0"
-                                />
-                                <path
-                                  d="M15.354 3.354a.5.5 0 0 0-.708-.708L8 9.293 5.354 6.646a.5.5 0 1 0-.708.708l3 3a.5.5 0 0 0 .708 0z"
-                                />
-                              </svg>
-                            </button>
-                          </x-tooltip>
-                        @endif
-
                         <x-tooltip text="Delete">
                           <button
                             wire:click.stop="deleteNotification('{{ $notification->id }}')"

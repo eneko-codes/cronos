@@ -83,35 +83,6 @@
 
           {{-- Actions Section --}}
           <div class="mt-2 flex flex-col gap-2 sm:flex-row sm:justify-end">
-            @if (! $notificationReadAtDiff)
-              <x-button
-                wire:click="markAsRead"
-                size="md"
-                variant="info"
-                type="button"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="currentColor"
-                  class="size-4"
-                  viewBox="0 0 16 16"
-                >
-                  <path
-                    d="M2.5 8a5.5 5.5 0 0 1 8.25-4.764.5.5 0 0 0 .5-.866A6.5 6.5 0 1 0 14.5 8a.5.5 0 0 0-1 0 5.5 5.5 0 1 1-11 0"
-                  />
-                  <path
-                    d="M15.354 3.354a.5.5 0 0 0-.708-.708L8 9.293 5.354 6.646a.5.5 0 1 0-.708.708l3 3a.5.5 0 0 0 .708 0z"
-                  />
-                </svg>
-                Mark as Read
-                <x-spinner
-                  size="4"
-                  wire:loading.delay
-                  wire:target="markAsRead"
-                />
-              </x-button>
-            @endif
-
             <x-button
               wire:click="deleteNotification"
               wire:confirm="Are you sure you want to delete this notification?"

@@ -65,20 +65,20 @@ class DeviationCalculator
     public function calculateOverallDeviations(array $totals)
     {
         $attendanceVsSchedule = $this->calculateDeviation(
-            \Carbon\CarbonInterval::minutes($totals['attendance'])->cascade()->format('%hh %dm'),
-            \Carbon\CarbonInterval::minutes($totals['scheduled'])->cascade()->format('%hh %dm'),
+            \Carbon\CarbonInterval::minutes($totals['attendance'])->cascade()->format('%hh %Im'),
+            \Carbon\CarbonInterval::minutes($totals['scheduled'])->cascade()->format('%hh %Im'),
             false
         );
 
         $workedVsSchedule = $this->calculateDeviation(
-            \Carbon\CarbonInterval::minutes($totals['worked'])->cascade()->format('%hh %dm'),
-            \Carbon\CarbonInterval::minutes($totals['scheduled'])->cascade()->format('%hh %dm'),
+            \Carbon\CarbonInterval::minutes($totals['worked'])->cascade()->format('%hh %Im'),
+            \Carbon\CarbonInterval::minutes($totals['scheduled'])->cascade()->format('%hh %Im'),
             false
         );
 
         $workedVsAttendance = $this->calculateDeviation(
-            \Carbon\CarbonInterval::minutes($totals['worked'])->cascade()->format('%hh %dm'),
-            \Carbon\CarbonInterval::minutes($totals['attendance'])->cascade()->format('%hh %dm'),
+            \Carbon\CarbonInterval::minutes($totals['worked'])->cascade()->format('%hh %Im'),
+            \Carbon\CarbonInterval::minutes($totals['attendance'])->cascade()->format('%hh %Im'),
             false
         );
 
@@ -126,7 +126,7 @@ class DeviationCalculator
     protected function formatDeviationTooltip(int $difference): string
     {
         $isPositive = $difference >= 0;
-        $formattedTime = CarbonInterval::minutes(abs($difference))->cascade()->format('%hh %dm');
+        $formattedTime = CarbonInterval::minutes(abs($difference))->cascade()->format('%hh %Im');
         $sign = $isPositive ? '+' : '-';
 
         return $sign.$formattedTime;

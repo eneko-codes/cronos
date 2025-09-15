@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services\Dashboard\Calculators;
 
-use Carbon\CarbonInterval;
 use Illuminate\Support\Collection;
 
 /**
@@ -73,6 +72,10 @@ class TotalsCalculator
             return '';
         }
 
-        return CarbonInterval::minutes($minutes)->cascade()->format('%hh %Im');
+        // Manual calculation to handle hours > 24 correctly
+        $hours = floor($minutes / 60);
+        $remainingMinutes = $minutes % 60;
+
+        return "{$hours}h {$remainingMinutes}m";
     }
 }

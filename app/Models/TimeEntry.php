@@ -118,22 +118,22 @@ class TimeEntry extends Model
     ];
 
     /**
-     * Set and get the date attribute with proper UTC timezone handling.
+     * Set and get the date attribute with proper date handling.
      *
-     * This accessor/mutator ensures all dates are properly normalized to UTC
-     * when stored, and properly converted when retrieved. This is essential for
-     * consistent date handling across different user timezones.
+     * This accessor/mutator ensures all dates are properly parsed as Carbon instances
+     * when retrieved and stored as date strings when saved. Date-only fields should
+     * not have timezone conversion applied.
      */
     protected function date(): Attribute
     {
         return Attribute::make(
             get: fn ($value) => $value
-              ? Carbon::parse($value)->setTimezone('UTC')
+              ? Carbon::parse($value)
               : null,
             set: fn ($value) => $value instanceof Carbon
-              ? $value->setTimezone('UTC')->toDateString()
+              ? $value->toDateString()
               : ($value
-                ? Carbon::parse($value)->setTimezone('UTC')->toDateString()
+                ? Carbon::parse($value)->toDateString()
                 : null)
         );
     }

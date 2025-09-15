@@ -24,20 +24,31 @@
     </div>
     @if ($todaysSchedule)
       <div class="flex flex-col">
-        @if ($todaysSchedule['duration'] !== '0h 0m')
-          {{-- Display Duration and Name for working days --}}
-          <span class="text-lg font-bold text-gray-800 dark:text-gray-100">
-            {{ $todaysSchedule['duration'] }}
-          </span>
-          <span class="text-xs text-gray-500 dark:text-gray-400">
+        @if ($todaysSchedule['duration'] && $todaysSchedule['duration'] !== '0h 0m')
+          {{-- Display Duration and detailed schedule information --}}
+          <div class="flex items-center justify-between">
+            <span class="text-lg font-bold text-gray-800 dark:text-gray-100">
+              {{ $todaysSchedule['duration'] }}
+            </span>
+            @if ($todaysSchedule['flexibleHours'])
+              <x-badge size="sm" variant="info">Flexible</x-badge>
+            @endif
+          </div>
+
+          {{-- Schedule Name --}}
+          <span class="mb-2 text-xs text-gray-500 dark:text-gray-400">
             {{ $todaysSchedule['name'] }}
           </span>
-          @if (! empty($todaysSchedule['slots']))
-            <div class="mt-1 flex flex-col gap-0.5">
-              @foreach ($todaysSchedule['slots'] as $slot)
-                <span class="text-xs text-gray-400">
-                  Start: {{ $slot['start'] }} - End: {{ $slot['end'] }}
-                </span>
+
+          {{-- Time Slots --}}
+          @if (! empty($todaysSchedule['detailedSlots']))
+            <div class="space-y-1">
+              @foreach ($todaysSchedule['detailedSlots'] as $slot)
+                <div class="text-xs">
+                  <span class="text-gray-600 dark:text-gray-300">
+                    {{ $slot['formatted'] }}
+                  </span>
+                </div>
               @endforeach
             </div>
           @endif
@@ -108,7 +119,15 @@
               @foreach ($todaysAttendance['segments'] as $segment)
                 <div class="text-xs text-gray-400">
                   {{ $segment['clock_in'] ?? '-' }} -
-                  {{ $segment['clock_out'] ?? 'Active' }}
+                  @if ($segment['clock_out'])
+                    {{ $segment['clock_out'] }}
+                  @else
+                    <span
+                      class="font-medium text-green-600 dark:text-green-500"
+                    >
+                      Clocked In
+                    </span>
+                  @endif
                   @if ($segment['duration'] !== '0h 0m')
                     <span class="text-gray-500">
                       ({{ $segment['duration'] }})
@@ -120,22 +139,14 @@
               {{-- Fallback to overall start/end times --}}
               <span class="text-xs text-gray-400">
                 Start:
-                {{ $todaysAttendance['start'] ? \Carbon\Carbon::parse($todaysAttendance['start'])->format('H:i') : '-' }}
+                {{ $todaysAttendance['start'] ?: '-' }}
               </span>
               <span class="text-xs text-gray-400">
                 End:
-                {{ $todaysAttendance['end'] ? \Carbon\Carbon::parse($todaysAttendance['end'])->format('H:i') : '-' }}
+                {{ $todaysAttendance['end'] ?: '-' }}
               </span>
             @endif
           </div>
-        @endif
-
-        @if ($todaysAttendance['clockedIn'] ?? false)
-          <span
-            class="mt-1 text-xs font-medium text-green-600 dark:text-green-500"
-          >
-            Currently Clocked In
-          </span>
         @endif
       </div>
     @else
@@ -183,26 +194,33 @@
         <div class="max-h-32 overflow-y-auto">
           @foreach ($todaysTimeEntries as $entry)
             <div class="mb-2 border-l-2 border-gray-300 pl-2 text-xs">
-              <div class="flex items-center justify-between">
-                <span class="font-semibold text-gray-700 dark:text-gray-300">
-                  {{ $entry['duration'] }}
-                </span>
-                @if ($entry['status'])
-                  <x-badge variant="info" size="xs">
+              @if ($entry['status'] && $entry['status'] !== 'none')
+                <div class="mb-1 flex justify-end">
+                  <x-badge variant="info" size="sm">
                     {{ $entry['status'] }}
                   </x-badge>
-                @endif
-              </div>
-              <div class="text-gray-600 dark:text-gray-400">
-                {{ $entry['project_name'] }}
-                @if ($entry['task_name'])
-                  <span class="text-gray-500">
-                    → {{ $entry['task_name'] }}
-                  </span>
-                @endif
+                </div>
+              @endif
+
+              <div class="mb-1 flex items-start justify-between gap-2">
+                <span
+                  class="flex-1 text-xs font-medium break-words text-gray-600 dark:text-gray-300"
+                >
+                  {{ $entry['project_name'] }}
+                  @if ($entry['task_name'])
+                    <span class="text-gray-500">
+                      → {{ $entry['task_name'] }}
+                    </span>
+                  @endif
+                </span>
+                <span
+                  class="flex-shrink-0 rounded bg-gray-100 px-1.5 py-0.5 text-xs font-semibold whitespace-nowrap text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+                >
+                  {{ $entry['duration'] }}
+                </span>
               </div>
               @if ($entry['description'])
-                <div class="mt-1 text-gray-500 dark:text-gray-400">
+                <div class="text-gray-500 dark:text-gray-400">
                   {{ $entry['description'] }}
                 </div>
               @endif

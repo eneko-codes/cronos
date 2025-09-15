@@ -203,32 +203,38 @@
               <div class="flex flex-col gap-1">
                 <x-tooltip>
                   <x-slot name="text">
-                    <div class="flex flex-col gap-1">
+                    <div class="flex flex-col">
                       @if (isset($day['scheduled']['slots']) && ! empty($day['scheduled']['slots']))
+                        {{-- Schedule Name --}}
                         @if (isset($day['scheduled']['scheduleName']) && $day['scheduled']['scheduleName'])
-                          <span
-                            class="mb-1 text-xs font-medium text-gray-700 dark:text-gray-100"
-                          >
-                            {{ $day['scheduled']['scheduleName'] }}
-                          </span>
+                          <div class="mb-1">
+                            <span
+                              class="text-sm font-semibold text-gray-800 dark:text-gray-100"
+                            >
+                              {{ $day['scheduled']['scheduleName'] }}
+                            </span>
+                          </div>
                         @endif
 
-                        @foreach ($day['scheduled']['slots'] as $slot)
-                          <span
-                            class="text-xs text-gray-600 dark:text-gray-200"
-                          >
-                            {{ $slot }}
-                          </span>
-                        @endforeach
+                        {{-- Time Slots --}}
+                        <div class="space-y-1">
+                          @foreach ($day['scheduled']['slots'] as $slot)
+                            <div
+                              class="text-xs text-gray-600 dark:text-gray-200"
+                            >
+                              {{ $slot }}
+                            </div>
+                          @endforeach
+                        </div>
                       @else
                         <span class="text-xs text-gray-500 dark:text-gray-400">
-                          No data
+                          No schedule data available
                         </span>
                       @endif
                     </div>
                   </x-slot>
                   <span class="{{ $futureTextClass }}">
-                    {{ isset($day['scheduled']['duration']) && $day['scheduled']['duration'] !== '0h 0m' ? $day['scheduled']['duration'] : '' }}
+                    {{ isset($day['scheduled']['duration']) && $day['scheduled']['duration'] && $day['scheduled']['duration'] !== '0h 0m' ? $day['scheduled']['duration'] : '' }}
                   </span>
                 </x-tooltip>
               </div>
@@ -239,84 +245,125 @@
               class="{{ $dataCellClasses }} {{ $futureTextClass }} p-2 whitespace-nowrap"
             >
               @if (isset($day['leave']) && $day['leave'])
-                <div
-                  class="{{ isset($day['leave']['status']) && $day['leave']['status'] !== 'validate' ? 'opacity-60' : '' }} flex items-center gap-2"
-                >
-                  <x-tooltip>
-                    <x-slot name="text">
-                      <div class="flex max-w-xs flex-col gap-2">
-                        <span
-                          class="text-xs font-medium text-gray-600 dark:text-gray-300"
-                        >
-                          {{ isset($day['leave']['duration']) ? $day['leave']['duration'] : '' }}
-                        </span>
-                        @if (isset($day['leave']['isHalfDay']) && $day['leave']['isHalfDay'])
+                <div class="flex items-center gap-2">
+                  @if (isset($day['leave']['status']) && $day['leave']['status'] === 'validate')
+                    {{-- Approved leaves: show duration with tooltip --}}
+                    <x-tooltip>
+                      <x-slot name="text">
+                        <div class="flex max-w-xs flex-col gap-2">
                           <span
-                            class="text-xs text-gray-600 dark:text-gray-300"
+                            class="text-xs font-medium text-gray-600 dark:text-gray-300"
                           >
-                            {{ isset($day['leave']['timePeriod']) ? Illuminate\Support\Str::ucfirst($day['leave']['timePeriod']) : '' }}
-                            ({{ $day['leave']['halfDayTime'] ?? '—' }})
+                            {{ isset($day['leave']['duration']) ? $day['leave']['duration'] : '' }}
                           </span>
-                        @elseif (isset($day['leave']['durationDays']) && $day['leave']['durationDays'] == 1)
-                          <span
-                            class="text-xs text-gray-600 dark:text-gray-300"
-                          >
-                            Full day
-                          </span>
-                        @endif
-                        @if (isset($day['leave']['status']) && $day['leave']['status'] !== 'validate')
-                          <span
-                            class="text-xs text-gray-500 italic dark:text-gray-400"
-                          >
-                            {{ isset($day['leave']['status']) && $day['leave']['status'] === 'confirm' ? 'Waiting approval' : 'Cancelled' }}
-                          </span>
-                        @endif
-
-                        <span class="text-xs text-gray-500 dark:text-gray-400">
-                          Type: {{ $day['leave']['leaveType'] ?? '' }}
-                          @if (isset($day['leave']['context']) && $day['leave']['context'])
-                              ({{ $day['leave']['context'] }})
+                          @if (isset($day['leave']['isHalfDay']) && $day['leave']['isHalfDay'])
+                            <span
+                              class="text-xs text-gray-600 dark:text-gray-300"
+                            >
+                              {{ isset($day['leave']['timePeriod']) ? Illuminate\Support\Str::ucfirst($day['leave']['timePeriod']) : '' }}
+                              ({{ $day['leave']['halfDayTime'] ?? '—' }})
+                            </span>
+                          @elseif (isset($day['leave']['durationDays']) && $day['leave']['durationDays'] == 1)
+                            <span
+                              class="text-xs text-gray-600 dark:text-gray-300"
+                            >
+                              Full day
+                            </span>
                           @endif
-                        </span>
-                        @if (isset($day['leave']['leaveTypeDescription']) && $day['leave']['leaveTypeDescription'])
+
                           <span
                             class="text-xs text-gray-500 dark:text-gray-400"
                           >
-                            Description:
-                            {{ $day['leave']['leaveTypeDescription'] }}
+                            Type: {{ $day['leave']['leaveType'] ?? '' }}
+                            @if (isset($day['leave']['context']) && $day['leave']['context'])
+                                ({{ $day['leave']['context'] }})
+                            @endif
                           </span>
-                        @endif
+                          @if (isset($day['leave']['leaveTypeDescription']) && $day['leave']['leaveTypeDescription'])
+                            <span
+                              class="text-xs text-gray-500 dark:text-gray-400"
+                            >
+                              Description:
+                              {{ $day['leave']['leaveTypeDescription'] }}
+                            </span>
+                          @endif
 
-                        <span class="text-xs text-gray-500 dark:text-gray-400">
-                          Hours: {{ $day['leave']['durationHours'] ?? '' }}
-                        </span>
-                      </div>
-                    </x-slot>
-                    <span class="{{ $futureTextClass }}">
-                      {{ isset($day['leave']['durationHours']) && $day['leave']['durationHours'] !== '0h 0m' ? $day['leave']['durationHours'] : '' }}
-                    </span>
-                  </x-tooltip>
-                  @if (isset($day['leave']['status']) && $day['leave']['status'] === 'validate')
+                          <span
+                            class="text-xs text-gray-500 dark:text-gray-400"
+                          >
+                            Hours: {{ $day['leave']['durationHours'] ?? '' }}
+                          </span>
+                        </div>
+                      </x-slot>
+                      <span class="{{ $futureTextClass }}">
+                        {{ isset($day['leave']['durationHours']) && $day['leave']['durationHours'] !== '0h 0m' ? $day['leave']['durationHours'] : '' }}
+                      </span>
+                    </x-tooltip>
                     <x-badge variant="info" size="sm">
                       {{ $day['leave']['leaveType'] ?? 'Leave' }}
                     </x-badge>
                   @elseif (isset($day['leave']['status']) && $day['leave']['status'] === 'confirm')
-                    <x-tooltip text="Leave request is pending approval">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="size-4 text-yellow-500"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="2"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.79 4 4s-1.79 4-4 4c-1.742 0-3.223-.835-3.772-2M12 12H9m3 3h3m-3-3V6m0 9v3m0-9H6m9 0h3m0 0v3m0-9V6m0 9H9"
-                        />
-                      </svg>
+                    {{-- Pending leaves: show leave type with tooltip details --}}
+                    <x-tooltip>
+                      <x-slot name="text">
+                        <div class="flex max-w-xs flex-col gap-2">
+                          <span
+                            class="text-xs font-medium text-gray-600 dark:text-gray-300"
+                          >
+                            {{ isset($day['leave']['duration']) ? $day['leave']['duration'] : '' }}
+                          </span>
+                          @if (isset($day['leave']['isHalfDay']) && $day['leave']['isHalfDay'])
+                            <span
+                              class="text-xs text-gray-600 dark:text-gray-300"
+                            >
+                              {{ isset($day['leave']['timePeriod']) ? Illuminate\Support\Str::ucfirst($day['leave']['timePeriod']) : '' }}
+                              ({{ $day['leave']['halfDayTime'] ?? '—' }})
+                            </span>
+                          @elseif (isset($day['leave']['durationDays']) && $day['leave']['durationDays'] == 1)
+                            <span
+                              class="text-xs text-gray-600 dark:text-gray-300"
+                            >
+                              Full day
+                            </span>
+                          @endif
+                          <span
+                            class="text-xs text-gray-500 italic dark:text-gray-400"
+                          >
+                            Waiting approval
+                          </span>
+
+                          <span
+                            class="text-xs text-gray-500 dark:text-gray-400"
+                          >
+                            Type: {{ $day['leave']['leaveType'] ?? '' }}
+                            @if (isset($day['leave']['context']) && $day['leave']['context'])
+                                ({{ $day['leave']['context'] }})
+                            @endif
+                          </span>
+                          @if (isset($day['leave']['leaveTypeDescription']) && $day['leave']['leaveTypeDescription'])
+                            <span
+                              class="text-xs text-gray-500 dark:text-gray-400"
+                            >
+                              Description:
+                              {{ $day['leave']['leaveTypeDescription'] }}
+                            </span>
+                          @endif
+
+                          <span
+                            class="text-xs text-gray-500 dark:text-gray-400"
+                          >
+                            Hours: {{ $day['leave']['durationHours'] ?? '' }}
+                          </span>
+                        </div>
+                      </x-slot>
+                      <span class="{{ $futureTextClass }}">
+                        {{ isset($day['leave']['durationHours']) && $day['leave']['durationHours'] !== '0h 0m' ? $day['leave']['durationHours'] : '' }}
+                      </span>
                     </x-tooltip>
+                    <x-badge variant="info" size="sm">
+                      {{ $day['leave']['leaveType'] ?? 'Leave' }}
+                    </x-badge>
+                    <x-badge variant="warning" size="sm">Pending</x-badge>
                   @elseif (isset($day['leave']['status']) && ($day['leave']['status'] === 'cancel' || $day['leave']['status'] === 'refuse'))
                     <x-tooltip
                       text="Leave request was {{ $day['leave']['status'] === 'cancel' ? 'cancelled' : 'refused' }}"
@@ -345,45 +392,46 @@
             <td
               class="{{ $dataCellClasses }} {{ $futureTextClass }} p-2 whitespace-nowrap"
             >
-              <x-tooltip>
-                <x-slot name="text">
-                  <div class="flex flex-col gap-1">
-                    @if (isset($day['attendance']['segments']) && ! empty($day['attendance']['segments']))
-                      {{-- Display individual segments --}}
-                      @foreach ($day['attendance']['segments'] as $segment)
-                        <div class="text-xs text-gray-600 dark:text-gray-200">
-                          {{ $segment['clock_in'] ?? '-' }} -
-                          {{ $segment['clock_out'] ?? 'Active' }}
-                          @if ($segment['duration'] !== '0h 0m')
-                            <span class="text-gray-500 dark:text-gray-400">
-                              ({{ $segment['duration'] }})
-                            </span>
+              @if (isset($day['attendance']) && isset($day['attendance']['duration']) && $day['attendance']['duration'] !== '0h 0m')
+                {{-- Only show tooltip when there's actual attendance data --}}
+                <x-tooltip>
+                  <x-slot name="text">
+                    <div class="flex flex-col gap-1">
+                      @if (isset($day['attendance']['segments']) && ! empty($day['attendance']['segments']))
+                        {{-- Display individual segments --}}
+                        @foreach ($day['attendance']['segments'] as $segment)
+                          <div class="text-xs text-gray-600 dark:text-gray-200">
+                            {{ $segment['clock_in'] ?? '-' }} -
+                            {{ $segment['clock_out'] ?? 'Active' }}
+                            @if ($segment['duration'] !== '0h 0m')
+                              <span class="text-gray-500 dark:text-gray-400">
+                                ({{ $segment['duration'] }})
+                              </span>
+                            @endif
+                          </div>
+                        @endforeach
+                      @else
+                        {{-- Fallback to overall start/end times --}}
+                        <span class="text-xs text-gray-600 dark:text-gray-200">
+                          Start:
+                          @if (isset($day['attendance']) && isset($day['attendance']['start']) && $day['attendance']['start'])
+                            {{ $day['attendance']['start'] }}
+                          @else
+                              -
                           @endif
-                        </div>
-                      @endforeach
-                    @else
-                      {{-- Fallback to overall start/end times --}}
-                      <span class="text-xs text-gray-600 dark:text-gray-200">
-                        Start:
-                        @if (isset($day['attendance']) && isset($day['attendance']['start']) && $day['attendance']['start'])
-                          {{ \Carbon\Carbon::parse($day['attendance']['start'])->format('H:i') }}
-                        @else
-                            -
-                        @endif
-                      </span>
-                      <span class="text-xs text-gray-600 dark:text-gray-200">
-                        End:
-                        @if (isset($day['attendance']) && isset($day['attendance']['end']) && $day['attendance']['end'])
-                          {{ \Carbon\Carbon::parse($day['attendance']['end'])->format('H:i') }}
-                        @else
-                            -
-                        @endif
-                      </span>
-                    @endif
-                  </div>
-                </x-slot>
-                <div class="flex flex-row items-center gap-2">
-                  @if (isset($day['attendance']) && isset($day['attendance']['duration']) && $day['attendance']['duration'] !== '0h 0m')
+                        </span>
+                        <span class="text-xs text-gray-600 dark:text-gray-200">
+                          End:
+                          @if (isset($day['attendance']) && isset($day['attendance']['end']) && $day['attendance']['end'])
+                            {{ $day['attendance']['end'] }}
+                          @else
+                              -
+                          @endif
+                        </span>
+                      @endif
+                    </div>
+                  </x-slot>
+                  <div class="flex flex-row items-center gap-2">
                     <span class="{{ $futureTextClass }}">
                       {{ $day['attendance']['duration'] }}
                     </span>
@@ -401,11 +449,11 @@
                     @elseif ((isset($day['attendance']['is_remote']) && ! $day['attendance']['is_remote'] && isset($day['attendance']['times']) && collect($day['attendance']['times'])->isNotEmpty()) || (! isset($day['attendance']['is_remote']) && isset($day['attendance']['times']) && collect($day['attendance']['times'])->isNotEmpty()))
                       <x-badge variant="success" size="sm">In Office</x-badge>
                     @endif
-                  @else
-                    <span class="{{ $futureTextClass }}">&nbsp;</span>
-                  @endif
-                </div>
-              </x-tooltip>
+                  </div>
+                </x-tooltip>
+              @else
+                {{-- No attendance data: completely empty cell --}}
+              @endif
             </td>
 
             <!-- Worked -->

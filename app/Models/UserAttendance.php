@@ -102,19 +102,19 @@ class UserAttendance extends Model
     }
 
     /**
-     * Set and get the date attribute with proper UTC timezone handling.
+     * Set and get the date attribute with proper date handling.
      *
-     * Ensures date values are always normalized to UTC when stored
-     * and properly formatted when retrieved. This maintains consistency
-     * across different user timezones and data sources.
+     * Ensures date values are properly parsed as Carbon instances when retrieved
+     * and stored as date strings when saved. Date-only fields should not have
+     * timezone conversion applied to maintain correct calendar dates.
      */
     protected function date(): Attribute
     {
         return Attribute::make(
-            get: fn ($value) => Carbon::parse($value)->setTimezone('UTC'),
+            get: fn ($value) => Carbon::parse($value),
             set: fn ($value) => $value instanceof Carbon
-              ? $value->setTimezone('UTC')->toDateString()
-              : Carbon::parse($value)->setTimezone('UTC')->toDateString()
+              ? $value->toDateString()
+              : Carbon::parse($value)->toDateString()
         );
     }
 

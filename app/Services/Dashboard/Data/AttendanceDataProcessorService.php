@@ -120,8 +120,8 @@ class AttendanceDataProcessorService
 
         if ($firstClockIn && $lastClockOut) {
             return [
-                Carbon::parse($firstClockIn)->format('H:i'),
-                Carbon::parse($lastClockOut)->format('H:i'),
+                Carbon::parse($firstClockIn)->setTimezone(config('app.timezone'))->format('H:i'),
+                Carbon::parse($lastClockOut)->setTimezone(config('app.timezone'))->format('H:i'),
             ];
         }
 
@@ -138,8 +138,8 @@ class AttendanceDataProcessorService
     {
         return $attendances->map(function ($attendance) {
             return [
-                'clock_in' => $attendance->clock_in ? Carbon::parse($attendance->clock_in)->format('H:i') : null,
-                'clock_out' => $attendance->clock_out ? Carbon::parse($attendance->clock_out)->format('H:i') : null,
+                'clock_in' => $attendance->clock_in ? Carbon::parse($attendance->clock_in)->setTimezone(config('app.timezone'))->format('H:i') : null,
+                'clock_out' => $attendance->clock_out ? Carbon::parse($attendance->clock_out)->setTimezone(config('app.timezone'))->format('H:i') : null,
                 'duration' => CarbonInterval::seconds((int) $attendance->duration_seconds)
                     ->cascade()
                     ->format('%hh %Im'),

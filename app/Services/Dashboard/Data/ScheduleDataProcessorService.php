@@ -70,12 +70,17 @@ class ScheduleDataProcessorService
                 $end = Carbon::parse($detail->end)->setTimezone('UTC');
                 $minutesForSlot = $start->diffInMinutes($end);
                 $totalMinutes += $minutesForSlot;
-                $slots[] = ucfirst($detail->day_period).": {$start->format('H:i')} - {$end->format('H:i')}";
+                $slots[] = "{$start->format('H:i')} - {$end->format('H:i')}";
+            }
+
+            // Return null for days with no schedule (0 minutes)
+            if ($totalMinutes === 0) {
+                return null;
             }
 
             return [
                 'model' => $schedule,
-                'duration' => CarbonInterval::minutes((int) round($totalMinutes))->cascade()->format('%hh %dm'),
+                'duration' => CarbonInterval::minutes((int) round($totalMinutes))->cascade()->format('%hh %Im'),
                 'slots' => $slots,
                 'scheduleName' => $schedule->schedule->description ?? null,
             ];

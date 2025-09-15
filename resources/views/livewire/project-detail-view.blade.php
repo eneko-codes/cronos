@@ -156,7 +156,7 @@
                               <span>{{ $entry->date->diffForHumans() }}</span>
                             </x-tooltip>
                             -
-                            {{ \Carbon\CarbonInterval::seconds($entry->duration_seconds)->cascade()->format('%hh %im') }}
+                            {{ \Carbon\CarbonInterval::seconds($entry->duration_seconds)->cascade()->format('%hh %Im') }}
                           </span>
                         </div>
                         @if ($entry->description)
@@ -241,7 +241,7 @@
                       <span>{{ $entry->date->diffForHumans() }}</span>
                     </x-tooltip>
                     -
-                    {{ \Carbon\CarbonInterval::seconds($entry->duration_seconds)->cascade()->format('%hh %im') }}
+                    {{ \Carbon\CarbonInterval::seconds($entry->duration_seconds)->cascade()->format('%hh %Im') }}
                   </span>
                   <x-badge
                     size="sm"

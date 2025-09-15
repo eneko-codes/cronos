@@ -42,7 +42,7 @@ class UserDashboardWidgets extends Component
                 ->first();
             $schedule = $userSchedule?->schedule;
             if ($schedule) {
-                $todayWeekday = now()->dayOfWeekIso; // 1 (Mon) - 7 (Sun)
+                $todayWeekday = (now()->dayOfWeek + 6) % 7; // 0 (Mon) - 6 (Sun) - matches Odoo format
                 $today = now()->toDateString();
 
                 // Filter schedule details to only include explicitly active ones for today
@@ -73,22 +73,43 @@ class UserDashboardWidgets extends Component
 
                 $totalMinutes = 0;
                 $slots = [];
+                $detailedSlots = [];
+                /** @var \Illuminate\Database\Eloquent\Collection<int, \App\Models\ScheduleDetail> $details */
                 foreach ($details as $detail) {
-                    if ($detail->start && $detail->end) {
-                        $totalMinutes += $detail->start->diffInMinutes($detail->end);
-                        $slots[] = [
-                            'start' => $detail->start->format('H:i'),
-                            'end' => $detail->end->format('H:i'),
-                        ];
-                    }
+                    /** @var \App\Models\ScheduleDetail $detail */
+                    $start = $detail->start;
+                    $end = $detail->end;
+                    $minutesForSlot = $start->diffInMinutes($end);
+                    $totalMinutes += $minutesForSlot;
+
+                    // Simple slots for backward compatibility
+                    $slots[] = [
+                        'start' => $start->format('H:i'),
+                        'end' => $end->format('H:i'),
+                    ];
+
+                    // Detailed slots without period labels
+                    $detailedSlots[] = [
+                        'start' => $start->format('H:i'),
+                        'end' => $end->format('H:i'),
+                        'period' => $detail->day_period,
+                        'name' => $detail->name,
+                        'formatted' => "{$start->format('H:i')} - {$end->format('H:i')}",
+                        'duration' => \Carbon\CarbonInterval::minutes($minutesForSlot)->cascade()->format('%hh %Im'),
+                    ];
                 }
                 $duration = $totalMinutes > 0
-                    ? \Carbon\CarbonInterval::minutes($totalMinutes)->cascade()->format('%hh %mm')
-                    : '0h 0m';
+                    ? \Carbon\CarbonInterval::minutes($totalMinutes)->cascade()->format('%hh %Im')
+                    : '';
                 $this->todaysSchedule = [
                     'name' => $schedule->description,
                     'duration' => $duration,
                     'slots' => $slots,
+                    'detailedSlots' => $detailedSlots,
+                    'scheduleId' => $schedule->odoo_schedule_id,
+                    'averageHoursDay' => $schedule->average_hours_day,
+                    'flexibleHours' => $schedule->flexible_hours,
+                    'twoWeeksCalendar' => $schedule->two_weeks_calendar,
                 ];
             } else {
                 $this->todaysSchedule = null;
@@ -112,8 +133,7 @@ class UserDashboardWidgets extends Component
                 ];
             } else {
                 $isRemote = $attendances->first()->is_remote;
-                $totalSeconds = $attendances->sum('duration_seconds');
-                $durationMinutes = (int) ($totalSeconds / 60);
+                $totalSeconds = 0;
 
                 // Get first clock-in and last clock-out
                 $firstClockIn = $attendances->whereNotNull('clock_in')->min('clock_in');
@@ -123,24 +143,38 @@ class UserDashboardWidgets extends Component
                 $latestSegment = $attendances->sortByDesc('clock_in')->first();
                 $clockedIn = $latestSegment && $latestSegment->clock_in && ! $latestSegment->clock_out;
 
-                // Build segments array
-                $segments = $attendances->map(function ($attendance) {
+                // Build segments array and calculate total duration
+                $segments = $attendances->map(function ($attendance) use (&$totalSeconds) {
+                    $segmentSeconds = 0;
+
+                    if ($attendance->clock_out) {
+                        // Completed segment: use stored duration
+                        $segmentSeconds = (int) $attendance->duration_seconds;
+                    } elseif ($attendance->clock_in) {
+                        // Active segment: calculate from clock_in until now
+                        $segmentSeconds = $attendance->clock_in->diffInSeconds(now());
+                    }
+
+                    $totalSeconds += $segmentSeconds;
+
                     return [
-                        'clock_in' => $attendance->clock_in ? $attendance->clock_in->format('H:i') : null,
-                        'clock_out' => $attendance->clock_out ? $attendance->clock_out->format('H:i') : null,
-                        'duration' => \Carbon\CarbonInterval::seconds((int) $attendance->duration_seconds)
+                        'clock_in' => $attendance->clock_in ? $attendance->clock_in->setTimezone(config('app.timezone'))->format('H:i') : null,
+                        'clock_out' => $attendance->clock_out ? $attendance->clock_out->setTimezone(config('app.timezone'))->format('H:i') : null,
+                        'duration' => \Carbon\CarbonInterval::seconds($segmentSeconds)
                             ->cascade()
                             ->format('%hh %Im'),
                     ];
                 })->toArray();
+
+                $durationMinutes = (int) ($totalSeconds / 60);
 
                 $this->todaysAttendance = [
                     'status' => $isRemote ? 'Remote' : 'In Office',
                     'duration' => \Carbon\CarbonInterval::minutes($durationMinutes)->cascade()->format('%hh %Im'),
                     'is_remote' => $isRemote,
                     'clockedIn' => $clockedIn,
-                    'start' => $firstClockIn ? $firstClockIn->toDateTimeString() : null,
-                    'end' => $lastClockOut ? $lastClockOut->toDateTimeString() : null,
+                    'start' => $firstClockIn ? $firstClockIn->setTimezone(config('app.timezone'))->format('H:i') : null,
+                    'end' => $lastClockOut ? $lastClockOut->setTimezone(config('app.timezone'))->format('H:i') : null,
                     'segments' => $segments,
                 ];
             }

@@ -185,7 +185,11 @@ class UserTimeSheetTable extends Component
             return '';
         }
 
-        return \Carbon\CarbonInterval::minutes($minutes)->cascade()->format('%hh %Im');
+        // Manual calculation to handle hours > 24 correctly
+        $hours = floor($minutes / 60);
+        $remainingMinutes = $minutes % 60;
+
+        return "{$hours}h {$remainingMinutes}m";
     }
 
     public function dispatchPreviousPeriod(): void

@@ -29,7 +29,6 @@ class WorkedDataProcessorService
             $durationInfo = $this->calculateDurationInfo($entries);
             $projectSummaries = $this->generateProjectSummaries($entries);
 
-            // Map entries to human-friendly tooltip data expected by the view
             $detailedEntries = $entries->map(function (TimeEntry $entry) {
                 return [
                     'project' => optional($entry->project)->title ?? '—',
@@ -45,7 +44,6 @@ class WorkedDataProcessorService
                 'entries' => $entries,
                 'duration' => $durationInfo['formatted'],
                 'projects' => collect($projectSummaries),
-                // Provide view with already-formatted strings to avoid raw model/JSON output
                 'detailedEntries' => $detailedEntries,
             ];
         } catch (\Exception $e) {

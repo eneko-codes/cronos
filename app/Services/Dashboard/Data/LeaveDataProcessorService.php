@@ -142,7 +142,7 @@ class LeaveDataProcessorService
 
         return [
             'text' => $durationText,
-            'hours' => CarbonInterval::minutes($durationMinutes)->cascade()->format('%hh %dm'),
+            'hours' => CarbonInterval::minutes($durationMinutes)->cascade()->format('%hh %Im'),
             'minutes' => $durationMinutes,
         ];
     }
@@ -214,7 +214,7 @@ class LeaveDataProcessorService
      */
     protected function calculateMultiDayDuration(UserLeave $leave, bool $isWeekend): int
     {
-        if ($leave->status === 'validate' && $leave->duration_days > 0) {
+        if (($leave->status === 'validate' || $leave->status === 'confirm') && $leave->duration_days > 0) {
             if ($leave->duration_days >= 1) {
                 return 8 * 60;
             }

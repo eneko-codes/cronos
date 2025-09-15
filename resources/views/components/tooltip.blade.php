@@ -14,9 +14,10 @@
   <span
     :id="$id('tooltip')"
     x-show="open"
-    x-anchor.bottom.offset.8="$refs.trigger"
+    x-anchor.bottom-start.offset.8="$refs.trigger"
+    x-anchor-modifiers.flip.shift
     x-transition.opacity.duration.150ms
-    class="pointer-events-none absolute z-50 w-max max-w-xs min-w-[8rem] rounded-lg border border-gray-200 bg-white/95 px-3 py-2 text-xs text-gray-900 shadow-md backdrop-blur select-none dark:border-gray-700 dark:bg-gray-900/95 dark:text-white"
+    class="pointer-events-none absolute z-50 w-max max-w-[20rem] min-w-[8rem] rounded-lg border border-gray-200 bg-white/95 px-3 py-2 text-xs text-gray-900 shadow-lg backdrop-blur select-none dark:border-gray-700 dark:bg-gray-900/95 dark:text-white"
     role="tooltip"
     style="display: none"
   >

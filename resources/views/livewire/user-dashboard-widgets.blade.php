@@ -84,24 +84,52 @@
     </div>
     @if ($todaysAttendance)
       <div class="flex flex-col">
-        <div class="flex items-baseline gap-2">
-          <span class="text-lg font-bold text-gray-800 dark:text-gray-100">
-            {{ $todaysAttendance['duration'] ?? '-' }}
-          </span>
-          <span class="text-lg font-bold text-gray-800 dark:text-gray-100">
-            {{ $todaysAttendance['is_remote'] ? 'Remote' : 'Office' }}
-          </span>
+        <div class="flex items-center gap-2">
+          @if (! empty($todaysAttendance['segments']) || $todaysAttendance['duration'] !== '0h 0m')
+            <span class="text-lg font-bold text-gray-800 dark:text-gray-100">
+              {{ $todaysAttendance['duration'] ?? '-' }}
+            </span>
+            <x-badge
+              variant="{{ $todaysAttendance['is_remote'] ? 'info' : 'success' }}"
+              size="sm"
+            >
+              {{ $todaysAttendance['is_remote'] ? 'Remote' : 'In Office' }}
+            </x-badge>
+          @else
+            <span class="text-lg font-bold text-gray-800 dark:text-gray-100">
+              {{ $todaysAttendance['status'] ?? 'Not Clocked In' }}
+            </span>
+          @endif
         </div>
-        <div class="mt-1 flex flex-col gap-0.5">
-          <span class="text-xs text-gray-400">
-            Start:
-            {{ $todaysAttendance['start'] ? \Carbon\Carbon::parse($todaysAttendance['start'])->format('H:i') : '-' }}
-          </span>
-          <span class="text-xs text-gray-400">
-            End:
-            {{ $todaysAttendance['end'] ? \Carbon\Carbon::parse($todaysAttendance['end'])->format('H:i') : '-' }}
-          </span>
-        </div>
+        @if (! empty($todaysAttendance['segments']) || $todaysAttendance['duration'] !== '0h 0m')
+          <div class="mt-1 flex flex-col gap-0.5">
+            @if (! empty($todaysAttendance['segments']))
+              {{-- Display individual segments --}}
+              @foreach ($todaysAttendance['segments'] as $segment)
+                <div class="text-xs text-gray-400">
+                  {{ $segment['clock_in'] ?? '-' }} -
+                  {{ $segment['clock_out'] ?? 'Active' }}
+                  @if ($segment['duration'] !== '0h 0m')
+                    <span class="text-gray-500">
+                      ({{ $segment['duration'] }})
+                    </span>
+                  @endif
+                </div>
+              @endforeach
+            @else
+              {{-- Fallback to overall start/end times --}}
+              <span class="text-xs text-gray-400">
+                Start:
+                {{ $todaysAttendance['start'] ? \Carbon\Carbon::parse($todaysAttendance['start'])->format('H:i') : '-' }}
+              </span>
+              <span class="text-xs text-gray-400">
+                End:
+                {{ $todaysAttendance['end'] ? \Carbon\Carbon::parse($todaysAttendance['end'])->format('H:i') : '-' }}
+              </span>
+            @endif
+          </div>
+        @endif
+
         @if ($todaysAttendance['clockedIn'] ?? false)
           <span
             class="mt-1 text-xs font-medium text-green-600 dark:text-green-500"
@@ -140,12 +168,53 @@
         Today's Logged Time
       </h3>
     </div>
-    <span class="text-lg font-bold text-gray-800 dark:text-gray-100">
-      {{ $todaysLoggedTime }}
-    </span>
-    <p class="text-xs text-gray-500 dark:text-gray-400">
-      Total time logged in ProofHub today.
-    </p>
+    @if (! empty($todaysTimeEntries))
+      <div class="flex flex-col gap-2">
+        @php
+          $totalSeconds = array_sum(array_column($todaysTimeEntries, 'duration_seconds'));
+          $totalHours = floor($totalSeconds / 3600);
+          $totalMinutes = floor(($totalSeconds % 3600) / 60);
+          $totalTime = $totalHours . 'h ' . $totalMinutes . 'm';
+        @endphp
+
+        <span class="text-lg font-bold text-gray-800 dark:text-gray-100">
+          {{ $totalTime }}
+        </span>
+        <div class="max-h-32 overflow-y-auto">
+          @foreach ($todaysTimeEntries as $entry)
+            <div class="mb-2 border-l-2 border-gray-300 pl-2 text-xs">
+              <div class="flex items-center justify-between">
+                <span class="font-semibold text-gray-700 dark:text-gray-300">
+                  {{ $entry['duration'] }}
+                </span>
+                @if ($entry['status'])
+                  <x-badge variant="info" size="xs">
+                    {{ $entry['status'] }}
+                  </x-badge>
+                @endif
+              </div>
+              <div class="text-gray-600 dark:text-gray-400">
+                {{ $entry['project_name'] }}
+                @if ($entry['task_name'])
+                  <span class="text-gray-500">
+                    → {{ $entry['task_name'] }}
+                  </span>
+                @endif
+              </div>
+              @if ($entry['description'])
+                <div class="mt-1 text-gray-500 dark:text-gray-400">
+                  {{ $entry['description'] }}
+                </div>
+              @endif
+            </div>
+          @endforeach
+        </div>
+      </div>
+    @else
+      <span class="text-lg font-bold text-gray-800 dark:text-gray-100">
+        No time logged
+      </span>
+    @endif
   </div>
 
   <!-- Upcoming Leave -->

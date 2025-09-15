@@ -348,25 +348,36 @@
               <x-tooltip>
                 <x-slot name="text">
                   <div class="flex flex-col gap-1">
-                    <span class="text-xs text-gray-600 dark:text-gray-200">
-                      Start:
-                      @if (isset($day['attendance']) && isset($day['attendance']['start']) && $day['attendance']['start'])
-                        {{ \Carbon\Carbon::parse($day['attendance']['start'])->format('H:i') }}
-                      @else
-                          -
-                      @endif
-                    </span>
-                    <span class="text-xs text-gray-600 dark:text-gray-200">
-                      End:
-                      @if (isset($day['attendance']) && isset($day['attendance']['end']) && $day['attendance']['end'])
-                        {{ \Carbon\Carbon::parse($day['attendance']['end'])->format('H:i') }}
-                      @else
-                          -
-                      @endif
-                    </span>
-                    @if (isset($day['attendance']) && isset($day['attendance']['is_remote']) && $day['attendance']['is_remote'])
-                      <span class="text-xs text-gray-500 dark:text-gray-400">
-                        Remote work
+                    @if (isset($day['attendance']['segments']) && ! empty($day['attendance']['segments']))
+                      {{-- Display individual segments --}}
+                      @foreach ($day['attendance']['segments'] as $segment)
+                        <div class="text-xs text-gray-600 dark:text-gray-200">
+                          {{ $segment['clock_in'] ?? '-' }} -
+                          {{ $segment['clock_out'] ?? 'Active' }}
+                          @if ($segment['duration'] !== '0h 0m')
+                            <span class="text-gray-500 dark:text-gray-400">
+                              ({{ $segment['duration'] }})
+                            </span>
+                          @endif
+                        </div>
+                      @endforeach
+                    @else
+                      {{-- Fallback to overall start/end times --}}
+                      <span class="text-xs text-gray-600 dark:text-gray-200">
+                        Start:
+                        @if (isset($day['attendance']) && isset($day['attendance']['start']) && $day['attendance']['start'])
+                          {{ \Carbon\Carbon::parse($day['attendance']['start'])->format('H:i') }}
+                        @else
+                            -
+                        @endif
+                      </span>
+                      <span class="text-xs text-gray-600 dark:text-gray-200">
+                        End:
+                        @if (isset($day['attendance']) && isset($day['attendance']['end']) && $day['attendance']['end'])
+                          {{ \Carbon\Carbon::parse($day['attendance']['end'])->format('H:i') }}
+                        @else
+                            -
+                        @endif
                       </span>
                     @endif
                   </div>
@@ -376,7 +387,16 @@
                     <span class="{{ $futureTextClass }}">
                       {{ $day['attendance']['duration'] }}
                     </span>
-                    @if (isset($day['attendance']['is_remote']) && $day['attendance']['is_remote'])
+                    @if (isset($day['attendance']['is_mixed']) && $day['attendance']['is_mixed'])
+                      {{-- Mixed work day: show both badges --}}
+                      @if (isset($day['attendance']['has_office']) && $day['attendance']['has_office'])
+                        <x-badge variant="success" size="sm">In Office</x-badge>
+                      @endif
+
+                      @if (isset($day['attendance']['has_remote']) && $day['attendance']['has_remote'])
+                        <x-badge variant="info" size="sm">Remote</x-badge>
+                      @endif
+                    @elseif (isset($day['attendance']['is_remote']) && $day['attendance']['is_remote'])
                       <x-badge variant="info" size="sm">Remote</x-badge>
                     @elseif ((isset($day['attendance']['is_remote']) && ! $day['attendance']['is_remote'] && isset($day['attendance']['times']) && collect($day['attendance']['times'])->isNotEmpty()) || (! isset($day['attendance']['is_remote']) && isset($day['attendance']['times']) && collect($day['attendance']['times'])->isNotEmpty()))
                       <x-badge variant="success" size="sm">In Office</x-badge>
@@ -395,27 +415,29 @@
               <div class="flex flex-col gap-1">
                 <x-tooltip>
                   <x-slot name="text">
-                    <div class="flex max-w-xs flex-col gap-2">
+                    <div class="flex flex-col gap-2">
                       @if (isset($day['worked']) && $day['worked'] && isset($day['worked']['detailedEntries']) && collect($day['worked']['detailedEntries'])->isNotEmpty())
                         @foreach (collect($day['worked']['detailedEntries']) as $entry)
                           <div
                             class="{{ ! $loop->last ? 'mb-1 ' : '' }} flex flex-col"
                           >
-                            <div class="mb-1 flex items-center justify-between">
+                            <div
+                              class="mb-1 flex items-start justify-between gap-2"
+                            >
                               <span
-                                class="text-xs font-medium text-gray-800 dark:text-gray-100"
+                                class="flex-1 text-xs font-medium break-words text-gray-800 dark:text-gray-100"
                               >
                                 {{ $entry['project'] ?? '' }}
                               </span>
                               <span
-                                class="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-xs whitespace-nowrap text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+                                class="flex-shrink-0 rounded bg-gray-100 px-1.5 py-0.5 text-xs whitespace-nowrap text-gray-700 dark:bg-gray-700 dark:text-gray-300"
                               >
                                 {{ $entry['duration'] ?? '' }}
                               </span>
                             </div>
                             @if (isset($entry['task']) && $entry['task'])
                               <span
-                                class="mb-0.5 text-xs text-gray-600 dark:text-gray-300"
+                                class="mb-0.5 text-xs break-words text-gray-600 dark:text-gray-300"
                               >
                                 {{ $entry['task'] }}
                               </span>
@@ -423,9 +445,9 @@
 
                             @if (isset($entry['description']) && $entry['description'])
                               <span
-                                class="text-xs text-gray-500 italic dark:text-gray-400"
+                                class="text-xs break-words text-gray-500 italic dark:text-gray-400"
                               >
-                                {{ Illuminate\Support\Str::limit($entry['description'], 80) }}
+                                {{ Illuminate\Support\Str::limit($entry['description'], 100) }}
                               </span>
                             @endif
                           </div>
@@ -435,13 +457,13 @@
                           @foreach (collect($day['worked']['projects']) as $project)
                             <div class="{{ ! $loop->last ? 'mb-2' : '' }}">
                               <span
-                                class="text-xs font-medium text-gray-800 dark:text-gray-100"
+                                class="text-xs font-medium break-words text-gray-800 dark:text-gray-100"
                               >
-                                {{ $project['name'] ?? '' }}
+                                {{ $project['title'] ?? '' }}
                               </span>
                               @if (isset($project['tasks']) && collect($project['tasks'])->isNotEmpty())
                                 <div
-                                  class="mt-1 text-xs text-gray-600 dark:text-gray-300"
+                                  class="mt-1 text-xs break-words text-gray-600 dark:text-gray-300"
                                 >
                                   {{ collect($project['tasks'])->join(', ') }}
                                 </div>

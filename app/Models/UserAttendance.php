@@ -68,10 +68,10 @@ class UserAttendance extends Model
     protected $fillable = [
         'user_id',
         'date',
-        'presence_seconds',
+        'clock_in',
+        'clock_out',
+        'duration_seconds',
         'is_remote',
-        'start',
-        'end',
     ];
 
     /**
@@ -84,10 +84,10 @@ class UserAttendance extends Model
      */
     protected $casts = [
         'is_remote' => 'boolean',
-        'presence_seconds' => 'integer',
+        'duration_seconds' => 'integer',
         'date' => 'date',
-        'start' => 'datetime',
-        'end' => 'datetime',
+        'clock_in' => 'datetime',
+        'clock_out' => 'datetime',
     ];
 
     /**

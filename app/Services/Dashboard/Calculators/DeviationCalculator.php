@@ -127,11 +127,8 @@ class DeviationCalculator
     {
         $isPositive = $difference >= 0;
         $formattedTime = CarbonInterval::minutes(abs($difference))->cascade()->format('%hh %dm');
+        $sign = $isPositive ? '+' : '-';
 
-        return sprintf(
-            '%s%s',
-            $isPositive ? '+' : '-',
-            $formattedTime
-        );
+        return $sign.$formattedTime;
     }
 }

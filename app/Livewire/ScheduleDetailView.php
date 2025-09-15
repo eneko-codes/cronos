@@ -48,10 +48,15 @@ class ScheduleDetailView extends Component
     public function currentUserSchedules(): Collection
     {
         $now = Carbon::now();
-        $allUserSchedules = $this->schedule->userSchedules; // Already loaded in mount
+
+        // Ensure user relationship is loaded to prevent lazy loading violations
+        /** @var \Illuminate\Database\Eloquent\Collection<int, UserSchedule> $allUserSchedules */
+        $allUserSchedules = UserSchedule::with('user')
+            ->where('odoo_schedule_id', $this->schedule->odoo_schedule_id)
+            ->get();
 
         // Filter for assignments active now or in the future
-        $currentAssignments = $allUserSchedules->filter(function ($us) use ($now) {
+        $currentAssignments = $allUserSchedules->filter(function (UserSchedule $us) use ($now) {
             return is_null($us->effective_until) || $us->effective_until >= $now;
         });
 
@@ -68,10 +73,15 @@ class ScheduleDetailView extends Component
     public function pastUserSchedules(): Collection
     {
         $now = Carbon::now();
-        $allUserSchedules = $this->schedule->userSchedules; // Already loaded in mount
+
+        // Ensure user relationship is loaded to prevent lazy loading violations
+        /** @var \Illuminate\Database\Eloquent\Collection<int, UserSchedule> $allUserSchedules */
+        $allUserSchedules = UserSchedule::with('user')
+            ->where('odoo_schedule_id', $this->schedule->odoo_schedule_id)
+            ->get();
 
         // Filter for assignments that ended in the past
-        $pastAssignments = $allUserSchedules->filter(function ($us) use ($now) {
+        $pastAssignments = $allUserSchedules->filter(function (UserSchedule $us) use ($now) {
             return ! is_null($us->effective_until) && $us->effective_until < $now;
         });
 
@@ -82,37 +92,16 @@ class ScheduleDetailView extends Component
     }
 
     /**
-     * Get schedule details grouped by weekday, sorted, with duplicates marked,
-     * and converted to stdClass objects including a duration string.
+     * Get schedule details grouped by weekday, sorted, and converted to stdClass objects including a duration string.
      */
     #[Computed]
     public function groupedScheduleDetails(): SupportCollection
     {
-        // Create a mutable copy for marking duplicates without affecting original models
-        $detailsCopy = $this->schedule->scheduleDetails->map(function ($detail) {
-            $clone = $detail->replicate(); // Use replicate or newFromBuilder if needed
-            $clone->id = $detail->id; // Ensure ID is copied if replicate doesn't handle it well
-            $clone->has_duplicates = false; // Initialize flag
+        $today = now()->toDateString();
 
-            return $clone;
-        });
-
-        $grouped = $detailsCopy
+        $grouped = $this->schedule->scheduleDetails
             ->sortBy('start') // Sort by start time within each day
             ->groupBy('weekday');
-
-        // Detect and mark duplicates within each day/period group
-        foreach ($grouped as $weekday => $weekdayDetails) {
-            $periodGroups = $weekdayDetails->groupBy('day_period');
-            foreach ($periodGroups as $periodDetails) {
-                if ($periodDetails->count() > 1) {
-                    // Mark all details in this specific group as having duplicates
-                    foreach ($periodDetails as $detail) {
-                        $detail->has_duplicates = true; // Mark the copied instance
-                    }
-                }
-            }
-        }
 
         // Custom sort keys: Mon (1) to Sun (0)
         return $grouped->sortBy(function ($group, $weekday) {
@@ -120,11 +109,15 @@ class ScheduleDetailView extends Component
             return ($weekday == 0) ? 7 : $weekday;
         })
         // Convert inner Eloquent Collections to base SupportCollections of stdClass objects
-            ->map(function ($details) {
-                // Convert each detail model, explicitly adding has_duplicates and duration_string
-                return collect($details->map(function ($model) {
+            ->map(function ($details) use ($today) {
+                // Convert each detail model with duration string and status
+                return collect($details->map(function ($model) use ($today) {
                     $data = $model->toArray(); // Convert base attributes
-                    $data['has_duplicates'] = $model->has_duplicates; // Use the flag from the copied instance
+
+                    // Determine status based on active flag and date range
+                    $data['status'] = $this->determineScheduleDetailStatus($model, $today);
+                    $data['status_label'] = $this->getStatusLabel($data['status']);
+                    $data['status_classes'] = $this->getStatusClasses($data['status']);
 
                     // Calculate duration string
                     try {
@@ -152,6 +145,66 @@ class ScheduleDetailView extends Component
                     return (object) $data; // Return as stdClass object
                 })->all());
             });
+    }
+
+    /**
+     * Determine the status of a schedule detail based on active flag and date range.
+     */
+    private function determineScheduleDetailStatus($detail, string $today): string
+    {
+        // First check if it's active
+        if ($detail->active === false) {
+            return 'inactive';
+        }
+
+        // Get date range
+        $dateFrom = $detail->date_from ? $detail->date_from->toDateString() : null;
+        $dateTo = $detail->date_to ? $detail->date_to->toDateString() : null;
+
+        // If no date range specified, it's always active (if active flag is true)
+        if (! $dateFrom && ! $dateTo) {
+            return $detail->active === true ? 'active' : 'inactive';
+        }
+
+        // Check date range
+        $afterStart = ! $dateFrom || $today >= $dateFrom;
+        $beforeEnd = ! $dateTo || $today <= $dateTo;
+
+        if ($afterStart && $beforeEnd) {
+            return $detail->active === true ? 'active' : 'inactive';
+        } elseif (! $afterStart) {
+            return 'future'; // Not yet started
+        } else {
+            return 'historical'; // Has ended
+        }
+    }
+
+    /**
+     * Get human-readable status label.
+     */
+    private function getStatusLabel(string $status): string
+    {
+        return match ($status) {
+            'active' => 'Currently Active',
+            'future' => 'Future Schedule',
+            'historical' => 'Historical/Expired',
+            'inactive' => 'Inactive',
+            default => 'Unknown',
+        };
+    }
+
+    /**
+     * Get CSS classes for status styling.
+     */
+    private function getStatusClasses(string $status): string
+    {
+        return match ($status) {
+            'active' => 'border-green-500 bg-green-50 dark:bg-gray-700 dark:border-green-500 dark:border-l-4 dark:border-l-green-500',
+            'future' => 'border-yellow-500 bg-yellow-50 dark:bg-gray-700 dark:border-yellow-500 dark:border-l-4 dark:border-l-yellow-500',
+            'historical' => 'border-orange-400 bg-orange-50 dark:bg-gray-700 dark:border-orange-500 dark:border-l-4 dark:border-l-orange-500',
+            'inactive' => 'border-gray-400 bg-gray-100 dark:bg-gray-800 dark:border-gray-500 opacity-75',
+            default => 'border-gray-300 bg-gray-50 dark:bg-gray-700 dark:border-gray-500',
+        };
     }
 
     /**

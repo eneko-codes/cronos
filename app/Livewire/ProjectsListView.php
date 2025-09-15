@@ -22,7 +22,7 @@ class ProjectsListView extends Component
     public int $perPage = 25; // Added for configurable pagination
 
     // Sorting
-    public string $sortBy = 'name_asc'; // Default sort: name asc
+    public string $sortBy = 'title_asc'; // Default sort: title asc
 
     // Filtering
     public array $filters = [
@@ -36,7 +36,7 @@ class ProjectsListView extends Component
     protected $queryString = [
         'search' => ['except' => ''],
         'page' => ['except' => 1],
-        'sortBy' => ['except' => 'name_asc'], // Updated default
+        'sortBy' => ['except' => 'title_asc'], // Updated default
         'perPage' => ['except' => 25], // Added perPage to query string
         'filters.has_tasks' => ['as' => 'f_ht', 'except' => false],
         'filters.has_time_entries' => ['as' => 'f_hte', 'except' => false],
@@ -76,8 +76,8 @@ class ProjectsListView extends Component
     {
         $projects = Project::query()
             ->when($this->search, function ($query): void {
-                $query->whereRaw('LOWER(name) LIKE ?', [
-                    '%'.strtolower($this->search).'%',
+                $query->whereRaw('LOWER(title) LIKE LOWER(?)', [
+                    '%'.$this->search.'%',
                 ]);
             })
           // Apply Filters
@@ -111,8 +111,8 @@ class ProjectsListView extends Component
             ->when($this->sortBy, function ($query): void {
                 // Changed Builder import requirement
                 match ($this->sortBy) {
-                    'name_asc' => $query->orderBy('name', 'asc'),
-                    'name_desc' => $query->orderBy('name', 'desc'),
+                    'title_asc' => $query->orderBy('title', 'asc'),
+                    'title_desc' => $query->orderBy('title', 'desc'),
                     'created_at_desc' => $query->orderBy('created_at', 'desc'),
                     'created_at_asc' => $query->orderBy('created_at', 'asc'),
                     'updated_at_desc' => $query->orderBy('updated_at', 'desc'),
@@ -127,7 +127,7 @@ class ProjectsListView extends Component
                         'project_time_entries_count',
                         'asc'
                     ),
-                    default => $query->orderBy('name', 'asc'), // Fallback default
+                    default => $query->orderBy('title', 'asc'), // Fallback default
                 };
             })
             ->paginate($this->perPage);

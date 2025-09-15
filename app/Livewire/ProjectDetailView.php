@@ -47,7 +47,7 @@ class ProjectDetailView extends Component
             'tasks' => function ($query): void {
                 $query->with('users:id,name,user_type') // Load task users
                     ->withCount('timeEntries')       // Count task time entries
-                    ->orderBy('name');               // Order tasks
+                    ->orderBy('title');               // Order tasks
             },
             'timeEntries' => function ($query): void {
                 $query->whereNull('proofhub_task_id') // Only project-level entries

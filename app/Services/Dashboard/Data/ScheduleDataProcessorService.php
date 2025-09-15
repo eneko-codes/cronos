@@ -34,32 +34,34 @@ class ScheduleDataProcessorService
             }
 
             $weekday = (Carbon::parse($dateString)->dayOfWeek + 6) % 7;
-            $details = $schedule->schedule->scheduleDetails->where('weekday', $weekday);
+            $targetDate = Carbon::parse($dateString)->toDateString();
 
-            if ($details->count() > 0) {
-                $periodGroups = $details->groupBy('day_period');
-                $selectedDetails = collect();
-                foreach ($periodGroups as $periodDetails) {
-                    if ($periodDetails->count() == 1) {
-                        $selectedDetails->push($periodDetails->first());
-                    } else {
-                        $standardPeriodMins = 240;
-                        $closestDetail = $periodDetails
-                            ->sortBy(function ($detail) use ($standardPeriodMins) {
-                                $start = Carbon::parse($detail->start);
-                                $end = Carbon::parse($detail->end);
-                                $mins = $start->diffInMinutes($end);
-
-                                return abs($mins - $standardPeriodMins);
-                            })
-                            ->first();
-                        $selectedDetails->push($closestDetail);
+            // Filter schedule details to only include explicitly active ones for the target date
+            $details = $schedule->schedule->scheduleDetails
+                ->where('weekday', $weekday)
+                ->filter(function ($detail) use ($targetDate) {
+                    // Check if the detail is active
+                    if ($detail->active !== true) {
+                        return false;
                     }
-                }
-                $selectedDetails = $selectedDetails->sortBy('start');
-            } else {
-                $selectedDetails = $details->sortBy('start');
-            }
+
+                    // Check if the detail applies to the target date
+                    $dateFrom = $detail->date_from ? $detail->date_from->toDateString() : null;
+                    $dateTo = $detail->date_to ? $detail->date_to->toDateString() : null;
+
+                    // If no date range specified, it applies to all dates
+                    if (! $dateFrom && ! $dateTo) {
+                        return true;
+                    }
+
+                    // Check if target date is within the range
+                    $afterStart = ! $dateFrom || $targetDate >= $dateFrom;
+                    $beforeEnd = ! $dateTo || $targetDate <= $dateTo;
+
+                    return $afterStart && $beforeEnd;
+                });
+
+            $selectedDetails = $details->sortBy('start');
 
             $totalMinutes = 0;
             $slots = [];

@@ -26,7 +26,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property \Carbon\Carbon|null $odoo_created_at Creation date of the record in Odoo
  * @property \Carbon\Carbon|null $odoo_updated_at Last update date of the record in Odoo
  * @property-read \App\Models\Schedule $schedule
- * @property bool $has_duplicates Dynamically added in ScheduleDetailView to mark duplicate entries
+
  * @property bool|null $active Whether the schedule detail is active (from Odoo)
  * @property int $week_type Determines whether the attendance applies to both weeks (0), week 1 (1), or week 2 (2)
  * @property \Carbon\Carbon|null $date_from Optional start date for when the attendance is active
@@ -110,5 +110,36 @@ class ScheduleDetail extends Model
             'odoo_schedule_id',
             'odoo_schedule_id'
         );
+    }
+
+    /**
+     * Scope to filter schedule details that are explicitly active for a specific date.
+     * Only includes schedule details where active = true (no backward compatibility).
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  string  $date  Date in Y-m-d format
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeActiveForDate($query, string $date)
+    {
+        return $query->where('active', true)
+            ->where(function ($q) use ($date): void {
+                $q->where(function ($subQ): void {
+                    // Either no date range specified (applies to all dates)
+                    $subQ->whereNull('date_from')
+                        ->whereNull('date_to');
+                })
+                    ->orWhere(function ($subQ) use ($date): void {
+                        // Or specified date is within the range
+                        $subQ->where(function ($dateFromQ) use ($date): void {
+                            $dateFromQ->whereNull('date_from')
+                                ->orWhere('date_from', '<=', $date);
+                        })
+                            ->where(function ($dateToQ) use ($date): void {
+                                $dateToQ->whereNull('date_to')
+                                    ->orWhere('date_to', '>=', $date);
+                            });
+                    });
+            });
     }
 }

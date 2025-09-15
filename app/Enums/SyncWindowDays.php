@@ -6,6 +6,11 @@ namespace App\Enums;
 
 enum SyncWindowDays: int
 {
+    case OneYear = 365;
+    case SixMonths = 180;
+    case FourMonths = 120;
+    case ThreeMonths = 90;
+    case TwoMonths = 60;
     case Thirty = 30;
     case TwentyNine = 29;
     case TwentyEight = 28;
@@ -40,6 +45,11 @@ enum SyncWindowDays: int
     public function label(): string
     {
         return match ($this) {
+            self::OneYear => '1 year',
+            self::SixMonths => '6 months',
+            self::FourMonths => '4 months',
+            self::ThreeMonths => '3 months',
+            self::TwoMonths => '2 months',
             self::Thirty => '30 days',
             self::TwentyNine => '29 days',
             self::TwentyEight => '28 days',

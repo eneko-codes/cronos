@@ -157,7 +157,7 @@
             <!-- Project Info -->
             <div class="flex flex-1 flex-col gap-1">
               <p class="text-sm font-semibold text-gray-800 dark:text-gray-100">
-                {{ $project->name }}
+                {{ $project->title }}
               </p>
               <div
                 class="flex flex-row gap-4 text-xs text-gray-500 dark:text-gray-400"

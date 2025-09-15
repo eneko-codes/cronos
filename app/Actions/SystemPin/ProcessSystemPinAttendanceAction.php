@@ -79,49 +79,40 @@ final class ProcessSystemPinAttendanceAction
                 return;
             }
 
-            // Calculate total worked time and extract first/last times
-            $totalMinutes = 0;
-            $firstClockIn = null;
-            $lastClockOut = null;
+            // Delete existing attendance records for this day to ensure clean data
+            UserAttendance::where('user_id', $user->id)
+                ->whereDate('date', $date)
+                ->where('is_remote', false) // Only delete SystemPin records
+                ->delete();
 
+            // Create one row per time segment
             foreach ($timeRecords as $record) {
+                $clockIn = null;
+                $clockOut = null;
+                $durationSeconds = 0;
+
                 if (isset($record['From'])) {
-                    // Extract first clock in time
-                    if ($firstClockIn === null) {
-                        $firstClockIn = $this->parseSystemPinDateTime($record['From']);
-                    }
+                    $clockIn = $this->parseTime($this->parseSystemPinDateTime($record['From']), $date);
                 }
 
                 if (isset($record['From'], $record['to'])) {
-                    // Calculate duration for complete records
+                    // Complete segment with both in and out
                     $start = \Carbon\Carbon::createFromFormat('YmdHis', $record['From']);
                     $end = \Carbon\Carbon::createFromFormat('YmdHis', $record['to']);
-                    $totalMinutes += $start->diffInMinutes($end);
-
-                    // Update last clock out
-                    $lastClockOut = $this->parseSystemPinDateTime($record['to']);
+                    $durationSeconds = $start->diffInSeconds($end);
+                    $clockOut = $this->parseTime($this->parseSystemPinDateTime($record['to']), $date);
                 }
-            }
 
-            // Parse start and end times for database storage
-            $start = $firstClockIn ? $this->parseTime($firstClockIn, $date) : null;
-            $end = $lastClockOut ? $this->parseTime($lastClockOut, $date) : null;
-
-            // Convert minutes to seconds
-            $presenceSeconds = $totalMinutes * 60;
-
-            UserAttendance::updateOrCreate(
-                [
+                // Create attendance record for this segment
+                UserAttendance::create([
                     'user_id' => $user->id,
                     'date' => $date,
+                    'clock_in' => $clockIn,
+                    'clock_out' => $clockOut,
+                    'duration_seconds' => $durationSeconds,
                     'is_remote' => false, // SystemPin is always on-site
-                ],
-                [
-                    'presence_seconds' => $presenceSeconds,
-                    'start' => $start,
-                    'end' => $end,
-                ]
-            );
+                ]);
+            }
         });
     }
 

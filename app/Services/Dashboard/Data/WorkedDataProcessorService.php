@@ -29,11 +29,24 @@ class WorkedDataProcessorService
             $durationInfo = $this->calculateDurationInfo($entries);
             $projectSummaries = $this->generateProjectSummaries($entries);
 
+            // Map entries to human-friendly tooltip data expected by the view
+            $detailedEntries = $entries->map(function (TimeEntry $entry) {
+                return [
+                    'project' => optional($entry->project)->title ?? '—',
+                    'task' => optional($entry->task)->name,
+                    'description' => $entry->description,
+                    'duration' => CarbonInterval::seconds((int) $entry->duration_seconds)
+                        ->cascade()
+                        ->format('%hh %Im'),
+                ];
+            });
+
             return [
                 'entries' => $entries,
                 'duration' => $durationInfo['formatted'],
                 'projects' => collect($projectSummaries),
-                'detailedEntries' => $entries,
+                // Provide view with already-formatted strings to avoid raw model/JSON output
+                'detailedEntries' => $detailedEntries,
             ];
         } catch (\Exception $e) {
             Log::error('Error processing worked data', [
@@ -74,11 +87,21 @@ class WorkedDataProcessorService
      */
     protected function calculateDurationInfo(Collection $entries): array
     {
-        $totalMinutes = $entries->sum(fn (TimeEntry $entry) => $entry->duration_seconds / 60);
-        $formatted = CarbonInterval::minutes((int) round($totalMinutes))->cascade()->format('%hh %dm');
+        $totalSeconds = $entries->sum(fn (TimeEntry $entry) => $entry->duration_seconds);
+
+        // Return empty string for no worked time instead of "0h 00m"
+        if ($totalSeconds <= 0 || $entries->isEmpty()) {
+            return [
+                'minutes' => 0,
+                'formatted' => '',
+            ];
+        }
+
+        $interval = CarbonInterval::seconds((int) $totalSeconds)->cascade();
+        $formatted = $interval->format('%hh %Im');
 
         return [
-            'minutes' => (int) $totalMinutes,
+            'minutes' => (int) $interval->totalMinutes,
             'formatted' => $formatted,
         ];
     }
@@ -87,7 +110,7 @@ class WorkedDataProcessorService
      * Generate summaries of worked time by project.
      *
      * @param  Collection<TimeEntry>  $entries  The time entries to summarize
-     * @return array<int, array{name: string, tasks: array}>
+     * @return array<int, array{title: string, tasks: array<string>}>
      */
     protected function generateProjectSummaries(Collection $entries): array
     {
@@ -103,7 +126,8 @@ class WorkedDataProcessorService
                 ->toArray();
 
             $summaries[] = [
-                'name' => $project->name,
+                // Align key names with the Blade view expectations
+                'title' => optional($project)->title ?? 'Unknown project',
                 'tasks' => $uniqueTaskNames,
             ];
         }

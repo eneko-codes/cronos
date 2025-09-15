@@ -83,6 +83,10 @@ class LeaveType extends Model
         'name',
         'request_unit',
         'active',
+        'is_unpaid',
+        'requires_allocation',
+        'validation_type',
+        'limit',
         'odoo_created_at',
         'odoo_updated_at',
     ];
@@ -97,6 +101,10 @@ class LeaveType extends Model
         'name' => 'string',
         'request_unit' => 'string',
         'active' => 'boolean',
+        'is_unpaid' => 'boolean',
+        'requires_allocation' => 'boolean',
+        'validation_type' => 'string',
+        'limit' => 'boolean',
     ];
 
     /**

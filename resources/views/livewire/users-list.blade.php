@@ -28,16 +28,6 @@
         />
       @endif
     </div>
-
-    <!-- Action Buttons -->
-    <div class="flex flex-row items-center gap-2">
-      <!-- Sync Users Button -->
-      <x-tooltip
-        text="Synchronize all users from Odoo and their Proofhub, Desktime, and SystemPin IDs"
-      >
-        <livewire:sync-button :key="'users-list-sync'" sync-type="users" />
-      </x-tooltip>
-    </div>
   </div>
 
   <!-- Users Table -->

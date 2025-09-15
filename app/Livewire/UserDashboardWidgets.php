@@ -22,7 +22,7 @@ class UserDashboardWidgets extends Component
 
     public ?array $todaysAttendance = null;
 
-    public string $todaysLoggedTime = '0h 0m'; // Default value
+    public array $todaysTimeEntries = []; // Array of today's time entries
 
     public ?int $upcomingLeaveId = null;
 
@@ -43,7 +43,34 @@ class UserDashboardWidgets extends Component
             $schedule = $userSchedule?->schedule;
             if ($schedule) {
                 $todayWeekday = now()->dayOfWeekIso; // 1 (Mon) - 7 (Sun)
-                $details = $schedule->scheduleDetails()->where('weekday', $todayWeekday)->get();
+                $today = now()->toDateString();
+
+                // Filter schedule details to only include explicitly active ones for today
+                $details = $schedule->scheduleDetails()
+                    ->where('weekday', $todayWeekday)
+                    ->where(function ($query) use ($today): void {
+                        $query->where('active', true)
+                            ->where(function ($q) use ($today): void {
+                                $q->where(function ($subQ): void {
+                                    // Either no date range specified (applies to all dates)
+                                    $subQ->whereNull('date_from')
+                                        ->whereNull('date_to');
+                                })
+                                    ->orWhere(function ($subQ) use ($today): void {
+                                        // Or specified date is within the range
+                                        $subQ->where(function ($dateFromQ) use ($today): void {
+                                            $dateFromQ->whereNull('date_from')
+                                                ->orWhere('date_from', '<=', $today);
+                                        })
+                                            ->where(function ($dateToQ) use ($today): void {
+                                                $dateToQ->whereNull('date_to')
+                                                    ->orWhere('date_to', '>=', $today);
+                                            });
+                                    });
+                            });
+                    })
+                    ->get();
+
                 $totalMinutes = 0;
                 $slots = [];
                 foreach ($details as $detail) {
@@ -67,11 +94,13 @@ class UserDashboardWidgets extends Component
                 $this->todaysSchedule = null;
             }
 
-            // Today's Attendance (simplified logic)
-            $attendance = UserAttendance::where('user_id', $user->id)
+            // Today's Attendance (handles multiple segments)
+            $attendances = UserAttendance::where('user_id', $user->id)
                 ->whereDate('date', now()->toDateString())
-                ->first();
-            if (! $attendance) {
+                ->orderBy('clock_in')
+                ->get();
+
+            if ($attendances->isEmpty()) {
                 $this->todaysAttendance = [
                     'status' => 'Not Clocked In',
                     'duration' => '0h 0m',
@@ -79,45 +108,64 @@ class UserDashboardWidgets extends Component
                     'clockedIn' => false,
                     'start' => null,
                     'end' => null,
-                ];
-            } elseif ($attendance->is_remote) {
-                $durationMinutes = (int) (($attendance->presence_seconds ?? 0) / 60);
-                $this->todaysAttendance = [
-                    'status' => 'Remote',
-                    'duration' => \Carbon\CarbonInterval::minutes($durationMinutes)->cascade()->format('%hh %dm'),
-                    'is_remote' => true,
-                    'clockedIn' => false,
-                    'start' => null,
-                    'end' => null,
+                    'segments' => [],
                 ];
             } else {
-                $durationMinutes = 0;
-                $clockedIn = false;
-                $start = $attendance->start ? $attendance->start->toDateTimeString() : null;
-                $end = $attendance->end ? $attendance->end->toDateTimeString() : null;
-                if ($attendance->start && $attendance->end) {
-                    $durationMinutes = $attendance->start->diffInMinutes($attendance->end);
-                } elseif ($attendance->start) {
-                    $durationMinutes = (int) (($attendance->presence_seconds ?? 0) / 60);
-                    $clockedIn = true;
-                }
+                $isRemote = $attendances->first()->is_remote;
+                $totalSeconds = $attendances->sum('duration_seconds');
+                $durationMinutes = (int) ($totalSeconds / 60);
+
+                // Get first clock-in and last clock-out
+                $firstClockIn = $attendances->whereNotNull('clock_in')->min('clock_in');
+                $lastClockOut = $attendances->whereNotNull('clock_out')->max('clock_out');
+
+                // Check if currently clocked in (has clock_in but no clock_out in latest segment)
+                $latestSegment = $attendances->sortByDesc('clock_in')->first();
+                $clockedIn = $latestSegment && $latestSegment->clock_in && ! $latestSegment->clock_out;
+
+                // Build segments array
+                $segments = $attendances->map(function ($attendance) {
+                    return [
+                        'clock_in' => $attendance->clock_in ? $attendance->clock_in->format('H:i') : null,
+                        'clock_out' => $attendance->clock_out ? $attendance->clock_out->format('H:i') : null,
+                        'duration' => \Carbon\CarbonInterval::seconds((int) $attendance->duration_seconds)
+                            ->cascade()
+                            ->format('%hh %Im'),
+                    ];
+                })->toArray();
+
                 $this->todaysAttendance = [
-                    'status' => 'In Office',
-                    'duration' => \Carbon\CarbonInterval::minutes($durationMinutes)->cascade()->format('%hh %dm'),
-                    'is_remote' => false,
+                    'status' => $isRemote ? 'Remote' : 'In Office',
+                    'duration' => \Carbon\CarbonInterval::minutes($durationMinutes)->cascade()->format('%hh %Im'),
+                    'is_remote' => $isRemote,
                     'clockedIn' => $clockedIn,
-                    'start' => $start,
-                    'end' => $end,
+                    'start' => $firstClockIn ? $firstClockIn->toDateTimeString() : null,
+                    'end' => $lastClockOut ? $lastClockOut->toDateTimeString() : null,
+                    'segments' => $segments,
                 ];
             }
 
-            // Today's Logged Time
-            $seconds = TimeEntry::where('user_id', $user->id)
+            // Today's Time Entries
+            $timeEntries = TimeEntry::where('user_id', $user->id)
                 ->whereDate('date', now()->toDateString())
-                ->sum('duration_seconds');
-            $this->todaysLoggedTime = $seconds > 0
-                ? \Carbon\CarbonInterval::seconds($seconds)->cascade()->format('%hh %mm')
-                : '0h 0m';
+                ->with(['project', 'task'])
+                ->orderBy('proofhub_created_at')
+                ->get();
+
+            $this->todaysTimeEntries = $timeEntries->map(function ($entry) {
+                $hours = floor($entry->duration_seconds / 3600);
+                $minutes = floor(($entry->duration_seconds % 3600) / 60);
+                $duration = $hours.'h '.$minutes.'m';
+
+                return [
+                    'duration' => $duration,
+                    'duration_seconds' => $entry->duration_seconds,
+                    'description' => $entry->description,
+                    'project_name' => $entry->project->title ?? 'Unknown Project',
+                    'task_name' => $entry->task->name ?? null,
+                    'status' => $entry->status,
+                ];
+            })->toArray();
 
             // Upcoming Leave
             $upcomingLeave = UserLeave::where('user_id', $user->id)
@@ -136,7 +184,7 @@ class UserDashboardWidgets extends Component
                 'start' => null,
                 'end' => null,
             ];
-            $this->todaysLoggedTime = '0h 0m';
+            $this->todaysTimeEntries = [];
             $this->upcomingLeaveId = null;
         }
     }

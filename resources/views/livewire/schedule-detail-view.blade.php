@@ -1,7 +1,7 @@
 <div class="flex flex-col gap-6">
   <!-- Back button -->
   <a
-    href="{{ route('schedules.list') }}"
+    href="{{ route("schedules.list") }}"
     wire:navigate
     class="inline-flex h-fit w-fit flex-row items-center justify-center gap-2 rounded-lg bg-gray-200/75 px-2 py-1 text-xs font-semibold whitespace-nowrap text-gray-800 shadow-sm hover:bg-gray-200 dark:bg-gray-200 dark:text-gray-800 dark:hover:bg-gray-100"
   >
@@ -22,10 +22,10 @@
   {{-- Page Header --}}
   <div class="flex flex-col gap-2">
     <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-      {{ $schedule->description ?? 'Schedule ID: ' . $schedule->odoo_schedule_id }}
+      {{ $schedule->description ?? "Schedule ID: " . $schedule->odoo_schedule_id }}
     </h1>
     <p class="text-xs text-gray-600 dark:text-gray-400">
-      Average hours per day: {{ $schedule->average_hours_day ?? 'N/A' }}
+      Average hours per day: {{ $schedule->average_hours_day ?? "N/A" }}
     </p>
     {{-- Timestamps --}}
     <div
@@ -55,7 +55,7 @@
           Weekly Time Slots
         </h2>
         <svg
-          class="{{ $showScheduleDetails ? 'rotate-180' : '' }} size-5 transform text-gray-500 transition-transform duration-200 dark:text-gray-400"
+          class="{{ $showScheduleDetails ? "rotate-180" : "" }} size-5 transform text-gray-500 transition-transform duration-200 dark:text-gray-400"
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 20 20"
           fill="currentColor"
@@ -78,50 +78,82 @@
               <div class="flex flex-col gap-1">
                 {{-- Day Header --}}
                 <h4 class="font-semibold text-gray-700 dark:text-gray-300">
-                  {{ Carbon\Carbon::now()->startOfWeek(Carbon\Carbon::SUNDAY)->addDays($weekday)->format('l') }}
+                  {{ Carbon\Carbon::now()->startOfWeek(Carbon\Carbon::SUNDAY)->addDays($weekday)->format("l") }}
                 </h4>
                 {{-- List of details for this day --}}
                 <ul class="list-none space-y-2 pl-0 text-sm">
                   @foreach ($details as $detail)
                     {{-- $details are already sorted by start time --}}
                     <div
-                      class="rounded-md border border-gray-300 bg-gray-50 p-2 dark:border-gray-500 dark:bg-gray-700"
+                      class="{{ $detail->status_classes }} rounded-md border p-3"
                     >
-                      <span
-                        class="flex flex-row items-center gap-1 font-semibold"
-                      >
-                        {{-- Display period --}}
-                        {{ ucfirst($detail->day_period) }}
-                        {{-- Display warning icon if duplicates exist --}}
-                        @if ($detail->has_duplicates)
-                          <x-tooltip
-                            text="Duplicate entries detected for this day and period."
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              viewBox="0 0 20 20"
-                              fill="currentColor"
-                              class="inline-block size-4 text-yellow-500"
-                            >
-                              <path
-                                fill-rule="evenodd"
-                                d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 6a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 6Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"
-                                clip-rule="evenodd"
-                              />
-                            </svg>
-                          </x-tooltip>
-                        @endif
-                      </span>
+                      <div class="flex flex-row items-center justify-between">
+                        <span
+                          class="flex flex-row items-center gap-2 font-semibold"
+                        >
+                          {{-- Display period --}}
+                          {{ ucfirst($detail->day_period) }}
 
-                      {{-- Use correct properties and Carbon format --}}
-                      {{ \Carbon\Carbon::parse($detail->start)->format('H:i') }}
-                      →
-                      {{ \Carbon\Carbon::parse($detail->end)->format('H:i') }}
-                      <span class="text-gray-500">
-                        {{-- Use pre-calculated duration string from component --}}
-                        ({{ $detail->duration_string ?? 'N/A' }})
-                      </span>
-                      {{-- is_off_day check likely needs adjustment if property doesn't exist, removing for now --}}
+                          {{-- Status indicator badge --}}
+                          <span
+                            class="@if ($detail->status === "active")
+                                bg-green-100
+                                text-green-800
+                                dark:bg-green-900/40
+                                dark:text-green-200
+                            @elseif ($detail->status === "future")
+                                bg-yellow-100
+                                text-yellow-800
+                                dark:bg-yellow-900/40
+                                dark:text-yellow-200
+                            @elseif ($detail->status === "historical")
+                                bg-orange-100
+                                text-orange-800
+                                dark:bg-orange-900/40
+                                dark:text-orange-200
+                            @else
+                                bg-gray-100
+                                text-gray-800
+                                dark:bg-gray-700
+                                dark:text-gray-200
+                            @endif inline-flex items-center rounded-full px-2 py-1 text-xs font-medium"
+                          >
+                            {{ $detail->status_label }}
+                          </span>
+                        </span>
+                      </div>
+
+                      <div class="mt-2">
+                        {{-- Time and duration --}}
+                        <div class="text-sm">
+                          {{ \Carbon\Carbon::parse($detail->start)->format("H:i") }}
+                          →
+                          {{ \Carbon\Carbon::parse($detail->end)->format("H:i") }}
+                          <span class="text-gray-500">
+                            ({{ $detail->duration_string ?? "N/A" }})
+                          </span>
+                        </div>
+
+                        {{-- Date range information if present --}}
+                        @if ($detail->date_from || $detail->date_to)
+                          <div
+                            class="mt-1 text-xs text-gray-600 dark:text-gray-400"
+                          >
+                            Valid:
+                            @if ($detail->date_from && $detail->date_to)
+                              {{ \Carbon\Carbon::parse($detail->date_from)->format("M j, Y") }}
+                              -
+                              {{ \Carbon\Carbon::parse($detail->date_to)->format("M j, Y") }}
+                            @elseif ($detail->date_from)
+                              From
+                              {{ \Carbon\Carbon::parse($detail->date_from)->format("M j, Y") }}
+                            @elseif ($detail->date_to)
+                              Until
+                              {{ \Carbon\Carbon::parse($detail->date_to)->format("M j, Y") }}
+                            @endif
+                          </div>
+                        @endif
+                      </div>
                     </div>
                   @endforeach
                 </ul>
@@ -155,7 +187,7 @@
             Currently Assigned
           </h3>
           <svg
-            class="{{ $showCurrentlyAssigned ? 'rotate-180' : '' }} size-5 transform text-gray-500 transition-transform duration-200 dark:text-gray-400"
+            class="{{ $showCurrentlyAssigned ? "rotate-180" : "" }} size-5 transform text-gray-500 transition-transform duration-200 dark:text-gray-400"
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
             fill="currentColor"
@@ -180,7 +212,7 @@
                     text="Assigned from {{ $userSchedule->effective_from->format('Y-m-d') }} {{ $userSchedule->effective_until ? 'to ' . $userSchedule->effective_until->format('Y-m-d') : 'indefinitely' }}"
                   >
                     <a
-                      href="{{ route('user.dashboard', ['user' => $userSchedule->user->id]) }}"
+                      href="{{ route("user.dashboard", ["user" => $userSchedule->user->id]) }}"
                       wire:navigate
                       class="inline-block"
                     >
@@ -215,7 +247,7 @@
             Previously Assigned
           </h3>
           <svg
-            class="{{ $showPreviouslyAssigned ? 'rotate-180' : '' }} size-5 transform text-gray-500 transition-transform duration-200 dark:text-gray-400"
+            class="{{ $showPreviouslyAssigned ? "rotate-180" : "" }} size-5 transform text-gray-500 transition-transform duration-200 dark:text-gray-400"
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
             fill="currentColor"
@@ -240,7 +272,7 @@
                     text="Assigned from {{ $userSchedule->effective_from->format('Y-m-d') }} to {{ $userSchedule->effective_until ? $userSchedule->effective_until->format('Y-m-d') : 'Error: No end date?' }}"
                   >
                     <a
-                      href="{{ route('user.dashboard', ['user' => $userSchedule->user->id]) }}"
+                      href="{{ route("user.dashboard", ["user" => $userSchedule->user->id]) }}"
                       wire:navigate
                       class="inline-block"
                     >

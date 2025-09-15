@@ -65,31 +65,35 @@ final class ProcessDesktimeAttendanceAction
                 return;
             }
 
-            // Case 1: No DeskTime data - Delete any existing record for this day
+            // Case 1: No DeskTime data - Delete any existing remote records for this day
             if ($attendanceDto->desktimeTime === null || $attendanceDto->desktimeTime === 0) {
                 UserAttendance::where('user_id', $user->id)
                     ->whereDate('date', $attendanceDto->date)
+                    ->where('is_remote', true) // Only delete Desktime (remote) records
                     ->delete();
 
                 return;
             }
 
-            // Case 2: There is DeskTime data - Create or update record
-            $start = is_string($attendanceDto->arrived) ? $attendanceDto->arrived : null;
-            $end = is_string($attendanceDto->left) ? $attendanceDto->left : null;
+            // Case 2: There is DeskTime data - Delete existing remote records and create new one
+            UserAttendance::where('user_id', $user->id)
+                ->whereDate('date', $attendanceDto->date)
+                ->where('is_remote', true) // Only delete Desktime (remote) records
+                ->delete();
 
-            UserAttendance::updateOrCreate(
-                [
-                    'user_id' => $user->id,
-                    'date' => $attendanceDto->date,
-                ],
-                [
-                    'presence_seconds' => $attendanceDto->desktimeTime ?? 0,
-                    'start' => $start,
-                    'end' => $end,
-                    'is_remote' => true,
-                ]
-            );
+            // Create single attendance segment for the Desktime session
+            $clockIn = is_string($attendanceDto->arrived) ? $attendanceDto->arrived : null;
+            $clockOut = is_string($attendanceDto->left) ? $attendanceDto->left : null;
+            $durationSeconds = $attendanceDto->desktimeTime ?? 0;
+
+            UserAttendance::create([
+                'user_id' => $user->id,
+                'date' => $attendanceDto->date,
+                'clock_in' => $clockIn,
+                'clock_out' => $clockOut,
+                'duration_seconds' => $durationSeconds,
+                'is_remote' => true, // Desktime is always remote work
+            ]);
         });
     }
 }

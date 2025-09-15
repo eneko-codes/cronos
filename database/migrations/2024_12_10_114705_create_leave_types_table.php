@@ -14,6 +14,10 @@ class CreateLeaveTypesTable extends Migration
             $table->string('name');
             $table->string('request_unit')->nullable()->comment('Odoo request unit (e.g., day, half_day, hour)');
             $table->boolean('active')->default(true);
+            $table->boolean('is_unpaid')->default(false)->comment('Whether this leave type is unpaid');
+            $table->boolean('requires_allocation')->default(false)->comment('Whether this leave type requires allocation');
+            $table->string('validation_type')->nullable()->comment('Validation type for this leave type');
+            $table->boolean('limit')->default(false)->comment('Whether this leave type has a limit');
             $table->string('odoo_created_at')->nullable();
             $table->string('odoo_updated_at')->nullable();
             $table->timestamps();

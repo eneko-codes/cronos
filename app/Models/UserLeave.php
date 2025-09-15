@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
@@ -237,19 +238,16 @@ class UserLeave extends Model
             return null;
         }
 
-        // Convert decimal hours to hours and minutes format
-        $fromHour = floor($this->request_hour_from);
-        $fromMin = round(($this->request_hour_from - $fromHour) * 60);
-        $toHour = floor($this->request_hour_to);
-        $toMin = round(($this->request_hour_to - $toHour) * 60);
+        // Convert decimal hours to hours and minutes format using Carbon
+        $fromHour = (int) floor($this->request_hour_from);
+        $fromMin = (int) round(($this->request_hour_from - $fromHour) * 60);
+        $toHour = (int) floor($this->request_hour_to);
+        $toMin = (int) round(($this->request_hour_to - $toHour) * 60);
 
-        return sprintf(
-            '%02d:%02d - %02d:%02d',
-            $fromHour,
-            $fromMin,
-            $toHour,
-            $toMin
-        );
+        $fromTime = \Carbon\Carbon::createFromTime($fromHour, $fromMin)->format('H:i');
+        $toTime = \Carbon\Carbon::createFromTime($toHour, $toMin)->format('H:i');
+
+        return $fromTime.' - '.$toTime;
     }
 
     public function scopeBetweenDates($query, $from, $to)

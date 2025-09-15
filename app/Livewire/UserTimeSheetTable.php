@@ -7,7 +7,6 @@ namespace App\Livewire;
 use App\Models\User;
 use App\Services\Dashboard\DashboardDataAggregatorService;
 use Carbon\Carbon;
-use Carbon\CarbonInterval;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Lazy;
@@ -186,7 +185,7 @@ class UserTimeSheetTable extends Component
             return '';
         }
 
-        return CarbonInterval::minutes($minutes)->cascade()->format('%hh %dm');
+        return \Carbon\CarbonInterval::minutes($minutes)->cascade()->format('%hh %Im');
     }
 
     public function dispatchPreviousPeriod(): void

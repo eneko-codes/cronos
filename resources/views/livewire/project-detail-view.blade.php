@@ -23,7 +23,7 @@
   <!-- Project Header -->
   <div class="flex flex-col gap-2">
     <h1 class="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-      {{ $project->name }}
+      {{ $project->title }}
     </h1>
     <div
       class="flex flex-wrap items-center gap-4 text-xs text-gray-500 dark:text-gray-400"
@@ -93,7 +93,7 @@
                   <span
                     class="text-sm font-medium text-gray-700 dark:text-gray-100"
                   >
-                    {{ $task->name }}
+                    {{ $task->title }}
                   </span>
                   <span class="text-xs text-gray-500 dark:text-gray-400">
                     Entries: {{ $task->time_entries_count }}

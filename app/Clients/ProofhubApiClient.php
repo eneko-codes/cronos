@@ -314,9 +314,20 @@ class ProofhubApiClient
         $allResults = collect();
         $url = $this->baseUrl.'alltime';
 
+        // ProofHub /alltime endpoint uses start/limit pagination, not Link headers
+        $start = 0;
+        $limit = 100; // Maximum allowed by ProofHub API
+
         do {
-            $pageResult = $this->callPage($url, $params, 'alltime');
-            $params = []; // Subsequent requests use the full URL from the 'Link' header, so we clear params.
+            // Add pagination parameters to the existing params
+            $paginatedParams = array_merge($params, [
+                'start' => $start,
+                'limit' => $limit,
+            ]);
+
+            $pageResult = $this->callPage($url, $paginatedParams, 'alltime');
+            $dataCount = $pageResult['data']->count();
+
             $allResults = $allResults->merge($pageResult['data']->map(function ($item) {
                 return new ProofhubTimeEntryDTO(
                     id: $item['id'] ?? null,
@@ -332,8 +343,11 @@ class ProofhubApiClient
                     description: $item['description'] ?? null,
                 );
             }));
-            $url = $pageResult['nextPageUrl'];
-        } while ($url && $pageResult['data']->isNotEmpty());
+
+            $start += $limit;
+
+            // Continue until we get less than the limit (indicating end of data)
+        } while ($dataCount >= $limit);
 
         return $allResults;
     }

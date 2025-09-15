@@ -182,10 +182,11 @@ This document describes how the ProofHub API is used in this application, includ
 - **Parameters:**
   - `from_date` (string, required): Start date in `YYYY-MM-DD` format.
   - `to_date` (string, required): End date in `YYYY-MM-DD` format.
-  - `page` (integer, optional): For pagination.
+  - `start` (integer, optional): Starting index for pagination (default: 0).
+  - `limit` (integer, optional): Number of entries to return (max: 100, default: 100).
 - **Example Request:**
   ```http
-  GET https://yourcompany.proofhub.com/api/v3/alltime?from_date=2024-07-01&to_date=2024-07-07&page=1
+  GET https://yourcompany.proofhub.com/api/v3/alltime?from_date=2024-07-01&to_date=2024-07-07&start=0&limit=100
   X-API-KEY: YOUR_API_KEY
   ```
 - **Response Example (from official docs):**
@@ -250,17 +251,23 @@ This document describes how the ProofHub API is used in this application, includ
 ## Example Sync Loop (PHP)
 
 ```php
-$page = 1;
+$start = 0;
+$limit = 100; // Maximum allowed by ProofHub
 do {
     $response = Http::withHeaders([
         'X-API-KEY' => $apiKey,
     ])->get('https://yourcompany.proofhub.com/api/v3/alltime', [
         'from_date' => $from,
         'to_date' => $to,
-        'page' => $page,
+        'start' => $start,
+        'limit' => $limit,
     ]);
-    // Process $response
-    // The v3 API uses the 'Link' header for pagination, not the count of the response.
-    $nextPageUrl = parseNextLinkFromHeader($response->header('Link'));
-} while ($nextPageUrl);
+
+    $data = $response->json();
+    $count = count($data);
+
+    // Process $data
+
+    $start += $limit;
+} while ($count >= $limit); // Continue until we get less than the limit
 ```

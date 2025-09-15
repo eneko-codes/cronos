@@ -11,19 +11,20 @@ class CreateUserAttendancesTable extends Migration
      */
     public function up(): void
     {
-        Schema::create('user_attendances', function (Blueprint $table) {
+        Schema::create('user_attendances', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('user_id')->constrained('users');
             $table->date('date');
-            $table->integer('presence_seconds'); // Changed from presence_minutes float to presence_seconds integer
-            $table->timestamp('start')->nullable(); // UTC timestamp
-            $table->timestamp('end')->nullable(); // UTC timestamp
+            $table->timestamp('clock_in')->nullable(); // UTC timestamp for clock in
+            $table->timestamp('clock_out')->nullable(); // UTC timestamp for clock out
+            $table->integer('duration_seconds')->default(0); // Duration of this specific segment
             $table->boolean('is_remote');
             $table->timestamps();
 
             $table->index('user_id');
             $table->index(['user_id', 'date']);
-            $table->index(['start', 'end']);
+            $table->index(['user_id', 'date', 'clock_in']);
+            $table->index(['clock_in', 'clock_out']);
         });
     }
 

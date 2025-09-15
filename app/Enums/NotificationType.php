@@ -13,7 +13,6 @@ enum NotificationType: string
     case AdminPromotionEmail = 'admin_promotion_email';
     case WelcomeEmail = 'welcome_email';
     case UserPromotedToAdmin = 'user_promoted_to_admin';
-    case DuplicateScheduleWarning = 'duplicate_schedule_warning';
 
     /**
      * Get the human-readable label for this notification type
@@ -28,7 +27,7 @@ enum NotificationType: string
             self::AdminPromotionEmail => 'Admin Promotion Email',
             self::WelcomeEmail => 'Welcome Email',
             self::UserPromotedToAdmin => 'User Promoted To Admin',
-            self::DuplicateScheduleWarning => 'Duplicate Schedule Warning',
+
         };
     }
 
@@ -40,8 +39,7 @@ enum NotificationType: string
         return match ($this) {
             self::ApiDownWarning,
             self::AdminPromotionEmail,
-            self::UserPromotedToAdmin,
-            self::DuplicateScheduleWarning => true,
+            self::UserPromotedToAdmin => true,
             default => false,
         };
     }
@@ -70,7 +68,7 @@ enum NotificationType: string
             self::AdminPromotionEmail => 'Notifications when users are promoted to admin',
             self::WelcomeEmail => 'Welcome messages for new users',
             self::UserPromotedToAdmin => 'Notifications when you are promoted to admin',
-            self::DuplicateScheduleWarning => 'Warnings about conflicting schedule assignments',
+
         };
     }
 

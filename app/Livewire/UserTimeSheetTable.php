@@ -60,6 +60,43 @@ class UserTimeSheetTable extends Component
     }
 
     /**
+     * Get formatted current date for display in the header.
+     */
+    #[Computed]
+    public function formattedCurrentDate(): string
+    {
+        return Carbon::parse($this->currentDate)->translatedFormat('F d, Y');
+    }
+
+    /**
+     * Get processed period data with Carbon instances and computed properties.
+     */
+    #[Computed]
+    public function processedPeriodData(): Collection
+    {
+        return $this->periodData->map(function ($day) {
+            if ($day['isTotalRow'] ?? false) {
+                return [
+                    ...$day,
+                    'is_total_row' => true,
+                ];
+            }
+
+            $date = Carbon::parse($day['date']);
+
+            return [
+                ...$day,
+                'carbon_date' => $date,
+                'is_today' => $date->isToday(),
+                'is_future' => $date->isFuture(),
+                'is_weekend' => $date->isWeekend(),
+                'formatted_day' => $date->translatedFormat('l d'),
+                'is_total_row' => false,
+            ];
+        });
+    }
+
+    /**
      * Toggles the visibility of the deviation columns and reloads data.
      */
     public function toggleDeviations(): void

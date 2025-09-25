@@ -160,9 +160,9 @@ class UserDashboardWidgets extends Component
                     return [
                         'clock_in' => $attendance->clock_in ? $attendance->clock_in->setTimezone(config('app.timezone'))->format('H:i') : null,
                         'clock_out' => $attendance->clock_out ? $attendance->clock_out->setTimezone(config('app.timezone'))->format('H:i') : null,
-                        'duration' => \Carbon\CarbonInterval::seconds($segmentSeconds)
-                            ->cascade()
-                            ->format('%hh %Im'),
+                        'duration' => $segmentSeconds > 0
+                            ? \Carbon\CarbonInterval::seconds($segmentSeconds)->cascade()->format('%hh %Im')
+                            : '',
                     ];
                 })->toArray();
 
@@ -187,12 +187,8 @@ class UserDashboardWidgets extends Component
                 ->get();
 
             $this->todaysTimeEntries = $timeEntries->map(function ($entry) {
-                $hours = floor($entry->duration_seconds / 3600);
-                $minutes = floor(($entry->duration_seconds % 3600) / 60);
-                $duration = $hours.'h '.$minutes.'m';
-
                 return [
-                    'duration' => $duration,
+                    'duration' => $entry->formatted_duration,
                     'duration_seconds' => $entry->duration_seconds,
                     'description' => $entry->description,
                     'project_name' => $entry->project->title ?? 'Unknown Project',

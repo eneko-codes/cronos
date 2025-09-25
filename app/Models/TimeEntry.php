@@ -29,6 +29,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property \Carbon\Carbon $proofhub_created_at When the entry was created in ProofHub
  * @property \Carbon\Carbon|null $created_at When record was created locally
  * @property \Carbon\Carbon|null $updated_at When record was last updated locally
+ * @property-read \Carbon\CarbonInterval $duration The duration as a Carbon interval
+ * @property-read string $formatted_duration The formatted duration string (e.g., "2h 30m")
  * @property-read \App\Models\User $user The user who logged this time
  * @property-read \App\Models\Project $project The project this time entry belongs to
  * @property-read \App\Models\Task|null $task The task this time entry is associated with (if any)
@@ -135,6 +137,34 @@ class TimeEntry extends Model
               : ($value
                 ? Carbon::parse($value)->toDateString()
                 : null)
+        );
+    }
+
+    /**
+     * Get duration as a Carbon interval instance.
+     *
+     * This accessor converts the duration_seconds field to a CarbonInterval
+     * for easier manipulation and formatting in the application.
+     */
+    protected function duration(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => \Carbon\CarbonInterval::seconds((int) $this->duration_seconds)
+        );
+    }
+
+    /**
+     * Get formatted duration string (e.g., "2h 30m").
+     *
+     * This accessor provides a human-readable duration format
+     * that can be used directly in views and reports.
+     */
+    protected function formattedDuration(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->duration_seconds > 0
+                ? \Carbon\CarbonInterval::seconds((int) $this->duration_seconds)->cascade()->format('%hh %Im')
+                : ''
         );
     }
 

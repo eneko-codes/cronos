@@ -165,7 +165,7 @@
 
             // CSS classes for cell backgrounds
             $dateCellClasses = 'border border-gray-200 bg-gray-50 dark:border-gray-600 dark:bg-gray-700'; // For Day column & Totals label cell
-            $dataCellBgLight = $isFutureDate ? 'bg-gray-50' : 'bg-white';
+            $dataCellBgLight = 'bg-white';
             $dataCellBgDark = $isFutureDate ? 'dark:bg-gray-800' : 'dark:bg-gray-800';
             $dataCellClasses = $dataCellBgLight . ' ' . $dataCellBgDark . ' border border-gray-100 dark:border-gray-600';
 
@@ -435,6 +435,15 @@
                     <span class="{{ $futureTextClass }}">
                       {{ $day['attendance']['duration'] }}
                     </span>
+                    @if (isset($day['attendance']['has_open_segment']) && $day['attendance']['has_open_segment'])
+                      <x-badge
+                        variant="{{ $dayDate->isToday() ? 'warning' : 'alert' }}"
+                        size="sm"
+                      >
+                        Active
+                      </x-badge>
+                    @endif
+
                     @if (isset($day['attendance']['is_mixed']) && $day['attendance']['is_mixed'])
                       {{-- Mixed work day: show both badges --}}
                       @if (isset($day['attendance']['has_office']) && $day['attendance']['has_office'])
@@ -564,7 +573,7 @@
               @endphp
 
               <td
-                class="{{ $deviationCellSpecificBgClass ?: ($isFutureDate ? 'bg-gray-50 dark:bg-gray-700' : 'bg-white dark:bg-gray-800') }} {{ ! $attVsSchShouldDisplay ? 'text-transparent' : '' }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : '' }} border border-gray-100 p-2 whitespace-nowrap dark:border-gray-600"
+                class="{{ $deviationCellSpecificBgClass ?: 'bg-white dark:bg-gray-800' }} {{ ! $attVsSchShouldDisplay ? 'text-transparent' : '' }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : '' }} border border-gray-100 p-2 whitespace-nowrap dark:border-gray-600"
               >
                 @if ($attVsSchShouldDisplay && $attVsSchDetail)
                   <x-tooltip :text="$attVsSchDetail['tooltip']">
@@ -604,7 +613,7 @@
               @endphp
 
               <td
-                class="{{ $deviationCellSpecificBgClass ?: ($isFutureDate ? 'bg-gray-50 dark:bg-gray-700' : 'bg-white dark:bg-gray-800') }} {{ ! $workVsSchShouldDisplay ? 'text-transparent' : '' }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : '' }} border border-gray-100 p-2 whitespace-nowrap dark:border-gray-600"
+                class="{{ $deviationCellSpecificBgClass ?: 'bg-white dark:bg-gray-800' }} {{ ! $workVsSchShouldDisplay ? 'text-transparent' : '' }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : '' }} border border-gray-100 p-2 whitespace-nowrap dark:border-gray-600"
               >
                 @if ($workVsSchShouldDisplay && $workVsSchDetail)
                   <x-tooltip :text="$workVsSchDetail['tooltip']">
@@ -644,7 +653,7 @@
               @endphp
 
               <td
-                class="{{ $deviationCellSpecificBgClass ?: ($isFutureDate ? 'bg-gray-50 dark:bg-gray-700' : 'bg-white dark:bg-gray-800') }} {{ ! $workVsAttShouldDisplay ? 'text-transparent' : '' }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : '' }} border border-gray-100 p-2 whitespace-nowrap dark:border-gray-600"
+                class="{{ $deviationCellSpecificBgClass ?: 'bg-white dark:bg-gray-800' }} {{ ! $workVsAttShouldDisplay ? 'text-transparent' : '' }} {{ $isFutureDate ? 'text-gray-400 dark:text-gray-500' : '' }} border border-gray-100 p-2 whitespace-nowrap dark:border-gray-600"
               >
                 @if ($workVsAttShouldDisplay && $workVsAttDetail)
                   <x-tooltip :text="$workVsAttDetail['tooltip']">

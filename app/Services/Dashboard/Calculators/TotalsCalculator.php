@@ -26,10 +26,15 @@ class TotalsCalculator
         ];
 
         foreach ($periodData as $dayData) {
-            $totals['scheduled'] += $this->timeToMinutes($dayData['scheduled']['duration'] ?? '0h 0m');
-            $totals['attendance'] += $this->timeToMinutes($dayData['attendance']['duration'] ?? '0h 0m');
-            $totals['worked'] += $this->timeToMinutes($dayData['worked']['duration'] ?? '0h 0m');
-            $totals['leave'] += $this->timeToMinutes($dayData['leave']['duration'] ?? '0h 0m');
+            // Skip total rows that may be included in the data
+            if (isset($dayData['isTotalRow']) && $dayData['isTotalRow']) {
+                continue;
+            }
+
+            $totals['scheduled'] += $this->timeToMinutes($dayData['scheduled']['duration'] ?? '');
+            $totals['attendance'] += $this->timeToMinutes($dayData['attendance']['duration'] ?? '');
+            $totals['worked'] += $this->timeToMinutes($dayData['worked']['duration'] ?? '');
+            $totals['leave'] += $this->timeToMinutes($dayData['leave']['duration'] ?? '');
         }
 
         return $totals;
@@ -38,27 +43,34 @@ class TotalsCalculator
     /**
      * Convert time string to minutes.
      *
-     * @param  string  $time  Time string in format "Xh Ym"
+     * @param  string  $time  Time string in format "Xh Ym" or empty string
      */
     protected function timeToMinutes(string $time): int
     {
-        if (empty($time)) {
+        if (empty(trim($time))) {
             return 0;
         }
 
-        $parts = explode(' ', $time);
-        $hours = 0;
-        $minutes = 0;
+        // Try to parse using CarbonInterval first for consistency
+        try {
+            return (int) \Carbon\CarbonInterval::fromString($time)->totalMinutes;
+        } catch (\Exception $e) {
+            // Fallback to manual parsing for older format strings
+            $parts = explode(' ', trim($time));
+            $hours = 0;
+            $minutes = 0;
 
-        foreach ($parts as $part) {
-            if (str_ends_with($part, 'h')) {
-                $hours = (int) rtrim($part, 'h');
-            } elseif (str_ends_with($part, 'm')) {
-                $minutes = (int) rtrim($part, 'm');
+            foreach ($parts as $part) {
+                $part = trim($part);
+                if (str_ends_with($part, 'h')) {
+                    $hours = (int) rtrim($part, 'h');
+                } elseif (str_ends_with($part, 'm')) {
+                    $minutes = (int) rtrim($part, 'm');
+                }
             }
-        }
 
-        return ($hours * 60) + $minutes;
+            return ($hours * 60) + $minutes;
+        }
     }
 
     /**
@@ -66,16 +78,28 @@ class TotalsCalculator
      *
      * @param  int  $minutes  The total minutes
      */
-    protected function formatMinutesToHoursMinutes(int $minutes): string
+    public function formatMinutesToHoursMinutes(int $minutes): string
     {
         if ($minutes <= 0) {
             return '';
         }
 
-        // Manual calculation to handle hours > 24 correctly
-        $hours = floor($minutes / 60);
-        $remainingMinutes = $minutes % 60;
+        return \Carbon\CarbonInterval::minutes($minutes)->cascade()->format('%hh %Im');
+    }
 
-        return "{$hours}h {$remainingMinutes}m";
+    /**
+     * Get formatted totals for display.
+     *
+     * @param  array  $totals  The calculated totals in minutes
+     * @return array The formatted totals for display
+     */
+    public function getFormattedTotals(array $totals): array
+    {
+        return [
+            'scheduled' => $this->formatMinutesToHoursMinutes($totals['scheduled']),
+            'attendance' => $this->formatMinutesToHoursMinutes($totals['attendance']),
+            'worked' => $this->formatMinutesToHoursMinutes($totals['worked']),
+            'leave' => $this->formatMinutesToHoursMinutes($totals['leave']),
+        ];
     }
 }

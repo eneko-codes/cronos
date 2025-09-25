@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -248,6 +249,60 @@ class UserLeave extends Model
         $toTime = \Carbon\Carbon::createFromTime($toHour, $toMin)->format('H:i');
 
         return $fromTime.' - '.$toTime;
+    }
+
+    /**
+     * Get leave duration as a Carbon interval instance.
+     *
+     * This accessor converts the duration_days field to a CarbonInterval
+     * for easier manipulation and formatting in the application.
+     */
+    protected function duration(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => \Carbon\CarbonInterval::days((float) ($this->duration_days ?? 0))
+        );
+    }
+
+    /**
+     * Get formatted duration string for leave (e.g., "1 day", "0.5 day").
+     *
+     * This accessor provides a human-readable duration format
+     * that can be used directly in views and reports.
+     */
+    protected function formattedDuration(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => ($this->duration_days ?? 0) > 0
+                ? ($this->duration_days == 1 ? '1 day' : "{$this->duration_days} days")
+                : ''
+        );
+    }
+
+    /**
+     * Get the start date as a Carbon instance with proper casting.
+     */
+    protected function startDate(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => $value ? Carbon::parse($value) : null,
+            set: fn ($value) => $value instanceof Carbon
+                ? $value->format('Y-m-d H:i:s')
+                : ($value ? Carbon::parse($value)->format('Y-m-d H:i:s') : null)
+        );
+    }
+
+    /**
+     * Get the end date as a Carbon instance with proper casting.
+     */
+    protected function endDate(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => $value ? Carbon::parse($value) : null,
+            set: fn ($value) => $value instanceof Carbon
+                ? $value->format('Y-m-d H:i:s')
+                : ($value ? Carbon::parse($value)->format('Y-m-d H:i:s') : null)
+        );
     }
 
     public function scopeBetweenDates($query, $from, $to)

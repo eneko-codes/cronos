@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -81,14 +83,17 @@ class UserSchedule extends Model
     }
 
     /**
-     * Accessor for the duration attribute.
+     * Get the duration between effective_from and effective_until dates.
+     *
+     * This accessor calculates the duration of the schedule assignment
+     * and returns it in a human-readable format.
      */
-    public function getDurationAttribute(): ?string
+    protected function duration(): Attribute
     {
-        if ($this->effective_until) {
-            return $this->effective_from->diffForHumans($this->effective_until, \Carbon\CarbonInterface::DIFF_ABSOLUTE);
-        }
-
-        return null;
+        return Attribute::make(
+            get: fn () => $this->effective_until
+                ? $this->effective_from->diffForHumans($this->effective_until, CarbonInterface::DIFF_ABSOLUTE)
+                : null
+        );
     }
 }

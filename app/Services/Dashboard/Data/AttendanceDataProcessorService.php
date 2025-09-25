@@ -42,6 +42,11 @@ class AttendanceDataProcessorService
             $start = $dayAttendances->min('clock_in');
             $end = $dayAttendances->max('clock_out');
 
+            // Determine if any segment is still active (has clock_in but no clock_out)
+            $hasOpenSegment = $dayAttendances->contains(function ($attendance) {
+                return (bool) ($attendance->clock_in && ! $attendance->clock_out);
+            });
+
             return [
                 'models' => $dayAttendances,
                 'duration' => $durationInfo['formatted'],
@@ -51,6 +56,7 @@ class AttendanceDataProcessorService
                 'has_remote' => $workLocationInfo['has_remote'],
                 'times' => $times,
                 'segments' => $segments,
+                'has_open_segment' => $hasOpenSegment,
                 'start' => $start ? Carbon::parse($start)->toDateTimeString() : null,
                 'end' => $end ? Carbon::parse($end)->toDateTimeString() : null,
             ];
@@ -99,6 +105,14 @@ class AttendanceDataProcessorService
     protected function calculateDurationInfo(Collection $attendances): array
     {
         $totalSeconds = $attendances->sum('duration_seconds');
+
+        if ($totalSeconds <= 0) {
+            return [
+                'minutes' => 0,
+                'formatted' => '',
+            ];
+        }
+
         $interval = CarbonInterval::seconds((int) $totalSeconds)->cascade();
 
         return [
@@ -140,9 +154,7 @@ class AttendanceDataProcessorService
             return [
                 'clock_in' => $attendance->clock_in ? Carbon::parse($attendance->clock_in)->setTimezone(config('app.timezone'))->format('H:i') : null,
                 'clock_out' => $attendance->clock_out ? Carbon::parse($attendance->clock_out)->setTimezone(config('app.timezone'))->format('H:i') : null,
-                'duration' => CarbonInterval::seconds((int) $attendance->duration_seconds)
-                    ->cascade()
-                    ->format('%hh %Im'),
+                'duration' => $attendance->formatted_duration,
             ];
         })->toArray();
     }

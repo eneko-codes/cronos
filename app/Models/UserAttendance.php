@@ -22,12 +22,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $id Primary key
  * @property int $user_id Foreign key to users table
  * @property \Carbon\Carbon $date Date of the attendance record (stored in UTC)
- * @property int $presence_seconds Total time present in seconds
+ * @property int $duration_seconds Total duration in seconds
  * @property bool $is_remote Whether this was remote work (true) or in-office work (false)
- * @property \Carbon\Carbon|null $start Start time of attendance (if available)
- * @property \Carbon\Carbon|null $end End time of attendance (if available)
+ * @property \Carbon\Carbon|null $clock_in Start time of attendance (if available)
+ * @property \Carbon\Carbon|null $clock_out End time of attendance (if available)
  * @property \Carbon\Carbon|null $created_at When record was created locally
  * @property \Carbon\Carbon|null $updated_at When record was last updated locally
+ * @property-read \Carbon\CarbonInterval $duration The duration as a Carbon interval
+ * @property-read string $formatted_duration The formatted duration string (e.g., "8h 30m")
+ * @property-read bool $is_clocked_in Whether the user is currently clocked in
  * @property-read \App\Models\User $user The user this attendance record belongs to
  *
  * @method static \Database\Factories\UserAttendanceFactory factory($count = null, $state = [])
@@ -115,6 +118,46 @@ class UserAttendance extends Model
             set: fn ($value) => $value instanceof Carbon
               ? $value->toDateString()
               : Carbon::parse($value)->toDateString()
+        );
+    }
+
+    /**
+     * Get duration as a Carbon interval instance.
+     *
+     * This accessor converts the duration_seconds field to a CarbonInterval
+     * for easier manipulation and formatting in the application.
+     */
+    protected function duration(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => \Carbon\CarbonInterval::seconds((int) ($this->duration_seconds ?? 0))
+        );
+    }
+
+    /**
+     * Get formatted duration string (e.g., "8h 30m").
+     *
+     * This accessor provides a human-readable duration format
+     * that can be used directly in views and reports.
+     */
+    protected function formattedDuration(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => ($this->duration_seconds ?? 0) > 0
+                ? \Carbon\CarbonInterval::seconds((int) ($this->duration_seconds ?? 0))->cascade()->format('%hh %Im')
+                : ''
+        );
+    }
+
+    /**
+     * Check if the user is currently clocked in.
+     *
+     * Returns true if there's a clock_in time but no clock_out time.
+     */
+    protected function isClockedIn(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->clock_in && ! $this->clock_out
         );
     }
 

@@ -29,14 +29,12 @@ class WorkedDataProcessorService
             $durationInfo = $this->calculateDurationInfo($entries);
             $projectSummaries = $this->generateProjectSummaries($entries);
 
-            $detailedEntries = $entries->map(function (TimeEntry $entry) {
+            $detailedEntries = $entries->map(function (TimeEntry $entry): array {
                 return [
                     'project' => optional($entry->project)->title ?? '—',
                     'task' => optional($entry->task)->name,
                     'description' => $entry->description,
-                    'duration' => CarbonInterval::seconds((int) $entry->duration_seconds)
-                        ->cascade()
-                        ->format('%hh %Im'),
+                    'duration' => $entry->formatted_duration,
                 ];
             });
 

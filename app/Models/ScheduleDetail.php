@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -31,6 +33,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $week_type Determines whether the attendance applies to both weeks (0), week 1 (1), or week 2 (2)
  * @property \Carbon\Carbon|null $date_from Optional start date for when the attendance is active
  * @property \Carbon\Carbon|null $date_to Optional end date for when the attendance is active
+ * @property-read \Carbon\CarbonInterval $duration The duration between start and end times
+ * @property-read string $formatted_duration The formatted duration string (e.g., "8h 30m")
+ * @property-read string $time_slot The formatted time slot (e.g., "09:00 - 17:00")
  *
  * @method static \Database\Factories\ScheduleDetailFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail newModelQuery()
@@ -109,6 +114,45 @@ class ScheduleDetail extends Model
             Schedule::class,
             'odoo_schedule_id',
             'odoo_schedule_id'
+        );
+    }
+
+    /**
+     * Get duration as a Carbon interval instance.
+     *
+     * This accessor calculates the duration between start and end times
+     * and returns it as a CarbonInterval for easier manipulation.
+     */
+    protected function duration(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => \Carbon\CarbonInterval::seconds($this->start->diffInSeconds($this->end))
+        );
+    }
+
+    /**
+     * Get formatted duration string (e.g., "8h 30m").
+     *
+     * This accessor provides a human-readable duration format
+     * that can be used directly in views and reports.
+     */
+    protected function formattedDuration(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->duration->cascade()->format('%hh %Im')
+        );
+    }
+
+    /**
+     * Get formatted time slot string (e.g., "09:00 - 17:00").
+     *
+     * This accessor provides a human-readable time range format
+     * showing the start and end times of this schedule detail.
+     */
+    protected function timeSlot(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->start->format('H:i').' - '.$this->end->format('H:i')
         );
     }
 

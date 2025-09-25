@@ -3,7 +3,6 @@
 use App\Actions\DispatchSyncBatchAction;
 use App\Actions\ShouldRunSyncBatchAction;
 use App\Jobs\SendUserLeaveReminder;
-use App\Jobs\SendUserWeeklyReport;
 use Illuminate\Support\Facades\Schedule;
 
 /*
@@ -16,17 +15,6 @@ use Illuminate\Support\Facades\Schedule;
 | simple approach to interacting with each command's IO methods.
 |
 */
-
-/**
- * Schedule the Weekly Report job to run every Monday at 8:00 AM
- */
-Schedule::job(new SendUserWeeklyReport)
-    ->weekly()
-    ->mondays()
-    ->at('08:00')
-    ->name('Weekly User Report')
-    ->onOneServer()
-    ->withoutOverlapping();
 
 /**
  * Schedule the Leave Reminder job to run daily at 8:00 AM

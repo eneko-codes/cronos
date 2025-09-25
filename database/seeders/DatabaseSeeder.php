@@ -22,7 +22,6 @@ use App\Models\UserLeave;
 use App\Models\UserNotificationPreference;
 use App\Models\UserSchedule;
 use App\Notifications\ScheduleChangeNotification;
-use App\Notifications\WeeklyUserReportNotification;
 use App\Notifications\WelcomeEmail;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
@@ -1239,7 +1238,7 @@ class DatabaseSeeder extends Seeder
                 // Create varied preferences for demo purposes
                 $enabled = match ($user->name) {
                     'John Developer' => true, // Admin gets all notifications
-                    'Jane Designer' => $type !== NotificationType::WeeklyUserReport, // Designer opts out of weekly reports
+                    'Jane Designer' => true,
                     'Sarah Engineer' => $type !== NotificationType::LeaveReminder, // Engineer opts out of leave reminders
                     'Michael Tester' => in_array($type, [NotificationType::ScheduleChange, NotificationType::WelcomeEmail]), // Tester only wants critical ones
                     'Emily Manager' => true, // Manager gets all notifications
@@ -1292,26 +1291,9 @@ class DatabaseSeeder extends Seeder
             $notificationCount++;
         }
 
-        // Create weekly report notifications for active users
-        $reportUsers = array_slice($users, 0, 4);
-        foreach ($reportUsers as $user) {
-            $weekStart = Carbon::now()->subWeek()->startOfWeek();
-            $weekEnd = Carbon::now()->subWeek()->endOfWeek();
-
-            $reportData = [
-                'week_start' => $weekStart->format('Y-m-d'),
-                'week_end' => $weekEnd->format('Y-m-d'),
-                'hours_worked' => rand(35, 45),
-                'projects_count' => rand(2, 5),
-                'tasks_completed' => rand(8, 15),
-                'attendance_days' => rand(4, 5),
-            ];
-
-            $user->notify(new WeeklyUserReportNotification($user, $reportData));
-            $notificationCount++;
-        }
+        // Weekly report notifications removed
 
         echo "    ✓ Created {$notificationCount} sample notifications\n";
-        echo "    ✓ Types: Welcome emails, Schedule changes, Weekly reports\n";
+        echo "    ✓ Types: Welcome emails, Schedule changes\n";
     }
 }

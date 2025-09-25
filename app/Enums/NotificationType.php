@@ -7,7 +7,6 @@ use App\Models\User;
 enum NotificationType: string
 {
     case ScheduleChange = 'schedule_change';
-    case WeeklyUserReport = 'weekly_user_report';
     case LeaveReminder = 'leave_reminder';
     case ApiDownWarning = 'api_down_warning';
     case AdminPromotionEmail = 'admin_promotion_email';
@@ -21,7 +20,6 @@ enum NotificationType: string
     {
         return match ($this) {
             self::ScheduleChange => 'Schedule Change',
-            self::WeeklyUserReport => 'Weekly User Report',
             self::LeaveReminder => 'Leave Reminder',
             self::ApiDownWarning => 'API Down Warning',
             self::AdminPromotionEmail => 'Admin Promotion Email',
@@ -50,8 +48,12 @@ enum NotificationType: string
     public function defaultEnabled(): bool
     {
         return match ($this) {
-            self::ApiDownWarning => false, // Only one that defaults to false
-            default => true,
+            self::ScheduleChange => true,
+            self::LeaveReminder => true,
+            self::ApiDownWarning => true,
+            self::AdminPromotionEmail => true,
+            self::WelcomeEmail => true,
+            self::UserPromotedToAdmin => true
         };
     }
 
@@ -62,13 +64,11 @@ enum NotificationType: string
     {
         return match ($this) {
             self::ScheduleChange => 'Notifications when your work schedule is updated',
-            self::WeeklyUserReport => 'Weekly summary of your activity and time tracking',
             self::LeaveReminder => 'Reminders about upcoming time off',
             self::ApiDownWarning => 'Alerts when external services are experiencing issues',
             self::AdminPromotionEmail => 'Notifications when users are promoted to admin',
             self::WelcomeEmail => 'Welcome messages for new users',
             self::UserPromotedToAdmin => 'Notifications when you are promoted to admin',
-
         };
     }
 

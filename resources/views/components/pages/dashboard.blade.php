@@ -24,20 +24,11 @@
     @endif
 
     <!-- User Profile Header Component -->
-    <livewire:user-profile-header
+    <livewire:users.user-profile-header
       :user="$user"
       key="user-profile-header-{{ $user->id }}"
     />
 
-    {{-- Widgets Section --}}
-    @if (! $user->do_not_track)
-      <livewire:user-dashboard-widgets
-        :user="$user"
-        key="widgets-{{ $user->id }}"
-      />
-    @endif
-
-    {{-- User data table --}}
     @if ($user->do_not_track)
       {{-- User is set to do not track --}}
       <div class="rounded-lg bg-gray-50 p-8 text-center dark:bg-gray-800">
@@ -47,8 +38,14 @@
         </p>
       </div>
     @else
-      {{-- Tracked User: Render the new UserTimeSheetTable component --}}
-      <livewire:user-time-sheet-table
+      {{-- Widgets Section --}}
+      <livewire:dashboard.user-dashboard-widgets
+        :user="$user"
+        key="widgets-{{ $user->id }}"
+      />
+
+      {{-- User data table --}}
+      <livewire:dashboard.user-time-sheet-table
         :user="$user"
         lazy
         key="user-timesheet-table-{{ $user->id }}"

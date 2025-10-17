@@ -4,6 +4,7 @@
 .env
 .env.backup
 .env.production
+.env.testing
 auth.json
 
 # Dependencies
@@ -82,4 +83,3 @@ Thumbs.db
 **/caddy
 frankenphp
 frankenphp-worker.php
-.env.testing

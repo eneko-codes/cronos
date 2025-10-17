@@ -37,7 +37,7 @@
           @auth
             <div class="flex flex-shrink-0 items-center gap-3">
               <!-- Settings button (visible to all logged in users) -->
-              <livewire:sidebar-toggle />
+              <livewire:ui.sidebar-toggle />
 
               <!-- User dropdown: hidden below 1000px (lg) -->
               <div x-show="!isMobile" x-cloak class="hidden lg:block">
@@ -57,7 +57,10 @@
 
                   <div class="flex flex-col gap-2">
                     <!-- Last Synced Component -->
-                    @livewire('last-synced')
+                    @livewire('ui.last-synced')
+
+                    <!-- App Time Component -->
+                    @livewire('ui.app-time')
 
                     <form
                       action="{{ route('logout') }}"
@@ -160,7 +163,12 @@
                     <div
                       class="w-full border-b border-gray-200 py-2 dark:border-gray-700"
                     >
-                      @livewire('last-synced')
+                      @livewire('ui.last-synced')
+                    </div>
+
+                    <!-- App Time Component (Mobile) -->
+                    <div class="w-full py-2">
+                      @livewire('ui.app-time')
                     </div>
                   </div>
                   <!-- logout form -->
@@ -201,14 +209,14 @@
     </main>
 
     @auth
-      @livewire('sidebar')
+      @livewire('ui.sidebar')
     @endauth
 
     @persist('toast')
-      @livewire('toast')
+      @livewire('ui.toast')
     @endpersist
 
-    @livewire('user-details-modal')
+    @livewire('users.user-details-modal')
     @livewireScripts
 
     <noscript>

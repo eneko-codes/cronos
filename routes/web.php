@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\UserDashboardController;
-use App\Livewire\LeaveTypesListView;
-use App\Livewire\ProjectDetailView;
-use App\Livewire\ProjectsListView;
-use App\Livewire\ScheduleDetailView;
-use App\Livewire\SchedulesList;
-use App\Livewire\Settings;
-use App\Livewire\UsersList;
+use App\Livewire\Leave\LeaveTypesListView;
+use App\Livewire\Projects\ProjectDetailView;
+use App\Livewire\Projects\ProjectsListView;
+use App\Livewire\Schedules\ScheduleDetailView;
+use App\Livewire\Schedules\SchedulesList;
+use App\Livewire\Settings\Settings;
+use App\Livewire\Users\UsersList;
 use Illuminate\Support\Facades\Route;
 
 // Public routes

@@ -12,7 +12,7 @@
   >
     {{ $slot }}
     @persist('toast')
-      @livewire('toast')
+      @livewire('ui.toast')
     @endpersist
 
     @livewireScripts

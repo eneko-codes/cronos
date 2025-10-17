@@ -1,507 +1,117 @@
 # Cronos
 
-Cronos is a Laravel application designed to synchronize data from various external platforms (Odoo, ProofHub, DeskTime) and provide related functionalities. It uses Livewire 3 for dynamic frontend components.
+A comprehensive Laravel 12 application that synchronizes and aggregates data from multiple external platforms (Odoo, ProofHub, DeskTime, SystemPin) to provide a unified dashboard for employee time tracking, project management, and attendance monitoring.
 
-## 🚀 Requirements
+## 🎯 Overview
+
+Cronos serves as a central hub that synchronizes employee data, schedules, and time entries from external platforms, providing unified dashboards and reporting capabilities for comprehensive workforce management.
+
+## ✨ Features
+
+- **Multi-Platform Integration**: Sync data from Odoo, ProofHub, DeskTime, and SystemPin
+- **Unified Dashboard**: Centralized view of all employee data and time tracking
+- **Real-time Synchronization**: Automatic data updates from external platforms
+- **Attendance Management**: Track both remote and office attendance
+- **Project Management**: Integrated project and task tracking
+- **Leave Management**: Comprehensive leave request and approval system
+- **Notification System**: Customizable user and global notifications
+
+## 🏗️ Architecture
+
+- **Laravel 12**: Backend framework with Eloquent ORM
+- **Livewire 3**: Dynamic frontend components
+- **PostgreSQL**: Primary database for data storage
+- **Queue System**: Background job processing for data synchronization
+- **TailwindCSS**: Utility-first CSS framework for styling
+- **Laravel Pulse**: Built-in application monitoring
+- **Laravel Telescope**: Development debugging and monitoring
+
+## 🚀 Quick Start
+
+### Prerequisites
 
 - PHP 8.2+
 - Composer
 - Node.js & npm
-- A database supported by Laravel (e.g., MySQL, PostgreSQL, SQLite)
-- Queue worker management:
-  - **Development**: Laravel Herd Pro (recommended) or manual `php artisan queue:work`
-  - **Production**: Supervisor process manager (official Laravel recommendation)
+- PostgreSQL (or other Laravel-supported database)
 
-## 🛠️ Installation
+### Installation
 
-1.  **Clone the repository:**
+1. **Clone and install dependencies:**
 
-    ```bash
-    git clone <repository-url>
-    cd cronos
-    ```
+   ```bash
+   git clone <repository-url>
+   cd cronos
+   composer install
+   npm install
+   ```
 
-2.  **Install PHP Dependencies:**
+2. **Environment setup:**
 
-    ```bash
-    composer install
-    ```
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
 
-3.  **Install Node.js Dependencies:**
+3. **Configure environment variables:**
 
-    ```bash
-    npm install
-    ```
+   Edit `.env` file with your database credentials and API keys (see [Local Development Setup](docs/deployment/LOCAL_DEPLOYMENT.md) for details).
 
-4.  **Setup Environment:**
-    Copy the example environment file and configure it for your local setup:
+4. **Database setup:**
 
-    ```bash
-    cp .env.example .env
-    ```
+   ```bash
+   php artisan migrate
+   ```
 
-    Open the `.env` file and update the following sections at minimum:
-    - **Database Credentials:** Configure `DB_CONNECTION`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`. If using SQLite (the default in `.env.example`), ensure the `DB_DATABASE` path points to your desired location (e.g., `database/database.sqlite`).
-    - **Application URL:** Set `APP_URL` to the URL you'll use for local development (e.g., `http://cronos.test`).
-    - **API Credentials:** Fill in the values for:
-      - `ODOO_BASE_URL`
-      - `ODOO_DATABASE`
-      - `ODOO_USERNAME`
-      - `ODOO_PASSWORD`
-      - `PROOFHUB_COMPANY_URL`
-      - `PROOFHUB_API_KEY`
-      - `DESKTIME_BASE_URL`
-      - `DESKTIME_API_KEY`
+5. **Build assets:**
 
-5.  **Generate Application Key:**
+   ```bash
+   npm run build
+   ```
 
-    ```bash
-    php artisan key:generate
-    ```
+6. **Configure queue worker:**
+   ```bash
+   php artisan queue:work
+   ```
 
-6.  **Run Database Migrations:**
-    If using SQLite and the file doesn't exist, create it first: `touch database/database.sqlite` (adjust path if changed in `.env`).
+## 📚 Documentation
 
-    ```bash
-    php artisan migrate
-    ```
+Comprehensive documentation is available in the [`docs/`](docs/) directory:
 
-7.  **Compile Frontend Assets:**
+- **[Local Development Setup](docs/deployment/LOCAL_DEPLOYMENT.md)** - Local development environment setup
+- **[Development Guide](docs/development/)** - Coding standards and best practices
+- **[Database Schema](docs/database/DATABASE_SCHEMA.md)** - Database structure and relationships
+- **[API Documentation](docs/api/)** - External platform integration guides
+- **[Deployment Guide](docs/deployment/)** - Production deployment and monitoring
 
-    ```bash
-    npm run build
-    ```
+## 🔌 API Integrations
 
-8.  **Configure Queue Worker:**
-    See the detailed [Queue Worker Management](#-queue-worker-management) section below for official setup instructions.
+Cronos integrates with four external platforms:
 
-9.  **Configure Web Server:**
-    Configure your web server (e.g., Nginx, Apache) to point to the `public` directory.
+- **Odoo**: Employee management, schedules, and leave tracking
+- **ProofHub**: Project management and time tracking
+- **DeskTime**: Remote work attendance and productivity tracking
+- **SystemPin**: Office attendance from physical clocking machines
 
-## ⚙️ Configuration
+See [API Documentation](docs/api/) for detailed setup instructions.
 
-### API Connections
+## 🛠️ Development
 
-Update your `.env` file with the correct credentials and URLs for Odoo, ProofHub, and DeskTime as outlined in Installation step 4.
+### Code Quality Tools
 
-After changing `.env` variables, clear the configuration cache:
+- **Pint**: PHP code formatting (`composer fix`)
+- **Rector**: Automated refactoring
+- **PHPStan**: Static analysis (`composer analyse`)
+- **Pest**: Testing framework (`composer test`)
 
-```bash
-php artisan config:clear
-php artisan cache:clear
-```
+## 📋 Requirements
 
-### Scheduled Synchronization
+- PHP 8.2+
+- Composer
+- Node.js & npm
+- PostgreSQL (recommended)
+- Queue worker management (see [Local Development Setup](docs/deployment/LOCAL_DEPLOYMENT.md))
 
-Data synchronization jobs are designed to run automatically. The schedule frequency is configurable in settings page. Ensure the Laravel scheduler is running by adding the following Cron entry to your server:
+## 🤝 Contributing
 
-```cron
-* * * * * cd /path-to-your-project && php artisan schedule:run >> /dev/null 2>&1
-```
-
-For local development run:
-
-```
-php artisan schedule:work
-```
-
-## 🔄 Queue Worker Management
-
-Cronos relies heavily on background job processing for data synchronization. Proper queue worker setup is crucial for the application to function correctly. Follow the **official Laravel recommendations** based on your environment.
-
-### 🏠 Development Environment
-
-#### Laravel Herd Users (Recommended)
-
-**Option 1: Laravel Herd Pro (Official)**
-
-- **Upgrade to [Laravel Herd Pro](https://herd.laravel.com/)** for built-in service management
-- Navigate to **"Services"** in Herd Pro
-- Enable and configure queue workers through the GUI
-- This is the **official Herd approach** for development
-
-**Option 2: Manual Development Command**
-If using free Laravel Herd, run manually during development:
-
-```bash
-php artisan queue:work --max-time=3600 --max-jobs=1000 --sleep=3 --tries=3
-```
-
-#### Other Development Environments
-
-```bash
-# Basic command for development
-php artisan queue:work
-
-# With recommended options for stability
-php artisan queue:work --max-time=3600 --max-jobs=1000 --sleep=3 --tries=3
-```
-
-### 🚀 Production Environment
-
-#### Official Laravel Recommendation: Supervisor
-
-According to [Laravel's official documentation](https://laravel.com/docs/12.x/queues#supervisor-configuration), **Supervisor** is the recommended process manager for production queue workers.
-
-**1. Install Supervisor:**
-
-```bash
-# Ubuntu/Debian
-sudo apt-get install supervisor
-```
-
-**2. Create Configuration File:**
-Create `/etc/supervisor/conf.d/cronos-worker.conf`:
-
-```ini
-[program:cronos-worker]
-process_name=%(program_name)s_%(process_num)02d
-command=php /path/to/cronos/artisan queue:work database --sleep=3 --tries=3 --max-time=3600
-autostart=true
-autorestart=true
-user=www-data
-numprocs=3
-redirect_stderr=true
-stdout_logfile=/path/to/cronos/storage/logs/worker.log
-stopwaitsecs=3600
-```
-
-**3. Start Supervisor:**
-
-```bash
-sudo supervisorctl reread
-sudo supervisorctl update
-sudo supervisorctl start cronos-worker:*
-```
-
-#### Laravel Forge (Managed Hosting)
-
-If using [Laravel Forge](https://forge.laravel.com/):
-
-- Navigate to your site's **"Queues"** section
-- Create a new queue worker through the GUI
-- Forge automatically configures Supervisor for you
-
-### 🔄 Deployment Best Practices
-
-When deploying application updates:
-
-```bash
-# Gracefully restart all queue workers
-php artisan queue:restart
-```
-
-This command:
-
-- Instructs workers to finish current jobs
-- Automatically restarts with new code
-- Requires a persistent cache driver (not `array`)
-
-### 📊 Monitoring Queue Workers
-
-**Check queue status:**
-
-```bash
-# View failed jobs
-php artisan queue:failed
-
-# Retry failed jobs
-php artisan queue:retry all
-
-# Clear all jobs (be careful!)
-php artisan queue:clear
-```
-
-### 🔧 Configuration Options
-
-Key queue configuration in `config/queue.php`:
-
-- **Connection**: `database` (default for Cronos)
-- **Max Attempts**: Configured per job class
-- **Timeout**: Prevents hung processes
-- **Sleep**: Pause between queue checks (3 seconds recommended)
-
-For detailed configuration options, refer to the [Laravel Queue Documentation](https://laravel.com/docs/12.x/queues).
-
-## 👨🏻‍💻 Development
-
-### Development Tools & Quality Checks
-
-This project includes tools to help maintain code quality:
-
-- **Pint:** For PHP code style formatting.
-  - Check: `composer lint`
-  - Fix: `composer fix`
-- **Rector:** For automated PHP code refactoring (configuration in `rector.php`).
-- **PHPStan:** For static analysis.
-  - Run: `composer analyse`
-- **Prettier:** For Blade template formatting (run via pre-commit hook or manually).
-- **Pest:** For running tests.
-  - Run: `composer test`
-  - Run with coverage: `composer test-coverage`
-
-Consider setting up the Git pre-commit hook (script available in the project history if needed) to automate formatting and checks before committing.
-
-## ⛓️ SETUP API CONNECTIONS
-
-### Odoo
-
-#### It will return the following data in XML-RPC format.
-
-- Employee details:
-  - Name
-  - Email
-  - Odoo ID
-- Employee calendar data (from the Calendar module):
-  - Weekly work hours
-  - Vacations
-
-#### Connect Odoo to the web app:
-
-- [x] Log into the admin account.
-- [ ] On the top right part of the screen clik on "My Account".
-- [ ] Click on the "Account security" tab.
-- [ ] Under the "API Keys" section, generate a new key and copy it.
-- [ ] Go to the Laravel project, open the .env (located in the root directory) and pass it in "ODOO_API_KEY".
-- [ ] Set the "ODOO_URL" to the URL of your Odoo site (domain.odoo.com).
-
----
-
-### Desktime
-
-#### It will return the following data in JSON format:
-
-- Employee details:
-  - Name
-  - Email
-  - Desktime ID
-- Employee remote work hours
-
-#### Connect DeskTime to the web app:
-
-- [x] Log into the admin account.
-- [ ] On the left sidebar clik on the Settings dropdown and select "API".
-- [ ] Under the "Introduction" tab, you will find "Your API Key", copy it.
-- [ ] Go to the Laravel project, open the .env (located in the root directory) and pass it in "DESKTIME_API_KEY".
-- [ ] Set the "DESKTIME_URL" to the URL of your DeskTime site.
-
----
-
-### ProofHub
-
-#### It will return the following data in JSON format:
-
-- Employee details:
-  - Name
-  - Email
-  - ProofHub ID
-- Projects that the employee is participating in:
-  - Projects
-  - Tasks
-
-#### Connect Proofhub to the web app:
-
-- [x] Log in to the admin account.
-- [ ] On the bottom left part of the screen, click on your account avatar, a dropdown will open. Select "API access".
-- [ ] Copy the API Key.
-- [ ] Go to the Laravel project, open the .env (located in the root directory) and pass it in "PROOFHUB_API_KEY".
-- [ ] Set the "PROOFHUB_URL" to the URL of your DeskTime site.
-
----
-
-> Once you are finished setting up all the API Connections, run these commands inside the Laravel root directory:
-> `php artisan config:clear` > `php artisan cache:clear`
-
----
-
-### 🗑️ Data Retention
-
-Cronos includes a feature to automatically delete old user time-related data to manage database size and comply with data retention policies. Select a frequency or disable the feature in the settings page.
-
-### Pre-commit Hook
-
-This project uses a Git pre-commit hook to automatically format and check code before it is committed. The hook ensures consistency and helps catch potential issues early.
-
-**Setup (Recommended):**
-
-Git hooks are not version controlled, so you need to set this up manually once per local clone. Follow these steps from the project root:
-
-1.  **Create the hook file (if it doesn't exist):**
-
-    ```bash
-    touch .git/hooks/pre-commit
-    ```
-
-2.  **Open the file** (`.git/hooks/pre-commit`) in your text editor.
-
-3.  **Paste the entire script content below** into the file, replacing any existing content:
-
-    ```sh
-    #!/bin/sh
-    #
-    # Pre-commit hook that runs formatters (Pint, Rector, Prettier)
-    # on staged files and checks for debug statements.
-    # Modifications are automatically staged.
-    #
-
-    echo "Running Pint on staged PHP files..."
-
-    # Get staged PHP files
-    STAGED_PHP_FILES=$(git diff --cached --name-only --diff-filter=ACM -- '*.php')
-
-    if [ -z "$STAGED_PHP_FILES" ]; then
-      echo "No staged PHP files found to Pint."
-    else
-      # Check if Pint is installed
-      PINT_PATH="./vendor/bin/pint"
-      if [ ! -f "$PINT_PATH" ]; then
-          echo >&2 "Error: Laravel Pint not found at $PINT_PATH. Please run 'composer install'."
-          exit 1
-      fi
-
-      # Run Pint on the staged files. Use --quiet to reduce noise, but capture output on error.
-      PINT_OUTPUT=$("$PINT_PATH" $STAGED_PHP_FILES 2>&1)
-      PINT_EXIT_CODE=$?
-
-      # Check Pint exit code
-      if [ $PINT_EXIT_CODE -ne 0 ]; then
-        echo >&2 "Pint failed to format PHP files:"
-        echo >&2 "$PINT_OUTPUT"
-        exit 1
-      fi
-
-      # Re-stage the files potentially modified by Pint
-      echo "Staging potentially modified PHP files..."
-      echo "$STAGED_PHP_FILES" | while IFS= read -r file; do
-        # Check if the file still exists (it might have been deleted and staged)
-        if [ -f "$file" ]; then
-            git add "$file"
-        fi
-      done
-      echo "Pint formatting applied and staged for PHP files."
-    fi
-
-    echo "Running Rector on staged PHP files..."
-
-    # We need the list of staged PHP files again, or reuse if available
-    # If Pint didn't run, STAGED_PHP_FILES would be empty, re-fetch it.
-    if [ -z "$STAGED_PHP_FILES" ] && [ -z "$(git diff --cached --name-only --diff-filter=ACM -- '*.php')" ]; then
-       STAGED_PHP_FILES=$(git diff --cached --name-only --diff-filter=ACM -- '*.php')
-    fi
-
-    if [ -z "$STAGED_PHP_FILES" ]; then
-      echo "No staged PHP files found to Rector."
-    else
-      # Check if Rector is installed
-      RECTOR_PATH="./vendor/bin/rector"
-      if [ ! -f "$RECTOR_PATH" ]; then
-          echo >&2 "Error: Rector not found at $RECTOR_PATH. Please run 'composer install'."
-          exit 1
-      fi
-
-      # Run Rector process on the staged files.
-      RECTOR_OUTPUT=$("$RECTOR_PATH" process $STAGED_PHP_FILES --no-progress-bar --no-diffs 2>&1)
-      RECTOR_EXIT_CODE=$?
-
-      # Check Rector exit code
-      # Allow non-zero exit if it just made changes.
-      if [ $RECTOR_EXIT_CODE -ne 0 ]; then
-          if ! echo "$RECTOR_OUTPUT" | grep -q "Rector is done!"; then
-            echo >&2 "Rector failed to process PHP files:"
-            echo >&2 "$RECTOR_OUTPUT"
-            exit 1
-          fi
-          echo "Rector applied changes."
-      fi
-
-      # Re-stage the files potentially modified by Rector
-      echo "Staging potentially modified PHP files after Rector..."
-      echo "$STAGED_PHP_FILES" | while IFS= read -r file; do
-        # Check if the file still exists
-        if [ -f "$file" ]; then
-            git add "$file"
-        fi
-      done
-      echo "Rector changes applied and staged for PHP files."
-    fi
-
-    echo "Checking Blade formatting with Prettier..."
-
-    # Get staged Blade files
-    STAGED_BLADE_FILES=$(git diff --cached --name-only --diff-filter=ACM -- '*.blade.php')
-
-    if [ -z "$STAGED_BLADE_FILES" ]; then
-      echo "No staged Blade files found to check."
-    else
-      # Check if node_modules exists (basic check for npm install)
-      if [ ! -d "node_modules" ]; then
-        echo >&2 "Error: node_modules directory not found. Please run 'npm install'."
-        exit 1
-      fi
-
-      # Run Prettier --write on staged Blade files
-      echo "Running Prettier --write on staged Blade files..."
-      PRETTIER_OUTPUT=$(npx prettier --write $STAGED_BLADE_FILES 2>&1)
-      PRETTIER_EXIT_CODE=$?
-
-      if [ $PRETTIER_EXIT_CODE -ne 0 ]; then
-        echo >&2 "Prettier formatting failed for Blade files:"
-        echo >&2 "$PRETTIER_OUTPUT"
-        exit 1
-      fi
-
-      # Add logic to stage modified Blade files
-      echo "Staging potentially modified Blade files..."
-      echo "$STAGED_BLADE_FILES" | while IFS= read -r file; do
-        # Check if the file still exists
-        if [ -f "$file" ]; then
-            git add "$file"
-        fi
-      done
-      echo "Prettier formatting applied and staged for Blade files."
-    fi
-
-    echo "Checking for leftover debug statements (dd, dump)..."
-
-    # Re-fetch staged PHP files if neither Pint nor Rector block ran
-    if [ -z "$STAGED_PHP_FILES" ] && [ -z "$STAGED_BLADE_FILES" ]; then
-      STAGED_PHP_FILES=$(git diff --cached --name-only --diff-filter=ACM -- '*.php')
-    fi
-
-    if [ -n "$STAGED_PHP_FILES" ]; then
-        # Search for dd( or dump( - ignore case, show line number, only match whole words
-        FORBIDDEN_PATTERN='\b(dd|dump)\('
-        DEBUG_OUTPUT=$(echo "$STAGED_PHP_FILES" | xargs grep -nwEi "$FORBIDDEN_PATTERN")
-
-        if [ -n "$DEBUG_OUTPUT" ]; then
-            echo >&2 "Error: Found forbidden debug statements in staged PHP files:"
-            echo >&2 "$DEBUG_OUTPUT"
-            exit 1
-        fi
-        echo "No leftover PHP debug statements found."
-    else
-        echo "No staged PHP files to check for debug statements."
-    fi
-
-    echo "Pre-commit checks passed."
-    # Exit with 0 to allow the commit
-    exit 0
-    ```
-
-4.  **Save and close** the file.
-
-5.  **Make the hook executable:**
-    ```bash
-    chmod +x .git/hooks/pre-commit
-    ```
-
-**Checks Performed:**
-
-When you run `git commit`, the hook will automatically perform the following actions on your _staged_ files:
-
-1.  **PHP Formatting (Pint):** Runs `vendor/bin/pint` to format staged PHP files according to the project's coding style.
-2.  **PHP Refactoring (Rector):** Runs `vendor/bin/rector process` to apply configured automated refactorings to staged PHP files.
-3.  **Blade Formatting (Prettier):** Runs `npx prettier --write` to format staged `*.blade.php` files.
-4.  **PHP Debug Statement Check:** Scans staged PHP files for leftover debug functions like `dd()` or `dump()` and prevents the commit if found.
-
-Any modifications made by Pint, Rector, or Prettier will be automatically added to your commit.
+Please read the [Development Guide](docs/development/) for coding standards and contribution guidelines.

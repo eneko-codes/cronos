@@ -209,7 +209,7 @@
                         @if (isset($day['scheduled']['scheduleName']) && $day['scheduled']['scheduleName'])
                           <div class="mb-1">
                             <span
-                              class="text-sm font-semibold text-gray-800 dark:text-gray-100"
+                              class="text-sm font-semibold text-gray-900 dark:text-gray-100"
                             >
                               {{ $day['scheduled']['scheduleName'] }}
                             </span>
@@ -272,7 +272,7 @@
                             @if (isset($day['leave']['isHalfDay']) && $day['leave']['isHalfDay'])
                               {{-- Half Day Leave --}}
                               <div
-                                class="text-sm text-gray-700 dark:text-gray-300"
+                                class="text-xs text-gray-600 dark:text-gray-200"
                               >
                                 @if ($day['leave']['timePeriod'] === 'morning')
                                   Morning half-day
@@ -292,7 +292,7 @@
                             @elseif (isset($day['leave']['durationDays']) && $day['leave']['durationDays'] >= 1)
                               {{-- Full Day or Multi-Day Leave --}}
                               <div
-                                class="text-sm text-gray-700 dark:text-gray-300"
+                                class="text-xs text-gray-600 dark:text-gray-200"
                               >
                                 @if ($day['leave']['durationDays'] == 1)
                                   Full day leave
@@ -304,7 +304,7 @@
                             @else
                               {{-- Partial Hour Leave --}}
                               <div
-                                class="text-sm text-gray-700 dark:text-gray-300"
+                                class="text-xs text-gray-600 dark:text-gray-200"
                               >
                                 {{ $day['leave']['durationText'] ?: $day['leave']['duration'] }}
                               </div>
@@ -371,7 +371,7 @@
                             @if (isset($day['leave']['isHalfDay']) && $day['leave']['isHalfDay'])
                               {{-- Half Day Leave --}}
                               <div
-                                class="text-sm text-gray-700 dark:text-gray-300"
+                                class="text-xs text-gray-600 dark:text-gray-200"
                               >
                                 @if ($day['leave']['timePeriod'] === 'morning')
                                   Morning half-day
@@ -391,7 +391,7 @@
                             @elseif (isset($day['leave']['durationDays']) && $day['leave']['durationDays'] >= 1)
                               {{-- Full Day or Multi-Day Leave --}}
                               <div
-                                class="text-sm text-gray-700 dark:text-gray-300"
+                                class="text-xs text-gray-600 dark:text-gray-200"
                               >
                                 @if ($day['leave']['durationDays'] == 1)
                                   Full day leave
@@ -403,7 +403,7 @@
                             @else
                               {{-- Partial Hour Leave --}}
                               <div
-                                class="text-sm text-gray-700 dark:text-gray-300"
+                                class="text-xs text-gray-600 dark:text-gray-200"
                               >
                                 {{ $day['leave']['durationText'] ?: $day['leave']['duration'] }}
                               </div>
@@ -465,7 +465,9 @@
                 {{-- Only show tooltip when there's actual attendance data --}}
                 <x-tooltip>
                   <x-slot name="text">
-                    <div class="flex flex-col gap-1">
+                    <div
+                      class="flex w-max max-w-[90vw] flex-col gap-1 sm:max-w-xs"
+                    >
                       @if (isset($day['attendance']['segments']) && ! empty($day['attendance']['segments']))
                         {{-- Display individual segments --}}
                         @foreach ($day['attendance']['segments'] as $segment)
@@ -497,6 +499,17 @@
                               -
                           @endif
                         </span>
+                      @endif
+
+                      {{-- Explanatory note about productive time (remote attendance only) --}}
+                      @if (isset($day['attendance']['is_remote']) && $day['attendance']['is_remote'])
+                        <div
+                          class="text-xs whitespace-normal text-gray-500 italic dark:text-gray-400"
+                        >
+                          Duration shows productive time tracked by Desktime.
+                          Any difference from clock times represents breaks,
+                          lunch, or idle time.
+                        </div>
                       @endif
                     </div>
                   </x-slot>
@@ -551,19 +564,19 @@
                               class="mb-1 flex items-start justify-between gap-2"
                             >
                               <span
-                                class="flex-1 text-xs font-medium break-words text-gray-800 dark:text-gray-100"
+                                class="flex-1 text-sm font-semibold break-words text-gray-900 dark:text-gray-100"
                               >
                                 {{ $entry['project'] ?? '' }}
                               </span>
                               <span
-                                class="flex-shrink-0 rounded bg-gray-100 px-1.5 py-0.5 text-xs whitespace-nowrap text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+                                class="flex-shrink-0 rounded bg-gray-100 px-1.5 py-0.5 text-xs whitespace-nowrap text-gray-600 dark:bg-gray-700 dark:text-gray-300"
                               >
                                 {{ $entry['duration'] ?? '' }}
                               </span>
                             </div>
                             @if (isset($entry['task']) && $entry['task'])
                               <span
-                                class="mb-0.5 text-xs break-words text-gray-600 dark:text-gray-300"
+                                class="mb-0.5 text-xs break-words text-gray-600 dark:text-gray-200"
                               >
                                 {{ $entry['task'] }}
                               </span>
@@ -583,13 +596,13 @@
                           @foreach (collect($day['worked']['projects']) as $project)
                             <div class="{{ ! $loop->last ? 'mb-2' : '' }}">
                               <span
-                                class="text-xs font-medium break-words text-gray-800 dark:text-gray-100"
+                                class="text-sm font-semibold break-words text-gray-900 dark:text-gray-100"
                               >
                                 {{ $project['title'] ?? '' }}
                               </span>
                               @if (isset($project['tasks']) && collect($project['tasks'])->isNotEmpty())
                                 <div
-                                  class="mt-1 text-xs break-words text-gray-600 dark:text-gray-300"
+                                  class="mt-1 text-xs break-words text-gray-600 dark:text-gray-200"
                                 >
                                   {{ collect($project['tasks'])->join(', ') }}
                                 </div>

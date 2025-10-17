@@ -11,8 +11,6 @@ This document outlines the organized folder structure for the Cronos Laravel app
 ```
 app/Livewire/
 ├── Dashboard/           # Dashboard & timesheet components
-│   ├── PeriodNavigator.php
-│   ├── TimeSheetTable.php
 │   ├── UserDashboardWidgets.php
 │   └── UserTimeSheetTable.php
 ├── Users/              # User management components
@@ -44,8 +42,6 @@ app/Livewire/
 ```
 resources/views/livewire/
 ├── dashboard/          # Dashboard views
-│   ├── period-navigator.blade.php
-│   ├── time-sheet-table.blade.php
 │   ├── user-dashboard-widgets.blade.php
 │   ├── user-dashboard-widgets-skeleton.blade.php
 │   ├── user-time-sheet-table.blade.php
@@ -125,8 +121,8 @@ app/DataTransferObjects/Dashboard/  # Dashboard DTOs
 
 #### **File Names**
 
-- **PascalCase** for PHP files (`TimeSheetTable.php`)
-- **kebab-case** for Blade files (`time-sheet-table.blade.php`)
+- **PascalCase** for PHP files (`UserTimeSheetTable.php`)
+- **kebab-case** for Blade files (`user-time-sheet-table.blade.php`)
 
 #### **Namespaces**
 
@@ -141,7 +137,7 @@ namespace App\DataTransferObjects\Dashboard;
 
 ```php
 // Match folder structure
-return view('livewire.dashboard.time-sheet-table');
+return view('livewire.dashboard.user-time-sheet-table');
 return view('livewire.users.user-details-modal');
 ```
 
@@ -243,8 +239,8 @@ return view('livewire.users.user-details-modal');
 ### **Good Organization**
 
 ```
-app/Livewire/Dashboard/TimeSheetTable.php
-resources/views/livewire/dashboard/time-sheet-table.blade.php
+app/Livewire/Dashboard/UserTimeSheetTable.php
+resources/views/livewire/dashboard/user-time-sheet-table.blade.php
 ```
 
 ### **Namespace Examples**
@@ -252,11 +248,11 @@ resources/views/livewire/dashboard/time-sheet-table.blade.php
 ```php
 // Good
 namespace App\Livewire\Dashboard;
-return view('livewire.dashboard.time-sheet-table');
+return view('livewire.dashboard.user-time-sheet-table');
 
 // Bad
 namespace App\Livewire;
-return view('livewire.time-sheet-table');
+return view('livewire.user-time-sheet-table');
 ```
 
 ## 🎯 **Benefits**

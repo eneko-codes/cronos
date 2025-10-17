@@ -53,12 +53,15 @@ class SyncDesktimeAttendancesJob extends BaseSyncJob
     public function handle(): void
     {
         $dateRange = $this->getDatesRange();
+        
+        // Retrieve the account timezone once for all attendances
+        $timezone = $this->desktime->getAccountTimezone();
 
-        collect($dateRange)->each(function ($date): void {
+        collect($dateRange)->each(function ($date) use ($timezone): void {
             $attendanceDTOs = $this->desktime->getAllAttendanceForDate($date->format('Y-m-d'));
 
-            $attendanceDTOs->each(function (DesktimeAttendanceDTO $attendanceDto): void {
-                (new ProcessDesktimeAttendanceAction)->execute($attendanceDto);
+            $attendanceDTOs->each(function (DesktimeAttendanceDTO $attendanceDto) use ($timezone): void {
+                (new ProcessDesktimeAttendanceAction)->execute($attendanceDto, $timezone);
             });
         });
     }

@@ -13,13 +13,13 @@ class CreateUserSchedulesTable extends Migration
      */
     public function up(): void
     {
-        Schema::create('user_schedules', function (Blueprint $table) {
+        Schema::create('user_schedules', function (Blueprint $table): void {
             $table->comment('Stores the historical schedules of each user, referencing odoo_schedule_id from schedules.');
             $table->id();
             $table->foreignId('user_id')->constrained();
             $table->unsignedBigInteger('odoo_schedule_id'); // Reference to schedule's primary key
-            $table->timestamp('effective_from');
-            $table->timestamp('effective_until')->nullable();
+            $table->timestampTz('effective_from')->comment('Schedule effective start date (stored as UTC)');
+            $table->timestampTz('effective_until')->nullable()->comment('Schedule effective end date (stored as UTC)');
             $table->timestamps();
 
             $table->foreign('odoo_schedule_id')->references('odoo_schedule_id')->on('schedules');

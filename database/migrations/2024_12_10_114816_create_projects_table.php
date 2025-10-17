@@ -17,8 +17,8 @@ class CreateProjectsTable extends Migration
             $table->string('title');
             $table->json('status')->nullable()->comment('Project status (object/array from ProofHub API)');
             $table->text('description')->nullable()->comment('Project description from ProofHub');
-            $table->timestamp('proofhub_created_at')->nullable()->comment('Project creation time in ProofHub');
-            $table->timestamp('proofhub_updated_at')->nullable()->comment('Project last update time in ProofHub');
+            $table->timestampTz('proofhub_created_at')->nullable()->comment('Project creation time in ProofHub (stored as UTC)');
+            $table->timestampTz('proofhub_updated_at')->nullable()->comment('Project last update time in ProofHub (stored as UTC)');
             $table->unsignedBigInteger('proofhub_creator_id')->nullable()->comment('ProofHub user ID of the project creator');
             $table->unsignedBigInteger('proofhub_manager_id')->nullable()->comment('ProofHub user ID of the project manager');
             $table->timestamps();

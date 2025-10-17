@@ -54,5 +54,6 @@ return [
     'systempin' => [
         'base_url' => env('SYSTEMPIN_BASE_URL'),
         'api_key' => env('SYSTEMPIN_API_KEY'),
+        'timezone' => env('SYSTEMPIN_TIMEZONE', 'Europe/Madrid'), // Physical machine timezone
     ],
 ];

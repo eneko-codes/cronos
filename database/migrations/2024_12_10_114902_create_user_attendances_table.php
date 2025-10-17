@@ -15,8 +15,8 @@ class CreateUserAttendancesTable extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained('users');
             $table->date('date');
-            $table->timestamp('clock_in')->nullable(); // UTC timestamp for clock in
-            $table->timestamp('clock_out')->nullable(); // UTC timestamp for clock out
+            $table->timestampTz('clock_in')->nullable()->comment('UTC timestamp for clock in');
+            $table->timestampTz('clock_out')->nullable()->comment('UTC timestamp for clock out');
             $table->integer('duration_seconds')->default(0); // Duration of this specific segment
             $table->boolean('is_remote');
             $table->timestamps();

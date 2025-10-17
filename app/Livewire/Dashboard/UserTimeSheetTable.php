@@ -948,8 +948,16 @@ class UserTimeSheetTable extends Component
             $totalMinutes = 0;
             $slots = [];
             foreach ($selectedDetails as $detail) {
-                $start = Carbon::parse($detail->start)->setTimezone('UTC');
-                $end = Carbon::parse($detail->end)->setTimezone('UTC');
+                // Get the raw time values from the database to avoid timezone conversion
+                // The times are stored as time(0) without timezone in the database
+                // but Laravel's datetime cast applies app timezone conversion
+                // We access the original attributes to get the raw time strings
+                $startTime = $detail->getAttributes()['start'] ?? $detail->start->format('H:i:s');
+                $endTime = $detail->getAttributes()['end'] ?? $detail->end->format('H:i:s');
+                
+                // Parse as UTC times for duration calculation
+                $start = Carbon::parse($startTime, 'UTC');
+                $end = Carbon::parse($endTime, 'UTC');
                 $minutesForSlot = $start->diffInMinutes($end);
                 $totalMinutes += $minutesForSlot;
                 $slots[] = "{$start->format('H:i')} - {$end->format('H:i')}";

@@ -82,6 +82,7 @@ class UserAttendance extends Model
      *
      * Date fields are stored in UTC format for consistency across
      * different time zones and data sources (Desktime and Systempin).
+     * clock_in and clock_out use custom Attribute accessors to ensure proper timezone handling.
      *
      * @var array<string, string>
      */
@@ -89,9 +90,43 @@ class UserAttendance extends Model
         'is_remote' => 'boolean',
         'duration_seconds' => 'integer',
         'date' => 'date',
-        'clock_in' => 'datetime',
-        'clock_out' => 'datetime',
     ];
+
+    /**
+     * Get/set the clock_in attribute with proper timezone conversion.
+     * Stored in UTC, displayed in APP_TIMEZONE.
+     */
+    protected function clockIn(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => $value 
+                ? Carbon::parse($value, 'UTC')->setTimezone(config('app.timezone'))
+                : null,
+            set: fn ($value) => match (true) {
+                $value === null => null,
+                $value instanceof Carbon => $value->utc()->toDateTimeString(),
+                default => Carbon::parse($value)->utc()->toDateTimeString(),
+            },
+        );
+    }
+
+    /**
+     * Get/set the clock_out attribute with proper timezone conversion.
+     * Stored in UTC, displayed in APP_TIMEZONE.
+     */
+    protected function clockOut(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => $value 
+                ? Carbon::parse($value, 'UTC')->setTimezone(config('app.timezone'))
+                : null,
+            set: fn ($value) => match (true) {
+                $value === null => null,
+                $value instanceof Carbon => $value->utc()->toDateTimeString(),
+                default => Carbon::parse($value)->utc()->toDateTimeString(),
+            },
+        );
+    }
 
     /**
      * Get the user that owns the attendance record.

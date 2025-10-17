@@ -7,7 +7,6 @@ namespace App\Services\Dashboard;
 use App\Models\UserSchedule;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Cache;
 
 class ScheduleService
 {
@@ -16,10 +15,12 @@ class ScheduleService
      */
     public function getScheduleForDate(Collection $schedules, string $dateString): ?array
     {
-        $cacheKey = "schedule_{$schedules->first()->user_id}_{$dateString}";
-        
-        return Cache::remember($cacheKey, 300, function () use ($schedules, $dateString) {
-            $schedule = $this->findScheduleForDate($schedules, $dateString);
+        // Return null if no schedules are provided
+        if ($schedules->isEmpty()) {
+            return null;
+        }
+
+        $schedule = $this->findScheduleForDate($schedules, $dateString);
         
         if (!$schedule) {
             return null;
@@ -53,8 +54,16 @@ class ScheduleService
         $slots = [];
 
         foreach ($selectedDetails as $detail) {
-            $start = Carbon::parse($detail->start)->setTimezone('UTC');
-            $end = Carbon::parse($detail->end)->setTimezone('UTC');
+            // Get the raw time values from the database to avoid timezone conversion
+            // The times are stored as time(0) without timezone in the database
+            // but Laravel's datetime cast applies app timezone conversion
+            // We access the original attributes to get the raw time strings
+            $startTime = $detail->getAttributes()['start'] ?? $detail->start->format('H:i:s');
+            $endTime = $detail->getAttributes()['end'] ?? $detail->end->format('H:i:s');
+            
+            // Parse as UTC times for duration calculation
+            $start = \Carbon\Carbon::parse($startTime, 'UTC');
+            $end = \Carbon\Carbon::parse($endTime, 'UTC');
             $minutesForSlot = $start->diffInMinutes($end);
             $totalMinutes += $minutesForSlot;
             $slots[] = "{$start->format('H:i')} - {$end->format('H:i')}";
@@ -64,14 +73,13 @@ class ScheduleService
             return null;
         }
 
-            return [
-                'model' => $schedule,
-                'duration' => \Carbon\CarbonInterval::minutes((int) round($totalMinutes))->cascade()->format('%hh %Im'),
-                'slots' => $slots,
-                'scheduleName' => $schedule->schedule->description ?? null,
-                'totalMinutes' => (int) round($totalMinutes),
-            ];
-        });
+        return [
+            'model' => $schedule,
+            'duration' => \Carbon\CarbonInterval::minutes((int) round($totalMinutes))->cascade()->format('%hh %Im'),
+            'slots' => $slots,
+            'scheduleName' => $schedule->schedule->description ?? null,
+            'totalMinutes' => (int) round($totalMinutes),
+        ];
     }
 
     /**

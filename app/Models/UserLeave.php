@@ -101,12 +101,12 @@ class UserLeave extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'start_date' => 'datetime:Y-m-d H:i:s',
-        'end_date' => 'datetime:Y-m-d H:i:s',
+        // start_date and end_date handled by custom Attribute accessors below
         'duration_days' => 'float',
         'request_hour_from' => 'float',
         'request_hour_to' => 'float',
     ];
+
 
     /**
      * Get the user that owns the leave.
@@ -280,28 +280,44 @@ class UserLeave extends Model
     }
 
     /**
-     * Get the start date as a Carbon instance with proper casting.
+     * Get the start_date attribute, ensuring timezone is handled correctly.
+     * 
+     * SETTER: When receiving API data (string without timezone), parse as UTC explicitly.
+     *         When receiving Carbon instance, store as-is (already has timezone).
+     *         Store to database in UTC format.
+     * 
+     * GETTER: PostgreSQL returns "2024-07-01 09:00:00+00" (with timezone suffix).
+     *         Parse this and convert to app timezone (Europe/Madrid) for display.
      */
     protected function startDate(): Attribute
     {
         return Attribute::make(
-            get: fn ($value) => $value ? Carbon::parse($value) : null,
-            set: fn ($value) => $value instanceof Carbon
-                ? $value->format('Y-m-d H:i:s')
-                : ($value ? Carbon::parse($value)->format('Y-m-d H:i:s') : null)
+            get: fn ($value) => $value 
+                ? Carbon::parse($value)->timezone(config('app.timezone')) 
+                : null,
+            set: fn ($value) => match (true) {
+                $value === null => null,
+                $value instanceof Carbon => $value->utc()->toDateTimeString(),
+                default => Carbon::parse($value, 'UTC')->toDateTimeString(),
+            },
         );
     }
 
     /**
-     * Get the end date as a Carbon instance with proper casting.
+     * Get the end_date attribute, ensuring timezone is handled correctly.
+     * Same logic as start_date - parse as UTC on set, display in Madrid on get.
      */
     protected function endDate(): Attribute
     {
         return Attribute::make(
-            get: fn ($value) => $value ? Carbon::parse($value) : null,
-            set: fn ($value) => $value instanceof Carbon
-                ? $value->format('Y-m-d H:i:s')
-                : ($value ? Carbon::parse($value)->format('Y-m-d H:i:s') : null)
+            get: fn ($value) => $value 
+                ? Carbon::parse($value)->timezone(config('app.timezone')) 
+                : null,
+            set: fn ($value) => match (true) {
+                $value === null => null,
+                $value instanceof Carbon => $value->utc()->toDateTimeString(),
+                default => Carbon::parse($value, 'UTC')->toDateTimeString(),
+            },
         );
     }
 

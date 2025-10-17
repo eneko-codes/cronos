@@ -15,8 +15,8 @@ class CreateUserLeavesTable extends Migration
             $table->id();
             $table->unsignedBigInteger('odoo_leave_id')->unique();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
-            $table->datetime('start_date');
-            $table->datetime('end_date');
+            $table->timestampTz('start_date')->comment('Leave start datetime stored in UTC');
+            $table->timestampTz('end_date')->comment('Leave end datetime stored in UTC');
             $table->enum('type', ['employee', 'department', 'category']);
             $table->string('status');
             $table->float('duration_days')->nullable();

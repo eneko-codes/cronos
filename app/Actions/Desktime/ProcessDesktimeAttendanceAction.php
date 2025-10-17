@@ -20,8 +20,9 @@ final class ProcessDesktimeAttendanceAction
      * Synchronizes a single DeskTime attendance DTO with the local database.
      *
      * @param  DesktimeAttendanceDTO  $attendanceDto  The DesktimeAttendanceDTO to sync.
+     * @param  string  $timezone  The DeskTime account timezone for parsing attendance times.
      */
-    public function execute(DesktimeAttendanceDTO $attendanceDto): void
+    public function execute(DesktimeAttendanceDTO $attendanceDto, string $timezone): void
     {
         $validator = Validator::make(
             [
@@ -52,7 +53,7 @@ final class ProcessDesktimeAttendanceAction
             return;
         }
 
-        DB::transaction(function () use ($attendanceDto): void {
+        DB::transaction(function () use ($attendanceDto, $timezone): void {
             $email = strtolower(trim($attendanceDto->email));
             $user = User::where('email', $email)->first();
 
@@ -82,8 +83,14 @@ final class ProcessDesktimeAttendanceAction
                 ->delete();
 
             // Create single attendance segment for the Desktime session
-            $clockIn = is_string($attendanceDto->arrived) ? $attendanceDto->arrived : null;
-            $clockOut = is_string($attendanceDto->left) ? $attendanceDto->left : null;
+            // DeskTime API returns full datetime strings (e.g., "2023-03-16 09:17:00") in company timezone
+            // Parse with correct timezone and explicitly convert to UTC for storage
+            $clockIn = is_string($attendanceDto->arrived)
+                ? \Carbon\Carbon::parse($attendanceDto->arrived, $timezone)->utc()
+                : null;
+            $clockOut = is_string($attendanceDto->left)
+                ? \Carbon\Carbon::parse($attendanceDto->left, $timezone)->utc()
+                : null;
             $durationSeconds = $attendanceDto->desktimeTime ?? 0;
 
             UserAttendance::create([

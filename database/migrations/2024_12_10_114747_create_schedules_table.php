@@ -24,8 +24,8 @@ class CreateSchedulesTable extends Migration
             $table->string('two_weeks_explanation')->nullable()->comment('Human-readable explanation of the two-week rotation.');
             $table->boolean('flexible_hours')->default(false)->comment('Whether the calendar allows flexible start/end times.');
             $table->boolean('active')->default(true)->comment('Whether the schedule is active.');
-            $table->timestamp('odoo_created_at')->nullable()->comment('Creation date of the record in Odoo (UTC).');
-            $table->timestamp('odoo_updated_at')->nullable()->comment('Last update date of the record in Odoo (UTC).');
+            $table->timestampTz('odoo_created_at')->nullable()->comment('Creation date of the record in Odoo (stored as UTC).');
+            $table->timestampTz('odoo_updated_at')->nullable()->comment('Last update date of the record in Odoo (stored as UTC).');
             $table->timestamps();
         });
     }

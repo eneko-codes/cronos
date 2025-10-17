@@ -33,16 +33,16 @@ class CreateTimeEntriesTable extends Migration
                 ->text('description')
                 ->nullable()
                 ->comment('Description of the time entry');
-            $table->date('date')->comment('Date of the time entry in UTC');
+            $table->date('date')->comment('Date of the time entry');
             $table
                 ->unsignedInteger('duration_seconds')
                 ->default(0)
                 ->comment('Duration in seconds');
             $table
-                ->timestamp('proofhub_created_at')
+                ->timestampTz('proofhub_created_at')
                 ->nullable()
-                ->comment('Original creation time in ProofHub');
-            $table->timestamp('proofhub_updated_at')->nullable()->comment('Last update time in ProofHub');
+                ->comment('Original creation time in ProofHub (stored as UTC)');
+            $table->timestampTz('proofhub_updated_at')->nullable()->comment('Last update time in ProofHub (stored as UTC)');
             $table->boolean('billable')->nullable()->comment('Whether the time entry is billable');
             $table->text('comments')->nullable()->comment('Comments from ProofHub');
             $table->json('tags')->nullable()->comment('Tags from ProofHub, stored as JSON array');

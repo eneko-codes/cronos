@@ -25,8 +25,8 @@ class CreateScheduleDetailsTable extends Migration
             $table->time('start');
             $table->time('end');
             $table->boolean('active')->nullable()->comment('Whether the schedule detail is active (from Odoo).');
-            $table->timestamp('odoo_created_at')->nullable()->comment('Creation date of the record in Odoo (UTC).');
-            $table->timestamp('odoo_updated_at')->nullable()->comment('Last update date of the record in Odoo (UTC).');
+            $table->timestampTz('odoo_created_at')->nullable()->comment('Creation date of the record in Odoo (stored as UTC).');
+            $table->timestampTz('odoo_updated_at')->nullable()->comment('Last update date of the record in Odoo (stored as UTC).');
             $table->timestamps();
 
             $table->foreign('odoo_schedule_id')->references('odoo_schedule_id')->on('schedules');

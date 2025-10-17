@@ -91,8 +91,8 @@ final class ProcessOdooLeavesAction
             if ($leave) {
                 $leave->update([
                     'type' => $leaveDto->holiday_type,
-                    'start_date' => $leaveDto->date_from,
-                    'end_date' => $leaveDto->date_to,
+                    'start_date' => \Carbon\Carbon::parse($leaveDto->date_from, 'UTC')->utc(),
+                    'end_date' => \Carbon\Carbon::parse($leaveDto->date_to, 'UTC')->utc(),
                     'status' => $leaveDto->state,
                     'duration_days' => $leaveDto->number_of_days,
                     'leave_type_id' => Arr::get($leaveDto->holiday_status_id, 0),
@@ -106,8 +106,8 @@ final class ProcessOdooLeavesAction
                 UserLeave::create([
                     'odoo_leave_id' => $leaveDto->id,
                     'type' => $leaveDto->holiday_type,
-                    'start_date' => $leaveDto->date_from,
-                    'end_date' => $leaveDto->date_to,
+                    'start_date' => \Carbon\Carbon::parse($leaveDto->date_from, 'UTC')->utc(),
+                    'end_date' => \Carbon\Carbon::parse($leaveDto->date_to, 'UTC')->utc(),
                     'status' => $leaveDto->state,
                     'duration_days' => $leaveDto->number_of_days,
                     'leave_type_id' => Arr::get($leaveDto->holiday_status_id, 0),

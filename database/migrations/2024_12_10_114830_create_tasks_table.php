@@ -23,8 +23,8 @@ class CreateTasksTable extends Migration
             $table->text('description')->nullable()->comment('Task description from ProofHub');
             $table->json('tags')->nullable()->comment('Task tags from ProofHub');
             $table->unsignedBigInteger('proofhub_creator_id')->nullable()->comment('ProofHub user ID of the task creator');
-            $table->timestamp('proofhub_created_at')->nullable()->comment('Task creation time in ProofHub');
-            $table->timestamp('proofhub_updated_at')->nullable()->comment('Task last update time in ProofHub');
+            $table->timestampTz('proofhub_created_at')->nullable()->comment('Task creation time in ProofHub (stored as UTC)');
+            $table->timestampTz('proofhub_updated_at')->nullable()->comment('Task last update time in ProofHub (stored as UTC)');
             $table->timestamps();
         });
     }

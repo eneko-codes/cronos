@@ -97,13 +97,16 @@ final class ProcessSystemPinAttendanceAction
 
                 if (isset($record['From'], $record['to'])) {
                     // Complete segment with both in and out
-                    $start = \Carbon\Carbon::createFromFormat('YmdHis', $record['From']);
-                    $end = \Carbon\Carbon::createFromFormat('YmdHis', $record['to']);
+                    // Parse as configured timezone (local office time) and convert to UTC
+                    $timezone = config('services.systempin.timezone', 'Europe/Madrid');
+                    $start = \Carbon\Carbon::createFromFormat('YmdHis', $record['From'], $timezone)->utc();
+                    $end = \Carbon\Carbon::createFromFormat('YmdHis', $record['to'], $timezone)->utc();
                     $durationSeconds = $start->diffInSeconds($end);
                     $clockOut = $this->parseTime($this->parseSystemPinDateTime($record['to']), $date);
                 }
 
                 // Create attendance record for this segment
+                // Carbon instances are already converted to UTC above
                 UserAttendance::create([
                     'user_id' => $user->id,
                     'date' => $date,
@@ -118,12 +121,14 @@ final class ProcessSystemPinAttendanceAction
 
     /**
      * Parse a time string and combine it with a date to create a full datetime.
+     * SystemPin returns times in local office timezone (configurable).
+     * Parse with timezone and let Laravel convert to UTC for storage.
      *
      * @param  string|null  $timeString  Time in format like "08:30" or "0830"
      * @param  string  $date  Date in Y-m-d format
-     * @return string|null Full datetime string or null if parsing fails
+     * @return \Carbon\Carbon|null Full Carbon datetime or null if parsing fails
      */
-    private function parseTime(?string $timeString, string $date): ?string
+    private function parseTime(?string $timeString, string $date): ?\Carbon\Carbon
     {
         if (empty($timeString)) {
             return null;
@@ -149,7 +154,9 @@ final class ProcessSystemPinAttendanceAction
                 $timeFormatted = $timeString;
             }
 
-            return Carbon::parse($date.' '.$timeFormatted)->toDateTimeString();
+            // Parse as configured timezone (local office time) and explicitly convert to UTC
+            $timezone = config('services.systempin.timezone', 'Europe/Madrid');
+            return Carbon::parse($date.' '.$timeFormatted, $timezone)->utc();
         } catch (\Exception $e) {
             Log::warning('Failed to parse SystemPin time', [
                 'time_string' => $timeString,

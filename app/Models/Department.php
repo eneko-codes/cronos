@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -26,7 +25,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int|null $odoo_parent_department_id
  * @property-read int|null $users_count
  *
- * @method static \Database\Factories\DepartmentFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Department newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Department newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Department query()
@@ -42,8 +40,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Department extends Model
 {
-    use HasFactory;
-
     /**
      * The table associated with the model.
      *

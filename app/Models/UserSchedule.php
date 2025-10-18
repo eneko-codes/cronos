@@ -6,7 +6,6 @@ namespace App\Models;
 
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -26,7 +25,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property-read \App\Models\Schedule $schedule
  * @property-read \App\Models\User $user
  *
- * @method static \Database\Factories\UserScheduleFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|UserSchedule newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|UserSchedule newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|UserSchedule query()
@@ -42,8 +40,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class UserSchedule extends Model
 {
-    use HasFactory;
-
     protected $table = 'user_schedules';
 
     public $timestamps = true;

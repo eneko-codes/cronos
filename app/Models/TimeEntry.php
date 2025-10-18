@@ -7,7 +7,6 @@ namespace App\Models;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -35,7 +34,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property-read \App\Models\Project $project The project this time entry belongs to
  * @property-read \App\Models\Task|null $task The task this time entry is associated with (if any)
  *
- * @method static \Database\Factories\TimeEntryFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|TimeEntry newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|TimeEntry newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|TimeEntry query()
@@ -55,8 +53,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class TimeEntry extends Model
 {
-    use HasFactory;
-
     /**
      * The table associated with the model.
      *

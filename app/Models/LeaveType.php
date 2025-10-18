@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -26,7 +25,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $create_date
  * @property string|null $write_date
  *
- * @method static \Database\Factories\LeaveTypeFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|LeaveType newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|LeaveType newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|LeaveType query()
@@ -43,8 +41,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class LeaveType extends Model
 {
-    use HasFactory;
-
     /**
      * The table associated with the model.
      *

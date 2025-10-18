@@ -7,7 +7,6 @@ namespace App\Models;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -33,7 +32,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property-read bool $is_clocked_in Whether the user is currently clocked in
  * @property-read \App\Models\User $user The user this attendance record belongs to
  *
- * @method static \Database\Factories\UserAttendanceFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|UserAttendance newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|UserAttendance newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|UserAttendance query()
@@ -51,8 +49,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class UserAttendance extends Model
 {
-    use HasFactory;
-
     /**
      * The table associated with the model.
      *
@@ -99,7 +95,7 @@ class UserAttendance extends Model
     protected function clockIn(): Attribute
     {
         return Attribute::make(
-            get: fn ($value) => $value 
+            get: fn ($value) => $value
                 ? Carbon::parse($value, 'UTC')->setTimezone(config('app.timezone'))
                 : null,
             set: fn ($value) => match (true) {
@@ -117,7 +113,7 @@ class UserAttendance extends Model
     protected function clockOut(): Attribute
     {
         return Attribute::make(
-            get: fn ($value) => $value 
+            get: fn ($value) => $value
                 ? Carbon::parse($value, 'UTC')->setTimezone(config('app.timezone'))
                 : null,
             set: fn ($value) => match (true) {

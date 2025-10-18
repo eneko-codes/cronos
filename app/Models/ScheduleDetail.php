@@ -6,7 +6,6 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -37,7 +36,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property-read string $formatted_duration The formatted duration string (e.g., "8h 30m")
  * @property-read string $time_slot The formatted time slot (e.g., "09:00 - 17:00")
  *
- * @method static \Database\Factories\ScheduleDetailFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|ScheduleDetail query()
@@ -58,8 +56,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class ScheduleDetail extends Model
 {
-    use HasFactory;
-
     /**
      * The table associated with the model.
      *

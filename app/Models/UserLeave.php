@@ -9,7 +9,6 @@ use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -42,7 +41,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property-read \App\Models\User|null $user
  *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|UserLeave activeBetween(\Carbon\CarbonInterface $start, \Carbon\CarbonInterface $end)
- * @method static \Database\Factories\UserLeaveFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|UserLeave newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|UserLeave newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|UserLeave query()
@@ -66,8 +64,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class UserLeave extends Model
 {
-    use HasFactory;
-
     /**
      * The table associated with the model.
      *
@@ -106,7 +102,6 @@ class UserLeave extends Model
         'request_hour_from' => 'float',
         'request_hour_to' => 'float',
     ];
-
 
     /**
      * Get the user that owns the leave.
@@ -281,19 +276,19 @@ class UserLeave extends Model
 
     /**
      * Get the start_date attribute, ensuring timezone is handled correctly.
-     * 
+     *
      * SETTER: When receiving API data (string without timezone), parse as UTC explicitly.
      *         When receiving Carbon instance, store as-is (already has timezone).
      *         Store to database in UTC format.
-     * 
+     *
      * GETTER: PostgreSQL returns "2024-07-01 09:00:00+00" (with timezone suffix).
      *         Parse this and convert to app timezone (Europe/Madrid) for display.
      */
     protected function startDate(): Attribute
     {
         return Attribute::make(
-            get: fn ($value) => $value 
-                ? Carbon::parse($value)->timezone(config('app.timezone')) 
+            get: fn ($value) => $value
+                ? Carbon::parse($value)->timezone(config('app.timezone'))
                 : null,
             set: fn ($value) => match (true) {
                 $value === null => null,
@@ -310,8 +305,8 @@ class UserLeave extends Model
     protected function endDate(): Attribute
     {
         return Attribute::make(
-            get: fn ($value) => $value 
-                ? Carbon::parse($value)->timezone(config('app.timezone')) 
+            get: fn ($value) => $value
+                ? Carbon::parse($value)->timezone(config('app.timezone'))
                 : null,
             set: fn ($value) => match (true) {
                 $value === null => null,

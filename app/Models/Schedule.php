@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -33,7 +32,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read int|null $user_schedules_count
  * @property-read int|null $current_users_count Number of users currently assigned to this schedule
  *
- * @method static \Database\Factories\ScheduleFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Schedule newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Schedule newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Schedule query()
@@ -49,8 +47,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Schedule extends Model
 {
-    use HasFactory;
-
     /**
      * The table associated with the model.
      *

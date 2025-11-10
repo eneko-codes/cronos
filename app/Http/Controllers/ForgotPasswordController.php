@@ -1,0 +1,41 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers;
+
+use App\Http\Requests\ForgotPasswordRequest;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Password;
+use Illuminate\View\View;
+
+class ForgotPasswordController extends Controller
+{
+    /**
+     * Display the forgot password form.
+     */
+    public function create(): View
+    {
+        return view('auth.forgot-password');
+    }
+
+    /**
+     * Handle an incoming password reset request.
+     */
+    public function store(ForgotPasswordRequest $request): RedirectResponse
+    {
+        $validatedData = $request->validated();
+        $email = $validatedData['email'];
+
+        // Use Laravel's native password reset flow
+        $status = Password::sendResetLink(['email' => $email]);
+
+        if ($status === Password::RESET_LINK_SENT) {
+            return back()->with('password_reset_success', __($status));
+        }
+
+        // If there was an error, return back with error
+        return back()->withErrors(['email' => __($status)]);
+    }
+}

@@ -1,4 +1,4 @@
-<div class="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-2">
+<div class="fixed right-5 bottom-5 z-50 flex flex-col items-end gap-2">
   @foreach ($toasts as $toast)
     @php
       // Determine the CSS classes based on the toast variant.
@@ -27,7 +27,7 @@
       x-transition:leave="transition duration-500 ease-in-out"
       x-transition:leave-start="translate-y-0 scale-100 transform opacity-100"
       x-transition:leave-end="translate-y-2 scale-95 transform opacity-0"
-      class="{{ $variantClass }} flex w-full min-w-[200px] max-w-lg gap-2 rounded border-2 px-4 py-3 shadow-lg"
+      class="{{ $variantClass }} flex w-full max-w-lg min-w-[200px] gap-2 rounded border-2 px-4 py-3 shadow-lg"
     >
       <!-- Icon Section -->
       <div class="mt-1 flex-shrink-0 self-start">

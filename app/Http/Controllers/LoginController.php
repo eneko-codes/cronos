@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Actions\RequestLoginLinkAction;
-use App\Actions\VerifyLoginTokenAction;
-use App\Http\Requests\LoginLinkRequest;
-use App\Http\Requests\VerifyLoginTokenRequest;
+use App\Http\Requests\LoginRequest;
+use App\Models\User;
+use App\Notifications\WelcomeNewUserEmail;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,52 +25,51 @@ class LoginController extends Controller
     }
 
     /**
-     * Handle an incoming magic link request.
+     * Handle an incoming login request.
      */
-    public function store(LoginLinkRequest $loginRequest, RequestLoginLinkAction $requestLoginLinkAction): RedirectResponse
+    public function store(LoginRequest $loginRequest): RedirectResponse
     {
+        // Regenerate session to prevent session fixation attacks
+        request()->session()->regenerate();
+
         $validatedLoginData = $loginRequest->validated();
         $email = $validatedLoginData['email'];
-        $remember = filter_var($validatedLoginData['remember'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $password = $validatedLoginData['password'];
+        $remember = (bool) ($validatedLoginData['remember'] ?? false);
 
         $ipAddress = request()->ip();
         $userAgent = request()->header('User-Agent');
 
-        $linkSent = $requestLoginLinkAction->handle(
-            $email,
-            $remember,
-            $ipAddress,
-            $userAgent
-        );
+        // Check if user exists but doesn't have a password set
+        $user = User::where('email', $email)->first();
+        if ($user && is_null($user->password)) {
+            // Resend welcome email instead of allowing direct access
+            $user->notify(new WelcomeNewUserEmail);
 
-        if (! $linkSent) {
-            return back()->withInput(['email' => $email, 'remember' => $remember])->withErrors([
-                'email' => 'The provided email does not match our records.',
-            ]);
+            return back()->with('welcome_email_sent', 'Please check your inbox at '.$email.' and click the link to create your password.');
         }
 
-        return back()->with('status', 'Click on the login link we sent to your email.');
-    }
+        // Attempt to authenticate the user
+        if (AuthFacade::attempt(['email' => $email, 'password' => $password], $remember)) {
+            $user = AuthFacade::user();
 
-    /**
-     * Verify the magic link token and log the user in.
-     */
-    public function verify(VerifyLoginTokenRequest $loginRequest, VerifyLoginTokenAction $verifyLoginTokenAction): RedirectResponse
-    {
-        $validatedLoginData = $loginRequest->validated();
-        $token = $validatedLoginData['token'];
-        $remember = filter_var($validatedLoginData['remember'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            // Log the successful authentication event
+            Log::info('User authenticated successfully: '.$user->name, [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'name' => $user->name,
+                'ip_address' => $ipAddress,
+                'user_agent' => $userAgent,
+                'session_id' => request()->session()->getId(),
+                'remember_me' => $remember,
+            ]);
 
-        $verifyLoginTokenAction->handle(
-            $token,
-            $remember,
-            request()->ip(),
-            request()->header('User-Agent')
-        );
+            return redirect()->intended(route('dashboard'));
+        }
 
-        request()->session()->regenerate();
-
-        return redirect()->intended(route('dashboard'));
+        return back()->withInput(['email' => $email, 'remember' => $remember])->withErrors([
+            'credentials' => 'These credentials do not match our records.',
+        ]);
     }
 
     /**
@@ -79,9 +77,9 @@ class LoginController extends Controller
      */
     public function logout(Request $httpRequest): RedirectResponse
     {
+        $user = AuthFacade::user();
         $ipAddress = $httpRequest->ip();
         $userAgent = $httpRequest->header('User-Agent');
-        $user = AuthFacade::user();
         $sessionId = $httpRequest->session()->getId();
 
         AuthFacade::logout();
@@ -105,6 +103,6 @@ class LoginController extends Controller
             'timestamp' => $timestamp,
         ]);
 
-        return redirect('/');
+        return redirect()->route('login');
     }
 }

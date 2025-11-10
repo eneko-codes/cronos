@@ -5,11 +5,10 @@ declare(strict_types=1);
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class WelcomeEmail extends Notification implements ShouldQueue
+class WelcomeNewUserEmail extends Notification
 {
     use Queueable;
 
@@ -29,14 +28,21 @@ class WelcomeEmail extends Notification implements ShouldQueue
      */
     public function toMail(object $notifiable): MailMessage
     {
+        // Generate secure token for password setup
+        $token = hash('sha256', $notifiable->id.$notifiable->email.$notifiable->created_at->toDateTimeString());
+        $setupUrl = route('password.setup', [
+            'email' => $notifiable->email,
+            'token' => $token,
+        ]);
+
         return (new MailMessage)
             ->subject('Welcome to '.config('app.name')." {$notifiable->name}!")
             ->greeting("Hello {$notifiable->name},")
             ->line('You have been added to '.config('app.name').'!')
-            ->line(
-                "You can log in using your work email: {$notifiable->email} and your password."
-            )
-            ->action('Open '.config('app.name'), route('login'));
+            ->line('To get started, you need to set up your account password.')
+            ->line('This will allow you to access your dashboard and view your synchronized data.')
+            ->action('Set Up Your Password', $setupUrl)
+            ->line('This password setup link is secure and personalized to your account.');
     }
 
     /**
@@ -49,7 +55,8 @@ class WelcomeEmail extends Notification implements ShouldQueue
 
         $messageLines = [
             "You have been added to {$appName}!",
-            "You can log in using your work email: {$notifiable->email} and your password.",
+            'To get started, you need to set up your account password.',
+            'This will allow you to access your dashboard and view your synchronized data.',
         ];
         $message = implode("\n", $messageLines);
 

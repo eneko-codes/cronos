@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Notifications\AdminPromotionEmail;
 use App\Notifications\UserPromotedToAdminNotification;
 use App\Notifications\WelcomeEmail;
+use App\Notifications\WelcomeNewUserEmail;
 use Illuminate\Support\Facades\Log;
 
 class UserObserver
@@ -40,9 +41,29 @@ class UserObserver
         // Initialize default notification preferences for the new user
         $this->updatePreferences->initialize($user);
 
-        $welcomeNotification = new WelcomeEmail;
-        if ($user->email && ($this->getPreferences->execute($user)['eligibility'][$welcomeNotification->type()->value] ?? false)) {
-            $user->notify($welcomeNotification);
+        // Send welcome email with password setup link for new users without passwords
+        if ($user->email && is_null($user->password)) {
+            try {
+                $user->notify(new WelcomeNewUserEmail);
+
+                Log::info('Welcome email sent to new user', [
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'name' => $user->name,
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Failed to send welcome email to new user', [
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        } else {
+            // For users with passwords, use the existing welcome notification
+            $welcomeNotification = new WelcomeEmail;
+            if ($user->email && ($this->getPreferences->execute($user)['eligibility'][$welcomeNotification->type()->value] ?? false)) {
+                $user->notify($welcomeNotification);
+            }
         }
     }
 
@@ -143,9 +164,6 @@ class UserObserver
     public function deleting(User $user): void
     {
         // Delete hasMany relations individually to emit model events
-        foreach ($user->loginTokens as $loginToken) {
-            $loginToken->delete();
-        }
 
         foreach ($user->userSchedules as $schedule) {
             $schedule->delete();

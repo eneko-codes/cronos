@@ -30,9 +30,7 @@
             <x-badge :variant="$badgeVariant" size="md">
               {{ Str::ucfirst($level) }}
             </x-badge>
-            <h2
-              class="m-0 self-center text-xl font-bold text-gray-900 dark:text-white"
-            >
+            <h2 class="m-0 text-xl font-bold text-gray-900 dark:text-white">
               {{ $notificationSubject }}
             </h2>
             <div

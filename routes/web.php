@@ -2,7 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\FirstTimePasswordSetupController;
+use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\LoginController;
+use App\Http\Controllers\ResetPasswordController;
 use App\Http\Controllers\UserDashboardController;
 use App\Livewire\Leave\LeaveTypesListView;
 use App\Livewire\Projects\ProjectDetailView;
@@ -15,23 +18,38 @@ use Illuminate\Support\Facades\Route;
 
 // Public routes
 // Middleware: 'guest' ensures only unauthenticated users can access these.
-// Middleware: 'throttle:login' applies rate limiting to prevent brute-force attempts.
-Route::middleware(['guest', 'throttle:login'])->group(function (): void {
+Route::middleware(['guest'])->group(function (): void {
     // Display login form
     Route::get('/login', [LoginController::class, 'create'])
         ->name('login');
-    // Handle login link request
+
+    // Handle login request - rate limited to prevent brute-force attempts
     Route::post('/login', [LoginController::class, 'store'])
-        ->name('login.request');
-    // Handle login link verification from email
-    Route::get('/login/verify', [LoginController::class, 'verify'])
-        ->middleware('signed') // Signed middleware to prevent URL tampering
-        ->name('login.verify');
+        ->middleware('throttle:login')
+        ->name('login');
+
+    // Forgot password routes
+    Route::get('/forgot-password', [ForgotPasswordController::class, 'create'])
+        ->name('password.request');
+    Route::post('/forgot-password', [ForgotPasswordController::class, 'store'])
+        ->name('password.email');
+
+    // Reset password routes
+    Route::get('/reset-password/{token}', [ResetPasswordController::class, 'create'])
+        ->name('password.reset');
+    Route::post('/reset-password', [ResetPasswordController::class, 'store'])
+        ->name('password.update');
+
+    // First-time password setup routes
+    Route::get('/setup-password', [FirstTimePasswordSetupController::class, 'create'])
+        ->name('password.setup');
+    Route::post('/setup-password', [FirstTimePasswordSetupController::class, 'store'])
+        ->name('password.setup');
 });
 
 // Protected routes for authenticated users
 // Middleware: 'auth' ensures only logged-in users can access these.
-// Middleware: 'throttle:api' applies general API rate limiting.
+// Middleware: 'throttle:web' applies general web rate limiting.
 Route::middleware(['auth', 'throttle:web'])->group(function (): void {
     // Route to handle user logout.
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');

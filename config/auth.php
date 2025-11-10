@@ -39,6 +39,7 @@ return [
         'web' => [
             'driver' => 'session',
             'provider' => 'users',
+            'remember' => env('AUTH_REMEMBER_LIFETIME', 43200), // 30 days in minutes (30 * 24 * 60)
         ],
     ],
 
@@ -73,17 +74,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Login Token Lifetime
+    | Resetting Passwords
     |--------------------------------------------------------------------------
     |
-    | Here you may specify the number of minutes that a login token will be
+    | You may specify multiple password reset configurations if you have more
+    | than one user table or model in the application and you want to have
+    | separate password reset settings based on the specific user types.
+    |
+    | The expire time is the number of minutes that each reset token will be
     | considered valid. This security feature keeps tokens short-lived so
     | they have less time to be guessed. You may change this as needed.
     |
     */
 
-    'login_token' => [
-        'expire_minutes' => env('LOGIN_TOKEN_EXPIRE_MINUTES', 15),
+    'passwords' => [
+        'users' => [
+            'provider' => 'users',
+            'table' => 'password_reset_tokens',
+            'expire' => 60,
+            'throttle' => 60,
+        ],
     ],
 
 ];

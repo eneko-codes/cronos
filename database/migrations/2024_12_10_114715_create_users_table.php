@@ -14,6 +14,7 @@ class CreateUsersTable extends Migration
             $table->id();
             $table->string('name')->index();
             $table->string('email')->unique()->index();
+            $table->string('password')->nullable();
             $table->unsignedBigInteger('odoo_id')->nullable()->unique();
             $table->unsignedBigInteger('proofhub_id')->nullable()->unique();
             $table->unsignedBigInteger('desktime_id')->nullable()->unique();

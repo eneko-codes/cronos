@@ -17,6 +17,7 @@ Central table linking all external platform IDs and user information.
 - `id` - Primary key (auto-increment)
 - `name` - User's full name (VARCHAR(255), indexed)
 - `email` - Email address (VARCHAR(255), unique, indexed)
+- `password` - Hashed password (VARCHAR(255), nullable)
 - `odoo_id` - Odoo employee ID (BIGINT, unique)
 - `proofhub_id` - ProofHub user ID (BIGINT, unique)
 - `desktime_id` - DeskTime user ID (BIGINT, unique)
@@ -39,7 +40,7 @@ Central table linking all external platform IDs and user information.
 
 **Relationships:**
 
-- **One-to-Many:** TimeEntries, UserAttendances, UserLeaves, UserSchedules, Sessions, LoginTokens, UserNotificationPreferences
+- **One-to-Many:** TimeEntries, UserAttendances, UserLeaves, UserSchedules, Sessions, UserNotificationPreferences
 - **Many-to-One:** Department
 - **Many-to-Many:** Projects (via project_user), Tasks (via task_user), Categories (via category_user)
 
@@ -372,29 +373,21 @@ Laravel session management for user authentication.
 
 - **Many-to-One:** User
 
-### Login Tokens Table (`login_tokens`)
+### Password Reset Tokens Table (`password_reset_tokens`)
 
-Passwordless authentication tokens for magic link login.
+Laravel's password reset token management for forgot password functionality.
 
-**Primary Key:** `id` (BIGSERIAL)
+**Primary Key:** `email` (VARCHAR(255))
 
 **Columns:**
 
-- `id` - Primary key (auto-increment)
-- `user_id` - Foreign key to users (BIGINT)
-- `token` - Authentication token (VARCHAR(255), unique)
-- `expires_at` - Token expiration (TIMESTAMP)
-- `remember` - Remember me flag (BOOLEAN, default: false)
-- `created_at` - Creation timestamp
-- `updated_at` - Last update timestamp
-
-**Foreign Keys:**
-
-- `user_id` → `users.id`
+- `email` - User email address (VARCHAR(255), primary)
+- `token` - Password reset token (VARCHAR(255))
+- `created_at` - Token creation timestamp (TIMESTAMP, nullable)
 
 **Relationships:**
 
-- **Many-to-One:** User
+- **One-to-One:** User (via email)
 
 ## 🔔 Notification Tables
 
@@ -563,7 +556,6 @@ Users (1) ←→ (N) User Attendances
 Users (1) ←→ (N) User Leaves
 Users (1) ←→ (N) User Schedules
 Users (1) ←→ (N) Sessions
-Users (1) ←→ (N) Login Tokens
 Users (1) ←→ (N) User Notification Preferences
 Users (N) ←→ (1) Departments
 Users (N) ←→ (N) Projects (via project_user)

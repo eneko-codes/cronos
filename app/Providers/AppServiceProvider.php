@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
+use Laravel\Telescope\TelescopeServiceProvider as TelescopeServiceProviderBase;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -94,8 +95,8 @@ class AppServiceProvider extends ServiceProvider
         });
 
         // Register TelescopeServiceProvider if the environment is local
-        if ($this->app->environment('local') && class_exists(\Laravel\Telescope\TelescopeServiceProvider::class)) {
-            $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);
+        if ($this->app->environment('local') && class_exists(TelescopeServiceProviderBase::class)) {
+            $this->app->register(TelescopeServiceProviderBase::class);
             $this->app->register(TelescopeServiceProvider::class);
         }
     }
@@ -122,18 +123,37 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('viewPulse', function (User $user) {
             return $user->isAdmin();
         });
+
         // Login attempts limiter
         RateLimiter::for('login', function (Request $request) {
-            return Limit::perMinute(5)->by($request->ip());
+            $maxAttempts = config('rate-limiting.login.max_attempts');
+            $decayMinutes = config('rate-limiting.login.decay_minutes');
+
+            return Limit::perMinutes($decayMinutes, $maxAttempts)
+                ->by($request->ip())
+                ->response(function (Request $request) use ($decayMinutes): \Illuminate\Http\RedirectResponse {
+                    return redirect()->back()
+                        ->withInput($request->except(['password']))
+                        ->withErrors(['rate_limit' => $decayMinutes]);
+                });
         });
 
         // Admin routes limiter
         RateLimiter::for('admin', function (Request $request) {
-            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+            $maxAttempts = config('rate-limiting.admin.max_attempts');
+            $decayMinutes = config('rate-limiting.admin.decay_minutes');
+
+            return Limit::perMinutes($decayMinutes, $maxAttempts)
+                ->by($request->user()?->id ?: $request->ip());
         });
 
+        // Web routes limiter
         RateLimiter::for('web', function (Request $request) {
-            return Limit::perMinute(30)->by($request->user()?->id ?: $request->ip());
+            $maxAttempts = config('rate-limiting.web.max_attempts');
+            $decayMinutes = config('rate-limiting.web.decay_minutes');
+
+            return Limit::perMinutes($decayMinutes, $maxAttempts)
+                ->by($request->user()?->id ?: $request->ip());
         });
     }
 }

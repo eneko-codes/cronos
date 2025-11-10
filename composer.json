@@ -20,6 +20,7 @@
     "calebdw/larastan-livewire": "^2.2",
     "fakerphp/faker": "^1.23",
     "larastan/larastan": "^3.4",
+    "laravel/boost": "^1.7",
     "laravel/pail": "^1.1",
     "laravel/pint": "*",
     "laravel/telescope": "^5.7",

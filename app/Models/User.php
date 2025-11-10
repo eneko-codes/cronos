@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\RoleType;
+use App\Notifications\ResetPasswordNotification;
+use Illuminate\Contracts\Auth\CanResetPassword;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -37,7 +39,6 @@ use Illuminate\Notifications\Notification;
  * @property int|null $department_id Foreign key to departments table
  * @property RoleType $user_type Type of the user (e.g., Admin, User)
  * @property bool $do_not_track Whether the user's data should be excluded from tracking operations
- * @property \Carbon\Carbon|null $email_verified_at When email was verified
  * @property \Carbon\Carbon|null $created_at When record was created
  * @property \Carbon\Carbon|null $updated_at When record was last updated
  * @property bool|null $is_online Virtual attribute that determines if the user is currently online (only works with database session driver)
@@ -50,8 +51,6 @@ use Illuminate\Notifications\Notification;
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Category> $categories
  * @property-read int|null $categories_count
  * @property-read \App\Models\Department|null $department
- * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\LoginToken> $loginTokens
- * @property-read int|null $login_tokens_count
  * @property-read User|null $manager
  * @property-read \App\Models\UserNotificationPreference $notificationPreferences
  * @property-read \Illuminate\Notifications\DatabaseNotificationCollection<int, \Illuminate\Notifications\DatabaseNotification> $notifications
@@ -99,7 +98,7 @@ use Illuminate\Notifications\Notification;
  *
  * @mixin \Eloquent
  */
-class User extends Authenticatable
+class User extends Authenticatable implements CanResetPassword
 {
     use Notifiable;
 
@@ -139,6 +138,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'password',
         'timezone',
         'odoo_id',
         'desktime_id',
@@ -167,6 +167,7 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $hidden = [
+        'password',
         'remember_token',
         'odoo_id',
         'desktime_id',
@@ -184,7 +185,6 @@ class User extends Authenticatable
         'do_not_track' => 'boolean',
         'muted_notifications' => 'boolean',
         'is_active' => 'boolean',
-        'email_verified_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'desktime_id' => 'integer',
@@ -235,18 +235,6 @@ class User extends Authenticatable
     public function sessions()
     {
         return $this->hasMany(Session::class, 'user_id', 'id');
-    }
-
-    /**
-     * Get the login tokens associated with the user.
-     *
-     * These are used for authentication purposes.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function loginTokens()
-    {
-        return $this->hasMany(LoginToken::class);
     }
 
     /**
@@ -600,14 +588,6 @@ class User extends Authenticatable
     }
 
     /**
-     * Override to disable password requirement for passwordless authentication.
-     */
-    public function getAuthPassword()
-    {
-        return '';
-    }
-
-    /**
      * Find a local user by Odoo employee ID.
      */
     public static function findByOdooId(?int $odooId): ?self
@@ -617,5 +597,16 @@ class User extends Authenticatable
         }
 
         return self::where('odoo_id', $odooId)->first();
+    }
+
+    /**
+     * Send the password reset notification.
+     *
+     * This method overrides Laravel's default password reset notification
+     * to use our custom queued notification for asynchronous processing.
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new ResetPasswordNotification($token));
     }
 }

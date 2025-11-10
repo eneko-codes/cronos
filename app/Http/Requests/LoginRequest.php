@@ -6,14 +6,14 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class LoginLinkRequest extends FormRequest
+class LoginRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        return true; // Anyone can request a magic link
+        return true; // Anyone can attempt to login
     }
 
     /**
@@ -25,6 +25,7 @@ class LoginLinkRequest extends FormRequest
     {
         return [
             'email' => 'required|email',
+            'password' => 'required|string',
             'remember' => 'nullable|boolean',
         ];
     }
@@ -39,6 +40,8 @@ class LoginLinkRequest extends FormRequest
         return [
             'email.required' => 'The email address is required.',
             'email.email' => 'Please provide a valid email address.',
+            'password.required' => 'The password is required.',
+            'password.string' => 'The password must be a valid string.',
         ];
     }
 }

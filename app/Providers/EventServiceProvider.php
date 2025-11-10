@@ -24,8 +24,8 @@ use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvi
  * Event Service Provider
  *
  * Handles all event-listener mappings for the application.
- * For authentication, we use custom magic link login with manual logging
- * in LoginController and Livewire components.
+ * For authentication, we use Laravel's native password-based authentication
+ * with manual logging in LoginController and Livewire components.
  */
 class EventServiceProvider extends ServiceProvider
 {

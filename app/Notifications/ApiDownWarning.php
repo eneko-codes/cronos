@@ -4,22 +4,21 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
-use App\Models\Setting;
+use App\Services\NotificationThrottleService;
+use App\Traits\HasConfigurableChannels;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Slack\SlackMessage;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
 
 /**
  * Notification sent to administrators when an external API service is down.
  *
- * This notification implements deduplication logic to prevent email spam when multiple
- * sync jobs fail simultaneously for the same platform. The notification uses cache-based
- * throttling with atomic locks to ensure only one notification per service per admin is
- * sent within a 60-minute window.
+ * This notification uses deduplication logic to prevent email spam when multiple
+ * sync jobs fail simultaneously for the same platform. Deduplication is handled
+ * before notification dispatch using the shouldSend() static method, following
+ * Laravel's standard notification pattern.
  *
  * Example scenario:
  * - Multiple SystemPin sync jobs fail (SyncSystempinUsersJob, SyncSystempinAttendancesJob)
@@ -34,7 +33,7 @@ use Illuminate\Support\Facades\Log;
  */
 class ApiDownWarning extends Notification implements ShouldQueue
 {
-    use Queueable;
+    use HasConfigurableChannels, Queueable;
 
     /**
      * The name of the API service that is down (e.g., "SystemPin", "Odoo", "ProofHub").
@@ -52,7 +51,7 @@ class ApiDownWarning extends Notification implements ShouldQueue
      * After a notification is sent, subsequent notifications for the same service
      * to the same admin will be suppressed for this duration.
      */
-    private const THROTTLE_MINUTES = 60;
+    public const THROTTLE_MINUTES = 60;
 
     /**
      * Create a new API down warning notification instance.
@@ -69,88 +68,36 @@ class ApiDownWarning extends Notification implements ShouldQueue
     /**
      * Get the notification's delivery channels.
      *
-     * This method implements deduplication logic using cache-based throttling:
-     * 1. Creates a unique cache key per service and user
-     * 2. Uses atomic cache locks to prevent race conditions
-     * 3. Checks if a notification was already sent within the throttle window
-     * 4. If yes: returns empty array (notification skipped)
-     * 5. If no: sets cache and returns channels (notification sent)
-     *
-     * The method uses a "fail open" strategy: if cache/lock operations fail,
-     * the notification is still sent to ensure critical alerts are not blocked.
-     *
      * @param  object  $notifiable  The user receiving the notification
-     * @return array<int, string> Array of channel names, or empty array if notification should be skipped
+     * @return array<int, string> Array of channel names
      */
     public function via(object $notifiable): array
     {
-        $cacheKey = $this->getThrottleCacheKey($notifiable);
-        $lockKey = "{$cacheKey}:lock";
-
-        // Use cache lock for atomic operation to prevent race conditions
-        $lock = Cache::lock($lockKey, 10);
-        $lockAcquired = false;
-
-        try {
-            // Attempt to acquire lock with 5 second timeout
-            // If lock cannot be acquired, allow notification to proceed (fail open)
-            $lockAcquired = $lock->block(5);
-
-            if ($lockAcquired) {
-                // Check if we've already sent a notification for this service within the throttle window
-                if (Cache::has($cacheKey)) {
-                    // Notification already sent recently, skip it
-                    return [];
-                }
-
-                // Mark that we're sending this notification
-                Cache::put($cacheKey, true, now()->addMinutes(self::THROTTLE_MINUTES));
-
-                return $this->getChannels();
-            }
-
-            // If lock acquisition failed, allow notification to proceed (fail open)
-            // This prevents lock failures from blocking critical notifications
-            return $this->getChannels();
-        } catch (\Throwable $e) {
-            // If any exception occurs, allow notification to proceed (fail open)
-            // Log the error but don't block the notification
-            Log::warning('ApiDownWarning: Cache lock error', [
-                'error' => $e->getMessage(),
-                'service' => $this->serviceName,
-                'user_id' => $notifiable->getKey(),
-            ]);
-
-            return $this->getChannels();
-        } finally {
-            // Only release if lock was successfully acquired
-            if ($lockAcquired) {
-                $lock->release();
-            }
-        }
+        return $this->getChannels();
     }
 
     /**
-     * Get the cache key for throttling this notification.
+     * Check if this notification should be sent to the given user.
      *
-     * The cache key is unique per service name and user, ensuring that:
-     * - Each admin has their own throttle window
-     * - Different services (SystemPin, Odoo, etc.) have separate throttles
-     * - The same service can send notifications to different admins independently
-     *
-     * Example cache keys:
-     * - "api_down_warning:systempin:user_1" (SystemPin API down for admin user ID 1)
-     * - "api_down_warning:odoo:user_1" (Odoo API down for admin user ID 1)
-     * - "api_down_warning:systempin:user_2" (SystemPin API down for admin user ID 2)
+     * This method uses NotificationThrottleService to check if a notification
+     * should be sent based on throttling rules. This should be called before
+     * notify() to follow Laravel's standard pattern of checking eligibility
+     * before dispatching notifications.
      *
      * @param  object  $notifiable  The user receiving the notification
-     * @return string The cache key in format: "api_down_warning:{service_slug}:user_{user_id}"
+     * @param  string  $serviceName  The name of the API service that is down
+     * @return bool True if notification should be sent, false if it should be skipped
      */
-    private function getThrottleCacheKey(object $notifiable): string
+    public static function shouldSend(object $notifiable, string $serviceName): bool
     {
-        $serviceSlug = strtolower(str_replace(' ', '_', $this->serviceName));
+        $throttleService = app(NotificationThrottleService::class);
 
-        return "api_down_warning:{$serviceSlug}:user_{$notifiable->getKey()}";
+        return $throttleService->shouldSend(
+            $notifiable,
+            'api_down_warning',
+            $serviceName,
+            self::THROTTLE_MINUTES
+        );
     }
 
     /**
@@ -203,28 +150,6 @@ class ApiDownWarning extends Notification implements ShouldQueue
             'message' => $message,
             'level' => 'error',
         ];
-    }
-
-    /**
-     * Get the notification channels based on global setting.
-     *
-     * Reads the global notification channel setting from Settings table.
-     * Always includes 'database' channel for in-app notifications.
-     *
-     * @return array<int, string> Array of channel names
-     */
-    private function getChannels(): array
-    {
-        $channel = Setting::getValue('notification_channel', 'mail');
-        $channels = ['database']; // Always include database for in-app notifications
-
-        if ($channel === 'slack') {
-            $channels[] = 'slack';
-        } else {
-            $channels[] = 'mail';
-        }
-
-        return $channels;
     }
 
     /**

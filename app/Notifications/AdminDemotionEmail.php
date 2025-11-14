@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
-use App\Models\Setting;
 use App\Models\User;
+use App\Traits\HasConfigurableChannels;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -14,7 +14,7 @@ use Illuminate\Notifications\Slack\SlackMessage;
 
 class AdminDemotionEmail extends Notification implements ShouldQueue
 {
-    use Queueable;
+    use HasConfigurableChannels, Queueable;
 
     public User $demotedUser;
 
@@ -42,28 +42,6 @@ class AdminDemotionEmail extends Notification implements ShouldQueue
     public function via(object $notifiable): array
     {
         return $this->getChannels();
-    }
-
-    /**
-     * Get the notification channels based on global setting.
-     *
-     * Reads the global notification channel setting from Settings table.
-     * Always includes 'database' channel for in-app notifications.
-     *
-     * @return array<int, string> Array of channel names
-     */
-    private function getChannels(): array
-    {
-        $channel = Setting::getValue('notification_channel', 'mail');
-        $channels = ['database']; // Always include database for in-app notifications
-
-        if ($channel === 'slack') {
-            $channels[] = 'slack';
-        } else {
-            $channels[] = 'mail';
-        }
-
-        return $channels;
     }
 
     /**

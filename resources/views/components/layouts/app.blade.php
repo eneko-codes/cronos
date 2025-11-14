@@ -35,7 +35,7 @@
           </div>
 
           @auth
-            <div class="flex flex-shrink-0 items-center gap-3">
+            <div class="flex shrink-0 items-center gap-3">
               <!-- Settings button (visible to all logged in users) -->
               <livewire:ui.sidebar-toggle />
 

@@ -66,9 +66,9 @@ class CheckSystemPinHealthAction
                 $preferences = $getPreferences->execute($maintenanceUser);
                 $isEligible = $preferences['eligibility'][$apiDownNotification->type()->value] ?? false;
 
-                if ($isEligible) {
+                // Check deduplication before sending (Laravel-native pattern)
+                if ($isEligible && ApiDownWarning::shouldSend($maintenanceUser, 'SystemPin')) {
                     // Queue the notification (will be processed asynchronously)
-                    // The ApiDownWarning::via() method will check for duplicates
                     $maintenanceUser->notify($apiDownNotification);
                 }
             }

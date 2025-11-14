@@ -6,12 +6,27 @@ use App\Models\User;
 
 enum NotificationType: string
 {
+    // Regular user notifications (most common/frequent)
     case ScheduleChange = 'schedule_change';
     case LeaveReminder = 'leave_reminder';
+
+    // System/technical notifications
     case ApiDownWarning = 'api_down_warning';
-    case AdminPromotionEmail = 'admin_promotion_email';
-    case WelcomeEmail = 'welcome_email';
+
+    // Admin notifications - personal notification first
     case UserPromotedToAdmin = 'user_promoted_to_admin';
+
+    // Maintenance notifications - personal notification
+    case UserPromotedToMaintenance = 'user_promoted_to_maintenance';
+
+    // Admin notifications - about others (grouped by action type)
+    case AdminPromotionEmail = 'admin_promotion_email';
+    case AdminDemotionEmail = 'admin_demotion_email';
+    case MaintenancePromotionEmail = 'maintenance_promotion_email';
+    case MaintenanceDemotionEmail = 'maintenance_demotion_email';
+
+    // Always sent (cannot be disabled)
+    case WelcomeEmail = 'welcome_email';
 
     /**
      * Get the human-readable label for this notification type
@@ -22,10 +37,13 @@ enum NotificationType: string
             self::ScheduleChange => 'Schedule Change',
             self::LeaveReminder => 'Leave Reminder',
             self::ApiDownWarning => 'API Down Warning',
-            self::AdminPromotionEmail => 'Admin Promotion Email',
+            self::AdminPromotionEmail => 'Admin Promotion (to Admins)',
+            self::AdminDemotionEmail => 'Admin Demotion (to Admins)',
+            self::MaintenancePromotionEmail => 'Maintenance Promotion (to Admins)',
+            self::MaintenanceDemotionEmail => 'Maintenance Demotion (to Admins)',
             self::WelcomeEmail => 'Welcome Email',
-            self::UserPromotedToAdmin => 'User Promoted To Admin',
-
+            self::UserPromotedToAdmin => 'You Promoted To Admin',
+            self::UserPromotedToMaintenance => 'You Promoted To Maintenance',
         };
     }
 
@@ -35,9 +53,23 @@ enum NotificationType: string
     public function isAdminOnly(): bool
     {
         return match ($this) {
-            self::ApiDownWarning,
             self::AdminPromotionEmail,
+            self::AdminDemotionEmail,
+            self::MaintenancePromotionEmail,
+            self::MaintenanceDemotionEmail,
             self::UserPromotedToAdmin => true,
+            default => false,
+        };
+    }
+
+    /**
+     * Check if this notification type is maintenance-only
+     */
+    public function isMaintenanceOnly(): bool
+    {
+        return match ($this) {
+            self::ApiDownWarning,
+            self::UserPromotedToMaintenance => true,
             default => false,
         };
     }
@@ -52,8 +84,12 @@ enum NotificationType: string
             self::LeaveReminder => true,
             self::ApiDownWarning => true,
             self::AdminPromotionEmail => true,
+            self::AdminDemotionEmail => true,
+            self::MaintenancePromotionEmail => true,
+            self::MaintenanceDemotionEmail => true,
             self::WelcomeEmail => true,
-            self::UserPromotedToAdmin => true
+            self::UserPromotedToAdmin => true,
+            self::UserPromotedToMaintenance => true,
         };
     }
 
@@ -66,9 +102,27 @@ enum NotificationType: string
             self::ScheduleChange => 'Notifications when your work schedule is updated',
             self::LeaveReminder => 'Reminders about upcoming time off',
             self::ApiDownWarning => 'Alerts when external services are experiencing issues',
-            self::AdminPromotionEmail => 'Notifications when users are promoted to admin',
+            self::AdminPromotionEmail => 'Notifications sent to admins when other users are promoted to admin',
+            self::AdminDemotionEmail => 'Notifications sent to admins when other users are demoted from admin',
+            self::MaintenancePromotionEmail => 'Notifications sent to admins when other users are promoted to maintenance',
+            self::MaintenanceDemotionEmail => 'Notifications sent to admins when other users are removed from maintenance',
             self::WelcomeEmail => 'Welcome messages for new users',
-            self::UserPromotedToAdmin => 'Notifications when you are promoted to admin',
+            self::UserPromotedToAdmin => 'Personal notification sent to you when you are promoted to admin',
+            self::UserPromotedToMaintenance => 'Personal notification sent to you when you are promoted to maintenance',
+        };
+    }
+
+    /**
+     * Check if this notification type can be disabled globally.
+     *
+     * Some notifications (like WelcomeEmail for new users) must always be sent
+     * and cannot be disabled via global preferences.
+     */
+    public function canBeDisabledGlobally(): bool
+    {
+        return match ($this) {
+            self::WelcomeEmail => false, // WelcomeNewUserEmail must always send for password setup
+            default => true,
         };
     }
 
@@ -79,9 +133,15 @@ enum NotificationType: string
     {
         $types = [];
         foreach (self::cases() as $type) {
-            if (! $type->isAdminOnly() || ($user && $user->isAdmin())) {
-                $types[] = $type;
+            // Admin-only notifications: only show to admins
+            if ($type->isAdminOnly() && (! $user || ! $user->isAdmin())) {
+                continue;
             }
+            // Maintenance-only notifications: only show to maintenance users
+            if ($type->isMaintenanceOnly() && (! $user || ! $user->isMaintenance())) {
+                continue;
+            }
+            $types[] = $type;
         }
 
         return $types;
@@ -98,6 +158,7 @@ enum NotificationType: string
                 'label' => $type->label(),
                 'description' => $type->description(),
                 'admin_only' => $type->isAdminOnly(),
+                'maintenance_only' => $type->isMaintenanceOnly(),
                 'default_enabled' => $type->defaultEnabled(),
             ];
         }

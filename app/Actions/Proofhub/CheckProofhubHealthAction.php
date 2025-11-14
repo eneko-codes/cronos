@@ -11,14 +11,14 @@ use App\Models\User;
 use App\Notifications\ApiDownWarning;
 
 /**
- * Action to check the health of the ProofHub API and notify administrators on failure.
+ * Action to check the health of the ProofHub API and notify maintenance users on failure.
  *
  * This action is typically called from sync job failure handlers when ProofHub
  * sync jobs fail. It performs a health check ping to the ProofHub API and,
- * if the check fails, sends ApiDownWarning notifications to all eligible admin users.
+ * if the check fails, sends ApiDownWarning notifications to all eligible maintenance users.
  *
  * The ApiDownWarning notification includes built-in deduplication logic to prevent
- * email spam when multiple sync jobs fail simultaneously. Each admin will receive
+ * email spam when multiple sync jobs fail simultaneously. Each maintenance user will receive
  * at most one notification per 60-minute window per service.
  *
  * @see \App\Notifications\ApiDownWarning For notification deduplication details
@@ -34,8 +34,8 @@ class CheckProofhubHealthAction
      *
      * This method:
      * 1. Performs a ping health check to the ProofHub API
-     * 2. If the health check fails, retrieves all admin users
-     * 3. Creates an ApiDownWarning notification for each eligible admin
+     * 2. If the health check fails, retrieves all maintenance users
+     * 3. Creates an ApiDownWarning notification for each eligible maintenance user
      * 4. Respects user notification preferences before sending
      *
      * The notification is queued (implements ShouldQueue), so it will be processed
@@ -50,11 +50,11 @@ class CheckProofhubHealthAction
 
         // Only send notifications if the health check failed
         if (! $health['success']) {
-            // Get all admin users who should receive API down warnings
-            $admins = User::where('user_type', RoleType::Admin)->get();
+            // Get all maintenance users who should receive API down warnings
+            $maintenanceUsers = User::where('user_type', RoleType::Maintenance)->get();
 
-            // Create a single notification instance (will be reused for all admins)
-            // The ApiDownWarning class handles deduplication per admin automatically
+            // Create a single notification instance (will be reused for all maintenance users)
+            // The ApiDownWarning class handles deduplication per user automatically
             $apiDownNotification = new ApiDownWarning(
                 'ProofHub',
                 $health['message'] ?? 'API health check failed'
@@ -62,16 +62,16 @@ class CheckProofhubHealthAction
 
             $getPreferences = resolve(GetNotificationPreferencesAction::class);
 
-            // Send notification to each eligible admin
-            foreach ($admins as $admin) {
-                // Check if this admin has enabled ApiDownWarning notifications
-                $preferences = $getPreferences->execute($admin);
+            // Send notification to each eligible maintenance user
+            foreach ($maintenanceUsers as $maintenanceUser) {
+                // Check if this maintenance user has enabled ApiDownWarning notifications
+                $preferences = $getPreferences->execute($maintenanceUser);
                 $isEligible = $preferences['eligibility'][$apiDownNotification->type()->value] ?? false;
 
                 if ($isEligible) {
                     // Queue the notification (will be processed asynchronously)
                     // The ApiDownWarning::via() method will check for duplicates
-                    $admin->notify($apiDownNotification);
+                    $maintenanceUser->notify($apiDownNotification);
                 }
             }
         }

@@ -216,6 +216,8 @@
       @livewire('ui.toast')
     @endpersist
 
+    @include('components.partials.toast-dispatch')
+
     @livewire('users.user-details-modal')
     @livewireScripts
 

@@ -60,4 +60,49 @@ return [
         'decay_minutes' => env('WEB_RATE_LIMIT_DECAY_MINUTES', 1),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Password Reset Rate Limiting
+    |--------------------------------------------------------------------------
+    |
+    | Controls the rate limiting for password reset attempts. This helps prevent
+    | brute-force attacks on password reset tokens.
+    |
+    */
+
+    'password-reset' => [
+        'max_attempts' => env('PASSWORD_RESET_RATE_LIMIT_MAX_ATTEMPTS', 5),
+        'decay_minutes' => env('PASSWORD_RESET_RATE_LIMIT_DECAY_MINUTES', 1),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Forgot Password Rate Limiting
+    |--------------------------------------------------------------------------
+    |
+    | Controls the rate limiting for forgot password requests. This helps prevent
+    | email spam and abuse.
+    |
+    */
+
+    'forgot-password' => [
+        'max_attempts' => env('FORGOT_PASSWORD_RATE_LIMIT_MAX_ATTEMPTS', 3),
+        'decay_minutes' => env('FORGOT_PASSWORD_RATE_LIMIT_DECAY_MINUTES', 1),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Password Setup Rate Limiting
+    |--------------------------------------------------------------------------
+    |
+    | Controls the rate limiting for first-time password setup attempts. This
+    | helps prevent brute-force attacks on setup tokens.
+    |
+    */
+
+    'password-setup' => [
+        'max_attempts' => env('PASSWORD_SETUP_RATE_LIMIT_MAX_ATTEMPTS', 5),
+        'decay_minutes' => env('PASSWORD_SETUP_RATE_LIMIT_DECAY_MINUTES', 1),
+    ],
+
 ];

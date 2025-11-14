@@ -46,6 +46,9 @@ class Settings extends Component
      */
     public array $notificationStates = [];
 
+    /** @var string The global notification channel ('mail' or 'slack') */
+    public string $notificationChannel = 'mail';
+
     /** @var array<string, string> Stores the status of recent connection tests ('success', 'failed', 'pending') */
     public array $connectionStatus = [];
 
@@ -57,6 +60,7 @@ class Settings extends Component
             $settings = app(\App\Actions\GetNotificationPreferencesAction::class)->execute($user);
             $this->globalNotificationsEnabled = $settings['global_enabled'];
             $this->notificationStates = $settings['global_types'];
+            $this->notificationChannel = Setting::getValue('notification_channel', 'mail');
         }
         $this->syncFrequency = Setting::getValue('sync_frequency', 'everyThirtyMinutes');
         $this->syncWindowDays = (int) Setting::getValue('sync_window_days', 1);
@@ -122,6 +126,30 @@ class Settings extends Component
                 $this->dispatch('global-notifications-updated', enabled: $boolValue);
             } catch (\Exception $e) {
                 $this->dispatch('add-toast', message: 'Failed to update setting: '.$e->getMessage(), variant: 'error');
+            }
+        }
+    }
+
+    /**
+     * Called when the global notification channel is changed.
+     */
+    public function updatedNotificationChannel($value, UpdateGlobalNotificationPreferencesAction $updateGlobal): void
+    {
+        $user = \Illuminate\Support\Facades\Auth::user();
+        if ($user) {
+            try {
+                if (! in_array($value, ['mail', 'slack'], true)) {
+                    $this->dispatch('add-toast', message: 'Invalid notification channel selected.', variant: 'error');
+                    $this->notificationChannel = Setting::getValue('notification_channel', 'mail'); // Reset to current value
+
+                    return;
+                }
+                $updateGlobal->updateChannel($user, $value);
+                $message = $value === 'slack' ? 'Notification channel set to Slack.' : 'Notification channel set to Email.';
+                $this->dispatch('add-toast', message: $message, variant: 'success');
+            } catch (\Exception $e) {
+                $this->dispatch('add-toast', message: 'Failed to update notification channel: '.$e->getMessage(), variant: 'error');
+                $this->notificationChannel = Setting::getValue('notification_channel', 'mail'); // Reset to current value
             }
         }
     }
@@ -307,7 +335,10 @@ class Settings extends Component
             'activeAdmins' => $activeAdmins,
             'telescopeEnabled' => $telescopeEnabled,
             'pulseEnabled' => $pulseEnabled,
-            'notificationTypes' => NotificationType::cases(),
+            'notificationTypes' => collect(NotificationType::cases())
+                ->filter(fn ($type) => $type->canBeDisabledGlobally())
+                ->values()
+                ->all(),
         ]);
     }
 }

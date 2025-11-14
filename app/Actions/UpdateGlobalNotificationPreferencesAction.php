@@ -6,6 +6,7 @@ namespace App\Actions;
 
 use App\Enums\NotificationType;
 use App\Models\GlobalNotificationPreference;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 
@@ -54,5 +55,20 @@ class UpdateGlobalNotificationPreferencesAction
             ['notification_type' => $type->value],
             ['enabled' => $enabled]
         );
+    }
+
+    /**
+     * Update the global notification channel (mail or slack).
+     *
+     * @param  User  $user  The admin performing the action (for authorization)
+     * @param  string  $channel  The channel to use ('mail' or 'slack')
+     */
+    public function updateChannel(User $user, string $channel): void
+    {
+        Gate::forUser($user)->authorize('manageGlobalSettings');
+        if (! in_array($channel, ['mail', 'slack'], true)) {
+            throw new \InvalidArgumentException("Invalid notification channel: {$channel}. Must be 'mail' or 'slack'.");
+        }
+        Setting::setValue('notification_channel', $channel);
     }
 }

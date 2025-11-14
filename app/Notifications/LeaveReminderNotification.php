@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Models\Setting;
 use App\Models\User;
 use App\Models\UserLeave;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Notifications\Slack\SlackMessage;
 
 class LeaveReminderNotification extends Notification implements ShouldQueue
 {
@@ -39,7 +41,29 @@ class LeaveReminderNotification extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        return ['mail', 'database'];
+        return $this->getChannels();
+    }
+
+    /**
+     * Get the notification channels based on global setting.
+     *
+     * Reads the global notification channel setting from Settings table.
+     * Always includes 'database' channel for in-app notifications.
+     *
+     * @return array<int, string> Array of channel names
+     */
+    private function getChannels(): array
+    {
+        $channel = Setting::getValue('notification_channel', 'mail');
+        $channels = ['database']; // Always include database for in-app notifications
+
+        if ($channel === 'slack') {
+            $channels[] = 'slack';
+        } else {
+            $channels[] = 'mail';
+        }
+
+        return $channels;
     }
 
     /**
@@ -88,5 +112,32 @@ class LeaveReminderNotification extends Notification implements ShouldQueue
     public function type(): \App\Enums\NotificationType
     {
         return \App\Enums\NotificationType::LeaveReminder;
+    }
+
+    /**
+     * Get the Slack representation of the notification.
+     *
+     * @param  object  $notifiable  The user receiving the notification
+     * @return \Illuminate\Notifications\Slack\SlackMessage The Slack message instance
+     */
+    public function toSlack(object $notifiable): SlackMessage
+    {
+        $leaveType = $this->leave->leaveType->name ?? 'Time Off';
+        $startDate = $this->leave->start_date->format('F j, Y');
+        $endDate = $this->leave->end_date->format('F j, Y');
+        $duration = $this->leave->duration_days;
+
+        return (new SlackMessage)
+            ->text("Upcoming Leave Reminder: {$leaveType}")
+            ->headerBlock("Upcoming Leave Reminder: {$leaveType}")
+            ->sectionBlock(function ($block) use ($notifiable): void {
+                $block->text("Hello {$notifiable->name},");
+            })
+            ->sectionBlock(function ($block) use ($leaveType, $startDate, $endDate, $duration): void {
+                $block->text("This is a reminder about your upcoming {$leaveType}.");
+                $block->field("*Start Date:*\n{$startDate}")->markdown();
+                $block->field("*End Date:*\n{$endDate}")->markdown();
+                $block->field("*Duration:*\n{$duration} day(s)")->markdown();
+            });
     }
 }

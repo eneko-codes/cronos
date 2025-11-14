@@ -155,5 +155,47 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinutes($decayMinutes, $maxAttempts)
                 ->by($request->user()?->id ?: $request->ip());
         });
+
+        // Password reset attempts limiter
+        RateLimiter::for('password-reset', function (Request $request) {
+            $maxAttempts = config('rate-limiting.password-reset.max_attempts');
+            $decayMinutes = config('rate-limiting.password-reset.decay_minutes');
+
+            return Limit::perMinutes($decayMinutes, $maxAttempts)
+                ->by($request->ip())
+                ->response(function (Request $request) use ($decayMinutes): \Illuminate\Http\RedirectResponse {
+                    return redirect()->back()
+                        ->withInput($request->except(['password', 'password_confirmation']))
+                        ->withErrors(['rate_limit' => "Too many password reset attempts. Please try again in {$decayMinutes} minute(s)."]);
+                });
+        });
+
+        // Forgot password requests limiter
+        RateLimiter::for('forgot-password', function (Request $request) {
+            $maxAttempts = config('rate-limiting.forgot-password.max_attempts');
+            $decayMinutes = config('rate-limiting.forgot-password.decay_minutes');
+
+            return Limit::perMinutes($decayMinutes, $maxAttempts)
+                ->by($request->ip())
+                ->response(function (Request $request) use ($decayMinutes): \Illuminate\Http\RedirectResponse {
+                    return redirect()->back()
+                        ->withInput($request->except(['password']))
+                        ->withErrors(['rate_limit' => "Too many password reset requests. Please try again in {$decayMinutes} minute(s)."]);
+                });
+        });
+
+        // Password setup attempts limiter
+        RateLimiter::for('password-setup', function (Request $request) {
+            $maxAttempts = config('rate-limiting.password-setup.max_attempts');
+            $decayMinutes = config('rate-limiting.password-setup.decay_minutes');
+
+            return Limit::perMinutes($decayMinutes, $maxAttempts)
+                ->by($request->ip())
+                ->response(function (Request $request) use ($decayMinutes): \Illuminate\Http\RedirectResponse {
+                    return redirect()->back()
+                        ->withInput($request->except(['password', 'password_confirmation']))
+                        ->withErrors(['rate_limit' => "Too many password setup attempts. Please try again in {$decayMinutes} minute(s)."]);
+                });
+        });
     }
 }

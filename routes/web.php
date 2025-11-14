@@ -32,19 +32,22 @@ Route::middleware(['guest'])->group(function (): void {
     Route::get('/forgot-password', [ForgotPasswordController::class, 'create'])
         ->name('password.request');
     Route::post('/forgot-password', [ForgotPasswordController::class, 'store'])
+        ->middleware('throttle:forgot-password')
         ->name('password.email');
 
     // Reset password routes
     Route::get('/reset-password/{token}', [ResetPasswordController::class, 'create'])
         ->name('password.reset');
     Route::post('/reset-password', [ResetPasswordController::class, 'store'])
+        ->middleware('throttle:password-reset')
         ->name('password.update');
 
     // First-time password setup routes
-    Route::get('/setup-password', [FirstTimePasswordSetupController::class, 'create'])
+    Route::get('/setup-password/{token}', [FirstTimePasswordSetupController::class, 'create'])
         ->name('password.setup');
     Route::post('/setup-password', [FirstTimePasswordSetupController::class, 'store'])
-        ->name('password.setup');
+        ->middleware('throttle:password-setup')
+        ->name('password.setup.store');
 });
 
 // Protected routes for authenticated users

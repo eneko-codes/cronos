@@ -15,6 +15,8 @@
       @livewire('ui.toast')
     @endpersist
 
+    @include('components.partials.toast-dispatch')
+
     @livewireScripts
   </body>
 </html>

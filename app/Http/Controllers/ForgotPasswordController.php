@@ -35,6 +35,11 @@ class ForgotPasswordController extends Controller
             return back()->with('password_reset_success', __($status));
         }
 
+        // Handle throttled requests specifically
+        if ($status === Password::RESET_THROTTLED) {
+            return back()->withErrors(['rate_limit' => __($status)]);
+        }
+
         // If there was an error, return back with error
         return back()->withErrors(['email' => __($status)]);
     }

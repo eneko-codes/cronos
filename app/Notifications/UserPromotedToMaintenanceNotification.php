@@ -11,7 +11,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Slack\SlackMessage;
 
-class UserPromotedToAdminNotification extends Notification implements ShouldQueue
+class UserPromotedToMaintenanceNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
@@ -61,10 +61,10 @@ class UserPromotedToAdminNotification extends Notification implements ShouldQueu
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('You have been promoted to administrator')
+            ->subject('You have been promoted to maintenance role')
             ->greeting("Hello {$notifiable->name},")
-            ->line('Congratulations! You have been promoted to an administrator role.')
-            ->line('You now have access to administrative features and can manage the application.')
+            ->line('Congratulations! You have been promoted to a maintenance role.')
+            ->line('You now have access to maintenance features and can monitor system health and API status.')
             ->action('Open '.config('app.name'), url('/'))
             ->line('Thank you for using our application!');
     }
@@ -77,15 +77,15 @@ class UserPromotedToAdminNotification extends Notification implements ShouldQueu
     public function toArray(object $notifiable): array
     {
         return [
-            'subject' => 'You have been promoted to administrator',
-            'message' => 'Congratulations! You have been promoted to an administrator role. You now have access to administrative features and can manage the application.',
+            'subject' => 'You have been promoted to maintenance role',
+            'message' => 'Congratulations! You have been promoted to a maintenance role. You now have access to maintenance features and can monitor system health and API status.',
             'level' => 'info',
         ];
     }
 
     public function type(): \App\Enums\NotificationType
     {
-        return \App\Enums\NotificationType::UserPromotedToAdmin;
+        return \App\Enums\NotificationType::UserPromotedToMaintenance;
     }
 
     /**
@@ -97,14 +97,14 @@ class UserPromotedToAdminNotification extends Notification implements ShouldQueu
     public function toSlack(object $notifiable): SlackMessage
     {
         return (new SlackMessage)
-            ->text('You have been promoted to administrator')
-            ->headerBlock('You have been promoted to administrator')
+            ->text('You have been promoted to maintenance role')
+            ->headerBlock('You have been promoted to maintenance role')
             ->sectionBlock(function ($block) use ($notifiable): void {
                 $block->text("Hello {$notifiable->name},");
             })
             ->sectionBlock(function ($block): void {
-                $block->text('Congratulations! You have been promoted to an administrator role.');
-                $block->text('You now have access to administrative features and can manage the application.');
+                $block->text('Congratulations! You have been promoted to a maintenance role.');
+                $block->text('You now have access to maintenance features and can monitor system health and API status.');
             });
     }
 }

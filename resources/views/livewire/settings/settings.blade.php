@@ -343,7 +343,9 @@
           <h2>Notification Settings</h2>
         </div>
         <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
-          Control system-wide email notifications.
+          Control system-wide notification settings. Admins can choose the
+          delivery channel (Email or Slack) for all notifications except login
+          flow notifications.
         </p>
       </div>
       <div class="space-y-4">
@@ -384,6 +386,56 @@
           />
         </div>
 
+        {{-- Notification Channel Selector (Admin Only) --}}
+        @if (auth()->user()?->isAdmin())
+          <div
+            class="flex items-center justify-between rounded-md bg-gray-50 p-3 dark:bg-gray-700"
+          >
+            <label
+              for="notificationChannelSelect"
+              class="inline-flex flex-row items-center gap-1 text-sm font-medium text-gray-600 dark:text-gray-300"
+            >
+              Notification Channel
+              <x-tooltip>
+                <x-slot name="text">
+                  Select the delivery channel for all notifications (except
+                  login flow notifications which always use email). This setting
+                  applies globally to all users.
+                </x-slot>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                  class="size-3"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+                  />
+                </svg>
+              </x-tooltip>
+            </label>
+            <select
+              id="notificationChannelSelect"
+              wire:model.change="notificationChannel"
+              class="focus:ring-opacity-50 block w-48 rounded-md border border-gray-300 bg-gray-200 px-2 text-sm shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-700 dark:text-gray-100"
+            >
+              <option value="mail" @selected($notificationChannel === 'mail')>
+                Email
+              </option>
+              <option
+                value="slack"
+                @selected($notificationChannel === 'slack')
+              >
+                Slack
+              </option>
+            </select>
+          </div>
+        @endif
+
         {{-- Individual Notification Type Toggles --}}
         <div class="space-y-2 rounded-md bg-gray-50 p-3 dark:bg-gray-700">
           @foreach ($notificationTypes as $type)
@@ -394,8 +446,7 @@
                 {{ $type->label() }}
                 <x-tooltip>
                   <x-slot name="text">
-                    Globally enable or disable
-                    {{ strtolower($type->label()) }}.
+                    {{ $type->description() }}
                   </x-slot>
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -415,6 +466,12 @@
                 @if ($type->isAdminOnly())
                   <x-badge variant="primary" size="sm" class="ml-2">
                     Admins
+                  </x-badge>
+                @endif
+
+                @if ($type->isMaintenanceOnly())
+                  <x-badge variant="primary" size="sm" class="ml-2">
+                    Maintenance
                   </x-badge>
                 @endif
               </label>

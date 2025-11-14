@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\Password;
 
-class WelcomeNewUserEmail extends Notification
+class WelcomeNewUserEmail extends Notification implements ShouldQueue
 {
     use Queueable;
 
@@ -16,11 +18,14 @@ class WelcomeNewUserEmail extends Notification
 
     /**
      * The channels this notification will be delivered on.
+     *
+     * This notification always sends via email only, regardless of global notification preferences.
+     * It is required for new users to set up their password.
      */
     public function via(object $notifiable): array
     {
-        // Use both mail and database channels.
-        return ['mail', 'database'];
+        // Only send via email channel - this notification must always be sent.
+        return ['mail'];
     }
 
     /**
@@ -28,11 +33,11 @@ class WelcomeNewUserEmail extends Notification
      */
     public function toMail(object $notifiable): MailMessage
     {
-        // Generate secure token for password setup
-        $token = hash('sha256', $notifiable->id.$notifiable->email.$notifiable->created_at->toDateTimeString());
+        // Use Laravel's password reset token system for secure, expiring tokens
+        $token = Password::createToken($notifiable);
         $setupUrl = route('password.setup', [
-            'email' => $notifiable->email,
             'token' => $token,
+            'email' => $notifiable->email,
         ]);
 
         return (new MailMessage)

@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Notifications;
 
 use App\Models\Schedule;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Notifications\Slack\SlackMessage;
 use Illuminate\Support\Str;
 
 class ScheduleChangeNotification extends Notification implements ShouldQueue
@@ -43,7 +45,29 @@ class ScheduleChangeNotification extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        return ['mail', 'database']; // Use both mail and database channels
+        return $this->getChannels();
+    }
+
+    /**
+     * Get the notification channels based on global setting.
+     *
+     * Reads the global notification channel setting from Settings table.
+     * Always includes 'database' channel for in-app notifications.
+     *
+     * @return array<int, string> Array of channel names
+     */
+    private function getChannels(): array
+    {
+        $channel = Setting::getValue('notification_channel', 'mail');
+        $channels = ['database']; // Always include database for in-app notifications
+
+        if ($channel === 'slack') {
+            $channels[] = 'slack';
+        } else {
+            $channels[] = 'mail';
+        }
+
+        return $channels;
     }
 
     /**
@@ -157,5 +181,44 @@ class ScheduleChangeNotification extends Notification implements ShouldQueue
     public function type(): \App\Enums\NotificationType
     {
         return \App\Enums\NotificationType::ScheduleChange;
+    }
+
+    /**
+     * Get the Slack representation of the notification.
+     *
+     * @param  object  $notifiable  The user receiving the notification
+     * @return \Illuminate\Notifications\Slack\SlackMessage The Slack message instance
+     */
+    public function toSlack(object $notifiable): SlackMessage
+    {
+        $message = (new SlackMessage)
+            ->text('Your Work Schedule Has Been Updated')
+            ->headerBlock('Your Work Schedule Has Been Updated')
+            ->sectionBlock(function ($block) use ($notifiable): void {
+                $block->text("Hello {$notifiable->name},");
+            })
+            ->sectionBlock(function ($block): void {
+                $block->text('Your assigned work schedule has been updated.');
+            });
+
+        if ($this->oldSchedule) {
+            $oldScheduleText = "**Previous Schedule:** {$this->oldSchedule->description}\n{$this->formatScheduleDetails($this->oldSchedule)}";
+            $message->sectionBlock(function ($block) use ($oldScheduleText): void {
+                $block->text($oldScheduleText)->markdown();
+            });
+        }
+
+        if ($this->newSchedule) {
+            $newScheduleText = "**New Schedule:** {$this->newSchedule->description}\n{$this->formatScheduleDetails($this->newSchedule)}";
+            $message->sectionBlock(function ($block) use ($newScheduleText): void {
+                $block->text($newScheduleText)->markdown();
+            });
+        } else {
+            $message->sectionBlock(function ($block): void {
+                $block->text('No schedule information available for this update.');
+            });
+        }
+
+        return $message;
     }
 }

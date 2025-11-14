@@ -370,6 +370,14 @@ class User extends Authenticatable implements CanResetPassword
     }
 
     /**
+     * Check if the user has the Maintenance role
+     */
+    public function isMaintenance(): bool
+    {
+        return $this->user_type === RoleType::Maintenance;
+    }
+
+    /**
      * Get the user's notification preferences.
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\UserNotificationPreference, $this>
@@ -502,6 +510,16 @@ class User extends Authenticatable implements CanResetPassword
                 'text' => 'Admin',
                 'variant' => 'primary',
                 'tooltip' => 'User can see all employee data',
+                'isMissing' => false,
+            ];
+        }
+
+        // Maintenance Badge
+        if ($this->isMaintenance()) {
+            $specialBadges[] = [
+                'text' => 'Maintenance',
+                'variant' => 'primary',
+                'tooltip' => 'User receives API down warning notifications',
                 'isMissing' => false,
             ];
         }

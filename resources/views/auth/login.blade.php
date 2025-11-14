@@ -11,24 +11,6 @@
     >
       <h1 class="text-xl font-bold text-gray-800 dark:text-gray-200">Login</h1>
 
-      {{-- Display success message for password reset --}}
-      @if (session('password_reset_success'))
-        <x-alert variant="success">
-          <x-slot:title>
-            Password Reset Complete!
-          </x-slot>
-          {{ session('password_reset_success') }}
-        </x-alert>
-      @endif
-
-      {{-- Display welcome email resend message --}}
-      @if (session('welcome_email_sent'))
-        <x-alert variant="success">
-          <x-slot:title>Welcome Email Sent!</x-slot>
-          {{ session('welcome_email_sent') }}
-        </x-alert>
-      @endif
-
       {{-- Display rate limit error --}}
       @error('rate_limit')
         <x-alert variant="warning">

@@ -103,6 +103,25 @@ class UserPolicy
     }
 
     /**
+     * Determine whether the authenticated user can promote another user to maintenance role.
+     */
+    public function promoteToMaintenance(User $authUser, User $userToPromote): bool
+    {
+        // Only admins can promote users to maintenance role
+        // Cannot promote users who are already Maintenance
+        return $authUser->isAdmin() && ! $userToPromote->isMaintenance();
+    }
+
+    /**
+     * Determine whether the authenticated user can demote another user from maintenance role.
+     */
+    public function demoteFromMaintenance(User $authUser, User $userToDemote): bool
+    {
+        // Only admins can demote users from maintenance role
+        return $authUser->isAdmin() && $userToDemote->isMaintenance();
+    }
+
+    /**
      * Determine whether the authenticated user can mute notifications for another user.
      */
     public function muteNotifications(User $authUser, User $userToMute): bool

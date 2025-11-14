@@ -114,8 +114,12 @@ class Sidebar extends Component
         }
         $keys = [];
         foreach (NotificationType::cases() as $type) {
-            // Skip non-admin toggles for non-admins
+            // Skip admin-only notifications for non-admins
             if ($type->isAdminOnly() && ! $user->isAdmin()) {
+                continue;
+            }
+            // Skip maintenance-only notifications for non-maintenance users
+            if ($type->isMaintenanceOnly() && ! $user->isMaintenance()) {
                 continue;
             }
             $isSpecificTypeGloballyOff = isset($this->globalPreferenceStates[$type->value]) && ! $this->globalPreferenceStates[$type->value];
@@ -127,6 +131,7 @@ class Sidebar extends Component
                 'label' => $type->label(),
                 'description' => $type->description(),
                 'isAdminOnly' => $type->isAdminOnly(),
+                'isMaintenanceOnly' => $type->isMaintenanceOnly(),
                 'isDisabled' => $isDisabled,
                 'isSpecificTypeGloballyOff' => $isSpecificTypeGloballyOff,
                 'tooltipText' => $tooltipText,

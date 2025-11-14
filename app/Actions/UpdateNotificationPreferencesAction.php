@@ -73,15 +73,21 @@ class UpdateNotificationPreferencesAction
     public function initialize(User $user): void
     {
         foreach (NotificationType::cases() as $type) {
-            if (! $type->isAdminOnly() || $user->isAdmin()) {
-                UserNotificationPreference::firstOrCreate(
-                    [
-                        'user_id' => $user->id,
-                        'notification_type' => $type->value,
-                    ],
-                    ['enabled' => $type->defaultEnabled()]
-                );
+            // Skip admin-only notifications if user is not admin
+            if ($type->isAdminOnly() && ! $user->isAdmin()) {
+                continue;
             }
+            // Skip maintenance-only notifications if user is not maintenance
+            if ($type->isMaintenanceOnly() && ! $user->isMaintenance()) {
+                continue;
+            }
+            UserNotificationPreference::firstOrCreate(
+                [
+                    'user_id' => $user->id,
+                    'notification_type' => $type->value,
+                ],
+                ['enabled' => $type->defaultEnabled()]
+            );
         }
     }
 }

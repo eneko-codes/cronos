@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Models\Setting;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Notifications\Slack\SlackMessage;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
@@ -104,12 +106,12 @@ class ApiDownWarning extends Notification implements ShouldQueue
                 // Mark that we're sending this notification
                 Cache::put($cacheKey, true, now()->addMinutes(self::THROTTLE_MINUTES));
 
-                return ['mail', 'database'];
+                return $this->getChannels();
             }
 
             // If lock acquisition failed, allow notification to proceed (fail open)
             // This prevents lock failures from blocking critical notifications
-            return ['mail', 'database'];
+            return $this->getChannels();
         } catch (\Throwable $e) {
             // If any exception occurs, allow notification to proceed (fail open)
             // Log the error but don't block the notification
@@ -119,7 +121,7 @@ class ApiDownWarning extends Notification implements ShouldQueue
                 'user_id' => $notifiable->getKey(),
             ]);
 
-            return ['mail', 'database'];
+            return $this->getChannels();
         } finally {
             // Only release if lock was successfully acquired
             if ($lockAcquired) {
@@ -201,6 +203,48 @@ class ApiDownWarning extends Notification implements ShouldQueue
             'message' => $message,
             'level' => 'error',
         ];
+    }
+
+    /**
+     * Get the notification channels based on global setting.
+     *
+     * Reads the global notification channel setting from Settings table.
+     * Always includes 'database' channel for in-app notifications.
+     *
+     * @return array<int, string> Array of channel names
+     */
+    private function getChannels(): array
+    {
+        $channel = Setting::getValue('notification_channel', 'mail');
+        $channels = ['database']; // Always include database for in-app notifications
+
+        if ($channel === 'slack') {
+            $channels[] = 'slack';
+        } else {
+            $channels[] = 'mail';
+        }
+
+        return $channels;
+    }
+
+    /**
+     * Get the Slack representation of the notification.
+     *
+     * @param  object  $notifiable  The user receiving the notification
+     * @return \Illuminate\Notifications\Slack\SlackMessage The Slack message instance
+     */
+    public function toSlack(object $notifiable): SlackMessage
+    {
+        return (new SlackMessage)
+            ->text("{$this->serviceName} API is down")
+            ->headerBlock("{$this->serviceName} API is down")
+            ->sectionBlock(function ($block) use ($notifiable): void {
+                $block->text("Hello {$notifiable->name},");
+            })
+            ->sectionBlock(function ($block): void {
+                $block->text("The {$this->serviceName} API service is currently unavailable.");
+                $block->field("*Error details:*\n{$this->errorMessage}")->markdown();
+            });
     }
 
     /**

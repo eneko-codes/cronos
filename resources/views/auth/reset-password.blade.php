@@ -75,8 +75,37 @@
             </x-alert>
           @enderror
 
+          @error('rate_limit')
+            <x-alert variant="warning">
+              <x-slot:title>
+                {{ $message }}
+              </x-slot>
+            </x-alert>
+          @enderror
+
           <input type="hidden" name="token" value="{{ $token }}" />
           <input type="hidden" name="email" value="{{ $email }}" />
+
+          <label
+            for="email"
+            class="w-full text-sm font-medium text-gray-600 dark:text-gray-400"
+          >
+            Email Address
+          </label>
+          <input
+            type="email"
+            name="email"
+            id="email"
+            value="{{ $email }}"
+            autocomplete="username"
+            readonly
+            tabindex="-1"
+            required
+            @class([
+              'w-full rounded-md border bg-gray-100 px-3 py-2 text-sm text-gray-600 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-400',
+              'border-gray-300 dark:border-gray-600',
+            ])
+          />
 
           <label
             for="password"
@@ -90,7 +119,6 @@
             id="password"
             placeholder="Enter your new password"
             autocomplete="new-password"
-            data-lpignore="true"
             required
             @class([
               'w-full rounded-md border bg-gray-50 px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 dark:border-gray-600 dark:bg-gray-800/50 dark:text-gray-200 dark:placeholder:text-gray-500',
@@ -111,7 +139,6 @@
             id="password_confirmation"
             placeholder="Confirm your new password"
             autocomplete="new-password"
-            data-lpignore="true"
             required
             @class([
               'w-full rounded-md border bg-gray-50 px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 dark:border-gray-600 dark:bg-gray-800/50 dark:text-gray-200 dark:placeholder:text-gray-500',

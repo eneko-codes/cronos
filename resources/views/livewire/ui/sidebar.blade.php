@@ -188,6 +188,19 @@
                       <div class="flex-1 space-y-1">
                         {{-- Notification Title and Badge --}}
                         <div class="flex items-center gap-2">
+                          @php
+                            $level = $notification->data["level"] ?? "info";
+                            $badgeVariant = match ($level) {
+                                "success" => "success",
+                                "warning" => "warning",
+                                "error" => "alert",
+                                default => "info",
+                            };
+                          @endphp
+
+                          <x-badge :variant="$badgeVariant" size="sm">
+                            {{ Str::ucfirst($level) }}
+                          </x-badge>
                           <p
                             class="text-sm font-medium text-gray-900 dark:text-white"
                           >
@@ -392,6 +405,12 @@
                     @if ($preference["isAdminOnly"])
                       <x-badge variant="primary" size="sm" class="ml-1">
                         Admin
+                      </x-badge>
+                    @endif
+
+                    @if ($preference["isMaintenanceOnly"] ?? false)
+                      <x-badge variant="primary" size="sm" class="ml-1">
+                        Maintenance
                       </x-badge>
                     @endif
                   </span>

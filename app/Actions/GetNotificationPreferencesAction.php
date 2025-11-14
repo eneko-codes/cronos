@@ -93,7 +93,12 @@ class GetNotificationPreferencesAction
             collect(NotificationType::cases())->map(fn ($type) => $type->value)->toArray()
         )->pluck('enabled', 'notification_type');
         foreach (NotificationType::cases() as $type) {
-            $states[$type->value] = (bool) $globalPrefs->get($type->value, $type->defaultEnabled());
+            // Some notification types cannot be disabled globally
+            if (! $type->canBeDisabledGlobally()) {
+                $states[$type->value] = true;
+            } else {
+                $states[$type->value] = (bool) $globalPrefs->get($type->value, $type->defaultEnabled());
+            }
         }
 
         return $states;
@@ -111,6 +116,9 @@ class GetNotificationPreferencesAction
         $userPrefs = $user->notificationPreferences()->pluck('enabled', 'notification_type');
         foreach (NotificationType::cases() as $type) {
             if ($type->isAdminOnly() && ! $user->isAdmin()) {
+                continue;
+            }
+            if ($type->isMaintenanceOnly() && ! $user->isMaintenance()) {
                 continue;
             }
             $preferences[$type->value] = $userPrefs->get($type->value, $type->defaultEnabled());
@@ -154,6 +162,9 @@ class GetNotificationPreferencesAction
         if ($type->isAdminOnly() && ! $user->isAdmin()) {
             return false;
         }
+        if ($type->isMaintenanceOnly() && ! $user->isMaintenance()) {
+            return false;
+        }
         $userPreference = $this->getUserPreferenceForType($user, $type);
         if ($userPreference !== null) {
             return $userPreference;
@@ -170,6 +181,11 @@ class GetNotificationPreferencesAction
      */
     private function isNotificationTypeGloballyEnabled(NotificationType $type): bool
     {
+        // Some notification types cannot be disabled globally (e.g., WelcomeEmail for password setup)
+        if (! $type->canBeDisabledGlobally()) {
+            return true;
+        }
+
         $globalPref = GlobalNotificationPreference::where('notification_type', $type->value)->first();
 
         return $globalPref ? (bool) $globalPref->enabled : $type->defaultEnabled();

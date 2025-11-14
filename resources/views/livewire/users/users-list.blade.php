@@ -21,6 +21,7 @@
           :filters="[
             'all' => 'All Users',
             'admins' => 'Admins',
+            'maintenance' => 'Maintenance',
             'not_tracked' => 'Not Tracked',
             'muted' => 'Muted'
           ]"

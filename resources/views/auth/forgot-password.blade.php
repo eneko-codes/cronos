@@ -13,15 +13,17 @@
         Forgot Password
       </h1>
 
-      {{-- Display success message --}}
+      {{-- Display success message for reset link sent --}}
       @if (session('password_reset_success'))
         <x-alert variant="success">
           <x-slot:title>Reset Link Sent!</x-slot>
           {{ session('password_reset_success') }}
         </x-alert>
-      @else
+      @endif
+
+      @if (! session('password_reset_success'))
         <p class="text-sm text-gray-600 dark:text-gray-400">
-          Enter your email address and we’ll send you instructions to reset your
+          Enter your email address and we'll send you instructions to reset your
           password.
         </p>
 
@@ -31,6 +33,14 @@
           class="flex w-full flex-col gap-3"
         >
           @csrf
+          @error('rate_limit')
+            <x-alert variant="warning">
+              <x-slot:title>
+                {{ $message }}
+              </x-slot>
+            </x-alert>
+          @enderror
+
           @error('email')
             <x-alert variant="warning">
               <x-slot:title>
@@ -50,6 +60,7 @@
             name="email"
             id="email"
             placeholder="you@example.com"
+            autocomplete="email"
             required
             value="{{ old('email') }}"
             @class([

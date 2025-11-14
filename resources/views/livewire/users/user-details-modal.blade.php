@@ -83,61 +83,122 @@
             </ul>
 
             <!-- Admin Management Section -->
-            <div class="flex flex-col gap-2">
-              @if ($isAdmin && $canDemoteAdmin)
-                <x-button
-                  wire:click="demoteFromAdmin"
-                  wire:confirm="Are you sure you want to remove admin rights from {{ $name }}?"
-                  class="w-full"
-                  size="lg"
-                  variant="alert"
-                  type="button"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="currentColor"
-                    class="size-5"
-                    viewBox="0 0 16 16"
+            @if (auth()->user()?->isAdmin())
+              <div class="flex flex-col gap-2">
+                @if ($isAdmin && $canDemoteAdmin)
+                  <x-button
+                    wire:click="demoteFromAdmin"
+                    wire:confirm="Are you sure you want to remove admin rights from {{ $name }}?"
+                    class="w-full"
+                    size="lg"
+                    variant="alert"
+                    type="button"
                   >
-                    <path
-                      d="M13.879 10.414a2.501 2.501 0 0 0-3.465 3.465zm.707.707-3.465 3.465a2.501 2.501 0 0 0 3.465-3.465m-4.56-1.096a3.5 3.5 0 1 1 4.949 4.95 3.5 3.5 0 0 1-4.95-4.95ZM11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0m-9 8c0 1 1 1 1 1h5.256A4.5 4.5 0 0 1 8 12.5a4.5 4.5 0 0 1 1.544-3.393Q8.844 9.002 8 9c-5 0-6 3-6 4"
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="currentColor"
+                      class="size-5"
+                      viewBox="0 0 16 16"
+                    >
+                      <path
+                        d="M13.879 10.414a2.501 2.501 0 0 0-3.465 3.465zm.707.707-3.465 3.465a2.501 2.501 0 0 0 3.465-3.465m-4.56-1.096a3.5 3.5 0 1 1 4.949 4.95 3.5 3.5 0 0 1-4.95-4.95ZM11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0m-9 8c0 1 1 1 1 1h5.256A4.5 4.5 0 0 1 8 12.5a4.5 4.5 0 0 1 1.544-3.393Q8.844 9.002 8 9c-5 0-6 3-6 4"
+                      />
+                    </svg>
+                    Remove Admin Rights
+                    <x-spinner
+                      size="4"
+                      wire:loading.delay
+                      wire:target="demoteFromAdmin"
                     />
-                  </svg>
-                  Remove Admin Rights
-                  <x-spinner
-                    size="4"
-                    wire:loading.delay
-                    wire:target="demoteFromAdmin"
-                  />
-                </x-button>
-              @elseif ($canPromoteToAdmin)
-                <x-button
-                  wire:click="promoteToAdmin"
-                  wire:confirm="Are you sure you want to promote {{ $name }} to admin?"
-                  class="w-full"
-                  size="lg"
-                  variant="success"
-                  type="button"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="currentColor"
-                    class="size-5"
-                    viewBox="0 0 16 16"
+                  </x-button>
+                @elseif ($canPromoteToAdmin)
+                  <x-button
+                    wire:click="promoteToAdmin"
+                    wire:confirm="Are you sure you want to promote {{ $name }} to admin?"
+                    class="w-full"
+                    size="lg"
+                    variant="success"
+                    type="button"
                   >
-                    <path
-                      d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0m-9 8c0 1 1 1 1 1h5.256A4.5 4.5 0 0 1 8 12.5a4.5 4.5 0 0 1 1.544-3.393Q8.844 9.002 8 9c-5 0-6 3-6 4m9.886-3.54c.18-.613 1.048-.613 1.229 0l.043.148a.64.64 0 0 0 .921.382l.136-.074c.561-.306 1.175.308.87.869l-.075.136a.64.64 0 0 0 .382.92l.149.045c.612.18.612 1.048 0 1.229l-.15.043a.64.64 0 0 0-.38.921l.074.136c.305.561-.309 1.175-.87.87l-.136-.075a.64.64 0 0 0-.92.382l-.045.149c-.18.612-1.048.612-1.229 0l-.043-.15a.64.64 0 0 0-.921-.38l-.136.074c-.561.305-1.175-.309-.87-.87l.075-.136a.64.64 0 0 0-.382-.92l-.148-.045c-.613-.18-.613-1.048 0-1.229l.148-.043a.64.64 0 0 0 .382-.921l-.074-.136c-.306-.561.308-1.175.869-.87l.136.075a.64.64 0 0 0 .92-.382zM14 12.5a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0"
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="currentColor"
+                      class="size-5"
+                      viewBox="0 0 16 16"
+                    >
+                      <path
+                        d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0m-9 8c0 1 1 1 1 1h5.256A4.5 4.5 0 0 1 8 12.5a4.5 4.5 0 0 1 1.544-3.393Q8.844 9.002 8 9c-5 0-6 3-6 4m9.886-3.54c.18-.613 1.048-.613 1.229 0l.043.148a.64.64 0 0 0 .921.382l.136-.074c.561-.306 1.175.308.87.869l-.075.136a.64.64 0 0 0 .382.92l.149.045c.612.18.612 1.048 0 1.229l-.15.043a.64.64 0 0 0-.38.921l.074.136c.305.561-.309 1.175-.87.87l-.136-.075a.64.64 0 0 0-.92.382l-.045.149c-.18.612-1.048.612-1.229 0l-.043-.15a.64.64 0 0 0-.921-.38l-.136.074c-.561.305-1.175-.309-.87-.87l.075-.136a.64.64 0 0 0-.382-.92l-.148-.045c-.613-.18-.613-1.048 0-1.229l.148-.043a.64.64 0 0 0 .382-.921l-.074-.136c-.306-.561.308-1.175.869-.87l.136.075a.64.64 0 0 0 .92-.382zM14 12.5a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0"
+                      />
+                    </svg>
+                    Promote to Admin
+                    <x-spinner
+                      size="4"
+                      wire:loading.delay
+                      wire:target="promoteToAdmin"
                     />
-                  </svg>
-                  Promote to Admin
-                  <x-spinner
-                    size="4"
-                    wire:loading.delay
-                    wire:target="promoteToAdmin"
-                  />
-                </x-button>
-              @endif
-            </div>
+                  </x-button>
+                @endif
+              </div>
+            @endif
+
+            <!-- Maintenance Role Management Section -->
+            @if (auth()->user()?->isAdmin())
+              <div class="flex flex-col gap-2">
+                @if ($canDemoteFromMaintenance)
+                  <x-button
+                    wire:click="demoteFromMaintenance"
+                    wire:confirm="Are you sure you want to remove maintenance role from {{ $name }}?"
+                    class="w-full"
+                    size="lg"
+                    variant="alert"
+                    type="button"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="currentColor"
+                      class="size-5"
+                      viewBox="0 0 16 16"
+                    >
+                      <path
+                        d="M13.879 10.414a2.501 2.501 0 0 0-3.465 3.465zm.707.707-3.465 3.465a2.501 2.501 0 0 0 3.465-3.465m-4.56-1.096a3.5 3.5 0 1 1 4.949 4.95 3.5 3.5 0 0 1-4.95-4.95ZM11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0m-9 8c0 1 1 1 1 1h5.256A4.5 4.5 0 0 1 8 12.5a4.5 4.5 0 0 1 1.544-3.393Q8.844 9.002 8 9c-5 0-6 3-6 4"
+                      />
+                    </svg>
+                    Remove Maintenance Role
+                    <x-spinner
+                      size="4"
+                      wire:loading.delay
+                      wire:target="demoteFromMaintenance"
+                    />
+                  </x-button>
+                @elseif ($canPromoteToMaintenance)
+                  <x-button
+                    wire:click="promoteToMaintenance"
+                    wire:confirm="Are you sure you want to promote {{ $name }} to maintenance role?"
+                    class="w-full"
+                    size="lg"
+                    variant="info"
+                    type="button"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="currentColor"
+                      class="size-5"
+                      viewBox="0 0 16 16"
+                    >
+                      <path
+                        d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0m-9 8c0 1 1 1 1 1h5.256A4.5 4.5 0 0 1 8 12.5a4.5 4.5 0 0 1 1.544-3.393Q8.844 9.002 8 9c-5 0-6 3-6 4m9.886-3.54c.18-.613 1.048-.613 1.229 0l.043.148a.64.64 0 0 0 .921.382l.136-.074c.561-.306 1.175.308.87.869l-.075.136a.64.64 0 0 0 .382.92l.149.045c.612.18.612 1.048 0 1.229l-.15.043a.64.64 0 0 0-.38.921l.074.136c.305.561-.309 1.175-.87.87l-.136-.075a.64.64 0 0 0-.92.382l-.045.149c-.18.612-1.048.612-1.229 0l-.043-.15a.64.64 0 0 0-.921-.38l-.136.074c-.561.305-1.175-.309-.87-.87l.075-.136a.64.64 0 0 0-.382-.92l-.148-.045c-.613-.18-.613-1.048 0-1.229l.148-.043a.64.64 0 0 0 .382-.921l-.074-.136c-.306-.561.308-1.175.869-.87l.136.075a.64.64 0 0 0 .92-.382zM14 12.5a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0"
+                      />
+                    </svg>
+                    Promote to Maintenance
+                    <x-spinner
+                      size="4"
+                      wire:loading.delay
+                      wire:target="promoteToMaintenance"
+                    />
+                  </x-button>
+                @endif
+              </div>
+            @endif
 
             <!-- Tracking Management Section -->
             <div class="flex flex-col gap-2">

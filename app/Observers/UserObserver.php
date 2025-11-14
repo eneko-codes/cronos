@@ -8,10 +8,14 @@ use App\Actions\GetNotificationPreferencesAction;
 use App\Actions\UpdateNotificationPreferencesAction;
 use App\Enums\RoleType;
 use App\Models\User;
+use App\Notifications\AdminDemotionEmail;
 use App\Notifications\AdminPromotionEmail;
+use App\Notifications\MaintenanceDemotionEmail;
+use App\Notifications\MaintenancePromotionEmail;
 use App\Notifications\UserPromotedToAdminNotification;
-use App\Notifications\WelcomeEmail;
+use App\Notifications\UserPromotedToMaintenanceNotification;
 use App\Notifications\WelcomeNewUserEmail;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class UserObserver
@@ -57,12 +61,6 @@ class UserObserver
                     'email' => $user->email,
                     'error' => $e->getMessage(),
                 ]);
-            }
-        } else {
-            // For users with passwords, use the existing welcome notification
-            $welcomeNotification = new WelcomeEmail;
-            if ($user->email && ($this->getPreferences->execute($user)['eligibility'][$welcomeNotification->type()->value] ?? false)) {
-                $user->notify($welcomeNotification);
             }
         }
     }
@@ -136,9 +134,10 @@ class UserObserver
 
         // Check if the user was just promoted to admin
         if ($user->wasChanged('user_type') && $user->isAdmin()) {
+            $performedBy = Auth::user();
 
             // --- Notify other admins ---
-            $adminPromotionEmail = new AdminPromotionEmail($user);
+            $adminPromotionEmail = new AdminPromotionEmail($user, $performedBy);
 
             $adminUsers = User::where('user_type', RoleType::Admin)
                 ->where('id', '!=', $user->id)
@@ -154,6 +153,66 @@ class UserObserver
             $userPromotionNotification = new UserPromotedToAdminNotification;
             if ($this->getPreferences->execute($user)['eligibility'][$userPromotionNotification->type()->value] ?? false) {
                 $user->notify($userPromotionNotification);
+            }
+        }
+
+        // Check if the user was just promoted to maintenance role
+        if ($user->wasChanged('user_type') && $user->isMaintenance()) {
+            // Re-initialize notification preferences to include Maintenance-only notifications
+            $this->updatePreferences->initialize($user);
+
+            $performedBy = Auth::user();
+
+            // --- Notify admins ---
+            $maintenancePromotionEmail = new MaintenancePromotionEmail($user, $performedBy);
+
+            $adminUsers = User::where('user_type', RoleType::Admin)
+                ->get();
+
+            foreach ($adminUsers as $admin) {
+                if ($this->getPreferences->execute($admin)['eligibility'][$maintenancePromotionEmail->type()->value] ?? false) {
+                    $admin->notify($maintenancePromotionEmail);
+                }
+            }
+
+            // --- Notify the promoted user ---
+            $userPromotionNotification = new UserPromotedToMaintenanceNotification;
+            if ($this->getPreferences->execute($user)['eligibility'][$userPromotionNotification->type()->value] ?? false) {
+                $user->notify($userPromotionNotification);
+            }
+        }
+
+        // Check if the user was just demoted from admin
+        if ($user->wasChanged('user_type') && $user->getOriginal('user_type') === RoleType::Admin && ! $user->isAdmin()) {
+            $performedBy = Auth::user();
+
+            // --- Notify other admins ---
+            $adminDemotionEmail = new AdminDemotionEmail($user, $performedBy);
+
+            $adminUsers = User::where('user_type', RoleType::Admin)
+                ->get();
+
+            foreach ($adminUsers as $admin) {
+                if ($this->getPreferences->execute($admin)['eligibility'][$adminDemotionEmail->type()->value] ?? false) {
+                    $admin->notify($adminDemotionEmail);
+                }
+            }
+        }
+
+        // Check if the user was just demoted from maintenance role
+        if ($user->wasChanged('user_type') && $user->getOriginal('user_type') === RoleType::Maintenance && ! $user->isMaintenance()) {
+            $performedBy = Auth::user();
+
+            // --- Notify admins ---
+            $maintenanceDemotionEmail = new MaintenanceDemotionEmail($user, $performedBy);
+
+            $adminUsers = User::where('user_type', RoleType::Admin)
+                ->get();
+
+            foreach ($adminUsers as $admin) {
+                if ($this->getPreferences->execute($admin)['eligibility'][$maintenanceDemotionEmail->type()->value] ?? false) {
+                    $admin->notify($maintenanceDemotionEmail);
+                }
             }
         }
     }

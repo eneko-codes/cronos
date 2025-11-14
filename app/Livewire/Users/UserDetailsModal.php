@@ -48,15 +48,21 @@ class UserDetailsModal extends Component
 
     public $isAdmin = false; // User admin status
 
+    public $isMaintenance = false; // User maintenance status
+
     public $isDoNotTrack = false; // User do not track status
 
     public $details = []; // User details array
 
     public $canPromoteToAdmin = false; // Permission to promote user to admin
 
-    public $canNotTrack = false; // Permission to set user as do not track
+    public $canPromoteToMaintenance = false; // Permission to promote user to maintenance
 
     public $canDemoteAdmin = false; // Permission to demote user from admin
+
+    public $canDemoteFromMaintenance = false; // Permission to demote user from maintenance
+
+    public $canNotTrack = false; // Permission to set user as do not track
 
     public $canEnableTracking = false; // Permission to enable tracking for user
 
@@ -86,6 +92,9 @@ class UserDetailsModal extends Component
         $this->canPromoteToAdmin = Gate::allows('promoteToAdmin', $user);
         $this->canDemoteAdmin =
           $user->isAdmin() && Gate::allows('demoteAdmin', $user);
+        $this->canPromoteToMaintenance = Gate::allows('promoteToMaintenance', $user);
+        $this->canDemoteFromMaintenance =
+          $user->isMaintenance() && Gate::allows('demoteFromMaintenance', $user);
         $this->canNotTrack =
           ! $user->do_not_track && Gate::allows('disableTracking', $user);
         $this->canEnableTracking =
@@ -119,6 +128,7 @@ class UserDetailsModal extends Component
         $this->updatedAtFormatted = $user->updated_at ? $user->updated_at->format('M d, Y H:i:s T') : '-';
 
         $this->isAdmin = $user->isAdmin();
+        $this->isMaintenance = $user->isMaintenance();
         $this->isDoNotTrack = $user->do_not_track;
         // Use the muted_notifications column from users table
         $this->isMuted = (bool) $user->muted_notifications;
@@ -163,6 +173,38 @@ class UserDetailsModal extends Component
             $user->save();
             $this->dispatch('user-updated', $user->id);
             $this->dispatch('add-toast', message: 'User demoted to regular user.', variant: 'success');
+
+            // Update local state and permissions by reloading all details
+            $this->loadUserDetails();
+        }
+    }
+
+    public function promoteToMaintenance(): void
+    {
+        $user = User::findOrFail($this->userId);
+        $this->authorize('promoteToMaintenance', $user);
+
+        if (! $user->isMaintenance()) {
+            $user->user_type = RoleType::Maintenance;
+            $user->save();
+            $this->dispatch('user-updated', $user->id);
+            $this->dispatch('add-toast', message: 'User promoted to maintenance role.', variant: 'success');
+
+            // Update local state and permissions by reloading all details
+            $this->loadUserDetails();
+        }
+    }
+
+    public function demoteFromMaintenance(): void
+    {
+        $user = User::findOrFail($this->userId);
+        $this->authorize('demoteFromMaintenance', $user);
+
+        if ($user->isMaintenance()) {
+            $user->user_type = RoleType::User;
+            $user->save();
+            $this->dispatch('user-updated', $user->id);
+            $this->dispatch('add-toast', message: 'User removed from maintenance role.', variant: 'success');
 
             // Update local state and permissions by reloading all details
             $this->loadUserDetails();

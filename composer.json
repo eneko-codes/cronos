@@ -12,6 +12,7 @@
     "laravel/framework": "^12.11.1",
     "laravel/nightwatch": "^1.7",
     "laravel/pulse": "^1.4",
+    "laravel/slack-notification-channel": "^3.6",
     "livewire/livewire": "^3.0"
   },
   "require-dev": {

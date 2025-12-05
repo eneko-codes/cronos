@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Validation\Rules\Password;
 use InvalidArgumentException;
 use Laravel\Telescope\TelescopeServiceProvider as TelescopeServiceProviderBase;
 
@@ -118,6 +119,15 @@ class AppServiceProvider extends ServiceProvider
 
         // Make sure all models are strict
         Model::shouldBeStrict();
+
+        // Configure default password validation rules
+        // This ensures consistent password requirements across the application
+        Password::defaults(function () {
+            return Password::min(16)
+                ->mixedCase()
+                ->numbers()
+                ->symbols();
+        });
 
         // Only users who are admin can access pulse in production
         Gate::define('viewPulse', function (User $user) {

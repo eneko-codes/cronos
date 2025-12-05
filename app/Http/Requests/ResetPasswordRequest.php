@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
-use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Password;
 
 class ResetPasswordRequest extends FormRequest
 {
@@ -27,39 +27,7 @@ class ResetPasswordRequest extends FormRequest
         return [
             'token' => 'required|string',
             'email' => 'required|email|exists:users,email',
-            'password' => 'required|string|min:16|confirmed',
+            'password' => ['required', 'string', 'confirmed', Password::defaults()],
         ];
-    }
-
-    /**
-     * Configure the validator instance.
-     */
-    public function withValidator(Validator $validator): void
-    {
-        $validator->after(function ($validator): void {
-            $password = $validator->getData()['password'] ?? null;
-
-            if ($password) {
-                // Check for uppercase letter
-                if (! preg_match('/[A-Z]/', $password)) {
-                    $validator->errors()->add('password', 'The password must contain at least one uppercase letter.');
-                }
-
-                // Check for lowercase letter
-                if (! preg_match('/[a-z]/', $password)) {
-                    $validator->errors()->add('password', 'The password must contain at least one lowercase letter.');
-                }
-
-                // Check for number
-                if (! preg_match('/\d/', $password)) {
-                    $validator->errors()->add('password', 'The password must contain at least one number.');
-                }
-
-                // Check for special character
-                if (! preg_match('/[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?]/', $password)) {
-                    $validator->errors()->add('password', 'The password must contain at least one special character.');
-                }
-            }
-        });
     }
 }

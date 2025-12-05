@@ -4,18 +4,22 @@ declare(strict_types=1);
 
 namespace App\Actions\SystemPin;
 
+use App\Actions\LinkUserExternalIdentityAction;
 use App\DataTransferObjects\SystemPin\SystemPinUserDTO;
-use App\Models\User;
-use Illuminate\Support\Facades\DB;
+use App\Enums\Platform;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 /**
  * Action to synchronize SystemPin user data with the local users table.
- * This action links a local user to their SystemPin ID via email.
+ * This action links a local user to their SystemPin identity via the external identities system.
  */
 final class ProcessSystemPinUserAction
 {
+    public function __construct(
+        private readonly LinkUserExternalIdentityAction $linkAction,
+    ) {}
+
     /**
      * Synchronizes a single SystemPin user DTO with the local database.
      *
@@ -26,7 +30,7 @@ final class ProcessSystemPinUserAction
         $validator = Validator::make(
             [
                 'id' => $userDto->id,
-                'email' => $userDto->Email,  // Updated to match API field name
+                'email' => $userDto->Email,
             ],
             [
                 'id' => 'required|integer',
@@ -48,31 +52,18 @@ final class ProcessSystemPinUserAction
             return;
         }
 
-        DB::transaction(function () use ($userDto): void {
-            $email = strtolower(trim($userDto->Email));  // Updated to match API field name
-            $user = User::where('email', $email)->first();
+        $identity = $this->linkAction->execute(
+            platform: Platform::SystemPin,
+            externalId: (string) $userDto->id,
+            externalEmail: $userDto->Email,
+        );
 
-            if (! $user) {
-                // Fallback: try to find user by systempin_id in case email changed in SystemPin
-                $user = User::where('systempin_id', $userDto->id)->first();
-                if ($user) {
-                    Log::warning('SystemPin email mismatch - email controlled by Odoo', [
-                        'systempin_id' => $userDto->id,
-                        'odoo_email' => $user->email,
-                        'systempin_email' => $email,
-                    ]);
-                }
-            }
-
-            if ($user) {
-                // The sync only updates the systempin_id. Other user data comes from Odoo.
-                $user->update(['systempin_id' => $userDto->id]);
-            } else {
-                Log::info('Skipping SystemPin user, not found by email or systempin_id.', [
-                    'email' => $email,
-                    'systempin_id' => $userDto->id,
-                ]);
-            }
-        });
+        if ($identity) {
+            Log::debug('SystemPin user linked successfully.', [
+                'systempin_id' => $userDto->id,
+                'user_id' => $identity->user_id,
+                'linked_by' => $identity->linked_by,
+            ]);
+        }
     }
 }

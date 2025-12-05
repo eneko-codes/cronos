@@ -4,18 +4,22 @@ declare(strict_types=1);
 
 namespace App\Actions\Proofhub;
 
+use App\Actions\LinkUserExternalIdentityAction;
 use App\DataTransferObjects\Proofhub\ProofhubUserDTO;
-use App\Models\User;
-use Illuminate\Support\Facades\DB;
+use App\Enums\Platform;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 /**
  * Action to synchronize ProofHub user data with the local users table.
- * This action links a local user to their ProofHub ID via email.
+ * This action links a local user to their ProofHub identity via the external identities system.
  */
 final class ProcessProofhubUserAction
 {
+    public function __construct(
+        private readonly LinkUserExternalIdentityAction $linkAction,
+    ) {}
+
     /**
      * Synchronizes a single ProofHub user DTO with the local database.
      *
@@ -48,15 +52,18 @@ final class ProcessProofhubUserAction
             return;
         }
 
-        DB::transaction(function () use ($userDto): void {
-            $user = User::where('email', $userDto->email)->first();
+        $identity = $this->linkAction->execute(
+            platform: Platform::ProofHub,
+            externalId: (string) $userDto->id,
+            externalEmail: $userDto->email,
+        );
 
-            if ($user) {
-                // The sync only updates the proofhub_id. Other user data comes from Odoo.
-                $user->update(['proofhub_id' => $userDto->id]);
-            } else {
-                Log::info('Skipping ProofHub user, not found by email.', ['email' => $userDto->email]);
-            }
-        });
+        if ($identity) {
+            Log::debug('ProofHub user linked successfully.', [
+                'proofhub_id' => $userDto->id,
+                'user_id' => $identity->user_id,
+                'linked_by' => $identity->linked_by,
+            ]);
+        }
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire\Users;
 
+use App\Enums\Platform;
 use App\Enums\RoleType;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
@@ -82,8 +83,8 @@ class UserDetailsModal extends Component
 
     public function loadUserDetails(): void
     {
-        // Fetch user details with manager and subordinates relationships
-        $user = User::with('manager', 'subordinates')->findOrFail($this->userId);
+        // Fetch user details with manager, subordinates, and external identities relationships
+        $user = User::with('manager', 'subordinates', 'externalIdentities')->findOrFail($this->userId);
 
         // Prepare user details for display
         $this->prepareDetails($user);
@@ -110,10 +111,10 @@ class UserDetailsModal extends Component
     {
         $this->name = $user->name;
         $this->email = $user->email;
-        $this->odooId = $user->odoo_id ?? '-';
-        $this->proofhubId = $user->proofhub_id ?? '-';
-        $this->desktimeId = $user->desktime_id ?? '-';
-        $this->systempinId = $user->systempin_id ?? '-';
+        $this->odooId = $user->getExternalIdFor(Platform::Odoo) ?? '-';
+        $this->proofhubId = $user->getExternalIdFor(Platform::ProofHub) ?? '-';
+        $this->desktimeId = $user->getExternalIdFor(Platform::DeskTime) ?? '-';
+        $this->systempinId = $user->getExternalIdFor(Platform::SystemPin) ?? '-';
         $this->jobTitle = $user->job_title ?? '-'; // Populate job title
         $this->managerName = $user->manager->name ?? '-'; // Populate manager name
         // Populate subordinates names

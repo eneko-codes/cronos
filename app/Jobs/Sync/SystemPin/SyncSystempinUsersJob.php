@@ -37,11 +37,11 @@ class SyncSystempinUsersJob extends BaseSyncJob
      *
      * Fetches users from SystemPin and processes each one using the action class.
      */
-    public function handle(): void
+    public function handle(ProcessSystemPinUserAction $action): void
     {
         $users = $this->systempin->getAllEmployees();
-        $users->each(function (SystemPinUserDTO $userDto): void {
-            (new ProcessSystemPinUserAction)->execute($userDto);
+        $users->each(function (SystemPinUserDTO $userDto) use ($action): void {
+            $action->execute($userDto);
         });
     }
 

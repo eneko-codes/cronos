@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\Platform;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -115,10 +115,17 @@ class Department extends Model
     }
 
     /**
-     * Get the manager (User) for the department via odoo_manager_id.
+     * Get the manager (User) for the department.
+     *
+     * Looks up the user via their Odoo external identity since odoo_manager_id
+     * stores the Odoo employee ID, not the local user ID.
      */
-    public function manager(): BelongsTo
+    public function manager(): ?User
     {
-        return $this->belongsTo(User::class, 'odoo_manager_id', 'odoo_id');
+        if (! $this->odoo_manager_id) {
+            return null;
+        }
+
+        return User::findByExternalId(Platform::Odoo, (string) $this->odoo_manager_id);
     }
 }

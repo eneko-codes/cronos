@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace App\Actions\Proofhub;
 
 use App\DataTransferObjects\Proofhub\ProofhubTaskDTO;
+use App\Enums\Platform;
 use App\Models\Task;
-use App\Models\User;
+use App\Models\UserExternalIdentity;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
@@ -51,9 +52,15 @@ final class ProcessProofhubTaskAction
         }
     }
 
-    private function syncTaskUsers(Task $task, array $assignedUserIds): void
+    private function syncTaskUsers(Task $task, array $assignedProofhubIds): void
     {
-        $userIds = User::whereIn('proofhub_id', $assignedUserIds)->pluck('id');
+        $proofhubIds = collect($assignedProofhubIds)->filter()->unique()->map(fn ($id) => (string) $id);
+
+        // Find users by their ProofHub external identities
+        $userIds = UserExternalIdentity::where('platform', Platform::ProofHub)
+            ->whereIn('external_id', $proofhubIds)
+            ->pluck('user_id');
+
         $task->users()->sync($userIds);
     }
 }

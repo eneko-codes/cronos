@@ -4,18 +4,22 @@ declare(strict_types=1);
 
 namespace App\Actions\Desktime;
 
+use App\Actions\LinkUserExternalIdentityAction;
 use App\DataTransferObjects\Desktime\DesktimeEmployeeDTO;
-use App\Models\User;
-use Illuminate\Support\Facades\DB;
+use App\Enums\Platform;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 /**
  * Action to synchronize DeskTime user data with the local users table.
- * This action links a local user to their DeskTime ID via email.
+ * This action links a local user to their DeskTime identity via the external identities system.
  */
 final class ProcessDesktimeUserAction
 {
+    public function __construct(
+        private readonly LinkUserExternalIdentityAction $linkAction,
+    ) {}
+
     /**
      * Synchronizes a single DeskTime user DTO with the local database.
      *
@@ -48,31 +52,18 @@ final class ProcessDesktimeUserAction
             return;
         }
 
-        DB::transaction(function () use ($userDto): void {
-            $email = strtolower(trim($userDto->email));
-            $user = User::where('email', $email)->first();
+        $identity = $this->linkAction->execute(
+            platform: Platform::DeskTime,
+            externalId: (string) $userDto->id,
+            externalEmail: $userDto->email,
+        );
 
-            if (! $user) {
-                // Fallback: try to find user by desktime_id in case email changed in DeskTime
-                $user = User::where('desktime_id', $userDto->id)->first();
-                if ($user) {
-                    Log::warning('DeskTime email mismatch - email controlled by Odoo', [
-                        'desktime_id' => $userDto->id,
-                        'odoo_email' => $user->email,
-                        'desktime_email' => $email,
-                    ]);
-                }
-            }
-
-            if ($user) {
-                // The sync only updates the desktime_id. Other user data comes from Odoo.
-                $user->update(['desktime_id' => $userDto->id]);
-            } else {
-                Log::info('Skipping DeskTime user, not found by email or desktime_id.', [
-                    'email' => $email,
-                    'desktime_id' => $userDto->id,
-                ]);
-            }
-        });
+        if ($identity) {
+            Log::debug('DeskTime user linked successfully.', [
+                'desktime_id' => $userDto->id,
+                'user_id' => $identity->user_id,
+                'linked_by' => $identity->linked_by,
+            ]);
+        }
     }
 }

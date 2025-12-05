@@ -40,11 +40,11 @@ class SyncProofhubUsersJob extends BaseSyncJob
      *
      * Fetches users from ProofHub and processes each one.
      */
-    public function handle(): void
+    public function handle(ProcessProofhubUserAction $action): void
     {
         $users = $this->proofhub->getUsers();
-        $users->each(function (ProofhubUserDTO $user): void {
-            (new ProcessProofhubUserAction)->execute($user);
+        $users->each(function (ProofhubUserDTO $user) use ($action): void {
+            $action->execute($user);
         });
     }
 

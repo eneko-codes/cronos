@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\SystemPin;
 
 use App\DataTransferObjects\SystemPin\SystemPinAttendanceDTO;
+use App\Enums\Platform;
 use App\Models\User;
 use App\Models\UserAttendance;
 use Carbon\Carbon;
@@ -51,11 +52,11 @@ final class ProcessSystemPinAttendanceAction
         }
 
         DB::transaction(function () use ($attendanceDto): void {
-            // Find user by SystemPin ID
-            $user = User::where('systempin_id', $attendanceDto->InternalEmployeeID)->first();
+            // Find user by SystemPin external identity
+            $user = User::findByExternalId(Platform::SystemPin, (string) $attendanceDto->InternalEmployeeID);
 
             if (! $user) {
-                Log::info('Skipping SystemPin attendance, user not found by systempin_id.', [
+                Log::info('Skipping SystemPin attendance, user not found by external identity.', [
                     'systempin_id' => $attendanceDto->InternalEmployeeID,
                     'date' => $attendanceDto->Date,
                 ]);
@@ -64,7 +65,7 @@ final class ProcessSystemPinAttendanceAction
             }
 
             // Convert SystemPin date format (YYYYMMDD) to Y-m-d
-            $date = \Carbon\Carbon::createFromFormat('Ymd', $attendanceDto->Date)->format('Y-m-d');
+            $date = Carbon::createFromFormat('Ymd', $attendanceDto->Date)->format('Y-m-d');
 
             // Process TimeRecords to calculate attendance
             $timeRecords = $attendanceDto->TimeRecords ?? [];
@@ -99,8 +100,8 @@ final class ProcessSystemPinAttendanceAction
                     // Complete segment with both in and out
                     // Parse as configured timezone (local office time) and convert to UTC
                     $timezone = config('services.systempin.timezone', 'Europe/Madrid');
-                    $start = \Carbon\Carbon::createFromFormat('YmdHis', $record['From'], $timezone)->utc();
-                    $end = \Carbon\Carbon::createFromFormat('YmdHis', $record['to'], $timezone)->utc();
+                    $start = Carbon::createFromFormat('YmdHis', $record['From'], $timezone)->utc();
+                    $end = Carbon::createFromFormat('YmdHis', $record['to'], $timezone)->utc();
                     $durationSeconds = $start->diffInSeconds($end);
                     $clockOut = $this->parseTime($this->parseSystemPinDateTime($record['to']), $date);
                 }
@@ -126,9 +127,9 @@ final class ProcessSystemPinAttendanceAction
      *
      * @param  string|null  $timeString  Time in format like "08:30" or "0830"
      * @param  string  $date  Date in Y-m-d format
-     * @return \Carbon\Carbon|null Full Carbon datetime or null if parsing fails
+     * @return Carbon|null Full Carbon datetime or null if parsing fails
      */
-    private function parseTime(?string $timeString, string $date): ?\Carbon\Carbon
+    private function parseTime(?string $timeString, string $date): ?Carbon
     {
         if (empty($timeString)) {
             return null;
@@ -156,6 +157,7 @@ final class ProcessSystemPinAttendanceAction
 
             // Parse as configured timezone (local office time) and explicitly convert to UTC
             $timezone = config('services.systempin.timezone', 'Europe/Madrid');
+
             return Carbon::parse($date.' '.$timeFormatted, $timezone)->utc();
         } catch (\Exception $e) {
             Log::warning('Failed to parse SystemPin time', [

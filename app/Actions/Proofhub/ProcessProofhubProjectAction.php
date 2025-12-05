@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace App\Actions\Proofhub;
 
 use App\DataTransferObjects\Proofhub\ProofhubProjectDTO;
+use App\Enums\Platform;
 use App\Models\Project;
-use App\Models\User;
+use App\Models\UserExternalIdentity;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -82,8 +83,13 @@ final class ProcessProofhubProjectAction
      */
     private function syncProjectUsers(Project $project): void
     {
-        $assignedUserIds = collect($this->dto->assigned)->filter()->unique();
-        $userIds = User::whereIn('proofhub_id', $assignedUserIds)->pluck('id');
+        $assignedProofhubIds = collect($this->dto->assigned)->filter()->unique()->map(fn ($id) => (string) $id);
+
+        // Find users by their ProofHub external identities
+        $userIds = UserExternalIdentity::where('platform', Platform::ProofHub)
+            ->whereIn('external_id', $assignedProofhubIds)
+            ->pluck('user_id');
+
         $project->users()->sync($userIds);
     }
 }

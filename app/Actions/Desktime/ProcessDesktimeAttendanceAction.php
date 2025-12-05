@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Desktime;
 
 use App\DataTransferObjects\Desktime\DesktimeAttendanceDTO;
+use App\Enums\Platform;
 use App\Models\User;
 use App\Models\UserAttendance;
 use Illuminate\Support\Facades\DB;
@@ -54,12 +55,19 @@ final class ProcessDesktimeAttendanceAction
         }
 
         DB::transaction(function () use ($attendanceDto, $timezone): void {
-            $email = strtolower(trim($attendanceDto->email));
-            $user = User::where('email', $email)->first();
+            // Primary lookup: by DeskTime external identity
+            $user = User::findByExternalId(Platform::DeskTime, (string) $attendanceDto->id);
+
+            // Fallback: try email lookup
+            if (! $user) {
+                $email = strtolower(trim($attendanceDto->email));
+                $user = User::where('email', $email)->first();
+            }
 
             if (! $user) {
-                Log::info('Skipping DeskTime attendance, user not found by email.', [
-                    'email' => $email,
+                Log::info('Skipping DeskTime attendance, user not found.', [
+                    'desktime_id' => $attendanceDto->id,
+                    'email' => $attendanceDto->email,
                     'date' => $attendanceDto->date,
                 ]);
 

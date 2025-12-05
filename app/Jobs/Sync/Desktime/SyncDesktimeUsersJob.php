@@ -39,11 +39,11 @@ class SyncDesktimeUsersJob extends BaseSyncJob
      *
      * Fetches users from DeskTime and processes each one using the action class.
      */
-    public function handle(): void
+    public function handle(ProcessDesktimeUserAction $action): void
     {
         $users = $this->desktime->getAllEmployees(null, 'month');
-        $users->each(function (DesktimeEmployeeDTO $userDto): void {
-            (new ProcessDesktimeUserAction)->execute($userDto);
+        $users->each(function (DesktimeEmployeeDTO $userDto) use ($action): void {
+            $action->execute($userDto);
         });
     }
 

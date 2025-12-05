@@ -71,6 +71,7 @@ class UsersList extends Component
         );
 
         $users = User::query()
+            ->with('externalIdentities')
             ->when($this->search, function ($query): void {
                 $query->whereRaw('LOWER(name) LIKE ?', [
                     '%'.strtolower($this->search).'%',

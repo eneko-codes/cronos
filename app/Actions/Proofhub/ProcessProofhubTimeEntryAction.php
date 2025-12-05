@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Proofhub;
 
 use App\DataTransferObjects\Proofhub\ProofhubTimeEntryDTO;
+use App\Enums\Platform;
 use App\Models\TimeEntry;
 use App\Models\User;
 use Carbon\Carbon;
@@ -32,7 +33,7 @@ final class ProcessProofhubTimeEntryAction
                 ]
             )->validate();
 
-            $user = User::where('proofhub_id', $timeEntryDto->creator['id'])->first();
+            $user = User::findByExternalId(Platform::ProofHub, (string) $timeEntryDto->creator['id']);
             if (! $user) {
                 Log::warning('Skipping time entry: User not found.', ['proofhub_user_id' => $timeEntryDto->creator['id']]);
 

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\Platform;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -101,19 +101,33 @@ class Project extends Model
     }
 
     /**
-     * The user who created the project.
+     * Get the user who created the project.
+     *
+     * Looks up the user via their ProofHub external identity since proofhub_creator_id
+     * stores the ProofHub user ID, not the local user ID.
      */
-    public function creator(): BelongsTo
+    public function creator(): ?User
     {
-        return $this->belongsTo(User::class, 'proofhub_creator_id', 'proofhub_id');
+        if (! $this->proofhub_creator_id) {
+            return null;
+        }
+
+        return User::findByExternalId(Platform::ProofHub, (string) $this->proofhub_creator_id);
     }
 
     /**
-     * The user who manages the project.
+     * Get the user who manages the project.
+     *
+     * Looks up the user via their ProofHub external identity since proofhub_manager_id
+     * stores the ProofHub user ID, not the local user ID.
      */
-    public function manager(): BelongsTo
+    public function manager(): ?User
     {
-        return $this->belongsTo(User::class, 'proofhub_manager_id', 'proofhub_id');
+        if (! $this->proofhub_manager_id) {
+            return null;
+        }
+
+        return User::findByExternalId(Platform::ProofHub, (string) $this->proofhub_manager_id);
     }
 
     /**

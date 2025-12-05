@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\Platform;
 use App\Enums\RoleType;
 use App\Notifications\ResetPasswordNotification;
 use Illuminate\Contracts\Auth\CanResetPassword;
@@ -16,14 +17,13 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Notifications\Notification;
 
 /**
  * User Model
  *
  * Represents an application user (employee) that can be tracked across multiple systems.
- * Each user can have identifiers for various platforms (Odoo, Desktime, Proofhub, Systempin)
- * which are used for data synchronization with external services.
+ * External platform identities (Odoo, DeskTime, ProofHub, SystemPin) are stored in the
+ * user_external_identities table for flexible cross-platform matching.
  *
  * Users with do_not_track=true will have their data automatically purged and will be
  * excluded from synchronization operations to maintain privacy.
@@ -32,25 +32,24 @@ use Illuminate\Notifications\Notification;
  * @property string $name Full name of the user
  * @property string $email Email address
  * @property string|null $timezone User's preferred timezone
- * @property int|null $odoo_id ID of the user in Odoo
- * @property int|null $desktime_id ID of the user in Desktime
- * @property int|null $proofhub_id ID of the user in Proofhub
- * @property int|null $systempin_id ID of the user in Systempin
  * @property int|null $department_id Foreign key to departments table
  * @property RoleType $user_type Type of the user (e.g., Admin, User)
  * @property bool $do_not_track Whether the user's data should be excluded from tracking operations
+ * @property bool $muted_notifications Whether to mute notifications for this user
+ * @property bool $is_active Whether the user is active (synced from Odoo)
+ * @property string|null $job_title User's job title
+ * @property int|null $manager_id Foreign key to users table (manager)
  * @property \Carbon\Carbon|null $created_at When record was created
  * @property \Carbon\Carbon|null $updated_at When record was last updated
- * @property bool|null $is_online Virtual attribute that determines if the user is currently online (only works with database session driver)
+ * @property bool|null $is_online Virtual attribute that determines if the user is currently online
  * @property string|null $remember_token
- * @property bool $is_active
- * @property string|null $job_title
- * @property int|null $odoo_manager_id
  * @property-read \App\Models\Schedule|null $activeSchedule
  * @property-read \App\Models\UserSchedule|null $activeUserSchedule
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Category> $categories
  * @property-read int|null $categories_count
  * @property-read \App\Models\Department|null $department
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\UserExternalIdentity> $externalIdentities
+ * @property-read int|null $external_identities_count
  * @property-read User|null $manager
  * @property-read \App\Models\UserNotificationPreference $notificationPreferences
  * @property-read \Illuminate\Notifications\DatabaseNotificationCollection<int, \Illuminate\Notifications\DatabaseNotification> $notifications
@@ -80,19 +79,15 @@ use Illuminate\Notifications\Notification;
  * @method static Builder<static>|User trackable()
  * @method static Builder<static>|User whereCreatedAt($value)
  * @method static Builder<static>|User whereDepartmentId($value)
- * @method static Builder<static>|User whereDesktimeId($value)
  * @method static Builder<static>|User whereDoNotTrack($value)
  * @method static Builder<static>|User whereEmail($value)
  * @method static Builder<static>|User whereId($value)
  * @method static Builder<static>|User whereIsActive($value)
  * @method static Builder<static>|User whereRoleType($value)
  * @method static Builder<static>|User whereJobTitle($value)
+ * @method static Builder<static>|User whereManagerId($value)
  * @method static Builder<static>|User whereName($value)
- * @method static Builder<static>|User whereOdooId($value)
- * @method static Builder<static>|User whereOdooManagerId($value)
- * @method static Builder<static>|User whereProofhubId($value)
  * @method static Builder<static>|User whereRememberToken($value)
- * @method static Builder<static>|User whereSystempinId($value)
  * @method static Builder<static>|User whereTimezone($value)
  * @method static Builder<static>|User whereUpdatedAt($value)
  *
@@ -140,13 +135,9 @@ class User extends Authenticatable implements CanResetPassword
         'email',
         'password',
         'timezone',
-        'odoo_id',
-        'desktime_id',
-        'proofhub_id',
-        'systempin_id',
         'department_id',
         'job_title',
-        'odoo_manager_id',
+        'manager_id',
         'user_type',
         'do_not_track',
         'muted_notifications',
@@ -169,10 +160,6 @@ class User extends Authenticatable implements CanResetPassword
     protected $hidden = [
         'password',
         'remember_token',
-        'odoo_id',
-        'desktime_id',
-        'proofhub_id',
-        'systempin_id',
     ];
 
     /**
@@ -187,11 +174,7 @@ class User extends Authenticatable implements CanResetPassword
         'is_active' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
-        'desktime_id' => 'integer',
         'timezone' => 'string',
-        'proofhub_created_at' => 'datetime',
-        'proofhub_updated_at' => 'datetime',
-        'proofhub_id' => 'integer',
     ];
 
     /**
@@ -202,7 +185,7 @@ class User extends Authenticatable implements CanResetPassword
     protected $appends = ['is_online'];
 
     /**
-     * Scope a query to only include users who are trackable (do_not_track is false).
+     * Scope a query to only include users who are trackable (do_not_track is false and has Odoo identity).
      *
      * Use this scope in sync operations to exclude users who have opted out of tracking.
      * Example: User::trackable()->where(...)->get();
@@ -210,7 +193,10 @@ class User extends Authenticatable implements CanResetPassword
     #[Scope]
     protected function trackable(Builder $query): void
     {
-        $query->where('do_not_track', false)->whereNotNull('odoo_id');
+        $query->where('do_not_track', false)
+            ->whereHas('externalIdentities', function (Builder $q): void {
+                $q->where('platform', Platform::Odoo);
+            });
     }
 
     /**
@@ -235,6 +221,57 @@ class User extends Authenticatable implements CanResetPassword
     public function sessions()
     {
         return $this->hasMany(Session::class, 'user_id', 'id');
+    }
+
+    /**
+     * Get all external identities for this user.
+     *
+     * External identities link this user to their accounts on external platforms
+     * (Odoo, DeskTime, ProofHub, SystemPin).
+     */
+    public function externalIdentities(): HasMany
+    {
+        return $this->hasMany(UserExternalIdentity::class);
+    }
+
+    /**
+     * Get the external identity for a specific platform.
+     */
+    public function externalIdentityFor(Platform $platform): HasOne
+    {
+        return $this->hasOne(UserExternalIdentity::class)
+            ->where('platform', $platform);
+    }
+
+    /**
+     * Get the external ID for a specific platform.
+     */
+    public function getExternalIdFor(Platform $platform): ?string
+    {
+        return $this->externalIdentities
+            ->firstWhere('platform', $platform)
+            ?->external_id;
+    }
+
+    /**
+     * Check if user has a linked identity for a specific platform.
+     */
+    public function hasExternalIdentity(Platform $platform): bool
+    {
+        return $this->externalIdentities()
+            ->where('platform', $platform)
+            ->exists();
+    }
+
+    /**
+     * Find a user by their external platform ID.
+     */
+    public static function findByExternalId(Platform $platform, string $externalId): ?self
+    {
+        return self::whereHas('externalIdentities', function (Builder $query) use ($platform, $externalId): void {
+            $query->where('platform', $platform)
+                ->where('external_id', $externalId);
+        })->first();
     }
 
     /**
@@ -415,7 +452,7 @@ class User extends Authenticatable implements CanResetPassword
      */
     public function manager(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'odoo_manager_id', 'odoo_id');
+        return $this->belongsTo(User::class, 'manager_id');
     }
 
     /**
@@ -423,7 +460,7 @@ class User extends Authenticatable implements CanResetPassword
      */
     public function subordinates(): HasMany
     {
-        return $this->hasMany(User::class, 'odoo_manager_id', 'odoo_id');
+        return $this->hasMany(User::class, 'manager_id');
     }
 
     /**
@@ -436,8 +473,11 @@ class User extends Authenticatable implements CanResetPassword
         $platformBadges = [];
         $specialBadges = [];
 
+        // Build a map of linked platforms for efficient lookup
+        $linkedPlatforms = $this->externalIdentities->pluck('platform')->toArray();
+
         // Odoo Badge
-        if ($this->odoo_id) {
+        if (in_array(Platform::Odoo, $linkedPlatforms, true)) {
             $platformBadges[] = [
                 'text' => 'Odoo',
                 'variant' => 'info',
@@ -453,12 +493,12 @@ class User extends Authenticatable implements CanResetPassword
             ];
         }
 
-        // Desktime Badge
-        if ($this->desktime_id) {
+        // DeskTime Badge
+        if (in_array(Platform::DeskTime, $linkedPlatforms, true)) {
             $platformBadges[] = [
-                'text' => 'Desktime',
+                'text' => 'DeskTime',
                 'variant' => 'info',
-                'tooltip' => 'User has a Desktime account linked',
+                'tooltip' => 'User has a DeskTime account linked',
                 'isMissing' => false,
             ];
         } else {
@@ -470,12 +510,12 @@ class User extends Authenticatable implements CanResetPassword
             ];
         }
 
-        // Proofhub Badge
-        if ($this->proofhub_id) {
+        // ProofHub Badge
+        if (in_array(Platform::ProofHub, $linkedPlatforms, true)) {
             $platformBadges[] = [
-                'text' => 'Proofhub',
+                'text' => 'ProofHub',
                 'variant' => 'info',
-                'tooltip' => 'User has a Proofhub account linked',
+                'tooltip' => 'User has a ProofHub account linked',
                 'isMissing' => false,
             ];
         } else {
@@ -488,7 +528,7 @@ class User extends Authenticatable implements CanResetPassword
         }
 
         // SystemPin Badge
-        if ($this->systempin_id) {
+        if (in_array(Platform::SystemPin, $linkedPlatforms, true)) {
             $platformBadges[] = [
                 'text' => 'SystemPin',
                 'variant' => 'info',
@@ -603,18 +643,6 @@ class User extends Authenticatable implements CanResetPassword
             'attendances' => $attendances,
             'time_entries' => $timeEntries,
         ];
-    }
-
-    /**
-     * Find a local user by Odoo employee ID.
-     */
-    public static function findByOdooId(?int $odooId): ?self
-    {
-        if (! $odooId) {
-            return null;
-        }
-
-        return self::where('odoo_id', $odooId)->first();
     }
 
     /**

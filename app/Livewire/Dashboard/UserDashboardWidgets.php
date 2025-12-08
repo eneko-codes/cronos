@@ -9,13 +9,16 @@ use App\Models\User;
 use App\Models\UserAttendance;
 use App\Models\UserLeave;
 use App\Models\UserSchedule;
+use App\Services\DurationFormatterService;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Lazy;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 #[Lazy]
 class UserDashboardWidgets extends Component
 {
+    #[Locked]
     public int $userId;
 
     public ?array $todaysSchedule = null;
@@ -28,13 +31,15 @@ class UserDashboardWidgets extends Component
 
     public ?int $upcomingLeaveId = null;
 
-    public function mount(User $user): void
+    public function mount(int $userId): void
     {
-        $this->userId = $user->id;
+        $this->userId = $userId;
+
+        $user = $this->user;
 
         if (! $user->do_not_track) {
             // Today's Schedule
-            $userSchedule = UserSchedule::where('user_id', $user->id)
+            $userSchedule = UserSchedule::where('user_id', $this->userId)
                 ->where('effective_from', '<=', now()->toDateString())
                 ->where(function ($q): void {
                     $q->whereNull('effective_until')
@@ -97,12 +102,10 @@ class UserDashboardWidgets extends Component
                         'period' => $detail->day_period,
                         'name' => $detail->name,
                         'formatted' => "{$start->format('H:i')} - {$end->format('H:i')}",
-                        'duration' => \Carbon\CarbonInterval::minutes($minutesForSlot)->cascade()->format('%hh %Im'),
+                        'duration' => DurationFormatterService::fromMinutes($minutesForSlot),
                     ];
                 }
-                $duration = $totalMinutes > 0
-                    ? \Carbon\CarbonInterval::minutes($totalMinutes)->cascade()->format('%hh %Im')
-                    : '';
+                $duration = DurationFormatterService::fromMinutes($totalMinutes);
                 $this->todaysSchedule = [
                     'name' => $schedule->description,
                     'duration' => $duration,
@@ -118,7 +121,7 @@ class UserDashboardWidgets extends Component
             }
 
             // Today's Leave
-            $todaysLeave = UserLeave::where('user_id', $user->id)
+            $todaysLeave = UserLeave::where('user_id', $this->userId)
                 ->whereDate('start_date', '<=', now()->toDateString())
                 ->whereDate('end_date', '>=', now()->toDateString())
                 ->whereIn('status', ['validate', 'confirm'])
@@ -138,16 +141,16 @@ class UserDashboardWidgets extends Component
                 $startTime = $todaysLeave->start_date->format('H:i');
                 $endTime = $todaysLeave->end_date->format('H:i');
                 $actualTimeRange = "{$startTime} - {$endTime}";
-                
+
                 // Only show time range for partial-day leaves, and avoid meaningless ranges
-                $shouldShowTimeRange = $todaysLeave->duration_days < 1 && 
-                                     $actualTimeRange !== '00:00 - 00:00' && 
+                $shouldShowTimeRange = $todaysLeave->duration_days < 1 &&
+                                     $actualTimeRange !== '00:00 - 00:00' &&
                                      $startTime !== $endTime;
 
                 $this->todaysLeave = [
                     'type' => $todaysLeave->leaveType ? $todaysLeave->leaveType->name : 'Leave',
                     'duration' => $showDuration && $leaveDurationMinutes > 0
-                        ? \Carbon\CarbonInterval::minutes($leaveDurationMinutes)->cascade()->format('%hh %Im')
+                        ? DurationFormatterService::fromMinutes($leaveDurationMinutes)
                         : '',
                     'status' => $todaysLeave->status,
                     'isHalfDay' => $todaysLeave->isHalfDay(),
@@ -160,7 +163,7 @@ class UserDashboardWidgets extends Component
             }
 
             // Today's Attendance (handles multiple segments)
-            $attendances = UserAttendance::where('user_id', $user->id)
+            $attendances = UserAttendance::where('user_id', $this->userId)
                 ->whereDate('date', now()->toDateString())
                 ->orderBy('clock_in')
                 ->get();
@@ -204,9 +207,7 @@ class UserDashboardWidgets extends Component
                     return [
                         'clock_in' => $attendance->clock_in ? $attendance->clock_in->setTimezone(config('app.timezone'))->format('H:i') : null,
                         'clock_out' => $attendance->clock_out ? $attendance->clock_out->setTimezone(config('app.timezone'))->format('H:i') : null,
-                        'duration' => $segmentSeconds > 0
-                            ? \Carbon\CarbonInterval::seconds($segmentSeconds)->cascade()->format('%hh %Im')
-                            : '',
+                        'duration' => DurationFormatterService::fromSeconds($segmentSeconds),
                     ];
                 })->toArray();
 
@@ -214,7 +215,7 @@ class UserDashboardWidgets extends Component
 
                 $this->todaysAttendance = [
                     'status' => $isRemote ? 'Remote' : 'In Office',
-                    'duration' => \Carbon\CarbonInterval::minutes($durationMinutes)->cascade()->format('%hh %Im'),
+                    'duration' => DurationFormatterService::fromMinutes($durationMinutes),
                     'is_remote' => $isRemote,
                     'clockedIn' => $clockedIn,
                     'start' => $firstClockIn ? $firstClockIn->setTimezone(config('app.timezone'))->format('H:i') : null,
@@ -224,7 +225,7 @@ class UserDashboardWidgets extends Component
             }
 
             // Today's Time Entries
-            $timeEntries = TimeEntry::where('user_id', $user->id)
+            $timeEntries = TimeEntry::where('user_id', $this->userId)
                 ->whereDate('date', now()->toDateString())
                 ->with(['project', 'task'])
                 ->orderBy('proofhub_created_at')
@@ -242,7 +243,7 @@ class UserDashboardWidgets extends Component
             })->toArray();
 
             // Upcoming Leave
-            $upcomingLeave = UserLeave::where('user_id', $user->id)
+            $upcomingLeave = UserLeave::where('user_id', $this->userId)
                 ->where('status', 'validate')
                 ->where('start_date', '>=', now()->toDateString())
                 ->orderBy('start_date')
@@ -267,6 +268,7 @@ class UserDashboardWidgets extends Component
     #[Computed]
     public function user(): User
     {
+        // Only accesses do_not_track attribute, no relationships needed
         return User::findOrFail($this->userId);
     }
 

@@ -14,16 +14,16 @@
       />
 
       <!-- Filter Tabs - Only show if there are users -->
-      @if ($counts['all'] > 0)
+      @if ($counts["all"] > 0)
         <x-tabs
           :active="$active"
           :counts="$counts"
           :filters="[
-            'all' => 'All Users',
-            'admins' => 'Admins',
-            'maintenance' => 'Maintenance',
-            'not_tracked' => 'Not Tracked',
-            'muted' => 'Muted'
+              'all' => 'All Users',
+              'admins' => 'Admins',
+              'maintenance' => 'Maintenance',
+              'not_tracked' => 'Not Tracked',
+              'muted' => 'Muted'
           ]"
           onFilterChange="setFilter"
         />
@@ -37,14 +37,20 @@
       <table class="w-full border-collapse">
         <tbody class="text-sm" wire:poll.10s>
           @foreach ($users as $user)
+            @php
+              $canViewDashboard = $dashboardAccess[$user->id] ?? false;
+            @endphp
+
             <tr
               wire:key="user-{{ $user->id }}"
-              class="flex flex-row items-center justify-between gap-4 border-b border-gray-200 p-2 text-gray-800 hover:cursor-pointer hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700/50"
+              class="{{ $canViewDashboard ? "hover:cursor-pointer hover:bg-gray-50" : "" }} {{ $canViewDashboard ? "dark:hover:bg-gray-700/50" : "" }} flex flex-row items-center justify-between gap-4 border-b border-gray-200 p-2 text-gray-800 dark:border-gray-700 dark:text-gray-200"
             >
               <!-- User Info Column -->
               <td
-                wire:click="redirectToUserDashboard({{ $user->id }})"
-                class="flex w-full flex-1 flex-col gap-1 md:w-auto md:flex-row md:items-center"
+                @if ($canViewDashboard)
+                    wire:click="redirectToUserDashboard({{ $user->id }})"
+                @endif
+                class="{{ $canViewDashboard ? "cursor-pointer" : "" }} flex w-full flex-1 flex-col gap-1 md:w-auto md:flex-row md:items-center"
               >
                 <div class="flex items-center gap-2">
                   <!-- Online Status Indicator with Tooltip -->
@@ -53,7 +59,7 @@
                       text="{{ $user->is_online ? 'Online' : 'Offline' }}"
                     >
                       <div
-                        class="{{ $user->is_online ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-700' }} h-2 w-2 rounded-full"
+                        class="{{ $user->is_online ? "bg-green-500" : "bg-gray-300 dark:bg-gray-700" }} h-2 w-2 rounded-full"
                       ></div>
                     </x-tooltip>
                   @endif
@@ -62,33 +68,13 @@
                   <p class="text-md font-bold capitalize">
                     {{ $user->name }}
                   </p>
-
-                  {{-- Muted icon --}}
-                  @if (! $globalNotificationsEnabled || $user->muted_notifications)
-                    <x-tooltip
-                      text="{{ !$globalNotificationsEnabled ? 'Global notifications disabled' : 'User notifications muted' }}"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="16"
-                        height="16"
-                        fill="currentColor"
-                        class="bi bi-bell-slash-fill text-red-500 dark:text-red-600"
-                        viewBox="0 0 16 16"
-                      >
-                        <path
-                          d="M5.164 14H15c-1.5-1-2-5.902-2-7q0-.396-.06-.776zm6.288-10.617A5 5 0 0 0 8.995 2.1a1 1 0 1 0-1.99 0A5 5 0 0 0 3 7c0 .898-.335 4.342-1.278 6.113zM10 15a2 2 0 1 1-4 0zm-9.375.625a.53.53 0 0 0 .75.75l14.75-14.75a.53.53 0 0 0-.75-.75z"
-                        />
-                      </svg>
-                    </x-tooltip>
-                  @endif
                 </div>
 
                 <!-- User Badges for Roles and Linked Accounts -->
-                <x-user-badges :badges="$user->getDisplayBadges()" />
+                <x-user-badges :user="$user" />
               </td>
 
-              <!-- Action Column: Details Button -->
+              <!-- Action Column: Settings Button -->
               <td
                 class="flex-none items-center justify-center gap-2 whitespace-nowrap"
               >
@@ -105,11 +91,11 @@
                   >
                     <path
                       fill-rule="evenodd"
-                      d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.253a.25.25 0 0 1 .244.304l-.459 2.066A1.75 1.75 0 0 0 10.747 15H11a.75.75 0 0 0 0-1.5h-.253a.25.25 0 0 1-.244-.304l.459-2.066A1.75 1.75 0 0 0 9.253 9H9Z"
+                      d="M7.84 1.804A1 1 0 0 1 8.82 1h2.36a1 1 0 0 1 .98.804l.331 1.652a6.993 6.993 0 0 1 1.929 1.115l1.598-.54a1 1 0 0 1 1.186.447l1.18 2.044a1 1 0 0 1-.205 1.251l-1.267 1.113a7.047 7.047 0 0 1 0 2.228l1.267 1.113a1 1 0 0 1 .206 1.25l-1.18 2.045a1 1 0 0 1-1.187.447l-1.598-.54a6.993 6.993 0 0 1-1.93 1.115l-.33 1.652a1 1 0 0 1-.98.804H8.82a1 1 0 0 1-.98-.804l-.331-1.652a6.993 6.993 0 0 1-1.929-1.115l-1.598.54a1 1 0 0 1-1.186-.447l-1.18-2.044a1 1 0 0 1 .205-1.251l1.267-1.114a7.05 7.05 0 0 1 0-2.227L1.821 7.773a1 1 0 0 1-.206-1.25l1.18-2.045a1 1 0 0 1 1.187-.447l1.598.54A6.993 6.993 0 0 1 7.51 3.456l.33-1.652ZM10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
                       clip-rule="evenodd"
                     />
                   </svg>
-                  Details
+                  Settings
                 </x-button>
               </td>
             </tr>

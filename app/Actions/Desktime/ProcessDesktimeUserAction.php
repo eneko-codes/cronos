@@ -5,19 +5,24 @@ declare(strict_types=1);
 namespace App\Actions\Desktime;
 
 use App\Actions\LinkUserExternalIdentityAction;
+use App\Actions\NotifyMaintenanceUsersAction;
 use App\DataTransferObjects\Desktime\DesktimeEmployeeDTO;
 use App\Enums\Platform;
+use App\Notifications\UnlinkedPlatformUserNotification;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
 
 /**
  * Action to synchronize DeskTime user data with the local users table.
- * This action links a local user to their DeskTime identity via the external identities system.
+ *
+ * Links a local user to their DeskTime identity via the external identities system.
+ * Uses email matching first, then falls back to name similarity matching.
+ * Notifies maintainers about unlinked users.
  */
 final class ProcessDesktimeUserAction
 {
     public function __construct(
         private readonly LinkUserExternalIdentityAction $linkAction,
+        private readonly NotifyMaintenanceUsersAction $notifyAction,
     ) {}
 
     /**
@@ -27,43 +32,72 @@ final class ProcessDesktimeUserAction
      */
     public function execute(DesktimeEmployeeDTO $userDto): void
     {
-        $validator = Validator::make(
-            [
-                'id' => $userDto->id,
-                'email' => $userDto->email,
-            ],
-            [
-                'id' => 'required|integer',
-                'email' => 'required|email',
-            ],
-            [
-                'id.required' => 'DeskTime user is missing an ID.',
-                'email.required' => 'DeskTime user (ID: '.$userDto->id.') is missing an email.',
-                'email.email' => 'DeskTime user (ID: '.$userDto->id.') has an invalid email address.',
-            ]
-        );
+        // Validate required ID
+        if ($userDto->id === null) {
+            Log::warning('Skipping DeskTime user: missing ID');
 
-        if ($validator->fails()) {
-            Log::warning('Skipping DeskTime user due to validation failure.', [
-                'user_id' => $userDto->id,
-                'errors' => $validator->errors()->all(),
+            return;
+        }
+
+        $externalId = (string) $userDto->id;
+        $hasEmail = ! empty($userDto->email) && filter_var($userDto->email, FILTER_VALIDATE_EMAIL);
+        $hasName = ! empty($userDto->name);
+
+        // Skip users with missing data: both name AND email are missing
+        if (! $hasEmail && ! $hasName) {
+            Log::warning('DeskTime user has missing data quality.', [
+                'desktime_id' => $externalId,
+                'name' => $userDto->name,
+                'email' => $userDto->email,
             ]);
 
             return;
         }
 
-        $identity = $this->linkAction->execute(
+        // Attempt to link the user
+        $result = $this->linkAction->execute(
             platform: Platform::DeskTime,
-            externalId: (string) $userDto->id,
-            externalEmail: $userDto->email,
+            externalId: $externalId,
+            externalEmail: $hasEmail ? $userDto->email : null,
+            externalName: $userDto->name,
         );
 
-        if ($identity) {
+        if ($result->hasIdentity()) {
             Log::debug('DeskTime user linked successfully.', [
-                'desktime_id' => $userDto->id,
-                'user_id' => $identity->user_id,
-                'linked_by' => $identity->linked_by,
+                'desktime_id' => $externalId,
+                'user_id' => $result->identity->user_id,
+                'linked_by' => $result->identity->linked_by,
+                'was_new_link' => $result->isNewLink(),
             ]);
+
+            return;
         }
+
+        // No match found - notify maintainers
+        Log::info('DeskTime user could not be linked.', [
+            'desktime_id' => $externalId,
+            'name' => $userDto->name,
+            'email' => $userDto->email,
+        ]);
+
+        $this->notifyUnlinkedUser($externalId, $userDto->name, $userDto->email);
+    }
+
+    /**
+     * Notify maintainers about an unlinked platform user.
+     */
+    private function notifyUnlinkedUser(string $externalId, ?string $name, ?string $email): void
+    {
+        $notification = new UnlinkedPlatformUserNotification(
+            platform: Platform::DeskTime,
+            externalId: $externalId,
+            externalName: $name,
+            externalEmail: $email,
+        );
+
+        $this->notifyAction->execute(
+            $notification,
+            fn ($user) => UnlinkedPlatformUserNotification::shouldSend($user, Platform::DeskTime, $externalId)
+        );
     }
 }

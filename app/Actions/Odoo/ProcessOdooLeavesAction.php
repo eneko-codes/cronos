@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Odoo;
 
 use App\DataTransferObjects\Odoo\OdooLeaveDTO;
+use App\Enums\Platform;
 use App\Models\User;
 use App\Models\UserLeave;
 use Illuminate\Support\Arr;
@@ -59,7 +60,7 @@ final class ProcessOdooLeavesAction
                 // Extract the Odoo employee ID from the DTO array
                 $employeeOdooId = Arr::get($leaveDto->employee_id, 0);
                 // If the employee Odoo ID is missing or the user does not exist, add a validation error
-                if (! $employeeOdooId || ! User::findByOdooId($employeeOdooId)) {
+                if (! $employeeOdooId || ! User::findByExternalId(Platform::Odoo, (string) $employeeOdooId)) {
                     $validator->errors()->add('user_id', 'User not found for Odoo employee ID: '.$employeeOdooId);
                 }
             }
@@ -82,7 +83,7 @@ final class ProcessOdooLeavesAction
             $userId = null;
             if ($leaveDto->holiday_type === 'employee' && $employeeOdooId) {
                 // Look up the local user by their Odoo employee ID.
-                $user = User::findByOdooId($employeeOdooId);
+                $user = User::findByExternalId(Platform::Odoo, (string) $employeeOdooId);
                 $userId = $user ? $user->id : null;
             }
             // Create or update the UserLeave record using odoo_leave_id as the unique key

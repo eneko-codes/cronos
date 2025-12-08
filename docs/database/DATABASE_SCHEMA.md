@@ -4,6 +4,49 @@
 
 Cronos uses PostgreSQL as the primary database, storing synchronized data from multiple external platforms. The schema is designed to maintain relationships between users, projects, time entries, and attendance records while supporting Laravel's authentication, session management, and notification systems.
 
+## 📧 Email Architecture
+
+This application uses a **dual-email storage strategy** to support both Laravel authentication and multi-platform data synchronization:
+
+### Primary Authentication Email (`users.email`)
+
+- **Purpose:** Laravel authentication, email verification, account setup/recovery
+- **Source:** Synced from Odoo's `work_email` field (Odoo is the source of truth)
+- **Usage:** Login (`Auth::attempt()`), password reset, welcome emails, email verification
+- **Required:** Yes - Laravel 12 requires this field for authentication
+- **Indexed:** Yes - unique index for fast authentication lookups
+
+### Platform-Specific Emails (`user_external_identities.external_email`)
+
+- **Purpose:** Store emails from each external platform (Odoo, DeskTime, ProofHub, SystemPin)
+- **Source:** Synced from respective platform APIs
+- **Usage:** Data synchronization, cross-platform user matching, notification preferences
+- **Required:** No - platforms may have different emails or no email
+- **Multiple:** Yes - one email per platform per user
+
+### Why Both?
+
+1. **Laravel 12 Requirements:** `Auth::attempt(['email' => $email, 'password' => $password])` requires `users.email`
+2. **Email Verification:** Handled via `user_external_identities.email_verified_at` - the primary email is verified through the Odoo identity when user completes password setup
+3. **Account Setup:** Welcome emails and password reset need a reliable, always-present email
+4. **Platform Flexibility:** Users may have different emails across platforms (e.g., `user@company.com` in Odoo, `user@desktime.com` in DeskTime)
+5. **Performance:** Direct column access is faster than joins for authentication queries
+
+### Data Flow
+
+- **Odoo sync** → `users.email` (from `work_email`) + `user_external_identities.external_email` (Odoo)
+- **DeskTime sync** → `user_external_identities.external_email` (DeskTime)
+- **ProofHub sync** → `user_external_identities.external_email` (ProofHub)
+- **SystemPin sync** → `user_external_identities.external_email` (SystemPin)
+
+### Notification Email Selection
+
+- Users can select any verified platform email for notifications
+- Falls back to `users.email` if no platform email is selected/verified
+- Account setup/recovery notifications always use `users.email` (most reliable)
+
+See `app/Models/User.php` and `app/Actions/Odoo/ProcessOdooUserAction.php` for implementation details.
+
 ## 📊 Core Tables
 
 ### Users Table (`users`)
@@ -16,7 +59,12 @@ Central table linking all external platform IDs and user information.
 
 - `id` - Primary key (auto-increment)
 - `name` - User's full name (VARCHAR(255), indexed)
-- `email` - Email address (VARCHAR(255), unique, indexed)
+- `email` - **Primary authentication email** (VARCHAR(255), unique, indexed)
+  - **Purpose:** Laravel authentication, account setup/recovery
+  - **Source:** Synced from Odoo's `work_email` field (Odoo is the source of truth)
+  - **Usage:** Login (`Auth::attempt()`), password reset, welcome emails
+  - **Required:** Yes - Laravel 12 requires this field for authentication
+  - **Note:** This email is also stored in `user_external_identities.external_email` for platform-specific records. Email verification is tracked via `user_external_identities.email_verified_at` (not on the users table).
 - `password` - Hashed password (VARCHAR(255), nullable)
 - `odoo_id` - Odoo employee ID (BIGINT, unique)
 - `proofhub_id` - ProofHub user ID (BIGINT, unique)

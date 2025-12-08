@@ -106,9 +106,11 @@ class FirstTimePasswordSetupController extends Controller
         $status = Password::reset(
             $validatedData,
             function ($user, $password): void {
-                // Set the user's password using Laravel's Hash facade (Laravel 12 best practice)
+                // Set the user's password and mark email as verified
+                // The user has proven they own this email by clicking the welcome link
                 $user->forceFill([
                     'password' => Hash::make($password),
+                    'email_verified_at' => $user->email_verified_at ?? now(),
                 ])->save();
 
                 // Log the password setup event
@@ -116,6 +118,7 @@ class FirstTimePasswordSetupController extends Controller
                     'user_id' => $user->id,
                     'email' => $user->email,
                     'name' => $user->name,
+                    'email_verified' => $user->hasVerifiedEmail(),
                     'ip_address' => request()->ip(),
                     'user_agent' => request()->header('User-Agent'),
                 ]);

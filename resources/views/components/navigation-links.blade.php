@@ -34,7 +34,8 @@
     Dashboard
   </a>
 
-  @if (Auth::user()->isAdmin())
+  {{-- User management: Admin + Maintenance users --}}
+  @can('accessUserManagement')
     <a
       wire:navigate
       href="{{ route('users.list') }}"
@@ -56,7 +57,10 @@
       </svg>
       Users
     </a>
+  @endcan
 
+  {{-- Admin-only routes: Projects, Schedules, Leaves --}}
+  @can('accessAdminRoutes')
     <a
       wire:navigate
       href="{{ route('projects.list') }}"
@@ -116,7 +120,10 @@
       </svg>
       Leaves
     </a>
+  @endcan
 
+  {{-- Settings: Admin only --}}
+  @can('accessSettingsPage')
     <a
       wire:navigate
       href="{{ route('settings') }}"
@@ -143,5 +150,5 @@
       </svg>
       Settings
     </a>
-  @endif
+  @endcan
 </nav>

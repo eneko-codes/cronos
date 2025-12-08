@@ -8,8 +8,10 @@ use App\Enums\Platform;
 use App\Enums\RoleType;
 use App\Notifications\ResetPasswordNotification;
 use Illuminate\Contracts\Auth\CanResetPassword;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -23,14 +25,29 @@ use Illuminate\Notifications\Notifiable;
  *
  * Represents an application user (employee) that can be tracked across multiple systems.
  * External platform identities (Odoo, DeskTime, ProofHub, SystemPin) are stored in the
- * user_external_identities table for flexible cross-platform matching.
+ * user_external_identities table for cross-platform sync matching.
  *
  * Users with do_not_track=true will have their data automatically purged and will be
  * excluded from synchronization operations to maintain privacy.
  *
+ * ## Email Architecture
+ *
+ * **users.email** (Primary Email):
+ * - Purpose: Laravel authentication, email verification, ALL notifications
+ * - Source: Synced from Odoo's `work_email` field (Odoo is the source of truth)
+ * - Usage: Login, password reset, welcome emails, email verification, all notifications
+ * - Verification: Via Laravel native MustVerifyEmail (email_verified_at column)
+ *
+ * **user_external_identities.external_email** (Platform-Specific Emails):
+ * - Purpose: Store emails from each external platform for sync matching only
+ * - Source: Synced from respective platform APIs
+ * - Usage: Data synchronization, cross-platform user matching
+ * - No verification needed - only used for sync purposes
+ *
  * @property int $id Primary key
  * @property string $name Full name of the user
- * @property string $email Email address
+ * @property string $email Primary authentication and notification email
+ * @property \Carbon\Carbon|null $email_verified_at When the email was verified
  * @property string|null $timezone User's preferred timezone
  * @property int|null $department_id Foreign key to departments table
  * @property RoleType $user_type Type of the user (e.g., Admin, User)
@@ -38,7 +55,6 @@ use Illuminate\Notifications\Notifiable;
  * @property bool $muted_notifications Whether to mute notifications for this user
  * @property bool $is_active Whether the user is active (synced from Odoo)
  * @property string|null $job_title User's job title
- * @property int|null $manager_id Foreign key to users table (manager)
  * @property \Carbon\Carbon|null $created_at When record was created
  * @property \Carbon\Carbon|null $updated_at When record was last updated
  * @property bool|null $is_online Virtual attribute that determines if the user is currently online
@@ -50,7 +66,6 @@ use Illuminate\Notifications\Notifiable;
  * @property-read \App\Models\Department|null $department
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\UserExternalIdentity> $externalIdentities
  * @property-read int|null $external_identities_count
- * @property-read User|null $manager
  * @property-read \App\Models\UserNotificationPreference $notificationPreferences
  * @property-read \Illuminate\Notifications\DatabaseNotificationCollection<int, \Illuminate\Notifications\DatabaseNotification> $notifications
  * @property-read int|null $notifications_count
@@ -59,8 +74,6 @@ use Illuminate\Notifications\Notifiable;
  * @property-read int|null $projects_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Session> $sessions
  * @property-read int|null $sessions_count
- * @property-read \Illuminate\Database\Eloquent\Collection<int, User> $subordinates
- * @property-read int|null $subordinates_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Task> $tasks
  * @property-read int|null $tasks_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\TimeEntry> $timeEntries
@@ -85,7 +98,6 @@ use Illuminate\Notifications\Notifiable;
  * @method static Builder<static>|User whereIsActive($value)
  * @method static Builder<static>|User whereRoleType($value)
  * @method static Builder<static>|User whereJobTitle($value)
- * @method static Builder<static>|User whereManagerId($value)
  * @method static Builder<static>|User whereName($value)
  * @method static Builder<static>|User whereRememberToken($value)
  * @method static Builder<static>|User whereTimezone($value)
@@ -93,9 +105,9 @@ use Illuminate\Notifications\Notifiable;
  *
  * @mixin \Eloquent
  */
-class User extends Authenticatable implements CanResetPassword
+class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
 {
-    use Notifiable;
+    use HasFactory, Notifiable;
 
     /**
      * The table associated with the model.
@@ -133,11 +145,11 @@ class User extends Authenticatable implements CanResetPassword
     protected $fillable = [
         'name',
         'email',
+        'email_verified_at',
         'password',
         'timezone',
         'department_id',
         'job_title',
-        'manager_id',
         'user_type',
         'do_not_track',
         'muted_notifications',
@@ -172,6 +184,7 @@ class User extends Authenticatable implements CanResetPassword
         'do_not_track' => 'boolean',
         'muted_notifications' => 'boolean',
         'is_active' => 'boolean',
+        'email_verified_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'timezone' => 'string',
@@ -341,10 +354,11 @@ class User extends Authenticatable implements CanResetPassword
      * Get the department that the user belongs to.
      *
      * Departments are organizational units imported from Odoo.
+     * Note: Department model uses odoo_department_id as its primary key.
      */
     public function department(): BelongsTo
     {
-        return $this->belongsTo(Department::class);
+        return $this->belongsTo(Department::class, 'department_id', 'odoo_department_id');
     }
 
     /**
@@ -448,136 +462,6 @@ class User extends Authenticatable implements CanResetPassword
     }
 
     /**
-     * Get the user's manager.
-     */
-    public function manager(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'manager_id');
-    }
-
-    /**
-     * Get the user's direct subordinates.
-     */
-    public function subordinates(): HasMany
-    {
-        return $this->hasMany(User::class, 'manager_id');
-    }
-
-    /**
-     * Generate an array of badges for the user, to be displayed in the UI.
-     *
-     * @return array<int, array<string, mixed>>
-     */
-    public function getDisplayBadges(): array
-    {
-        $platformBadges = [];
-        $specialBadges = [];
-
-        // Build a map of linked platforms for efficient lookup
-        $linkedPlatforms = $this->externalIdentities->pluck('platform')->toArray();
-
-        // Odoo Badge
-        if (in_array(Platform::Odoo, $linkedPlatforms, true)) {
-            $platformBadges[] = [
-                'text' => 'Odoo',
-                'variant' => 'info',
-                'tooltip' => 'User has an Odoo account linked',
-                'isMissing' => false,
-            ];
-        } else {
-            $platformBadges[] = [
-                'text' => 'Odoo',
-                'variant' => 'alert',
-                'tooltip' => 'User is not linked with Odoo.',
-                'isMissing' => true,
-            ];
-        }
-
-        // DeskTime Badge
-        if (in_array(Platform::DeskTime, $linkedPlatforms, true)) {
-            $platformBadges[] = [
-                'text' => 'DeskTime',
-                'variant' => 'info',
-                'tooltip' => 'User has a DeskTime account linked',
-                'isMissing' => false,
-            ];
-        } else {
-            $platformBadges[] = [
-                'text' => 'DeskTime',
-                'variant' => 'alert',
-                'tooltip' => 'User is not linked with DeskTime.',
-                'isMissing' => true,
-            ];
-        }
-
-        // ProofHub Badge
-        if (in_array(Platform::ProofHub, $linkedPlatforms, true)) {
-            $platformBadges[] = [
-                'text' => 'ProofHub',
-                'variant' => 'info',
-                'tooltip' => 'User has a ProofHub account linked',
-                'isMissing' => false,
-            ];
-        } else {
-            $platformBadges[] = [
-                'text' => 'ProofHub',
-                'variant' => 'alert',
-                'tooltip' => 'User is not linked with ProofHub.',
-                'isMissing' => true,
-            ];
-        }
-
-        // SystemPin Badge
-        if (in_array(Platform::SystemPin, $linkedPlatforms, true)) {
-            $platformBadges[] = [
-                'text' => 'SystemPin',
-                'variant' => 'info',
-                'tooltip' => 'User has a System PIN configured',
-                'isMissing' => false,
-            ];
-        } else {
-            $platformBadges[] = [
-                'text' => 'SystemPin',
-                'variant' => 'alert',
-                'tooltip' => 'User does not have a System PIN.',
-                'isMissing' => true,
-            ];
-        }
-
-        // Admin Badge
-        if ($this->isAdmin()) {
-            $specialBadges[] = [
-                'text' => 'Admin',
-                'variant' => 'primary',
-                'tooltip' => 'User can see all employee data',
-                'isMissing' => false,
-            ];
-        }
-
-        // Maintenance Badge
-        if ($this->isMaintenance()) {
-            $specialBadges[] = [
-                'text' => 'Maintenance',
-                'variant' => 'primary',
-                'tooltip' => 'User receives API down warning notifications',
-                'isMissing' => false,
-            ];
-        }
-
-        // Not Tracking Badge
-        if ($this->do_not_track) {
-            $specialBadges[] = [
-                'text' => 'Not tracking',
-                'variant' => 'warning',
-                'tooltip' => 'The data of this user will not be fetched',
-                'isMissing' => false,
-            ];
-        }
-
-        return array_merge($platformBadges, $specialBadges);
-    }
-
-    /**
      * Get comprehensive user data (schedules, leaves, attendances, time entries)
      * for a specific user within a given date range.
      *
@@ -654,5 +538,17 @@ class User extends Authenticatable implements CanResetPassword
     public function sendPasswordResetNotification($token): void
     {
         $this->notify(new ResetPasswordNotification($token));
+    }
+
+    /**
+     * Determine if the user can receive email notifications.
+     *
+     * User can receive notifications only if:
+     * - Email is verified (via Laravel native MustVerifyEmail)
+     * - Notifications are not muted
+     */
+    public function canReceiveEmailNotifications(): bool
+    {
+        return $this->hasVerifiedEmail() && ! $this->muted_notifications;
     }
 }

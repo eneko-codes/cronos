@@ -135,7 +135,7 @@ class ScheduleDetail extends Model
     protected function formattedDuration(): Attribute
     {
         return Attribute::make(
-            get: fn () => $this->duration->cascade()->format('%hh %Im')
+            get: fn () => \App\Services\DurationFormatterService::fromInterval($this->duration)
         );
     }
 

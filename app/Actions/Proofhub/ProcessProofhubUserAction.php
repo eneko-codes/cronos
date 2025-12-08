@@ -5,19 +5,24 @@ declare(strict_types=1);
 namespace App\Actions\Proofhub;
 
 use App\Actions\LinkUserExternalIdentityAction;
+use App\Actions\NotifyMaintenanceUsersAction;
 use App\DataTransferObjects\Proofhub\ProofhubUserDTO;
 use App\Enums\Platform;
+use App\Notifications\UnlinkedPlatformUserNotification;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
 
 /**
  * Action to synchronize ProofHub user data with the local users table.
- * This action links a local user to their ProofHub identity via the external identities system.
+ *
+ * Links a local user to their ProofHub identity via the external identities system.
+ * Uses email matching first, then falls back to name similarity matching.
+ * Notifies maintainers about unlinked users.
  */
 final class ProcessProofhubUserAction
 {
     public function __construct(
         private readonly LinkUserExternalIdentityAction $linkAction,
+        private readonly NotifyMaintenanceUsersAction $notifyAction,
     ) {}
 
     /**
@@ -27,43 +32,90 @@ final class ProcessProofhubUserAction
      */
     public function execute(ProofhubUserDTO $userDto): void
     {
-        $validator = Validator::make(
-            [
-                'id' => $userDto->id,
-                'email' => $userDto->email,
-            ],
-            [
-                'id' => 'required|integer',
-                'email' => 'required|email',
-            ],
-            [
-                'id.required' => 'ProofHub user is missing an ID.',
-                'email.required' => 'ProofHub user (ID: '.$userDto->id.') is missing an email.',
-                'email.email' => 'ProofHub user (ID: '.$userDto->id.') has an invalid email address.',
-            ]
-        );
+        // Validate required ID
+        if ($userDto->id === null) {
+            Log::warning('Skipping ProofHub user: missing ID');
 
-        if ($validator->fails()) {
-            Log::warning('Skipping ProofHub user due to validation failure.', [
-                'user_id' => $userDto->id,
-                'errors' => $validator->errors()->all(),
+            return;
+        }
+
+        $externalId = (string) $userDto->id;
+        $hasEmail = ! empty($userDto->email) && filter_var($userDto->email, FILTER_VALIDATE_EMAIL);
+        $hasName = ! empty($userDto->first_name) || ! empty($userDto->last_name);
+        $fullName = $this->buildFullName($userDto->first_name, $userDto->last_name);
+
+        // Skip users with missing data: both name AND email are missing
+        if (! $hasEmail && ! $hasName) {
+            Log::warning('ProofHub user has missing data quality.', [
+                'proofhub_id' => $externalId,
+                'first_name' => $userDto->first_name,
+                'last_name' => $userDto->last_name,
+                'email' => $userDto->email,
             ]);
 
             return;
         }
 
-        $identity = $this->linkAction->execute(
+        // Attempt to link the user
+        $result = $this->linkAction->execute(
             platform: Platform::ProofHub,
-            externalId: (string) $userDto->id,
-            externalEmail: $userDto->email,
+            externalId: $externalId,
+            externalEmail: $hasEmail ? $userDto->email : null,
+            externalName: null, // ProofHub uses separate first/last name
+            firstName: $userDto->first_name,
+            lastName: $userDto->last_name,
         );
 
-        if ($identity) {
+        if ($result->hasIdentity()) {
             Log::debug('ProofHub user linked successfully.', [
-                'proofhub_id' => $userDto->id,
-                'user_id' => $identity->user_id,
-                'linked_by' => $identity->linked_by,
+                'proofhub_id' => $externalId,
+                'user_id' => $result->identity->user_id,
+                'linked_by' => $result->identity->linked_by,
+                'was_new_link' => $result->isNewLink(),
             ]);
+
+            return;
         }
+
+        // No match found - notify maintainers
+        Log::info('ProofHub user could not be linked.', [
+            'proofhub_id' => $externalId,
+            'first_name' => $userDto->first_name,
+            'last_name' => $userDto->last_name,
+            'email' => $userDto->email,
+        ]);
+
+        $this->notifyUnlinkedUser($externalId, $fullName, $userDto->email);
+    }
+
+    /**
+     * Build a full name from first and last name parts.
+     */
+    private function buildFullName(?string $firstName, ?string $lastName): ?string
+    {
+        $parts = array_filter([
+            $firstName ? trim($firstName) : null,
+            $lastName ? trim($lastName) : null,
+        ]);
+
+        return empty($parts) ? null : implode(' ', $parts);
+    }
+
+    /**
+     * Notify maintainers about an unlinked platform user.
+     */
+    private function notifyUnlinkedUser(string $externalId, ?string $name, ?string $email): void
+    {
+        $notification = new UnlinkedPlatformUserNotification(
+            platform: Platform::ProofHub,
+            externalId: $externalId,
+            externalName: $name,
+            externalEmail: $email,
+        );
+
+        $this->notifyAction->execute(
+            $notification,
+            fn ($user) => UnlinkedPlatformUserNotification::shouldSend($user, Platform::ProofHub, $externalId)
+        );
     }
 }

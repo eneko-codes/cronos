@@ -40,6 +40,20 @@ class ScheduleDetailView extends Component
     }
 
     /**
+     * Get all user schedules for this schedule (memoized to avoid duplicate queries).
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, UserSchedule>
+     */
+    #[Computed]
+    protected function allUserSchedules(): Collection
+    {
+        // Ensure user relationship is loaded to prevent lazy loading violations
+        return UserSchedule::with('user')
+            ->where('odoo_schedule_id', $this->schedule->odoo_schedule_id)
+            ->get();
+    }
+
+    /**
      * Get the currently assigned user schedules (unique users).
      *
      * @return \Illuminate\Database\Eloquent\Collection<int, UserSchedule>
@@ -49,14 +63,8 @@ class ScheduleDetailView extends Component
     {
         $now = Carbon::now();
 
-        // Ensure user relationship is loaded to prevent lazy loading violations
-        /** @var \Illuminate\Database\Eloquent\Collection<int, UserSchedule> $allUserSchedules */
-        $allUserSchedules = UserSchedule::with('user')
-            ->where('odoo_schedule_id', $this->schedule->odoo_schedule_id)
-            ->get();
-
         // Filter for assignments active now or in the future
-        $currentAssignments = $allUserSchedules->filter(function (UserSchedule $us) use ($now) {
+        $currentAssignments = $this->allUserSchedules->filter(function (UserSchedule $us) use ($now) {
             return is_null($us->effective_until) || $us->effective_until >= $now;
         });
 
@@ -74,19 +82,13 @@ class ScheduleDetailView extends Component
     {
         $now = Carbon::now();
 
-        // Ensure user relationship is loaded to prevent lazy loading violations
-        /** @var \Illuminate\Database\Eloquent\Collection<int, UserSchedule> $allUserSchedules */
-        $allUserSchedules = UserSchedule::with('user')
-            ->where('odoo_schedule_id', $this->schedule->odoo_schedule_id)
-            ->get();
-
         // Filter for assignments that ended in the past
-        $pastAssignments = $allUserSchedules->filter(function (UserSchedule $us) use ($now) {
+        $pastAssignments = $this->allUserSchedules->filter(function (UserSchedule $us) use ($now) {
             return ! is_null($us->effective_until) && $us->effective_until < $now;
         });
 
         // Get unique users who were previously assigned BUT are NOT currently assigned
-        $currentlyAssignedUserIds = $this->currentUserSchedules()->pluck('user_id'); // Use the computed property
+        $currentlyAssignedUserIds = $this->currentUserSchedules->pluck('user_id');
 
         return $pastAssignments->whereNotIn('user_id', $currentlyAssignedUserIds)->unique('user_id');
     }
@@ -119,27 +121,20 @@ class ScheduleDetailView extends Component
                     $data['status_label'] = $this->getStatusLabel($data['status']);
                     $data['status_classes'] = $this->getStatusClasses($data['status']);
 
-                    // Calculate duration string
+                    // Calculate duration string (human-readable format: "X hour(s) Y minute(s)")
                     try {
-                        $startCarbon = Carbon::parse($model->start);
-                        $endCarbon = Carbon::parse($model->end);
-                        $interval = $startCarbon->diff($endCarbon);
+                        $interval = $model->duration; // Uses model's duration accessor (CarbonInterval)
                         $durationParts = [];
-                        if ($interval->h > 0) {
-                            $durationParts[] = $interval->h.' hour'.($interval->h > 1 ? 's' : '');
+                        if ($interval->hours > 0) {
+                            $durationParts[] = $interval->hours.' hour'.($interval->hours !== 1 ? 's' : '');
                         }
-                        if ($interval->i > 0) {
-                            $durationParts[] = $interval->i.' minute'.($interval->i > 1 ? 's' : '');
+                        if ($interval->minutes > 0) {
+                            $durationParts[] = $interval->minutes.' minute'.($interval->minutes !== 1 ? 's' : '');
                         }
-                        $durationString = implode(' ', $durationParts);
-                        if (empty($durationString)) {
-                            $durationString = '0 minutes';
-                        }
-                        $data['duration_string'] = $durationString;
+                        $data['duration_string'] = ! empty($durationParts) ? implode(' ', $durationParts) : '0 minutes';
                     } catch (\Exception $e) {
                         // Handle potential parsing errors if start/end are not valid time strings
                         $data['duration_string'] = 'Error calculating';
-                        // Log::error("Error parsing schedule detail time: " . $e->getMessage(), ['detail_id' => $model->id]);
                     }
 
                     return (object) $data; // Return as stdClass object

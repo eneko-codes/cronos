@@ -68,7 +68,10 @@ class LoginController extends Controller
         $ipAddress = request()->ip();
         $userAgent = request()->header('User-Agent');
 
-        // Attempt to authenticate the user
+        // Attempt to authenticate the user using Laravel's native authentication
+        // This uses users.email (primary authentication email synced from Odoo)
+        // Laravel 12 requires the email field on the User model for Auth::attempt()
+        // See User model documentation for details on the email architecture
         if (Auth::attempt(['email' => $email, 'password' => $password], $remember)) {
             $user = Auth::user();
 
@@ -96,6 +99,9 @@ class LoginController extends Controller
         // Note: This check happens after auth failure to minimize user enumeration risk
         // We always show the same error message regardless of whether user exists
         // but silently send welcome email if user needs password setup
+        //
+        // This lookup uses users.email (primary authentication email) which is
+        // synced from Odoo and always present for users created via sync jobs
         $user = User::where('email', $email)->whereNull('password')->first();
         if ($user) {
             // Resend welcome email instead of allowing direct access

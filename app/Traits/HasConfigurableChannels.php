@@ -22,6 +22,7 @@ trait HasConfigurableChannels
      *
      * Reads the global notification channel setting from Settings table.
      * Always includes 'database' channel for in-app notifications.
+     * Supports 'database' (in-app only), 'mail', or 'slack' channels.
      *
      * @return array<int, string> Array of channel names
      */
@@ -30,11 +31,13 @@ trait HasConfigurableChannels
         $channel = Setting::getValue('notification_channel', 'mail');
         $channels = ['database']; // Always include database for in-app notifications
 
+        // Only add external channel if not 'database' (in-app only)
         if ($channel === 'slack') {
             $channels[] = 'slack';
-        } else {
+        } elseif ($channel === 'mail') {
             $channels[] = 'mail';
         }
+        // If channel is 'database', only in-app notifications are sent
 
         return $channels;
     }

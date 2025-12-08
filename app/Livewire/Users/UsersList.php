@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace App\Livewire\Users;
 
 use App\Enums\RoleType;
-use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Lazy;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -22,19 +23,15 @@ class UsersList extends Component
 
     public int $itemsPerPage = 30;
 
+    #[Url(except: '')]
     public string $search = '';
 
+    #[Url(except: 'all')]
     public string $filter = 'all';
 
     public string $active = 'all';
 
     public bool $isLoading = false;
-
-    protected $queryString = [
-        'search' => ['except' => ''],
-        'filter' => ['except' => 'all'],
-        'page' => ['except' => 1],
-    ];
 
     #[On('updated:search')]
     public function resetPageWhenSearchIsUpdated(): void
@@ -49,9 +46,16 @@ class UsersList extends Component
         $this->resetPage();
     }
 
-    public function redirectToUserDashboard(int $userId)
+    public function redirectToUserDashboard(int $userId): void
     {
-        return redirect()->route('user.dashboard', ['user' => $userId]);
+        // Only used for authorization check, no relationships needed
+        $targetUser = User::findOrFail($userId);
+
+        // Authorize: check if the authenticated user can view this user's dashboard
+        // Uses the 'viewUserDashboard' gate defined in AuthServiceProvider
+        $this->authorize('viewUserDashboard', $targetUser);
+
+        $this->redirect(route('user.dashboard', ['user' => $userId]));
     }
 
     /**
@@ -65,11 +69,6 @@ class UsersList extends Component
 
     public function render(): View
     {
-        $globalNotificationsEnabled = (bool) Setting::getValue(
-            'notifications.global_enabled',
-            true
-        );
-
         $users = User::query()
             ->with('externalIdentities')
             ->when($this->search, function ($query): void {
@@ -104,10 +103,19 @@ class UsersList extends Component
             'maintenance' => User::where('user_type', RoleType::Maintenance)->count(),
         ];
 
+        $authUser = Auth::user();
+
+        // Pre-compute dashboard access for each user to avoid N+1 queries in the view
+        // Uses the 'viewUserDashboard' gate defined in AuthServiceProvider
+        $dashboardAccess = [];
+        foreach ($users as $user) {
+            $dashboardAccess[$user->id] = $authUser->can('viewUserDashboard', $user);
+        }
+
         return view('livewire.users.users-list', [
             'users' => $users,
             'counts' => $counts,
-            'globalNotificationsEnabled' => $globalNotificationsEnabled,
+            'dashboardAccess' => $dashboardAccess,
         ]);
     }
 }

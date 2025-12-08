@@ -58,16 +58,16 @@ class UpdateGlobalNotificationPreferencesAction
     }
 
     /**
-     * Update the global notification channel (mail or slack).
+     * Update the global notification channel (mail, slack, or database).
      *
      * @param  User  $user  The admin performing the action (for authorization)
-     * @param  string  $channel  The channel to use ('mail' or 'slack')
+     * @param  string  $channel  The channel to use ('mail', 'slack', or 'database')
      */
     public function updateChannel(User $user, string $channel): void
     {
         Gate::forUser($user)->authorize('manageGlobalSettings');
-        if (! in_array($channel, ['mail', 'slack'], true)) {
-            throw new \InvalidArgumentException("Invalid notification channel: {$channel}. Must be 'mail' or 'slack'.");
+        if (! in_array($channel, ['mail', 'slack', 'database'], true)) {
+            throw new \InvalidArgumentException("Invalid notification channel: {$channel}. Must be 'mail', 'slack', or 'database'.");
         }
         Setting::setValue('notification_channel', $channel);
     }

@@ -19,7 +19,29 @@ use Illuminate\Support\Str;
  * Action to synchronize Odoo user data (hr.employee) with the local users table.
  *
  * Odoo is the source of truth for user data. This action creates users and their
- * Odoo external identity, handles categories, schedules, and manager relationships.
+ * Odoo external identity, handles categories, and schedules.
+ *
+ * ## Email Storage Strategy
+ *
+ * This action stores the Odoo `work_email` in TWO places:
+ *
+ * 1. **users.email** (Primary Authentication Email):
+ *    - Used by Laravel's authentication system (Auth::attempt)
+ *    - Required for login, password reset, email verification
+ *    - Always synced from Odoo's work_email field
+ *    - See User model documentation for details
+ *
+ * 2. **user_external_identities.external_email** (Platform-Specific Email):
+ *    - Stores the email as it appears in Odoo for data synchronization
+ *    - Used for cross-platform user matching
+ *    - Allows users to have different emails per platform
+ *
+ * This dual storage is intentional and necessary:
+ * - Laravel 12 requires users.email for authentication
+ * - Platform emails may differ across systems (Odoo vs DeskTime vs ProofHub)
+ * - Direct column access is faster than joins for authentication queries
+ *
+ * Both emails are kept in sync during Odoo synchronization to ensure consistency.
  */
 final class ProcessOdooUserAction
 {
@@ -66,30 +88,43 @@ final class ProcessOdooUserAction
             // Sync related data
             $this->syncUserCategories($user, $userDto);
             $this->syncUserSchedule($user, $userDto);
-
-            // Sync manager relationship (may be null if manager not yet synced)
-            $this->syncManagerRelationship($user, $userDto);
         });
     }
 
     /**
      * Find an existing user by Odoo external identity or create a new one.
+     *
+     * This method implements a three-step lookup strategy:
+     * 1. Find by Odoo external identity (most reliable - uses Odoo ID)
+     * 2. Find by primary email (users.email) - for users synced before external identities existed
+     * 3. Create new user if not found
+     *
+     * **Important:** When updating or creating a user, this method always sets
+     * `users.email` to the Odoo work_email. This ensures the primary authentication
+     * email stays in sync with Odoo, which is the source of truth.
+     *
+     * The Odoo email is also stored in user_external_identities.external_email
+     * via syncExternalIdentity() to maintain platform-specific email records.
+     *
+     * @param  OdooUserDTO  $userDto  The Odoo user data transfer object
+     * @return User The found or newly created user instance
      */
     private function findOrCreateUser(OdooUserDTO $userDto): User
     {
         $normalizedEmail = Str::lower($userDto->work_email);
 
-        // First, try to find by Odoo external identity
+        // First, try to find by Odoo external identity (most reliable match)
         $existingIdentity = UserExternalIdentity::where('platform', Platform::Odoo)
             ->where('external_id', (string) $userDto->id)
             ->first();
 
         if ($existingIdentity) {
-            // User exists, update their data
+            // User exists, update their data including primary email
+            // This keeps users.email in sync with Odoo work_email
             $user = $existingIdentity->user;
             $user->update([
                 'name' => $userDto->name,
-                'email' => $normalizedEmail,
+                'email' => $normalizedEmail, // Keep primary email synced with Odoo
                 'timezone' => $userDto->tz ?? 'UTC',
                 'is_active' => $userDto->active ?? true,
                 'department_id' => $userDto->department_id !== null ? ($userDto->department_id[0] ?? null) : null,
@@ -99,11 +134,12 @@ final class ProcessOdooUserAction
             return $user;
         }
 
-        // Try to find by email (for users that exist but don't have Odoo identity yet)
+        // Try to find by primary email (for users that exist but don't have Odoo identity yet)
+        // This handles legacy users or users created before external identities were implemented
         $user = User::where('email', $normalizedEmail)->first();
 
         if ($user) {
-            // Update existing user's data
+            // Update existing user's data (email already matches, so no need to update it)
             $user->update([
                 'name' => $userDto->name,
                 'timezone' => $userDto->tz ?? 'UTC',
@@ -115,10 +151,11 @@ final class ProcessOdooUserAction
             return $user;
         }
 
-        // Create new user
+        // Create new user with Odoo email as primary authentication email
+        // This email will be used for Laravel authentication (login, password reset, etc.)
         return User::create([
             'name' => $userDto->name,
-            'email' => $normalizedEmail,
+            'email' => $normalizedEmail, // Primary authentication email from Odoo
             'timezone' => $userDto->tz ?? 'UTC',
             'is_active' => $userDto->active ?? true,
             'department_id' => $userDto->department_id !== null ? ($userDto->department_id[0] ?? null) : null,
@@ -128,6 +165,18 @@ final class ProcessOdooUserAction
 
     /**
      * Create or update the Odoo external identity for the user.
+     *
+     * This method stores the Odoo email in user_external_identities.external_email.
+     * Note that the same email is also stored in users.email (via findOrCreateUser)
+     * for authentication purposes. This dual storage is intentional:
+     *
+     * - users.email: Primary authentication email (required by Laravel)
+     * - user_external_identities.external_email: Platform-specific email record
+     *
+     * Both are kept in sync during Odoo synchronization to ensure consistency.
+     *
+     * @param  User  $user  The user model instance
+     * @param  OdooUserDTO  $userDto  The Odoo user data transfer object
      */
     private function syncExternalIdentity(User $user, OdooUserDTO $userDto): void
     {
@@ -138,49 +187,11 @@ final class ProcessOdooUserAction
             ],
             [
                 'external_id' => (string) $userDto->id,
-                'external_email' => Str::lower($userDto->work_email),
+                'external_email' => Str::lower($userDto->work_email), // Platform-specific email
                 'is_manual_link' => false,
                 'linked_by' => 'email',
             ]
         );
-    }
-
-    /**
-     * Sync the user's manager relationship.
-     *
-     * Looks up the manager by their Odoo external identity and sets the manager_id.
-     * If the manager hasn't been synced yet, manager_id will remain null.
-     */
-    private function syncManagerRelationship(User $user, OdooUserDTO $userDto): void
-    {
-        $odooManagerId = $userDto->parent_id !== null ? ($userDto->parent_id[0] ?? null) : null;
-
-        if (! $odooManagerId) {
-            // No manager in Odoo, clear the relationship
-            if ($user->manager_id !== null) {
-                $user->update(['manager_id' => null]);
-            }
-
-            return;
-        }
-
-        // Look up the manager by their Odoo external identity
-        $managerIdentity = UserExternalIdentity::where('platform', Platform::Odoo)
-            ->where('external_id', (string) $odooManagerId)
-            ->first();
-
-        if ($managerIdentity) {
-            // Manager exists, set the relationship
-            if ($user->manager_id !== $managerIdentity->user_id) {
-                $user->update(['manager_id' => $managerIdentity->user_id]);
-            }
-        } else {
-            // Manager not synced yet, leave manager_id as-is (will be set on next sync)
-            Log::debug('Manager not found for user, will be set on next sync.', [
-                'user_id' => $user->id,
-                'odoo_manager_id' => $odooManagerId,
-            ]);
-        }
     }
 
     /**

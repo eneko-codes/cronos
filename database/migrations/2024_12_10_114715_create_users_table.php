@@ -13,7 +13,11 @@ class CreateUsersTable extends Migration
             $table->comment('Stores the users of the application.');
             $table->id();
             $table->string('name')->index();
+            // Primary authentication and notification email - synced from Odoo work_email
+            // Required by Laravel 12 for Auth::attempt() and notifications
+            // All notifications are sent to this email address
             $table->string('email')->unique()->index();
+            $table->timestamp('email_verified_at')->nullable();
             $table->string('password')->nullable();
             $table->unsignedBigInteger('department_id')->nullable();
             $table->string('timezone')->nullable();
@@ -22,7 +26,6 @@ class CreateUsersTable extends Migration
             $table->boolean('muted_notifications')->default(false);
             $table->boolean('is_active')->default(true)->comment('Reflects the active status from Odoo');
             $table->string('job_title')->nullable();
-            $table->foreignId('manager_id')->nullable()->constrained('users')->nullOnDelete();
             $table->rememberToken()->nullable();
 
             $table

@@ -4,36 +4,53 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\DataTransferObjects\UserMatchResultDTO;
 use App\Enums\Platform;
 use App\Models\User;
 use App\Models\UserExternalIdentity;
+use App\Services\UserMatchingService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
  * Action to link a user to their external platform identity.
  *
- * Handles both automatic (email-based) and manual linking between local users
+ * Handles both automatic (email and name-based) and manual linking between local users
  * and their identities on external platforms (Odoo, DeskTime, ProofHub, SystemPin).
+ *
+ * Matching strategy:
+ * 1. Check if external ID is already linked (update email if needed)
+ * 2. Try exact email match (primary or cross-platform)
+ * 3. Fall back to name similarity matching (if enabled)
  */
 final class LinkUserExternalIdentityAction
 {
+    public function __construct(
+        private readonly UserMatchingService $matchingService,
+    ) {}
+
     /**
      * Link a user to an external platform identity.
      *
      * @param  Platform  $platform  The external platform
      * @param  string  $externalId  The user's ID on the external platform
      * @param  string|null  $externalEmail  The user's email on the external platform
+     * @param  string|null  $externalName  The user's full name (for Odoo, DeskTime, SystemPin)
+     * @param  string|null  $firstName  The user's first name (for ProofHub)
+     * @param  string|null  $lastName  The user's last name (for ProofHub)
      * @param  bool  $isManualLink  Whether this is a manual admin link
-     * @return UserExternalIdentity|null The created/updated identity or null if no user found
+     * @return LinkUserExternalIdentityResult Result containing identity (if linked) and match details
      */
     public function execute(
         Platform $platform,
         string $externalId,
         ?string $externalEmail = null,
+        ?string $externalName = null,
+        ?string $firstName = null,
+        ?string $lastName = null,
         bool $isManualLink = false,
-    ): ?UserExternalIdentity {
-        return DB::transaction(function () use ($platform, $externalId, $externalEmail, $isManualLink): ?UserExternalIdentity {
+    ): LinkUserExternalIdentityResult {
+        return DB::transaction(function () use ($platform, $externalId, $externalEmail, $externalName, $firstName, $lastName, $isManualLink): LinkUserExternalIdentityResult {
             // First, check if this external ID is already linked to a user
             /** @var UserExternalIdentity|null $existingIdentity */
             $existingIdentity = UserExternalIdentity::query()
@@ -47,21 +64,33 @@ final class LinkUserExternalIdentityAction
                     $existingIdentity->update(['external_email' => strtolower(trim($externalEmail))]);
                 }
 
-                return $existingIdentity;
+                return LinkUserExternalIdentityResult::alreadyLinked($existingIdentity);
             }
 
-            // Try to find a user to link by email
-            $user = $this->findUserByEmail($externalEmail);
+            // Use the matching service to find a user
+            $matchResult = $this->matchingService->findMatchingUser(
+                email: $externalEmail,
+                name: $externalName,
+                firstName: $firstName,
+                lastName: $lastName,
+            );
 
-            if (! $user) {
+            if (! $matchResult->hasMatch()) {
                 Log::info("No user found to link for {$platform->value} external ID", [
                     'platform' => $platform->value,
                     'external_id' => $externalId,
                     'external_email' => $externalEmail,
+                    'external_name' => $this->matchingService->normalizeFullName($externalName, $firstName, $lastName),
+                    'match_attempted_by' => 'email_and_name',
                 ]);
 
-                return null;
+                return LinkUserExternalIdentityResult::noMatch(
+                    $externalEmail,
+                    $this->matchingService->normalizeFullName($externalName, $firstName, $lastName),
+                );
             }
+
+            $user = $matchResult->user;
 
             // Check if user already has an identity for this platform
             /** @var UserExternalIdentity|null $existingPlatformLink */
@@ -76,49 +105,29 @@ final class LinkUserExternalIdentityAction
                     'new_external_id' => $externalId,
                 ]);
 
-                return $existingPlatformLink;
+                return LinkUserExternalIdentityResult::alreadyLinked($existingPlatformLink);
             }
 
             // Create the new identity link
-            return UserExternalIdentity::create([
+            $identity = UserExternalIdentity::create([
                 'user_id' => $user->id,
                 'platform' => $platform,
                 'external_id' => $externalId,
                 'external_email' => $externalEmail ? strtolower(trim($externalEmail)) : null,
                 'is_manual_link' => $isManualLink,
-                'linked_by' => $this->determineLinkedBy($user, $externalEmail, $isManualLink),
+                'linked_by' => $isManualLink ? 'manual' : $matchResult->matchedBy,
             ]);
+
+            Log::info("Linked {$platform->value} user to local user", [
+                'platform' => $platform->value,
+                'external_id' => $externalId,
+                'user_id' => $user->id,
+                'linked_by' => $matchResult->matchedBy,
+                'confidence' => $matchResult->confidence,
+            ]);
+
+            return LinkUserExternalIdentityResult::linked($identity, $matchResult);
         });
-    }
-
-    /**
-     * Find a user by email (normalized to lowercase).
-     */
-    private function findUserByEmail(?string $email): ?User
-    {
-        if (! $email) {
-            return null;
-        }
-
-        $normalizedEmail = strtolower(trim($email));
-
-        return User::where('email', $normalizedEmail)->first();
-    }
-
-    /**
-     * Determine how the identity was linked.
-     */
-    private function determineLinkedBy(User $user, ?string $externalEmail, bool $isManualLink): string
-    {
-        if ($isManualLink) {
-            return 'manual';
-        }
-
-        if ($externalEmail && strtolower(trim($externalEmail)) === strtolower($user->email)) {
-            return 'email';
-        }
-
-        return 'unknown';
     }
 
     /**
@@ -151,5 +160,89 @@ final class LinkUserExternalIdentityAction
                 'linked_by' => 'manual',
             ]);
         });
+    }
+}
+
+/**
+ * Result of a user external identity linking operation.
+ */
+final readonly class LinkUserExternalIdentityResult
+{
+    private function __construct(
+        public ?UserExternalIdentity $identity,
+        public ?UserMatchResultDTO $matchResult,
+        public bool $wasLinked,
+        public bool $wasAlreadyLinked,
+        public ?string $unmatchedEmail,
+        public ?string $unmatchedName,
+    ) {}
+
+    /**
+     * Create result for a newly linked identity.
+     */
+    public static function linked(UserExternalIdentity $identity, UserMatchResultDTO $matchResult): self
+    {
+        return new self(
+            identity: $identity,
+            matchResult: $matchResult,
+            wasLinked: true,
+            wasAlreadyLinked: false,
+            unmatchedEmail: null,
+            unmatchedName: null,
+        );
+    }
+
+    /**
+     * Create result when identity was already linked.
+     */
+    public static function alreadyLinked(UserExternalIdentity $identity): self
+    {
+        return new self(
+            identity: $identity,
+            matchResult: null,
+            wasLinked: false,
+            wasAlreadyLinked: true,
+            unmatchedEmail: null,
+            unmatchedName: null,
+        );
+    }
+
+    /**
+     * Create result when no user match was found.
+     */
+    public static function noMatch(?string $email, ?string $name): self
+    {
+        return new self(
+            identity: null,
+            matchResult: null,
+            wasLinked: false,
+            wasAlreadyLinked: false,
+            unmatchedEmail: $email,
+            unmatchedName: $name,
+        );
+    }
+
+    /**
+     * Check if the operation resulted in a linked identity (new or existing).
+     */
+    public function hasIdentity(): bool
+    {
+        return $this->identity !== null;
+    }
+
+    /**
+     * Check if this was a new link (not already existing).
+     */
+    public function isNewLink(): bool
+    {
+        return $this->wasLinked;
+    }
+
+    /**
+     * Check if no match was found for the external user.
+     */
+    public function isUnmatched(): bool
+    {
+        return ! $this->wasLinked && ! $this->wasAlreadyLinked;
     }
 }

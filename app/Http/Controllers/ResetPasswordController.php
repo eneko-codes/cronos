@@ -86,9 +86,11 @@ class ResetPasswordController extends Controller
         $status = Password::reset(
             $validatedData,
             function ($user, $password): void {
-                // Set password using Laravel's Hash facade (Laravel 12 best practice)
+                // Set password and mark email as verified
+                // The user has proven they own this email by clicking the reset link
                 $user->forceFill([
                     'password' => Hash::make($password),
+                    'email_verified_at' => $user->email_verified_at ?? now(),
                 ])->save();
             }
         );

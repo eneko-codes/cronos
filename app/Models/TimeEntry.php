@@ -158,9 +158,7 @@ class TimeEntry extends Model
     protected function formattedDuration(): Attribute
     {
         return Attribute::make(
-            get: fn () => $this->duration_seconds > 0
-                ? \Carbon\CarbonInterval::seconds((int) $this->duration_seconds)->cascade()->format('%hh %Im')
-                : ''
+            get: fn () => \App\Services\DurationFormatterService::fromSeconds((int) $this->duration_seconds)
         );
     }
 

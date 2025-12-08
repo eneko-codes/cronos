@@ -7,29 +7,24 @@ namespace App\Livewire\Users;
 use App\Models\User;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Lazy;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 #[Lazy]
 class UserProfileHeader extends Component
 {
+    #[Locked]
     public int $userId;
 
-    public function mount(User $user): void
+    public function mount(int $userId): void
     {
-        $this->userId = $user->id;
+        $this->userId = $userId;
     }
 
     #[Computed]
     public function user(): User
     {
-        return User::findOrFail($this->userId);
-    }
-
-    #[Computed]
-    public function allBadges(): array
-    {
-        // UserProfileHeader shows all badges including missing platform links.
-        return $this->user->getDisplayBadges();
+        return User::with('externalIdentities')->findOrFail($this->userId);
     }
 
     public function placeholder(array $params = []) // $params will contain the dehydrated props

@@ -1,9 +1,19 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Enums;
 
 use App\Models\User;
+use Illuminate\Support\Collection;
 
+/**
+ * Notification types for the application.
+ *
+ * Notification types are organized into groups (Personal, Maintenance, Admin)
+ * for better UI organization. Use the group() method to get the group for a type,
+ * or use the static grouped()/groupedForUser() methods to get all types organized by group.
+ */
 enum NotificationType: string
 {
     // Regular user notifications (most common/frequent)
@@ -12,6 +22,7 @@ enum NotificationType: string
 
     // System/technical notifications
     case ApiDownWarning = 'api_down_warning';
+    case UnlinkedPlatformUser = 'unlinked_platform_user';
 
     // Admin notifications - personal notification first
     case UserPromotedToAdmin = 'user_promoted_to_admin';
@@ -37,6 +48,7 @@ enum NotificationType: string
             self::ScheduleChange => 'Schedule Change',
             self::LeaveReminder => 'Leave Reminder',
             self::ApiDownWarning => 'API Down Warning',
+            self::UnlinkedPlatformUser => 'Unlinked Platform User',
             self::AdminPromotionEmail => 'Admin Promotion (to Admins)',
             self::AdminDemotionEmail => 'Admin Demotion (to Admins)',
             self::MaintenancePromotionEmail => 'Maintenance Promotion (to Admins)',
@@ -69,6 +81,7 @@ enum NotificationType: string
     {
         return match ($this) {
             self::ApiDownWarning,
+            self::UnlinkedPlatformUser,
             self::UserPromotedToMaintenance => true,
             default => false,
         };
@@ -83,6 +96,7 @@ enum NotificationType: string
             self::ScheduleChange => true,
             self::LeaveReminder => true,
             self::ApiDownWarning => true,
+            self::UnlinkedPlatformUser => true,
             self::AdminPromotionEmail => true,
             self::AdminDemotionEmail => true,
             self::MaintenancePromotionEmail => true,
@@ -102,6 +116,7 @@ enum NotificationType: string
             self::ScheduleChange => 'Notifications when your work schedule is updated',
             self::LeaveReminder => 'Reminders about upcoming time off',
             self::ApiDownWarning => 'Alerts when external services are experiencing issues',
+            self::UnlinkedPlatformUser => 'Alerts when a platform user cannot be automatically linked to a local user',
             self::AdminPromotionEmail => 'Notifications sent to admins when other users are promoted to admin',
             self::AdminDemotionEmail => 'Notifications sent to admins when other users are demoted from admin',
             self::MaintenancePromotionEmail => 'Notifications sent to admins when other users are promoted to maintenance',
@@ -164,5 +179,47 @@ enum NotificationType: string
         }
 
         return $config;
+    }
+
+    /**
+     * Get the group this notification type belongs to.
+     *
+     * Groups organize notifications by role/category for better UI organization:
+     * - Personal: Universal notifications for all users
+     * - Maintenance: Technical alerts for maintenance role users
+     * - Admin: Administrative notifications for admin role users
+     */
+    public function group(): NotificationGroup
+    {
+        return match (true) {
+            $this->isAdminOnly() => NotificationGroup::Admin,
+            $this->isMaintenanceOnly() => NotificationGroup::Maintenance,
+            default => NotificationGroup::Personal,
+        };
+    }
+
+    /**
+     * Get all notification types grouped by their category.
+     *
+     * @return Collection<string, Collection<int, NotificationType>>
+     */
+    public static function grouped(): Collection
+    {
+        return collect(self::cases())
+            ->groupBy(fn (NotificationType $type) => $type->group()->value)
+            ->sortBy(fn (Collection $types, string $groupKey) => NotificationGroup::from($groupKey)->order());
+    }
+
+    /**
+     * Get all notification types available to a user, grouped by category.
+     *
+     * @param  User|null  $user  The user to filter for (null returns all types)
+     * @return Collection<string, Collection<int, NotificationType>>
+     */
+    public static function groupedForUser(?User $user = null): Collection
+    {
+        return collect(self::availableForUser($user))
+            ->groupBy(fn (NotificationType $type) => $type->group()->value)
+            ->sortBy(fn (Collection $types, string $groupKey) => NotificationGroup::from($groupKey)->order());
     }
 }

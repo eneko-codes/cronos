@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\Platform;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -12,7 +13,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Represents a mapping between a local user and their identity on an external platform.
  *
  * This model enables users to have different emails across platforms while still
- * being correctly identified. Supports both automatic (email-based) and manual linking.
+ * being correctly identified during data synchronization. Supports both automatic
+ * (email-based) and manual linking.
+ *
+ * External identities are used for sync purposes only - not for notifications or verification.
  *
  * @property int $id
  * @property int $user_id
@@ -27,6 +31,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class UserExternalIdentity extends Model
 {
+    use HasFactory;
+
     /**
      * The table associated with the model.
      *

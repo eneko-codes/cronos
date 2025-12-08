@@ -275,6 +275,31 @@ class UserLeave extends Model
     }
 
     /**
+     * Format duration text based on duration days.
+     *
+     * Provides human-readable text for leave duration (e.g., "Half day", "1 day", "2.5 hours").
+     * Used by components and services to display leave duration consistently.
+     *
+     * @param  float  $durationDays  The duration in days
+     * @return string The formatted duration text
+     */
+    public static function formatDurationText(float $durationDays): string
+    {
+        if ($durationDays == 0.5) {
+            return 'Half day';
+        } elseif ($durationDays == 1) {
+            return '1 day';
+        } elseif ($durationDays < 1) {
+            // For partial days, show as hours
+            $hours = $durationDays * 8; // Convert to hours using 8-hour standard day
+
+            return round($hours, 1).' hours';
+        }
+
+        return \Carbon\CarbonInterval::days((int) $durationDays)->cascade()->forHumans(['parts' => 2]);
+    }
+
+    /**
      * Get the start_date attribute, ensuring timezone is handled correctly.
      *
      * SETTER: When receiving API data (string without timezone), parse as UTC explicitly.

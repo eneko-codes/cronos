@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Dashboard;
 
 use App\DataTransferObjects\Dashboard\DeviationData;
+use App\Services\DurationFormatterService;
 use Carbon\Carbon;
 use Carbon\CarbonInterval;
 
@@ -23,9 +24,9 @@ class DeviationCalculator
         // If date is in the future, return empty deviations
         if ($dateString && Carbon::parse($dateString)->startOfDay()->isFuture()) {
             return [
-                'attendanceVsScheduled' => new DeviationData(),
-                'workedVsScheduled' => new DeviationData(),
-                'workedVsAttendance' => new DeviationData(),
+                'attendanceVsScheduled' => new DeviationData,
+                'workedVsScheduled' => new DeviationData,
+                'workedVsAttendance' => new DeviationData,
             ];
         }
 
@@ -60,20 +61,20 @@ class DeviationCalculator
     public function calculateOverallDeviations(array $totals): array
     {
         $attendanceVsSchedule = $this->calculateDeviation(
-            CarbonInterval::minutes($totals['attendance'])->cascade()->format('%hh %Im'),
-            CarbonInterval::minutes($totals['scheduled'])->cascade()->format('%hh %Im'),
+            DurationFormatterService::fromMinutes($totals['attendance']),
+            DurationFormatterService::fromMinutes($totals['scheduled']),
             false
         );
 
         $workedVsSchedule = $this->calculateDeviation(
-            CarbonInterval::minutes($totals['worked'])->cascade()->format('%hh %Im'),
-            CarbonInterval::minutes($totals['scheduled'])->cascade()->format('%hh %Im'),
+            DurationFormatterService::fromMinutes($totals['worked']),
+            DurationFormatterService::fromMinutes($totals['scheduled']),
             false
         );
 
         $workedVsAttendance = $this->calculateDeviation(
-            CarbonInterval::minutes($totals['worked'])->cascade()->format('%hh %Im'),
-            CarbonInterval::minutes($totals['attendance'])->cascade()->format('%hh %Im'),
+            DurationFormatterService::fromMinutes($totals['worked']),
+            DurationFormatterService::fromMinutes($totals['attendance']),
             false
         );
 
@@ -113,9 +114,9 @@ class DeviationCalculator
     protected function formatDeviationTooltip(int $difference): string
     {
         $isPositive = $difference >= 0;
-        $formattedTime = CarbonInterval::minutes(abs($difference))->cascade()->format('%hh %Im');
+        $formattedTime = DurationFormatterService::fromMinutes(abs($difference));
         $sign = $isPositive ? '+' : '-';
 
-        return $sign . $formattedTime;
+        return $sign.$formattedTime;
     }
 }

@@ -7,6 +7,7 @@ namespace App\Livewire\Leave;
 use App\Models\LeaveType;
 use Livewire\Attributes\Lazy;
 use Livewire\Attributes\Title;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -16,11 +17,14 @@ class LeaveTypesListView extends Component
 {
     use WithPagination;
 
+    #[Url(except: '')]
     public string $search = '';
 
+    #[Url(except: 25)]
     public int $perPage = 25;
 
     // Sorting
+    #[Url(except: 'name_asc')]
     public string $sortBy = 'name_asc'; // Default sort: name asc
 
     // Filtering
@@ -32,17 +36,19 @@ class LeaveTypesListView extends Component
         'has_no_user_leaves' => false,
     ];
 
-    protected $queryString = [
-        'search' => ['except' => ''],
-        'page' => ['except' => 1],
-        'sortBy' => ['except' => 'name_asc'],
-        'perPage' => ['except' => 25],
-        'filters.active' => ['as' => 'f_act', 'except' => null],
-        'filters.is_unpaid' => ['as' => 'f_unp', 'except' => null],
-        'filters.requires_allocation' => ['as' => 'f_req', 'except' => null],
-        'filters.has_user_leaves' => ['as' => 'f_hul', 'except' => false],
-        'filters.has_no_user_leaves' => ['as' => 'f_hnul', 'except' => false],
-    ];
+    /**
+     * Query string configuration for nested filters with aliases.
+     */
+    protected function queryString(): array
+    {
+        return [
+            'filters.active' => ['as' => 'f_act', 'except' => null],
+            'filters.is_unpaid' => ['as' => 'f_unp', 'except' => null],
+            'filters.requires_allocation' => ['as' => 'f_req', 'except' => null],
+            'filters.has_user_leaves' => ['as' => 'f_hul', 'except' => false],
+            'filters.has_no_user_leaves' => ['as' => 'f_hnul', 'except' => false],
+        ];
+    }
 
     /**
      * Reset page when search query changes.

@@ -10,6 +10,8 @@ use App\Models\User;
 use App\Models\UserAttendance;
 use App\Models\UserLeave;
 use App\Models\UserSchedule;
+use App\Services\Dashboard\ScheduleService;
+use App\Services\DurationFormatterService;
 use Carbon\Carbon;
 use Carbon\CarbonInterval;
 use Illuminate\Support\Collection;
@@ -44,31 +46,31 @@ class UserTimeSheetTable extends Component
     #[Url]
     public bool $showDeviations = false;
 
-    /** 
+    /**
      * The period data for the user.
+     *
      * @var Collection<string, array>
-    */
+     */
     public Collection $periodData;
 
     /**
      * The dashboard totals for the user.
-     * @var array
      */
     public ?array $dashboardTotals = null;
 
     /**
      * The total deviations details for the user.
-     * @var array
      */
     public ?array $totalDeviationsDetails = null;
 
     /**
      * Mount the component.
-     * @param User $user The user to mount the component for.
+     *
+     * @param  int  $userId  The user ID to mount the component for.
      */
-    public function mount(User $user): void
+    public function mount(int $userId): void
     {
-        $this->userId = $user->id;
+        $this->userId = $userId;
         $this->currentDate = now()->toDateString();
         // viewMode and showDeviations will be initialized from URL or their defaults
         $this->loadPeriodDataAndTotals();
@@ -76,11 +78,11 @@ class UserTimeSheetTable extends Component
 
     /**
      * Get the user for the component.
-     * @return User
      */
     #[Computed]
     public function user(): User
     {
+        // Uses getDataForDateRange() which handles its own eager loading
         return User::findOrFail($this->userId);
     }
 
@@ -311,20 +313,20 @@ class UserTimeSheetTable extends Component
     public function calculateOverallDeviations(array $totals): array
     {
         $attendanceVsSchedule = $this->calculateDeviation(
-            CarbonInterval::minutes($totals['attendance'])->cascade()->format('%hh %Im'),
-            CarbonInterval::minutes($totals['scheduled'])->cascade()->format('%hh %Im'),
+            DurationFormatterService::fromMinutes($totals['attendance']),
+            DurationFormatterService::fromMinutes($totals['scheduled']),
             false
         );
 
         $workedVsSchedule = $this->calculateDeviation(
-            CarbonInterval::minutes($totals['worked'])->cascade()->format('%hh %Im'),
-            CarbonInterval::minutes($totals['scheduled'])->cascade()->format('%hh %Im'),
+            DurationFormatterService::fromMinutes($totals['worked']),
+            DurationFormatterService::fromMinutes($totals['scheduled']),
             false
         );
 
         $workedVsAttendance = $this->calculateDeviation(
-            CarbonInterval::minutes($totals['worked'])->cascade()->format('%hh %Im'),
-            CarbonInterval::minutes($totals['attendance'])->cascade()->format('%hh %Im'),
+            DurationFormatterService::fromMinutes($totals['worked']),
+            DurationFormatterService::fromMinutes($totals['attendance']),
             false
         );
 
@@ -372,7 +374,7 @@ class UserTimeSheetTable extends Component
     protected function formatDeviationTooltip(int $difference): string
     {
         $isPositive = $difference >= 0;
-        $formattedTime = CarbonInterval::minutes(abs($difference))->cascade()->format('%hh %Im');
+        $formattedTime = DurationFormatterService::fromMinutes(abs($difference));
         $sign = $isPositive ? '+' : '-';
 
         return $sign.$formattedTime;
@@ -457,11 +459,7 @@ class UserTimeSheetTable extends Component
      */
     protected function formatMinutesToHoursMinutes(int $minutes): string
     {
-        if ($minutes <= 0) {
-            return '';
-        }
-
-        return CarbonInterval::minutes($minutes)->cascade()->format('%hh %Im');
+        return DurationFormatterService::fromMinutes($minutes);
     }
 
     /**
@@ -599,7 +597,7 @@ class UserTimeSheetTable extends Component
     protected function calculateLeaveDurationInfo(UserLeave $leave, string $dateString, ?Collection $schedules = null): array
     {
         $dateCarbon = Carbon::parse($dateString);
-        $durationText = $this->formatLeaveDurationText($leave->duration_days);
+        $durationText = UserLeave::formatDurationText($leave->duration_days);
 
         // For multi-day leaves, calculate the actual hours for this specific day based on schedule
         if (! $leave->start_date->isSameDay($leave->end_date)) {
@@ -611,7 +609,8 @@ class UserTimeSheetTable extends Component
 
             if ($schedules && $leave->duration_days >= 1.0) {
                 // Full day leave - use actual scheduled time for that day
-                $scheduledMinutes = $this->getScheduledDurationForDate($schedules, $dateString);
+                $scheduleService = app(ScheduleService::class);
+                $scheduledMinutes = $scheduleService->getScheduledDurationForDate($schedules, $dateString);
                 $durationMinutes = $scheduledMinutes > 0 ? $scheduledMinutes : (8 * 60);
             } else {
                 // Partial day leave - convert Odoo's days to minutes using standard 8-hour day
@@ -622,89 +621,9 @@ class UserTimeSheetTable extends Component
 
         return [
             'text' => $durationText,
-            'hours' => $durationMinutes > 0 ? CarbonInterval::minutes($durationMinutes)->cascade()->format('%hh %Im') : '',
+            'hours' => DurationFormatterService::fromMinutes($durationMinutes),
             'minutes' => $durationMinutes,
         ];
-    }
-
-    /**
-     * Format duration text based on duration days.
-     *
-     * @param  float  $durationDays  The duration in days
-     * @return string The formatted duration text
-     */
-    protected function formatLeaveDurationText(float $durationDays): string
-    {
-        if ($durationDays == 0.5) {
-            return 'Half day';
-        } elseif ($durationDays == 1) {
-            return '1 day';
-        } elseif ($durationDays < 1) {
-            // For partial days, show as hours
-            $hours = $durationDays * 8; // Convert to hours using 8-hour standard day
-
-            return round($hours, 1).' hours';
-        }
-
-        return CarbonInterval::days($durationDays)->cascade()->forHumans(['parts' => 2]);
-    }
-
-    /**
-     * Get the scheduled duration for a date.
-     *
-     * @param  Collection  $schedules  Collection of schedules
-     * @param  string  $dateString  The date string
-     * @return int The scheduled duration in minutes
-     */
-    protected function getScheduledDurationForDate(Collection $schedules, string $dateString): int
-    {
-        $target = Carbon::parse($dateString)->startOfDay();
-        $weekday = (int) (($target->dayOfWeek + 6) % 7); // 0=Monday, 6=Sunday (Odoo format)
-
-        // Find the active user schedule record on that date
-        $userSchedule = $schedules->first(function ($record) use ($target) {
-            if (! $record->effective_from) {
-                return false;
-            }
-            $from = Carbon::parse($record->effective_from);
-            $until = $record->effective_until ? Carbon::parse($record->effective_until) : null;
-
-            return $from->lte($target) && (! $until || $until->gte($target));
-        });
-
-        if (! $userSchedule || ! $userSchedule->schedule) {
-            return 0;
-        }
-
-        $details = $userSchedule->schedule->scheduleDetails
-            ->where('weekday', $weekday)
-            ->filter(function ($detail) use ($target) {
-                if ($detail->active !== true) {
-                    return false;
-                }
-
-                $dateFrom = $detail->date_from ? $detail->date_from->toDateString() : null;
-                $dateTo = $detail->date_to ? $detail->date_to->toDateString() : null;
-                $date = $target->toDateString();
-
-                $afterStart = ! $dateFrom || $date >= $dateFrom;
-                $beforeEnd = ! $dateTo || $date <= $dateTo;
-
-                return $afterStart && $beforeEnd;
-            });
-
-        if ($details->isEmpty()) {
-            return 0;
-        }
-
-        $total = 0;
-        foreach ($details->sortBy('start') as $detail) {
-            $start = Carbon::parse($detail->start)->setTimezone('UTC');
-            $end = Carbon::parse($detail->end)->setTimezone('UTC');
-            $total += $start->diffInMinutes($end);
-        }
-
-        return (int) $total;
     }
 
     /**
@@ -717,7 +636,8 @@ class UserTimeSheetTable extends Component
         }
 
         // Get the scheduled minutes for this specific day
-        $scheduledMinutes = $this->getScheduledDurationForDate($schedules, $dateString);
+        $scheduleService = app(ScheduleService::class);
+        $scheduledMinutes = $scheduleService->getScheduledDurationForDate($schedules, $dateString);
 
         // For multi-day leaves, we assume each day takes the full scheduled time for that day
         return $scheduledMinutes > 0 ? $scheduledMinutes : 8 * 60;
@@ -954,7 +874,7 @@ class UserTimeSheetTable extends Component
                 // We access the original attributes to get the raw time strings
                 $startTime = $detail->getAttributes()['start'] ?? $detail->start->format('H:i:s');
                 $endTime = $detail->getAttributes()['end'] ?? $detail->end->format('H:i:s');
-                
+
                 // Parse as UTC times for duration calculation
                 $start = Carbon::parse($startTime, 'UTC');
                 $end = Carbon::parse($endTime, 'UTC');
@@ -970,7 +890,7 @@ class UserTimeSheetTable extends Component
 
             return [
                 'model' => $schedule,
-                'duration' => CarbonInterval::minutes((int) round($totalMinutes))->cascade()->format('%hh %Im'),
+                'duration' => DurationFormatterService::fromMinutes((int) round($totalMinutes)),
                 'slots' => $slots,
                 'scheduleName' => $schedule->schedule->description ?? null,
                 'totalMinutes' => (int) round($totalMinutes), // Add this for leave calculation consistency

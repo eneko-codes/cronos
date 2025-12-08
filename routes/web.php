@@ -14,6 +14,8 @@ use App\Livewire\Schedules\ScheduleDetailView;
 use App\Livewire\Schedules\SchedulesList;
 use App\Livewire\Settings\Settings;
 use App\Livewire\Users\UsersList;
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -56,14 +58,55 @@ Route::middleware(['guest'])->group(function (): void {
 Route::middleware(['auth', 'throttle:web'])->group(function (): void {
     // Route to handle user logout.
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+
+    // Laravel native email verification routes
+    // Notice page shown when email is not verified
+    Route::get('/email/verify', function () {
+        return redirect()->route('dashboard')->with('toast', [
+            'message' => 'Please verify your email address.',
+            'variant' => 'warning',
+        ]);
+    })->name('verification.notice');
+
+    // Handle email verification link clicks
+    Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
+        $request->fulfill();
+
+        return redirect()->route('dashboard')->with('toast', [
+            'message' => 'Email verified successfully!',
+            'variant' => 'success',
+        ]);
+    })->middleware(['signed', 'throttle:6,1'])->name('verification.verify');
+
+    // Resend verification email
+    Route::post('/email/verification-notification', function (Request $request) {
+        $request->user()->sendEmailVerificationNotification();
+
+        return back()->with('toast', [
+            'message' => 'Verification email sent!',
+            'variant' => 'success',
+        ]);
+    })->middleware('throttle:6,1')->name('verification.send');
+
+    // Dashboard (accessible to all authenticated users)
     Route::get('/', UserDashboardController::class)->name('dashboard');
 
-    // All other routes require admin access
-    Route::middleware(['can:viewAny,App\Models\User', 'throttle:admin'])->group(
+    // Settings: Admin only
+    Route::middleware(['can:accessSettingsPage'])->group(function (): void {
+        Route::get('/settings', Settings::class)->name('settings');
+    });
+
+    // User management routes (admin + maintenance users)
+    Route::middleware(['can:accessUserManagement', 'throttle:admin'])->group(
         function (): void {
-            Route::get('/settings', Settings::class)->name('settings');
             Route::get('/users', UsersList::class)->name('users.list');
             Route::get('/user/{user}', UserDashboardController::class)->name('user.dashboard');
+        }
+    );
+
+    // Admin-only routes (projects, schedules, leaves)
+    Route::middleware(['can:accessAdminRoutes', 'throttle:admin'])->group(
+        function (): void {
             Route::get('/projects', ProjectsListView::class)->name('projects.list');
             Route::get('/projects/{project:proofhub_project_id}', ProjectDetailView::class)->name('projects.show');
             Route::get('/schedules', SchedulesList::class)->name('schedules.list');

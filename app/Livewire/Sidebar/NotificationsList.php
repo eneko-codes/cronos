@@ -105,10 +105,10 @@ class NotificationsList extends Component
 
         $query = $user->notifications();
 
-        match ($this->notificationFilter) {
+        $query = match ($this->notificationFilter) {
             'unread' => $query->whereNull('read_at'),
             'read' => $query->whereNotNull('read_at'),
-            default => null,
+            default => $query,
         };
 
         return $query->paginate(15);

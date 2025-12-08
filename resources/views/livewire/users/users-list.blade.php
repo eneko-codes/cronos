@@ -35,7 +35,7 @@
   <div class="rounded-lg bg-white p-3 shadow-sm dark:bg-gray-800">
     @if ($users->isNotEmpty())
       <table class="w-full border-collapse">
-        <tbody class="text-sm" wire:poll.10s>
+        <tbody class="text-sm" wire:poll.10s.visible>
           @foreach ($users as $user)
             @php
               $canViewDashboard = $dashboardAccess[$user->id] ?? false;

@@ -9,12 +9,17 @@ use App\Clients\OdooApiClient;
 use App\Clients\ProofhubApiClient;
 use App\Clients\SystemPinApiClient;
 use App\Models\User;
+use App\Services\SyncStatusService;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Queue\Events\JobFailed;
+use Illuminate\Queue\Events\JobProcessed;
+use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
@@ -207,5 +212,99 @@ class AppServiceProvider extends ServiceProvider
                         ->withErrors(['rate_limit' => "Too many password setup attempts. Please try again in {$decayMinutes} minute(s)."]);
                 });
         });
+
+        // Register sync job event listeners for per-platform status tracking
+        $this->registerSyncJobEventListeners();
+    }
+
+    /**
+     * Register event listeners for sync jobs to track per-platform sync status.
+     *
+     * Uses Laravel's native Queue events to track when sync jobs start, complete,
+     * or fail, storing the status in cache via SyncStatusService.
+     */
+    private function registerSyncJobEventListeners(): void
+    {
+        $syncStatusService = app(SyncStatusService::class);
+
+        // Track when a sync job starts processing
+        Queue::before(function (JobProcessing $event) use ($syncStatusService): void {
+            $jobClass = $this->getJobClassFromPayload($event->job->payload());
+
+            if ($jobClass === null || ! $this->isSyncJob($jobClass)) {
+                return;
+            }
+
+            $platform = SyncStatusService::getPlatformFromJob($jobClass);
+
+            if ($platform !== null) {
+                $syncStatusService->recordInProgress(
+                    $platform,
+                    SyncStatusService::getShortJobName($jobClass)
+                );
+            }
+        });
+
+        // Track when a sync job completes successfully
+        Queue::after(function (JobProcessed $event) use ($syncStatusService): void {
+            $jobClass = $this->getJobClassFromPayload($event->job->payload());
+
+            if ($jobClass === null || ! $this->isSyncJob($jobClass)) {
+                return;
+            }
+
+            $platform = SyncStatusService::getPlatformFromJob($jobClass);
+
+            if ($platform !== null) {
+                $syncStatusService->recordSuccess(
+                    $platform,
+                    SyncStatusService::getShortJobName($jobClass)
+                );
+            }
+        });
+
+        // Track when a sync job fails
+        Queue::failing(function (JobFailed $event) use ($syncStatusService): void {
+            $jobClass = $this->getJobClassFromPayload($event->job->payload());
+
+            if ($jobClass === null || ! $this->isSyncJob($jobClass)) {
+                return;
+            }
+
+            $platform = SyncStatusService::getPlatformFromJob($jobClass);
+
+            if ($platform !== null) {
+                $syncStatusService->recordFailure(
+                    $platform,
+                    SyncStatusService::getShortJobName($jobClass),
+                    $event->exception->getMessage()
+                );
+            }
+        });
+    }
+
+    /**
+     * Get the job class name from the queue payload.
+     *
+     * Uses the displayName which contains the full class name,
+     * avoiding the need to unserialize encrypted jobs.
+     *
+     * @param  array<string, mixed>  $payload  The job payload
+     * @return string|null The job class name or null if not found
+     */
+    private function getJobClassFromPayload(array $payload): ?string
+    {
+        return $payload['displayName'] ?? null;
+    }
+
+    /**
+     * Check if a job class is a sync job (in the App\Jobs\Sync namespace).
+     *
+     * @param  string  $jobClass  The job class name
+     * @return bool True if it's a sync job
+     */
+    private function isSyncJob(string $jobClass): bool
+    {
+        return str_starts_with($jobClass, 'App\\Jobs\\Sync\\');
     }
 }

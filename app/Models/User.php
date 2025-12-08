@@ -439,6 +439,17 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
     }
 
     /**
+     * Get the entity's notifications.
+     * Override to use custom DatabaseNotification model with pruning support.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\MorphMany<\App\Models\DatabaseNotification, $this>
+     */
+    public function notifications(): \Illuminate\Database\Eloquent\Relations\MorphMany
+    {
+        return $this->morphMany(DatabaseNotification::class, 'notifiable')->latest();
+    }
+
+    /**
      * Get the user's currently active schedule assignment.
      */
     public function activeUserSchedule(): HasOne

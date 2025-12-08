@@ -45,7 +45,7 @@ class ScheduleDetailView extends Component
      * @return \Illuminate\Database\Eloquent\Collection<int, UserSchedule>
      */
     #[Computed]
-    protected function allUserSchedules(): Collection
+    public function allUserSchedules(): Collection
     {
         // Ensure user relationship is loaded to prevent lazy loading violations
         return UserSchedule::with('user')

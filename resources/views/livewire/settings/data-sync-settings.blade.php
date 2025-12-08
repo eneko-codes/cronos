@@ -20,7 +20,7 @@
     </div>
     <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
       Configure how often and how much data is synchronized from all connected
-      APIs. These settings help balance data freshness, completeness, and
+      platforms. These settings help balance data freshness, completeness, and
       storage usage.
     </p>
   </div>

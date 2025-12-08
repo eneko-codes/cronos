@@ -98,7 +98,7 @@ class UserBadges extends Component
             $badges[] = [
                 'text' => 'Maintenance',
                 'variant' => 'primary',
-                'tooltip' => 'User receives API down warning notifications',
+                'tooltip' => 'User can modify user and system parameters but cannot see employee data',
             ];
         }
 

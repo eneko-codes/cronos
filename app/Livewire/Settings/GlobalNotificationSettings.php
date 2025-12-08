@@ -6,7 +6,9 @@ namespace App\Livewire\Settings;
 
 use App\Actions\GetNotificationPreferencesAction;
 use App\Actions\UpdateGlobalNotificationPreferencesAction;
+use App\Actions\UpdateNotificationRetentionPeriodAction;
 use App\Enums\NotificationGroup;
+use App\Enums\NotificationRetentionPeriod;
 use App\Enums\NotificationType;
 use App\Models\Setting;
 use Exception;
@@ -21,6 +23,7 @@ use Livewire\Component;
  * Allows admins to configure:
  * - Global notifications master switch
  * - Notification channel (Email/Slack/In App Only)
+ * - Notification retention period
  * - Per-type notification toggles
  */
 class GlobalNotificationSettings extends Component
@@ -34,6 +37,11 @@ class GlobalNotificationSettings extends Component
      * The global notification channel ('mail', 'slack', or 'database').
      */
     public string $notificationChannel = 'mail';
+
+    /**
+     * The notification retention period in days.
+     */
+    public int $notificationRetentionPeriod = 30;
 
     /**
      * Stores the state of global notification type toggles.
@@ -50,6 +58,7 @@ class GlobalNotificationSettings extends Component
             $this->globalNotificationsEnabled = $settings['global_enabled'];
             $this->notificationStates = $settings['global_types'];
             $this->notificationChannel = Setting::getValue('notification_channel', 'mail');
+            $this->notificationRetentionPeriod = (int) Setting::getValue('notifications.retention_period', 30);
         }
     }
 
@@ -88,6 +97,22 @@ class GlobalNotificationSettings extends Component
         }
 
         return $grouped;
+    }
+
+    /**
+     * Get notification retention options.
+     *
+     * @return array<int, string>
+     */
+    #[Computed]
+    public function notificationRetentionOptions(): array
+    {
+        $options = [];
+        foreach (NotificationRetentionPeriod::cases() as $case) {
+            $options[$case->value] = $case->label();
+        }
+
+        return $options;
     }
 
     /**
@@ -139,13 +164,31 @@ class GlobalNotificationSettings extends Component
 
             $message = match ($value) {
                 'slack' => 'Notification channel set to Slack.',
-                'database' => 'Notification channel set to In App Only.',
+                'database' => 'Notification channel set to in app.',
                 default => 'Notification channel set to Email.',
             };
             $this->dispatch('add-toast', message: $message, variant: 'success');
         } catch (Exception $e) {
             $this->dispatch('add-toast', message: 'Failed to update notification channel: '.$e->getMessage(), variant: 'error');
             $this->notificationChannel = Setting::getValue('notification_channel', 'mail');
+        }
+    }
+
+    /**
+     * Handle notification retention period change.
+     */
+    public function updatedNotificationRetentionPeriod(
+        int $value,
+        UpdateNotificationRetentionPeriodAction $updateNotificationRetention
+    ): void {
+        try {
+            $enum = NotificationRetentionPeriod::from($value);
+            $updateNotificationRetention->execute($enum);
+            $this->dispatch('add-toast', message: 'Notification retention period updated.', variant: 'success');
+        } catch (\ValueError $e) {
+            $this->dispatch('add-toast', message: 'Invalid notification retention period selected.', variant: 'error');
+        } catch (Exception $e) {
+            $this->dispatch('add-toast', message: 'Failed to update notification retention period: '.$e->getMessage(), variant: 'error');
         }
     }
 

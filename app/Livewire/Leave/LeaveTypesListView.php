@@ -39,16 +39,13 @@ class LeaveTypesListView extends Component
     /**
      * Query string configuration for nested filters with aliases.
      */
-    protected function queryString(): array
-    {
-        return [
-            'filters.active' => ['as' => 'f_act', 'except' => null],
-            'filters.is_unpaid' => ['as' => 'f_unp', 'except' => null],
-            'filters.requires_allocation' => ['as' => 'f_req', 'except' => null],
-            'filters.has_user_leaves' => ['as' => 'f_hul', 'except' => false],
-            'filters.has_no_user_leaves' => ['as' => 'f_hnul', 'except' => false],
-        ];
-    }
+    protected $queryString = [
+        'filters.active' => ['as' => 'f_act', 'except' => null],
+        'filters.is_unpaid' => ['as' => 'f_unp', 'except' => null],
+        'filters.requires_allocation' => ['as' => 'f_req', 'except' => null],
+        'filters.has_user_leaves' => ['as' => 'f_hul', 'except' => false],
+        'filters.has_no_user_leaves' => ['as' => 'f_hnul', 'except' => false],
+    ];
 
     /**
      * Reset page when search query changes.

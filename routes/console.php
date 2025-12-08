@@ -54,6 +54,19 @@ Schedule::command('queue:prune-failed --hours=48')
     ->withoutOverlapping();
 
 /**
+ * Schedule daily pruning of old notifications (30 days retention).
+ * Uses Laravel's native model:prune command with the DatabaseNotification model.
+ */
+Schedule::command('model:prune', [
+    '--model' => [\App\Models\DatabaseNotification::class],
+])
+    ->daily()
+    ->at('02:00')
+    ->name('Prune Old Notifications')
+    ->onOneServer()
+    ->withoutOverlapping();
+
+/**
  * Schedule the Data Synchronization batch to run at the configured frequency.
  * This closure runs every minute, but only dispatches the sync batch if needed.
  */

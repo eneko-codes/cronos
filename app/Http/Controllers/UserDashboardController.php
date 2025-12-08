@@ -23,7 +23,7 @@ class UserDashboardController extends Controller
         $targetUser = $user ?? $authUser; // Use injected user if present, otherwise authenticated user
 
         // Authorize: check if the authenticated user can view the target user's dashboard
-        Gate::authorize('viewUserDashboard', $targetUser);
+        Gate::forUser($authUser)->authorize('viewUserDashboard', $targetUser);
 
         $isAdmin = $authUser->isAdmin();
         $isViewingSpecificUser = $user !== null; // True if a user was injected via route

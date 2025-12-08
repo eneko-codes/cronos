@@ -40,16 +40,13 @@ class ProjectsListView extends Component
     /**
      * Query string configuration for nested filters with aliases.
      */
-    protected function queryString(): array
-    {
-        return [
-            'filters.has_tasks' => ['as' => 'f_ht', 'except' => false],
-            'filters.has_time_entries' => ['as' => 'f_hte', 'except' => false],
-            'filters.has_no_tasks' => ['as' => 'f_hnt', 'except' => false],
-            'filters.has_no_time_entries' => ['as' => 'f_hnte', 'except' => false],
-            'filters.has_direct_time_entries' => ['as' => 'f_hdte', 'except' => false],
-        ];
-    }
+    protected $queryString = [
+        'filters.has_tasks' => ['as' => 'f_ht', 'except' => false],
+        'filters.has_time_entries' => ['as' => 'f_hte', 'except' => false],
+        'filters.has_no_tasks' => ['as' => 'f_hnt', 'except' => false],
+        'filters.has_no_time_entries' => ['as' => 'f_hnte', 'except' => false],
+        'filters.has_direct_time_entries' => ['as' => 'f_hdte', 'except' => false],
+    ];
 
     /**
      * Reset page when search query changes.

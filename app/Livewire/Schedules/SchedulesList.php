@@ -17,10 +17,14 @@ class SchedulesList extends Component
 {
     use WithPagination;
 
-    public int $itemsPerPage = 25;
-
     #[Url(except: '')]
     public string $search = '';
+
+    #[Url(except: 25)]
+    public int $itemsPerPage = 25;
+
+    #[Url(except: 'description_asc')]
+    public string $sortBy = 'description_asc'; // Default sort
 
     // Filters array
     public array $filters = [
@@ -30,29 +34,19 @@ class SchedulesList extends Component
         'has_no_assigned_users' => false,
     ];
 
-    // Sorting property
-    public string $sortBy = 'description_asc'; // Default sort
-
-    // Updated query string setup
-    protected function queryString()
-    {
-        return [
-            'search' => ['except' => ''],
-            'page' => ['except' => 1],
-            'sortBy' => ['except' => 'description_asc'], // Add sortBy
-            'itemsPerPage' => ['except' => 25],
-            // Add filters to query string with aliases
-            'filters.has_details' => ['as' => 'f_hd', 'except' => false],
-            'filters.has_no_details' => ['as' => 'f_hnd', 'except' => false],
-            'filters.has_assigned_users' => ['as' => 'f_hau', 'except' => false],
-            'filters.has_no_assigned_users' => ['as' => 'f_hnau', 'except' => false],
-        ];
-    }
+    /**
+     * Query string configuration for nested filters with aliases.
+     */
+    protected $queryString = [
+        'filters.has_details' => ['as' => 'f_hd', 'except' => false],
+        'filters.has_no_details' => ['as' => 'f_hnd', 'except' => false],
+        'filters.has_assigned_users' => ['as' => 'f_hau', 'except' => false],
+        'filters.has_no_assigned_users' => ['as' => 'f_hnau', 'except' => false],
+    ];
 
     /**
      * Reset page when search query changes.
      */
-    #[Url] // Keep this attribute for search updates
     public function updatedSearch(): void
     {
         $this->resetPage();

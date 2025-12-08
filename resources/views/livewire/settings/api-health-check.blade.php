@@ -19,7 +19,7 @@
       <h2>API Health Check</h2>
     </div>
     <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
-      Test the connection to the different APIs used by the application.
+      Test the connection to the different platforms used by the application.
     </p>
   </div>
   <div class="space-y-2">

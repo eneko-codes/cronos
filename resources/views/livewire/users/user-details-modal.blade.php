@@ -21,9 +21,11 @@
             <h2 class="m-0 text-xl font-bold">{{ $this->user->name }}</h2>
             <x-user-badges :user="$this->user" />
           </div>
-          <button
+          <x-button
             wire:click="$set('isOpen', false)"
-            class="mt-0 rounded-full p-1 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+            type="button"
+            size="sm"
+            variant="default"
             aria-label="Close modal"
           >
             <svg
@@ -38,7 +40,7 @@
                 clip-rule="evenodd"
               />
             </svg>
-          </button>
+          </x-button>
         </div>
 
         <div class="flex-1 overflow-x-auto overflow-y-auto p-4 md:p-6">

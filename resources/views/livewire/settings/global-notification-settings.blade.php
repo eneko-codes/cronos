@@ -58,8 +58,8 @@
       />
     </div>
 
-    {{-- Notification Channel Selector (Admin Only) --}}
-    @if (auth()->user()?->isAdmin())
+    {{-- Notification Channel Selector (Admin and Maintenance) --}}
+    @if (auth()->user()?->isAdmin() ||auth()->user()?->isMaintenance())
       <div
         class="flex items-center justify-between rounded-md bg-gray-50 p-3 dark:bg-gray-700"
       >

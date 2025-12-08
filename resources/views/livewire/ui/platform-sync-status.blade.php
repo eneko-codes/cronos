@@ -1,7 +1,56 @@
-<div wire:poll.5s.visible="loadStatuses" class="w-full space-y-2">
+<div
+  wire:poll.5s.visible="loadStatuses"
+  class="w-full space-y-2"
+  x-data="{ cooldownRemaining: @entangle('cooldownRemainingSeconds').live }"
+  x-init="
+    setInterval(() => {
+      if (cooldownRemaining > 0) {
+        cooldownRemaining = Math.max(0, cooldownRemaining - 1)
+      }
+    }, 1000)
+  "
+>
   {{-- Platform sync status header --}}
-  <div class="text-sm font-medium text-gray-700 dark:text-gray-300">
-    Platform Sync Status
+  <div class="flex items-center justify-between">
+    <div class="text-sm font-medium text-gray-700 dark:text-gray-300">
+      Platform Sync Status
+    </div>
+
+    {{-- Admin and Maintenance sync button --}}
+    @if (auth()->user()?->isAdmin() ||auth()->user()?->isMaintenance())
+      <x-button
+        wire:click="runSync"
+        type="button"
+        size="xs"
+        :variant="$this->isSyncOnCooldown ? 'default' : 'info'"
+        x-bind:title="
+          cooldownRemaining > 0
+            ? 'Cooldown: ' + cooldownRemaining + 's remaining'
+            : 'Trigger manual sync'
+        "
+        x-bind:class="cooldownRemaining > 0 ? 'opacity-60 cursor-not-allowed' : ''"
+      >
+        <svg
+          class="h-3 w-3"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="2"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+          />
+        </svg>
+        <span x-show="cooldownRemaining === 0">Sync Now</span>
+        <span
+          x-show="cooldownRemaining > 0"
+          x-text="cooldownRemaining + 's'"
+        ></span>
+      </x-button>
+    @endif
   </div>
 
   {{-- Per-platform details --}}

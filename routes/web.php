@@ -91,7 +91,7 @@ Route::middleware(['auth', 'throttle:web'])->group(function (): void {
     // Dashboard (accessible to all authenticated users)
     Route::get('/', UserDashboardController::class)->name('dashboard');
 
-    // Settings: Admin only
+    // Settings: Admin and Maintenance users
     Route::middleware(['can:accessSettingsPage'])->group(function (): void {
         Route::get('/settings', Settings::class)->name('settings');
     });

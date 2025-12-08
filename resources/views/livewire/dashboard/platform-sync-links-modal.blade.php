@@ -25,10 +25,11 @@
               External platform identities used for data synchronization.
             </p>
           </div>
-          <button
+          <x-button
             wire:click="closeModal"
             type="button"
-            class="rounded-lg p-2 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+            size="sm"
+            variant="default"
             aria-label="Close modal"
           >
             <svg
@@ -41,7 +42,7 @@
                 d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
               />
             </svg>
-          </button>
+          </x-button>
         </div>
 
         {{-- Content --}}

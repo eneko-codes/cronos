@@ -10,18 +10,22 @@ class NotificationPreferencePolicy
 {
     /**
      * Determine whether the user can view global notification settings.
+     *
+     * Both administrators and maintenance users can view global settings.
      */
     public function viewGlobalSettings(User $user): bool
     {
-        return $user->isAdmin();
+        return $user->isAdmin() || $user->isMaintenance();
     }
 
     /**
      * Determine whether the user can manage global notification settings.
+     *
+     * Both administrators and maintenance users can manage global settings.
      */
     public function manageGlobalSettings(User $user): bool
     {
-        return $user->isAdmin();
+        return $user->isAdmin() || $user->isMaintenance();
     }
 
     /**
@@ -34,10 +38,12 @@ class NotificationPreferencePolicy
 
     /**
      * Determine whether the user can view another user's notification preferences.
+     *
+     * Administrators, maintenance users, and the user themselves can view preferences.
      */
     public function viewUserPreferences(User $user, User $targetUser): bool
     {
-        return $user->isAdmin() || $user->id === $targetUser->id;
+        return $user->isAdmin() || $user->isMaintenance() || $user->id === $targetUser->id;
     }
 
     /**
@@ -50,18 +56,22 @@ class NotificationPreferencePolicy
 
     /**
      * Determine whether the user can modify another user's notification preferences.
+     *
+     * Administrators, maintenance users, and the user themselves can update preferences.
      */
     public function updateUserPreferences(User $user, User $targetUser): bool
     {
-        return $user->isAdmin() || $user->id === $targetUser->id;
+        return $user->isAdmin() || $user->isMaintenance() || $user->id === $targetUser->id;
     }
 
     /**
      * Determine whether the user can mute/unmute another user's notifications.
+     *
+     * Both administrators and maintenance users can mute other users' notifications.
      */
     public function muteUserNotifications(User $user, User $targetUser): bool
     {
-        return $user->isAdmin() && $user->id !== $targetUser->id;
+        return ($user->isAdmin() || $user->isMaintenance()) && $user->id !== $targetUser->id;
     }
 
     /**
@@ -74,16 +84,18 @@ class NotificationPreferencePolicy
             return true;
         }
 
-        // Users can check their own eligibility, admins can check anyone's
-        return $user->isAdmin() || $user->id === $targetUser->id;
+        // Users can check their own eligibility, admins and maintenance users can check anyone's
+        return $user->isAdmin() || $user->isMaintenance() || $user->id === $targetUser->id;
     }
 
     /**
      * Determine whether the user can access notification settings page.
+     *
+     * Both administrators and maintenance users can access the settings page.
      */
     public function accessSettingsPage(User $user): bool
     {
-        return $user->isAdmin();
+        return $user->isAdmin() || $user->isMaintenance();
     }
 
     /**

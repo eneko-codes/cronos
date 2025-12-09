@@ -64,22 +64,7 @@ final class SyncService
             SyncFrequencyType::EveryFourHours->value => $diff >= 240,
             SyncFrequencyType::EverySixHours->value => $diff >= 360,
             SyncFrequencyType::EveryTwelveHours->value => $diff >= 720,
-            SyncFrequencyType::DailyAt9->value => $this->shouldRunDailyAt9($last, $now),
             default => false,
         };
-    }
-
-    /**
-     * Check if sync should run for DailyAt9 frequency.
-     *
-     * @param  Carbon  $last  The last sync time
-     * @param  Carbon  $now  The current time
-     * @return bool True if sync should run
-     */
-    private function shouldRunDailyAt9(Carbon $last, Carbon $now): bool
-    {
-        $todayAt9 = $now->copy()->setTime(9, 0);
-
-        return $last < $todayAt9 && $now >= $todayAt9;
     }
 }

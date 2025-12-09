@@ -45,6 +45,14 @@
 
         <div class="flex-1 overflow-x-auto overflow-y-auto p-4 md:p-6">
           <div class="flex flex-col gap-6" wire:loading.class="opacity-50">
+            {{-- Admin Actions Section --}}
+            @if (auth()->user()?->isAdmin())
+              <livewire:users.user-admin-actions
+                :userId="$userId"
+                :key="'user-admin-actions-' . $userId"
+              />
+            @endif
+
             {{-- Profile Section --}}
             <livewire:users.user-profile-section
               :userId="$userId"
@@ -146,14 +154,6 @@
               :userId="$userId"
               :key="'user-timestamps-section-' . $userId"
             />
-
-            {{-- Admin Actions Section --}}
-            @if (auth()->user()?->isAdmin())
-              <livewire:users.user-admin-actions
-                :userId="$userId"
-                :key="'user-admin-actions-' . $userId"
-              />
-            @endif
           </div>
         </div>
       </div>

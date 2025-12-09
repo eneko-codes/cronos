@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Actions\Proofhub;
 
 use App\Actions\LinkUserExternalIdentityAction;
-use App\Actions\NotifyMaintenanceUsersAction;
 use App\DataTransferObjects\Proofhub\ProofhubUserDTO;
 use App\Enums\Platform;
 use App\Notifications\UnlinkedPlatformUserNotification;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -22,7 +22,7 @@ final class ProcessProofhubUserAction
 {
     public function __construct(
         private readonly LinkUserExternalIdentityAction $linkAction,
-        private readonly NotifyMaintenanceUsersAction $notifyAction,
+        private readonly NotificationService $notificationService,
     ) {}
 
     /**
@@ -113,9 +113,7 @@ final class ProcessProofhubUserAction
             externalEmail: $email,
         );
 
-        $this->notifyAction->execute(
-            $notification,
-            fn ($user) => UnlinkedPlatformUserNotification::shouldSend($user, Platform::ProofHub, $externalId)
-        );
+        // Rate limiting is handled by RateLimited middleware in the notification
+        $this->notificationService->notifyMaintenanceUsers($notification);
     }
 }

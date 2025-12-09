@@ -4,34 +4,33 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
-use App\Services\NotificationThrottleService;
 use App\Traits\HasConfigurableChannels;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Slack\SlackMessage;
+use Illuminate\Queue\Middleware\RateLimited;
 
 /**
  * Notification sent to administrators when an external API service is down.
  *
- * This notification uses deduplication logic to prevent email spam when multiple
- * sync jobs fail simultaneously for the same platform. Deduplication is handled
- * before notification dispatch using the shouldSend() static method, following
- * Laravel's standard notification pattern.
+ * This notification uses Laravel's native RateLimited middleware to prevent email spam
+ * when multiple sync jobs fail simultaneously for the same platform. Rate limiting
+ * is handled at the queue middleware level, following Laravel 12 best practices.
  *
  * Example scenario:
- * - Multiple SystemPin sync jobs fail (SyncSystempinUsersJob, SyncSystempinAttendancesJob)
+ * - Multiple SystemPin sync jobs fail (SyncSystemPinUsersJob, SyncSystemPinAttendancesJob)
  * - Each job triggers CheckSystemPinHealthAction
- * - Without deduplication: Admins receive multiple identical emails
- * - With deduplication: Admins receive only one email per 60-minute window
+ * - Without rate limiting: Admins receive multiple identical emails
+ * - With rate limiting: Admins receive only one email per 60-minute window per service
  *
  * @see \App\Actions\SystemPin\CheckSystemPinHealthAction
  * @see \App\Actions\Odoo\CheckOdooHealthAction
  * @see \App\Actions\Proofhub\CheckProofhubHealthAction
  * @see \App\Actions\Desktime\CheckDesktimeHealthAction
  */
-class ApiDownWarning extends Notification implements ShouldQueue
+class ApiDownNotification extends Notification implements ShouldQueue
 {
     use HasConfigurableChannels, Queueable;
 
@@ -46,15 +45,7 @@ class ApiDownWarning extends Notification implements ShouldQueue
     public string $errorMessage;
 
     /**
-     * Number of minutes to throttle duplicate notifications for the same service.
-     *
-     * After a notification is sent, subsequent notifications for the same service
-     * to the same admin will be suppressed for this duration.
-     */
-    public const THROTTLE_MINUTES = 60;
-
-    /**
-     * Create a new API down warning notification instance.
+     * Create a new API down notification instance.
      *
      * @param  string  $serviceName  The name of the API service that is down
      * @param  string  $errorMessage  The error message from the health check
@@ -77,27 +68,22 @@ class ApiDownWarning extends Notification implements ShouldQueue
     }
 
     /**
-     * Check if this notification should be sent to the given user.
+     * Get the middleware the notification job should pass through.
      *
-     * This method uses NotificationThrottleService to check if a notification
-     * should be sent based on throttling rules. This should be called before
-     * notify() to follow Laravel's standard pattern of checking eligibility
-     * before dispatching notifications.
+     * Uses Laravel's native RateLimited middleware to throttle notifications
+     * per service per user. The rate limiter is configured in AppServiceProvider
+     * and extracts the key from the notification job.
      *
      * @param  object  $notifiable  The user receiving the notification
-     * @param  string  $serviceName  The name of the API service that is down
-     * @return bool True if notification should be sent, false if it should be skipped
+     * @param  string  $channel  The notification channel
+     * @return array<int, object>
      */
-    public static function shouldSend(object $notifiable, string $serviceName): bool
+    public function middleware(object $notifiable, string $channel): array
     {
-        $throttleService = app(NotificationThrottleService::class);
-
-        return $throttleService->shouldSend(
-            $notifiable,
-            'api_down_warning',
-            $serviceName,
-            self::THROTTLE_MINUTES
-        );
+        return [
+            (new RateLimited('api-down-notification'))
+                ->releaseAfter(3600), // Release after 60 minutes (3600 seconds)
+        ];
     }
 
     /**
@@ -178,10 +164,10 @@ class ApiDownWarning extends Notification implements ShouldQueue
      * This method is used by the notification preference system to determine
      * if a user is eligible to receive this type of notification.
      *
-     * @return \App\Enums\NotificationType The ApiDownWarning notification type
+     * @return \App\Enums\NotificationType The ApiDown notification type
      */
     public function type(): \App\Enums\NotificationType
     {
-        return \App\Enums\NotificationType::ApiDownWarning;
+        return \App\Enums\NotificationType::ApiDown;
     }
 }

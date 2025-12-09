@@ -6,13 +6,13 @@ namespace App\Notifications;
 
 use App\Enums\NotificationType;
 use App\Enums\Platform;
-use App\Services\NotificationThrottleService;
 use App\Traits\HasConfigurableChannels;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Slack\SlackMessage;
+use Illuminate\Queue\Middleware\RateLimited;
 
 /**
  * Notification sent to maintenance users when a platform user cannot be
@@ -25,15 +25,13 @@ use Illuminate\Notifications\Slack\SlackMessage;
  * - Platform user has a different email than any local user
  * - Platform user has a different name than any local user
  * - New employee added to external platform but not yet in Odoo
+ *
+ * Uses Laravel's native RateLimited middleware to throttle notifications
+ * per platform per external user ID per maintenance user (24 hours).
  */
 class UnlinkedPlatformUserNotification extends Notification implements ShouldQueue
 {
     use HasConfigurableChannels, Queueable;
-
-    /**
-     * Number of minutes to throttle duplicate notifications for the same user.
-     */
-    public const THROTTLE_MINUTES = 1440; // 24 hours - don't spam for the same unlinked user
 
     /**
      * Create a new notification instance.
@@ -62,38 +60,22 @@ class UnlinkedPlatformUserNotification extends Notification implements ShouldQue
     }
 
     /**
-     * Check if this notification should be sent to the given user.
+     * Get the middleware the notification job should pass through.
      *
-     * This method handles two call patterns:
-     * 1. Laravel's automatic call: shouldSend($notifiable, string $channel)
-     * 2. Custom callback: shouldSend($notifiable, Platform $platform, string $externalId)
-     *
-     * Uses throttling with a longer window (24 hours) to prevent daily
-     * notification spam for the same unlinked user.
+     * Uses Laravel's native RateLimited middleware to throttle notifications
+     * per platform per external user ID per maintenance user. The rate limiter
+     * is configured in AppServiceProvider and extracts the key from the notification job.
      *
      * @param  object  $notifiable  The user receiving the notification
-     * @param  Platform|string  $platformOrChannel  The platform enum or channel name
-     * @param  string|null  $externalId  The external user ID (only for custom callback)
-     * @return bool True if notification should be sent
+     * @param  string  $channel  The notification channel
+     * @return array<int, object>
      */
-    public static function shouldSend(object $notifiable, Platform|string $platformOrChannel, ?string $externalId = null): bool
+    public function middleware(object $notifiable, string $channel): array
     {
-        // If called by Laravel with channel string, always allow (throttling handled by callback)
-        if (is_string($platformOrChannel)) {
-            return true;
-        }
-
-        // Custom callback with Platform enum - check throttling
-        $platform = $platformOrChannel;
-        $throttleService = app(NotificationThrottleService::class);
-        $throttleKey = "{$platform->value}_{$externalId}";
-
-        return $throttleService->shouldSend(
-            $notifiable,
-            'unlinked_platform_user',
-            $throttleKey,
-            self::THROTTLE_MINUTES
-        );
+        return [
+            (new RateLimited('unlinked-platform-user'))
+                ->releaseAfter(86400), // Release after 24 hours (86400 seconds)
+        ];
     }
 
     /**

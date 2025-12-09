@@ -1,8 +1,8 @@
 <?php
 
 use App\Actions\DispatchSyncBatchAction;
-use App\Actions\ShouldRunSyncBatchAction;
-use App\Jobs\SendUserLeaveReminder;
+use App\Jobs\SendUserLeaveReminderJob;
+use App\Services\SyncService;
 use Illuminate\Support\Facades\Schedule;
 
 /*
@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Schedule;
 /**
  * Schedule the Leave Reminder job to run daily at 8:00 AM
  */
-Schedule::job(new SendUserLeaveReminder(1))
+Schedule::job(new SendUserLeaveReminderJob(1))
     ->daily()
     ->at('08:00')
     ->name('Daily Leave Reminder')
@@ -71,7 +71,8 @@ Schedule::command('model:prune', [
  * This closure runs every minute, but only dispatches the sync batch if needed.
  */
 Schedule::call(function (): void {
-    if (app(ShouldRunSyncBatchAction::class)()) {
+    $syncService = app(SyncService::class);
+    if ($syncService->shouldRun()) {
         app(DispatchSyncBatchAction::class)();
     }
 })->everyMinute()

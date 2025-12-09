@@ -127,39 +127,33 @@
             </svg>
           </x-button>
 
-          {{-- Resend Verification Button --}}
-          @if (! $this->targetUser?->hasVerifiedEmail())
-            <x-button
-              type="button"
-              wire:click="resendVerification"
-              size="sm"
-              variant="info"
-              title="Resend verification email"
+          {{-- Send/Resend Verification Email Button --}}
+          <x-button
+            type="button"
+            wire:click="resendVerification"
+            size="sm"
+            variant="info"
+            title="{{ $this->targetUser?->hasVerifiedEmail() ? 'Send verification email' : 'Resend verification email' }}"
+          >
+            <x-spinner size="4" wire:loading wire:target="resendVerification" />
+            <span
+              wire:loading.remove
+              wire:target="resendVerification"
+              class="flex items-center gap-1"
             >
-              <x-spinner
-                size="4"
-                wire:loading
-                wire:target="resendVerification"
-              />
-              <span
-                wire:loading.remove
-                wire:target="resendVerification"
-                class="flex items-center gap-1"
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 16 16"
+                fill="currentColor"
+                class="size-4"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 16 16"
-                  fill="currentColor"
-                  class="size-4"
-                >
-                  <path
-                    d="M1 3.5A1.5 1.5 0 0 1 2.5 2h11A1.5 1.5 0 0 1 15 3.5v.214l-5.429 3.243a1.5 1.5 0 0 1-1.142.152L1 4.31V3.5Zm0 1.726 6.203 2.44a2.5 2.5 0 0 0 1.904-.254L15 4.24v8.26a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 12.5V5.226Z"
-                  />
-                </svg>
-                Verify
-              </span>
-            </x-button>
-          @endif
+                <path
+                  d="M1 3.5A1.5 1.5 0 0 1 2.5 2h11A1.5 1.5 0 0 1 15 3.5v.214l-5.429 3.243a1.5 1.5 0 0 1-1.142.152L1 4.31V3.5Zm0 1.726 6.203 2.44a2.5 2.5 0 0 0 1.904-.254L15 4.24v8.26a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 12.5V5.226Z"
+                />
+              </svg>
+              Verify
+            </span>
+          </x-button>
         </div>
       </div>
     @endif

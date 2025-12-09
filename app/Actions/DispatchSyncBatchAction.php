@@ -21,8 +21,8 @@ use App\Jobs\Sync\Proofhub\SyncProofhubProjectsJob;
 use App\Jobs\Sync\Proofhub\SyncProofhubTasksJob;
 use App\Jobs\Sync\Proofhub\SyncProofhubTimeEntriesJob;
 use App\Jobs\Sync\Proofhub\SyncProofhubUsersJob;
-use App\Jobs\Sync\SystemPin\SyncSystempinAttendancesJob;
-use App\Jobs\Sync\SystemPin\SyncSystempinUsersJob;
+use App\Jobs\Sync\SystemPin\SyncSystemPinAttendancesJob;
+use App\Jobs\Sync\SystemPin\SyncSystemPinUsersJob;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
@@ -80,8 +80,8 @@ class DispatchSyncBatchAction
         ];
 
         $systempinChain = [
-            new SyncSystempinUsersJob($systempinApi),
-            new SyncSystempinAttendancesJob($systempinApi, $fromDate, $toDate),
+            new SyncSystemPinUsersJob($systempinApi),
+            new SyncSystemPinAttendancesJob($systempinApi, $fromDate, $toDate),
         ];
 
         // Merge all jobs into a single array to enforce strict order

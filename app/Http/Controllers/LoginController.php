@@ -6,7 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\LoginRequest;
 use App\Models\User;
-use App\Notifications\WelcomeNewUserEmail;
+use App\Notifications\WelcomeNewUserNotification;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -105,7 +105,7 @@ class LoginController extends Controller
         $user = User::where('email', $email)->whereNull('password')->first();
         if ($user) {
             // Resend welcome email instead of allowing direct access
-            $user->notify(new WelcomeNewUserEmail);
+            $user->notify(new WelcomeNewUserNotification);
         }
 
         return back()->withInput(['email' => $email, 'remember' => $remember])->withErrors([

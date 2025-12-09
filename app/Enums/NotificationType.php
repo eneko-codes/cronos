@@ -21,7 +21,7 @@ enum NotificationType: string
     case LeaveReminder = 'leave_reminder';
 
     // System/technical notifications
-    case ApiDownWarning = 'api_down_warning';
+    case ApiDown = 'api_down';
     case UnlinkedPlatformUser = 'unlinked_platform_user';
 
     // Admin notifications - personal notification first
@@ -31,13 +31,13 @@ enum NotificationType: string
     case UserPromotedToMaintenance = 'user_promoted_to_maintenance';
 
     // Admin notifications - about others (grouped by action type)
-    case AdminPromotionEmail = 'admin_promotion_email';
-    case AdminDemotionEmail = 'admin_demotion_email';
-    case MaintenancePromotionEmail = 'maintenance_promotion_email';
-    case MaintenanceDemotionEmail = 'maintenance_demotion_email';
+    case AdminPromotion = 'admin_promotion';
+    case AdminDemotion = 'admin_demotion';
+    case MaintenancePromotion = 'maintenance_promotion';
+    case MaintenanceDemotion = 'maintenance_demotion';
 
     // Always sent (cannot be disabled)
-    case WelcomeEmail = 'welcome_email';
+    case WelcomeNewUser = 'welcome_new_user';
 
     /**
      * Get the human-readable label for this notification type
@@ -47,13 +47,13 @@ enum NotificationType: string
         return match ($this) {
             self::ScheduleChange => 'Schedule Change',
             self::LeaveReminder => 'Leave Reminder',
-            self::ApiDownWarning => 'API Down Warning',
+            self::ApiDown => 'API Down Warning',
             self::UnlinkedPlatformUser => 'Unlinked Platform User',
-            self::AdminPromotionEmail => 'Admin Promotion (to Admins)',
-            self::AdminDemotionEmail => 'Admin Demotion (to Admins)',
-            self::MaintenancePromotionEmail => 'Maintenance Promotion (to Admins)',
-            self::MaintenanceDemotionEmail => 'Maintenance Demotion (to Admins)',
-            self::WelcomeEmail => 'Welcome Email',
+            self::AdminPromotion => 'Admin Promotion (to Admins)',
+            self::AdminDemotion => 'Admin Demotion (to Admins)',
+            self::MaintenancePromotion => 'Maintenance Promotion (to Admins)',
+            self::MaintenanceDemotion => 'Maintenance Demotion (to Admins)',
+            self::WelcomeNewUser => 'Welcome Email',
             self::UserPromotedToAdmin => 'You Promoted To Admin',
             self::UserPromotedToMaintenance => 'You Promoted To Maintenance',
         };
@@ -65,10 +65,10 @@ enum NotificationType: string
     public function isAdminOnly(): bool
     {
         return match ($this) {
-            self::AdminPromotionEmail,
-            self::AdminDemotionEmail,
-            self::MaintenancePromotionEmail,
-            self::MaintenanceDemotionEmail,
+            self::AdminPromotion,
+            self::AdminDemotion,
+            self::MaintenancePromotion,
+            self::MaintenanceDemotion,
             self::UserPromotedToAdmin => true,
             default => false,
         };
@@ -80,7 +80,7 @@ enum NotificationType: string
     public function isMaintenanceOnly(): bool
     {
         return match ($this) {
-            self::ApiDownWarning,
+            self::ApiDown,
             self::UnlinkedPlatformUser,
             self::UserPromotedToMaintenance => true,
             default => false,
@@ -95,13 +95,13 @@ enum NotificationType: string
         return match ($this) {
             self::ScheduleChange => true,
             self::LeaveReminder => true,
-            self::ApiDownWarning => true,
+            self::ApiDown => true,
             self::UnlinkedPlatformUser => true,
-            self::AdminPromotionEmail => true,
-            self::AdminDemotionEmail => true,
-            self::MaintenancePromotionEmail => true,
-            self::MaintenanceDemotionEmail => true,
-            self::WelcomeEmail => true,
+            self::AdminPromotion => true,
+            self::AdminDemotion => true,
+            self::MaintenancePromotion => true,
+            self::MaintenanceDemotion => true,
+            self::WelcomeNewUser => true,
             self::UserPromotedToAdmin => true,
             self::UserPromotedToMaintenance => true,
         };
@@ -115,13 +115,13 @@ enum NotificationType: string
         return match ($this) {
             self::ScheduleChange => 'Notifications when your work schedule is updated',
             self::LeaveReminder => 'Reminders about upcoming time off',
-            self::ApiDownWarning => 'Alerts when external services are experiencing issues',
+            self::ApiDown => 'Alerts when external services are experiencing issues',
             self::UnlinkedPlatformUser => 'Alerts when a platform user cannot be automatically linked to a local user',
-            self::AdminPromotionEmail => 'Notifications sent to admins when other users are promoted to admin',
-            self::AdminDemotionEmail => 'Notifications sent to admins when other users are demoted from admin',
-            self::MaintenancePromotionEmail => 'Notifications sent to admins when other users are promoted to maintenance',
-            self::MaintenanceDemotionEmail => 'Notifications sent to admins when other users are removed from maintenance',
-            self::WelcomeEmail => 'Welcome messages for new users',
+            self::AdminPromotion => 'Notifications sent to admins when other users are promoted to admin',
+            self::AdminDemotion => 'Notifications sent to admins when other users are demoted from admin',
+            self::MaintenancePromotion => 'Notifications sent to admins when other users are promoted to maintenance',
+            self::MaintenanceDemotion => 'Notifications sent to admins when other users are removed from maintenance',
+            self::WelcomeNewUser => 'Welcome messages for new users',
             self::UserPromotedToAdmin => 'Personal notification sent to you when you are promoted to admin',
             self::UserPromotedToMaintenance => 'Personal notification sent to you when you are promoted to maintenance',
         };
@@ -130,13 +130,13 @@ enum NotificationType: string
     /**
      * Check if this notification type can be disabled globally.
      *
-     * Some notifications (like WelcomeEmail for new users) must always be sent
+     * Some notifications (like WelcomeNewUser for new users) must always be sent
      * and cannot be disabled via global preferences.
      */
     public function canBeDisabledGlobally(): bool
     {
         return match ($this) {
-            self::WelcomeEmail => false, // WelcomeNewUserEmail must always send for password setup
+            self::WelcomeNewUser => false, // WelcomeNewUserNotification must always send for password setup
             default => true,
         };
     }

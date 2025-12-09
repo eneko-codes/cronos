@@ -16,8 +16,8 @@ declare(strict_types=1);
 
 namespace App\Livewire\Sidebar;
 
-use App\Actions\GetNotificationPreferencesAction;
 use App\Models\User;
+use App\Services\NotificationPreferenceService;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
@@ -60,7 +60,7 @@ class NotificationsList extends Component
     /**
      * Mount the component and load notification status.
      */
-    public function mount(?int $userId, GetNotificationPreferencesAction $getPreferences): void
+    public function mount(?int $userId, NotificationPreferenceService $preferenceService): void
     {
         $this->userId = $userId;
 
@@ -75,7 +75,7 @@ class NotificationsList extends Component
         }
 
         // Load global and user notification states for status indicators
-        $prefs = $getPreferences->execute($authUser, $user->id);
+        $prefs = $preferenceService->getPreferences($authUser, $user->id);
         $this->isGloballyEnabled = $prefs['global_enabled'];
         $this->userNotificationsMuted = $prefs['user_mute_all'];
 

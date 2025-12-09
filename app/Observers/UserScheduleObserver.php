@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace App\Observers;
 
-use App\Actions\GetNotificationPreferencesAction;
 use App\Models\User;
 use App\Models\UserSchedule;
 use App\Notifications\ScheduleChangeNotification;
+use App\Services\NotificationPreferenceService;
 use Illuminate\Support\Facades\Log;
 
 class UserScheduleObserver
 {
-    private GetNotificationPreferencesAction $getPreferences;
+    private NotificationPreferenceService $preferenceService;
 
-    public function __construct(GetNotificationPreferencesAction $getPreferences)
+    public function __construct(NotificationPreferenceService $preferenceService)
     {
-        $this->getPreferences = $getPreferences;
+        $this->preferenceService = $preferenceService;
     }
 
     /**
@@ -65,7 +65,7 @@ class UserScheduleObserver
             $notification = new ScheduleChangeNotification($user, $endedSchedule, null);
 
             // Check permission using the notification service
-            if ($this->getPreferences->execute($user)['eligibility'][$notification->type()->value] ?? false) {
+            if ($this->preferenceService->getPreferences($user)['eligibility'][$notification->type()->value] ?? false) {
                 $user->notify($notification);
             }
         }

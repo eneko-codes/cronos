@@ -21,7 +21,7 @@ The channel selection is controlled by the `Setting::getValue('notification_chan
 **Type**: `NotificationType::ScheduleChange`  
 **Channels**: `['database']` + `['mail']` or `['slack']` (based on global setting)  
 **Queue**: Yes (`ShouldQueue`)  
-**Eligibility**: Checked via `GetNotificationPreferencesAction`
+**Eligibility**: Checked via `NotificationPreferenceService`
 
 **Recipients**:
 
@@ -51,7 +51,7 @@ The channel selection is controlled by the `Setting::getValue('notification_chan
 **Type**: `NotificationType::LeaveReminder`  
 **Channels**: `['database']` + `['mail']` or `['slack']` (based on global setting)  
 **Queue**: Yes (`ShouldQueue`)  
-**Eligibility**: Checked via `GetNotificationPreferencesAction`
+**Eligibility**: Checked via `NotificationPreferenceService`
 
 **Recipients**:
 
@@ -59,7 +59,7 @@ The channel selection is controlled by the `Setting::getValue('notification_chan
 
 **When Sent**:
 
-- Scheduled job: `SendUserLeaveReminder` (default: 1 day in advance)
+- Scheduled job: `SendUserLeaveReminderJob` (default: 1 day in advance)
 - For users with approved leaves starting on the target date
 
 **Purpose**:
@@ -81,15 +81,15 @@ The channel selection is controlled by the `Setting::getValue('notification_chan
 
 ### API Down Warning
 
-**Type**: `NotificationType::ApiDownWarning`  
+**Type**: `NotificationType::ApiDown`  
 **Channels**: `['database']` + `['mail']` or `['slack']` (based on global setting)  
 **Queue**: Yes (`ShouldQueue`)  
-**Eligibility**: Checked via `GetNotificationPreferencesAction` (Maintenance users only)
+**Eligibility**: Checked via `NotificationPreferenceService` (Maintenance users only)
 
 **Recipients**:
 
 - All users with `user_type = RoleType::Maintenance`
-- Only if they have enabled `ApiDownWarning` notifications
+- Only if they have enabled `ApiDown` notifications
 
 **When Sent**:
 
@@ -122,7 +122,7 @@ The channel selection is controlled by the `Setting::getValue('notification_chan
 **Type**: `NotificationType::UserPromotedToAdmin`  
 **Channels**: `['database']` + `['mail']` or `['slack']` (based on global setting)  
 **Queue**: Yes (`ShouldQueue`)  
-**Eligibility**: Checked via `GetNotificationPreferencesAction` (Admin users only)
+**Eligibility**: Checked via `NotificationPreferenceService` (Admin users only)
 
 **Recipients**:
 
@@ -143,7 +143,7 @@ The channel selection is controlled by the `Setting::getValue('notification_chan
 **Special Notes**:
 
 - **Admin-only notification** - only visible to admin users
-- Sent to the promoted user (different from `AdminPromotionEmail` which goes to other admins)
+- Sent to the promoted user (different from `AdminPromotionNotification` which goes to other admins)
 - Message: "You have been promoted to administrator"
 
 ---
@@ -153,7 +153,7 @@ The channel selection is controlled by the `Setting::getValue('notification_chan
 **Type**: `NotificationType::UserPromotedToMaintenance`  
 **Channels**: `['database']` + `['mail']` or `['slack']` (based on global setting)  
 **Queue**: Yes (`ShouldQueue`)  
-**Eligibility**: Checked via `GetNotificationPreferencesAction` (Maintenance users only)
+**Eligibility**: Checked via `NotificationPreferenceService` (Maintenance users only)
 
 **Recipients**:
 
@@ -174,7 +174,7 @@ The channel selection is controlled by the `Setting::getValue('notification_chan
 **Special Notes**:
 
 - **Maintenance-only notification** - only visible to maintenance users
-- Sent to the promoted user (different from `MaintenancePromotionEmail` which goes to admins)
+- Sent to the promoted user (different from `MaintenancePromotionNotification` which goes to admins)
 - User's notification preferences are re-initialized when promoted to include Maintenance-only notifications
 - Message: "You have been promoted to maintenance role"
 
@@ -182,17 +182,17 @@ The channel selection is controlled by the `Setting::getValue('notification_chan
 
 ## Admin Notifications (About Others)
 
-### Admin Promotion Email
+### Admin Promotion Notification
 
-**Type**: `NotificationType::AdminPromotionEmail`  
+**Type**: `NotificationType::AdminPromotion`  
 **Channels**: `['database']` + `['mail']` or `['slack']` (based on global setting)  
 **Queue**: Yes (`ShouldQueue`)  
-**Eligibility**: Checked via `GetNotificationPreferencesAction` (Admin users only)
+**Eligibility**: Checked via `NotificationPreferenceService` (Admin users only)
 
 **Recipients**:
 
 - All other admin users (excluding the promoted user)
-- Only if they have enabled `AdminPromotionEmail` notifications
+- Only if they have enabled `AdminPromotion` notifications
 
 **When Sent**:
 
@@ -213,17 +213,17 @@ The channel selection is controlled by the `Setting::getValue('notification_chan
 
 ---
 
-### Admin Demotion Email
+### Admin Demotion Notification
 
-**Type**: `NotificationType::AdminDemotionEmail`  
+**Type**: `NotificationType::AdminDemotion`  
 **Channels**: `['database']` + `['mail']` or `['slack']` (based on global setting)  
 **Queue**: Yes (`ShouldQueue`)  
-**Eligibility**: Checked via `GetNotificationPreferencesAction` (Admin users only)
+**Eligibility**: Checked via `NotificationPreferenceService` (Admin users only)
 
 **Recipients**:
 
 - All admin users
-- Only if they have enabled `AdminDemotionEmail` notifications
+- Only if they have enabled `AdminDemotion` notifications
 
 **When Sent**:
 
@@ -243,17 +243,17 @@ The channel selection is controlled by the `Setting::getValue('notification_chan
 
 ---
 
-### Maintenance Promotion Email
+### Maintenance Promotion Notification
 
-**Type**: `NotificationType::MaintenancePromotionEmail`  
+**Type**: `NotificationType::MaintenancePromotion`  
 **Channels**: `['database']` + `['mail']` or `['slack']` (based on global setting)  
 **Queue**: Yes (`ShouldQueue`)  
-**Eligibility**: Checked via `GetNotificationPreferencesAction` (Admin users only)
+**Eligibility**: Checked via `NotificationPreferenceService` (Admin users only)
 
 **Recipients**:
 
 - All admin users
-- Only if they have enabled `MaintenancePromotionEmail` notifications
+- Only if they have enabled `MaintenancePromotion` notifications
 
 **When Sent**:
 
@@ -273,17 +273,17 @@ The channel selection is controlled by the `Setting::getValue('notification_chan
 
 ---
 
-### Maintenance Demotion Email
+### Maintenance Demotion Notification
 
-**Type**: `NotificationType::MaintenanceDemotionEmail`  
+**Type**: `NotificationType::MaintenanceDemotion`  
 **Channels**: `['database']` + `['mail']` or `['slack']` (based on global setting)  
 **Queue**: Yes (`ShouldQueue`)  
-**Eligibility**: Checked via `GetNotificationPreferencesAction` (Admin users only)
+**Eligibility**: Checked via `NotificationPreferenceService` (Admin users only)
 
 **Recipients**:
 
 - All admin users
-- Only if they have enabled `MaintenanceDemotionEmail` notifications
+- Only if they have enabled `MaintenanceDemotion` notifications
 
 **When Sent**:
 
@@ -305,9 +305,9 @@ The channel selection is controlled by the `Setting::getValue('notification_chan
 
 ## Authentication Notifications
 
-### Welcome New User Email
+### Welcome New User Notification
 
-**Type**: `NotificationType::WelcomeEmail`  
+**Type**: `NotificationType::WelcomeNewUser`  
 **Channels**: `['mail']` (always email only, cannot be disabled)  
 **Queue**: Yes (`ShouldQueue`)  
 **Eligibility**: Always sent (bypasses notification preferences)
@@ -367,7 +367,7 @@ The channel selection is controlled by the `Setting::getValue('notification_chan
 ## Notification Flow
 
 1. **Trigger**: Event occurs (user created, role changed, API down, schedule change, etc.)
-2. **Eligibility Check**: `GetNotificationPreferencesAction` checks if user can receive notification
+2. **Eligibility Check**: `NotificationPreferenceService` checks if user can receive notification
    - Checks global notification preferences
    - Checks user-specific notification preferences
    - Checks role-based restrictions
@@ -384,18 +384,18 @@ The channel selection is controlled by the `Setting::getValue('notification_chan
 
 These notifications are only visible and available to users with admin role:
 
-- `AdminPromotionEmail`
-- `AdminDemotionEmail`
-- `MaintenancePromotionEmail`
-- `MaintenanceDemotionEmail`
-- `UserPromotedToAdmin`
+- `AdminPromotionNotification`
+- `AdminDemotionNotification`
+- `MaintenancePromotionNotification`
+- `MaintenanceDemotionNotification`
+- `UserPromotedToAdminNotification`
 
 ### Maintenance-Only Notifications
 
 These notifications are only visible and available to users with maintenance role:
 
-- `ApiDownWarning`
-- `UserPromotedToMaintenance`
+- `ApiDownNotification`
+- `UserPromotedToMaintenanceNotification`
 
 ### All Users
 
@@ -412,22 +412,34 @@ These notifications are available to all users:
 
 These notifications always send regardless of user preferences:
 
-- **WelcomeNewUserEmail**: Required for password setup
+- **WelcomeNewUserNotification**: Required for password setup
 - **ResetPasswordNotification**: Required for password reset
 
 ### Channel Overrides
 
 Some notifications have fixed channels that cannot be changed:
 
-- **WelcomeNewUserEmail**: Always email only (password setup link must be delivered via email)
+- **WelcomeNewUserNotification**: Always email only (password setup link must be delivered via email)
 - **ResetPasswordNotification**: Always email only (password reset link must be delivered via email)
 
-### Deduplication
+### Rate Limiting
 
-- **ApiDownWarning**: Implements 60-minute throttling per service per user to prevent spam
-  - Uses cache-based throttling with atomic locks
+- **ApiDownNotification**: Implements 60-minute rate limiting per service per user to prevent spam
+  - Uses Laravel's native `RateLimited` queue middleware
+  - Rate limiter configured in `AppServiceProvider` using `RateLimiter::for()`
   - Prevents duplicate notifications when multiple sync jobs fail simultaneously
-  - Each service (SystemPin, Odoo, ProofHub, DeskTime) has separate throttle windows
+  - Each service (SystemPin, Odoo, ProofHub, DeskTime) has separate rate limit windows
+  - Rate-limited jobs are automatically released back to the queue with appropriate delays
+
+- **UnlinkedPlatformUserNotification**: Implements 24-hour rate limiting per platform per external ID per user
+  - Uses Laravel's native `RateLimited` queue middleware
+  - Rate limiter configured in `AppServiceProvider` using `RateLimiter::for()`
+  - Prevents notification spam for the same unlinked user across multiple sync runs
+
+- **VerifyEmailNotification**: Implements 5-minute rate limiting per user
+  - Uses Laravel's native `RateLimited` queue middleware
+  - Rate limiter configured in `AppServiceProvider` using `RateLimiter::for()`
+  - Prevents email verification spam
 
 ### Queuing
 
@@ -440,7 +452,7 @@ Some notifications have fixed channels that cannot be changed:
 
 - **Notifications**: `app/Notifications/`
 - **Observers**: `app/Observers/UserObserver.php`, `app/Observers/UserScheduleObserver.php`
-- **Jobs**: `app/Jobs/SendUserLeaveReminder.php`
+- **Jobs**: `app/Jobs/SendUserLeaveReminderJob.php`
 - **Actions**: `app/Actions/*/Check*HealthAction.php`
 - **Enums**: `app/Enums/NotificationType.php`
 - **Models**: `app/Models/User.php`, `app/Models/UserNotificationPreference.php`, `app/Models/GlobalNotificationPreference.php`

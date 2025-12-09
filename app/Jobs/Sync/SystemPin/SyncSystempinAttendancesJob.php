@@ -14,9 +14,9 @@ use Carbon\Carbon;
 /**
  * Job to synchronize SystemPin attendance records with the local database.
  *
- * Synchronizes Systempin attendances into the local database.
+ * Synchronizes SystemPin attendances into the local database.
  */
-class SyncSystempinAttendancesJob extends BaseSyncJob
+class SyncSystemPinAttendancesJob extends BaseSyncJob
 {
     /**
      * The priority of the job in the queue.
@@ -30,7 +30,7 @@ class SyncSystempinAttendancesJob extends BaseSyncJob
     private ?string $toDate;
 
     /**
-     * Constructs a new SyncSystempinAttendancesJob instance.
+     * Constructs a new SyncSystemPinAttendancesJob instance.
      *
      * @param  SystemPinApiClient  $systempin  The SystemPin API client.
      * @param  string|null  $fromDate  Optional start date in Y-m-d format.

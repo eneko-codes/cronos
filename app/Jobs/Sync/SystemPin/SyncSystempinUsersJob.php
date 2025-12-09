@@ -15,7 +15,7 @@ use App\Jobs\Sync\BaseSyncJob;
  *
  * Updates local users with their SystemPin IDs and clears SystemPin IDs for users no longer present in SystemPin.
  */
-class SyncSystempinUsersJob extends BaseSyncJob
+class SyncSystemPinUsersJob extends BaseSyncJob
 {
     /**
      * The priority of the job in the queue. Lower numbers indicate higher priority.
@@ -25,7 +25,7 @@ class SyncSystempinUsersJob extends BaseSyncJob
     protected SystemPinApiClient $systempin;
 
     /**
-     * Constructs a new SyncSystempinUsersJob instance.
+     * Constructs a new SyncSystemPinUsersJob instance.
      */
     public function __construct(SystemPinApiClient $systempin)
     {

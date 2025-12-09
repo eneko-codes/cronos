@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Livewire\Settings;
 
-use App\Actions\GetNotificationPreferencesAction;
 use App\Actions\UpdateNotificationPreferencesAction;
 use App\Enums\NotificationGroup;
 use App\Enums\NotificationType;
 use App\Models\User;
+use App\Services\NotificationPreferenceService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
@@ -59,7 +59,7 @@ class ManageNotificationPreferences extends Component
     /**
      * Mount the component, optionally for a specific user.
      */
-    public function mount(?int $userId, GetNotificationPreferencesAction $getPreferences): void
+    public function mount(?int $userId, NotificationPreferenceService $preferenceService): void
     {
         $this->targetUserId = $userId;
 
@@ -72,13 +72,13 @@ class ManageNotificationPreferences extends Component
         // Uses 'updateUserPreferences' gate defined in AuthServiceProvider
         $this->authorize('updateUserPreferences', $targetUser);
 
-        $this->loadPreferences($getPreferences);
+        $this->loadPreferences($preferenceService);
     }
 
     /**
      * Load the notification preferences for the target user.
      */
-    private function loadPreferences(GetNotificationPreferencesAction $getPreferences): void
+    private function loadPreferences(NotificationPreferenceService $preferenceService): void
     {
         $targetUser = $this->targetUser;
         $authUser = Auth::user();
@@ -87,7 +87,7 @@ class ManageNotificationPreferences extends Component
             return;
         }
 
-        $prefs = $getPreferences->execute($authUser, $targetUser->id);
+        $prefs = $preferenceService->getPreferences($authUser, $targetUser->id);
 
         $this->userNotificationsMuted = $prefs['user_mute_all'];
         $this->userNotificationStates = $prefs['user_individual'];

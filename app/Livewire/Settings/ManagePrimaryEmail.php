@@ -6,6 +6,7 @@ namespace App\Livewire\Settings;
 
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Validate;
@@ -134,10 +135,22 @@ class ManagePrimaryEmail extends Component
             'email_verified_at' => null,
         ]);
 
-        // Send verification email using Laravel native method
-        $user->sendEmailVerificationNotification();
+        try {
+            // Send verification email using our custom queued notification
+            $user->sendEmailVerificationNotification();
 
-        $this->dispatch('add-toast', message: 'Email updated. Verification email sent to '.$normalizedEmail, variant: 'success');
+            $this->dispatch('add-toast', message: 'Email updated. Verification email queued and will be sent to '.$normalizedEmail, variant: 'success');
+        } catch (\Exception $e) {
+            // Log the error for debugging
+            \Log::error('Failed to send verification email after email update', [
+                'user_id' => $user->id,
+                'email' => $normalizedEmail,
+                'error' => $e->getMessage(),
+            ]);
+
+            $this->dispatch('add-toast', message: 'Email updated, but failed to send verification email. Please use the verify button to resend.', variant: 'warning');
+        }
+
         $this->cancelEditing();
 
         // Refresh computed properties
@@ -146,25 +159,62 @@ class ManagePrimaryEmail extends Component
 
     /**
      * Resend the verification email.
+     *
+     * Sends a verification email to the user regardless of their current verification status.
+     * The email is queued for asynchronous processing and rate limited to 1 per 5 minutes.
      */
     public function resendVerification(): void
     {
         $user = $this->targetUser;
         if (! $user) {
+            $this->dispatch('add-toast', message: 'User not found.', variant: 'error');
+
             return;
         }
 
         $this->authorize('update', $user);
 
-        if ($user->hasVerifiedEmail()) {
-            $this->dispatch('add-toast', message: 'Email is already verified.', variant: 'info');
+        // Get the rate limiter definition to check limits
+        // The rate limiter uses the same logic as the notification middleware
+        $limiter = RateLimiter::limiter('email-verification');
+        if ($limiter) {
+            $limit = $limiter($user);
+            if ($limit) {
+                // Key format matches what RateLimited middleware uses internally
+                // Format: {limiter-name}:{by-value}
+                $key = 'email-verification:'.$user->id;
 
-            return;
+                if (RateLimiter::tooManyAttempts($key, $limit->maxAttempts)) {
+                    $seconds = RateLimiter::availableIn($key);
+                    $minutes = (int) ceil($seconds / 60);
+
+                    $this->dispatch('add-toast', message: "Please wait {$minutes} minute(s) before requesting another verification email.", variant: 'warning');
+
+                    return;
+                }
+
+                // Increment the rate limiter before sending
+                RateLimiter::hit($key, $limit->decaySeconds);
+            }
         }
 
-        $user->sendEmailVerificationNotification();
+        try {
+            // Send verification email (always, even if already verified)
+            // The email is queued via VerifyEmailNotification and rate limited at queue level
+            $user->sendEmailVerificationNotification();
 
-        $this->dispatch('add-toast', message: 'Verification email sent to '.$user->email, variant: 'success');
+            $verificationStatus = $user->hasVerifiedEmail() ? ' (already verified)' : '';
+            $this->dispatch('add-toast', message: 'Verification email queued and will be sent to '.$user->email.$verificationStatus, variant: 'success');
+        } catch (\Exception $e) {
+            // Log the error for debugging
+            \Log::error('Failed to send verification email', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'error' => $e->getMessage(),
+            ]);
+
+            $this->dispatch('add-toast', message: 'Failed to send verification email. Please try again later.', variant: 'error');
+        }
     }
 
     public function render(): \Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory

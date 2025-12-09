@@ -10,7 +10,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Password;
 
-class WelcomeNewUserEmail extends Notification implements ShouldQueue
+class WelcomeNewUserNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
@@ -74,6 +74,6 @@ class WelcomeNewUserEmail extends Notification implements ShouldQueue
 
     public function type(): \App\Enums\NotificationType
     {
-        return \App\Enums\NotificationType::WelcomeEmail;
+        return \App\Enums\NotificationType::WelcomeNewUser;
     }
 }

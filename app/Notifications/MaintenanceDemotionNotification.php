@@ -12,23 +12,23 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Slack\SlackMessage;
 
-class MaintenancePromotionEmail extends Notification implements ShouldQueue
+class MaintenanceDemotionNotification extends Notification implements ShouldQueue
 {
     use HasConfigurableChannels, Queueable;
 
-    public User $promotedUser;
+    public User $demotedUser;
 
     public ?User $performedBy;
 
     /**
      * Create a new notification instance.
      *
-     * @param  User  $promotedUser  The user who was promoted to maintenance.
-     * @param  User|null  $performedBy  The user who performed the promotion action.
+     * @param  User  $demotedUser  The user who was demoted from maintenance.
+     * @param  User|null  $performedBy  The user who performed the demotion action.
      */
-    public function __construct(User $promotedUser, ?User $performedBy = null)
+    public function __construct(User $demotedUser, ?User $performedBy = null)
     {
-        $this->promotedUser = $promotedUser;
+        $this->demotedUser = $demotedUser;
         $this->performedBy = $performedBy;
     }
 
@@ -50,10 +50,10 @@ class MaintenancePromotionEmail extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         $message = (new MailMessage)
-            ->subject("{$this->promotedUser->name} has been promoted to maintenance")
+            ->subject("{$this->demotedUser->name} has been removed from maintenance role")
             ->greeting('Hello '.$notifiable->name.',')
             ->line(
-                "{$this->promotedUser->name} has been promoted to a maintenance role."
+                "{$this->demotedUser->name} has been removed from maintenance role."
             );
 
         if ($this->performedBy) {
@@ -70,8 +70,8 @@ class MaintenancePromotionEmail extends Notification implements ShouldQueue
      */
     public function toArray(object $notifiable): array
     {
-        $subject = "{$this->promotedUser->name} has been promoted to maintenance";
-        $messageLines = ["{$this->promotedUser->name} has been promoted to maintenance role."];
+        $subject = "{$this->demotedUser->name} has been removed from maintenance role";
+        $messageLines = ["{$this->demotedUser->name} has been removed from maintenance role."];
         if ($this->performedBy) {
             $messageLines[] = "This action was performed by {$this->performedBy->name}.";
         }
@@ -86,7 +86,7 @@ class MaintenancePromotionEmail extends Notification implements ShouldQueue
 
     public function type(): \App\Enums\NotificationType
     {
-        return \App\Enums\NotificationType::MaintenancePromotionEmail;
+        return \App\Enums\NotificationType::MaintenanceDemotion;
     }
 
     /**
@@ -98,13 +98,13 @@ class MaintenancePromotionEmail extends Notification implements ShouldQueue
     public function toSlack(object $notifiable): SlackMessage
     {
         return (new SlackMessage)
-            ->text("{$this->promotedUser->name} has been promoted to maintenance")
-            ->headerBlock("{$this->promotedUser->name} has been promoted to maintenance")
+            ->text("{$this->demotedUser->name} has been removed from maintenance role")
+            ->headerBlock("{$this->demotedUser->name} has been removed from maintenance role")
             ->sectionBlock(function ($block) use ($notifiable): void {
                 $block->text("Hello {$notifiable->name},");
             })
             ->sectionBlock(function ($block): void {
-                $block->text("{$this->promotedUser->name} has been promoted to a maintenance role.");
+                $block->text("{$this->demotedUser->name} has been removed from maintenance role.");
                 if ($this->performedBy) {
                     $block->text("This action was performed by {$this->performedBy->name}.");
                 }

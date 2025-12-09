@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\DataTransferObjects\Desktime;
 
-final readonly class DesktimeEmployeeDTO
+final readonly class DesktimeUserDTO
 {
     public function __construct(
         public ?int $id = null,

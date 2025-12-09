@@ -213,6 +213,55 @@ class AppServiceProvider extends ServiceProvider
                 });
         });
 
+        // Email verification rate limiter (1 per 5 minutes per user)
+        RateLimiter::for('email-verification', function (object $notifiable) {
+            return Limit::perMinutes(5, 1)->by($notifiable->id);
+        });
+
+        // API down notification rate limiter (1 per 60 minutes per service per user)
+        // Extracts service name and user ID from the queued notification job
+        RateLimiter::for('api-down-notification', function (object $job) {
+            // Access notification and notifiables from SendQueuedNotifications job
+            $notification = $job->notification ?? null;
+            $notifiables = $job->notifiables ?? null;
+
+            if ($notification instanceof \App\Notifications\ApiDownNotification && $notifiables) {
+                // Get first notifiable (for single notifications, notifiables is a collection with one item)
+                $notifiable = $notifiables->first();
+                if ($notifiable) {
+                    // Create composite key: service name + user ID for per-service-per-user rate limiting
+                    $key = "{$notification->serviceName}:{$notifiable->getKey()}";
+
+                    return Limit::perMinutes(60, 1)->by($key);
+                }
+            }
+
+            // Fallback: use job class name if we can't extract notification properties
+            return Limit::perMinutes(60, 1)->by(get_class($job));
+        });
+
+        // Unlinked platform user rate limiter (1 per 24 hours per platform per external ID per user)
+        // Extracts platform, external ID, and user ID from the queued notification job
+        RateLimiter::for('unlinked-platform-user', function (object $job) {
+            // Access notification and notifiables from SendQueuedNotifications job
+            $notification = $job->notification ?? null;
+            $notifiables = $job->notifiables ?? null;
+
+            if ($notification instanceof \App\Notifications\UnlinkedPlatformUserNotification && $notifiables) {
+                // Get first notifiable (for single notifications, notifiables is a collection with one item)
+                $notifiable = $notifiables->first();
+                if ($notifiable) {
+                    // Create composite key: platform + external ID + user ID for per-platform-per-external-user-per-user rate limiting
+                    $key = "{$notification->platform->value}:{$notification->externalId}:{$notifiable->getKey()}";
+
+                    return Limit::perMinutes(1440, 1)->by($key); // 24 hours = 1440 minutes
+                }
+            }
+
+            // Fallback: use job class name if we can't extract notification properties
+            return Limit::perMinutes(1440, 1)->by(get_class($job));
+        });
+
         // Register sync job event listeners for per-platform status tracking
         $this->registerSyncJobEventListeners();
     }

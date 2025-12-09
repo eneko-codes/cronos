@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Livewire\Settings;
 
-use App\Actions\GetNotificationPreferencesAction;
 use App\Actions\UpdateGlobalNotificationPreferencesAction;
 use App\Actions\UpdateNotificationRetentionPeriodAction;
 use App\Enums\NotificationGroup;
 use App\Enums\NotificationRetentionPeriod;
 use App\Enums\NotificationType;
 use App\Models\Setting;
+use App\Services\NotificationPreferenceService;
 use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -50,11 +50,11 @@ class GlobalNotificationSettings extends Component
      */
     public array $notificationStates = [];
 
-    public function mount(GetNotificationPreferencesAction $getPreferences): void
+    public function mount(NotificationPreferenceService $preferenceService): void
     {
         $user = Auth::user();
         if ($user) {
-            $settings = $getPreferences->execute($user);
+            $settings = $preferenceService->getPreferences($user);
             $this->globalNotificationsEnabled = $settings['global_enabled'];
             $this->notificationStates = $settings['global_types'];
             $this->notificationChannel = Setting::getValue('notification_channel', 'mail');

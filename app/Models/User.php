@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Enums\Platform;
 use App\Enums\RoleType;
 use App\Notifications\ResetPasswordNotification;
+use App\Notifications\VerifyEmailNotification;
 use Illuminate\Contracts\Auth\CanResetPassword;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -549,6 +550,17 @@ class User extends Authenticatable implements CanResetPassword, MustVerifyEmail
     public function sendPasswordResetNotification($token): void
     {
         $this->notify(new ResetPasswordNotification($token));
+    }
+
+    /**
+     * Send the email verification notification.
+     *
+     * This method overrides Laravel's default email verification notification
+     * to use our custom queued notification for asynchronous processing.
+     */
+    public function sendEmailVerificationNotification(): void
+    {
+        $this->notify(new VerifyEmailNotification);
     }
 
     /**

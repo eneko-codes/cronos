@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Clients;
 
 use App\DataTransferObjects\Desktime\DesktimeAttendanceDTO;
-use App\DataTransferObjects\Desktime\DesktimeEmployeeDTO;
+use App\DataTransferObjects\Desktime\DesktimeUserDTO;
 use App\Exceptions\ApiConnectionException;
 use Carbon\Carbon;
 use Exception;
@@ -91,7 +91,7 @@ class DesktimeApiClient
      *
      * @param  string|null  $date  Date in 'Y-m-d' format. Defaults to today.
      * @param  string  $period  Either 'day' or 'month'. Defaults to 'month'.
-     * @return Collection|DesktimeEmployeeDTO[] Collection of DesktimeEmployeeDTOs.
+     * @return Collection|DesktimeUserDTO[] Collection of DesktimeUserDTOs.
      *
      * @throws ApiConnectionException If the API request fails.
      */
@@ -110,9 +110,9 @@ class DesktimeApiClient
             return collect();
         }
 
-        // Flatten all employees into a single collection of DesktimeEmployeeDTOs
+        // Flatten all employees into a single collection of DesktimeUserDTOs
         return collect($data['employees'])
-            ->flatMap(fn ($dateUsers) => collect($dateUsers)->map(fn ($user) => new DesktimeEmployeeDTO(
+            ->flatMap(fn ($dateUsers) => collect($dateUsers)->map(fn ($user) => new DesktimeUserDTO(
                 $user['id'] ?? null,
                 $user['email'] ?? null,
                 $user['name'] ?? null,

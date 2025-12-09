@@ -60,7 +60,6 @@ Route::middleware(['auth', 'throttle:web'])->group(function (): void {
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
     // Laravel native email verification routes
-    // Notice page shown when email is not verified
     Route::get('/email/verify', function () {
         return redirect()->route('dashboard')->with('toast', [
             'message' => 'Please verify your email address.',

@@ -12,7 +12,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Slack\SlackMessage;
 
-class AdminPromotionEmail extends Notification implements ShouldQueue
+class AdminPromotionNotification extends Notification implements ShouldQueue
 {
     use HasConfigurableChannels, Queueable;
 
@@ -86,7 +86,7 @@ class AdminPromotionEmail extends Notification implements ShouldQueue
 
     public function type(): \App\Enums\NotificationType
     {
-        return \App\Enums\NotificationType::AdminPromotionEmail;
+        return \App\Enums\NotificationType::AdminPromotion;
     }
 
     /**

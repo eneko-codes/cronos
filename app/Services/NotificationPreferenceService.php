@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Actions;
+namespace App\Services;
 
 use App\Enums\NotificationType;
 use App\Models\GlobalNotificationPreference;
@@ -10,7 +10,10 @@ use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 
 /**
- * Action to retrieve all notification preferences and eligibility for a user (or global if null).
+ * Service for retrieving notification preferences and eligibility.
+ *
+ * Provides reusable domain logic for checking notification preferences and eligibility
+ * across the application. Used by Livewire components, Observers, Actions, and Jobs.
  *
  * Used by:
  * - Sidebar Livewire component (user notification settings)
@@ -18,13 +21,11 @@ use Illuminate\Support\Facades\Gate;
  * - Observers (UserObserver, UserScheduleObserver) to check eligibility before sending notifications
  * - API health check and notification logic
  *
- * Returns a structured array with global and user-specific notification states, available types, and eligibility.
- *
  * Authorization:
  * - Uses policies/gates to ensure only authorized users can view preferences.
  * - Admins can view any user's preferences; users can view their own.
  */
-class GetNotificationPreferencesAction
+final class NotificationPreferenceService
 {
     /**
      * Returns all notification preferences and eligibility for a user (or global if null).
@@ -42,7 +43,7 @@ class GetNotificationPreferencesAction
      *
      * Returns a structured array with global and user-specific notification states, available types, and eligibility.
      */
-    public function execute(?User $currentUser = null, ?int $userId = null): array
+    public function getPreferences(?User $currentUser = null, ?int $userId = null): array
     {
         $user = $userId ? User::findOrFail($userId) : $currentUser;
         if ($user && $currentUser) {
@@ -55,7 +56,7 @@ class GetNotificationPreferencesAction
         $availableTypes = $this->getAvailableNotificationTypes($user);
         $eligibility = [];
         foreach (NotificationType::cases() as $type) {
-            $eligibility[$type->value] = $this->isEligibleForNotification($type, $user);
+            $eligibility[$type->value] = $this->isEligible($type, $user);
         }
 
         return [
@@ -66,6 +67,41 @@ class GetNotificationPreferencesAction
             'available_types' => $availableTypes,
             'eligibility' => $eligibility,
         ];
+    }
+
+    /**
+     * Determine if a user is eligible to receive a given notification type.
+     *
+     * @param  NotificationType  $type  The notification type.
+     * @param  User|null  $user  The user (or null for global).
+     * @return bool True if eligible, false otherwise.
+     */
+    public function isEligible(NotificationType $type, ?User $user = null): bool
+    {
+        if (! $this->areGlobalNotificationsEnabled()) {
+            return false;
+        }
+        if (! $this->isNotificationTypeGloballyEnabled($type)) {
+            return false;
+        }
+        if (! $user) {
+            return $type->defaultEnabled();
+        }
+        if ($user->muted_notifications) {
+            return false;
+        }
+        if ($type->isAdminOnly() && ! $user->isAdmin()) {
+            return false;
+        }
+        if ($type->isMaintenanceOnly() && ! $user->isMaintenance()) {
+            return false;
+        }
+        $userPreference = $this->getUserPreferenceForType($user, $type);
+        if ($userPreference !== null) {
+            return $userPreference;
+        }
+
+        return $type->defaultEnabled();
     }
 
     /**
@@ -136,41 +172,6 @@ class GetNotificationPreferencesAction
     private function getAvailableNotificationTypes(?User $user = null): array
     {
         return NotificationType::availableForUser($user);
-    }
-
-    /**
-     * Determine if a user is eligible to receive a given notification type.
-     *
-     * @param  NotificationType  $type  The notification type.
-     * @param  User|null  $user  The user (or null for global).
-     * @return bool True if eligible, false otherwise.
-     */
-    private function isEligibleForNotification(NotificationType $type, ?User $user = null): bool
-    {
-        if (! $this->areGlobalNotificationsEnabled()) {
-            return false;
-        }
-        if (! $this->isNotificationTypeGloballyEnabled($type)) {
-            return false;
-        }
-        if (! $user) {
-            return $type->defaultEnabled();
-        }
-        if ($user->muted_notifications) {
-            return false;
-        }
-        if ($type->isAdminOnly() && ! $user->isAdmin()) {
-            return false;
-        }
-        if ($type->isMaintenanceOnly() && ! $user->isMaintenance()) {
-            return false;
-        }
-        $userPreference = $this->getUserPreferenceForType($user, $type);
-        if ($userPreference !== null) {
-            return $userPreference;
-        }
-
-        return $type->defaultEnabled();
     }
 
     /**

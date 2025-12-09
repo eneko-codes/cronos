@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Actions\SystemPin;
 
 use App\Actions\LinkUserExternalIdentityAction;
-use App\Actions\NotifyMaintenanceUsersAction;
 use App\DataTransferObjects\SystemPin\SystemPinUserDTO;
 use App\Enums\Platform;
 use App\Notifications\UnlinkedPlatformUserNotification;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -22,7 +22,7 @@ final class ProcessSystemPinUserAction
 {
     public function __construct(
         private readonly LinkUserExternalIdentityAction $linkAction,
-        private readonly NotifyMaintenanceUsersAction $notifyAction,
+        private readonly NotificationService $notificationService,
     ) {}
 
     /**
@@ -95,9 +95,7 @@ final class ProcessSystemPinUserAction
             externalEmail: $email,
         );
 
-        $this->notifyAction->execute(
-            $notification,
-            fn ($user) => UnlinkedPlatformUserNotification::shouldSend($user, Platform::SystemPin, $externalId)
-        );
+        // Rate limiting is handled by RateLimited middleware in the notification
+        $this->notificationService->notifyMaintenanceUsers($notification);
     }
 }

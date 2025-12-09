@@ -9,7 +9,7 @@ use App\Services\DurationFormatterService;
 use Carbon\Carbon;
 use Carbon\CarbonInterval;
 
-class DeviationCalculator
+class DeviationService
 {
     /**
      * Calculate daily deviations between schedule, attendance, and worked time.

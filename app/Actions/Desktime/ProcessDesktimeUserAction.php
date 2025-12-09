@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Actions\Desktime;
 
 use App\Actions\LinkUserExternalIdentityAction;
-use App\Actions\NotifyMaintenanceUsersAction;
-use App\DataTransferObjects\Desktime\DesktimeEmployeeDTO;
+use App\DataTransferObjects\Desktime\DesktimeUserDTO;
 use App\Enums\Platform;
 use App\Notifications\UnlinkedPlatformUserNotification;
+use App\Services\NotificationService;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -22,15 +22,15 @@ final class ProcessDesktimeUserAction
 {
     public function __construct(
         private readonly LinkUserExternalIdentityAction $linkAction,
-        private readonly NotifyMaintenanceUsersAction $notifyAction,
+        private readonly NotificationService $notificationService,
     ) {}
 
     /**
      * Synchronizes a single DeskTime user DTO with the local database.
      *
-     * @param  DesktimeEmployeeDTO  $userDto  The DesktimeEmployeeDTO to sync.
+     * @param  DesktimeUserDTO  $userDto  The DesktimeUserDTO to sync.
      */
-    public function execute(DesktimeEmployeeDTO $userDto): void
+    public function execute(DesktimeUserDTO $userDto): void
     {
         // Validate required ID
         if ($userDto->id === null) {
@@ -95,9 +95,7 @@ final class ProcessDesktimeUserAction
             externalEmail: $email,
         );
 
-        $this->notifyAction->execute(
-            $notification,
-            fn ($user) => UnlinkedPlatformUserNotification::shouldSend($user, Platform::DeskTime, $externalId)
-        );
+        // Rate limiting is handled by RateLimited middleware in the notification
+        $this->notificationService->notifyMaintenanceUsers($notification);
     }
 }

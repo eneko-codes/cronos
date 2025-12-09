@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace App\Observers;
 
-use App\Actions\GetNotificationPreferencesAction;
 use App\Actions\UpdateNotificationPreferencesAction;
 use App\Enums\RoleType;
 use App\Models\User;
-use App\Notifications\AdminDemotionEmail;
-use App\Notifications\AdminPromotionEmail;
-use App\Notifications\MaintenanceDemotionEmail;
-use App\Notifications\MaintenancePromotionEmail;
+use App\Notifications\AdminDemotionNotification;
+use App\Notifications\AdminPromotionNotification;
+use App\Notifications\MaintenanceDemotionNotification;
+use App\Notifications\MaintenancePromotionNotification;
 use App\Notifications\UserPromotedToAdminNotification;
 use App\Notifications\UserPromotedToMaintenanceNotification;
-use App\Notifications\WelcomeNewUserEmail;
+use App\Notifications\WelcomeNewUserNotification;
+use App\Services\NotificationPreferenceService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
@@ -22,14 +22,14 @@ class UserObserver
 {
     private UpdateNotificationPreferencesAction $updatePreferences;
 
-    private GetNotificationPreferencesAction $getPreferences;
+    private NotificationPreferenceService $preferenceService;
 
     public function __construct(
         UpdateNotificationPreferencesAction $updatePreferences,
-        GetNotificationPreferencesAction $getPreferences
+        NotificationPreferenceService $preferenceService
     ) {
         $this->updatePreferences = $updatePreferences;
-        $this->getPreferences = $getPreferences;
+        $this->preferenceService = $preferenceService;
     }
 
     /**
@@ -48,7 +48,7 @@ class UserObserver
         // Send welcome email with password setup link for new users without passwords
         if ($user->email && is_null($user->password)) {
             try {
-                $user->notify(new WelcomeNewUserEmail);
+                $user->notify(new WelcomeNewUserNotification);
 
                 Log::info('Welcome email sent to new user', [
                     'user_id' => $user->id,
@@ -137,21 +137,21 @@ class UserObserver
             $performedBy = Auth::user();
 
             // --- Notify other admins ---
-            $adminPromotionEmail = new AdminPromotionEmail($user, $performedBy);
+            $adminPromotionNotification = new AdminPromotionNotification($user, $performedBy);
 
             $adminUsers = User::where('user_type', RoleType::Admin)
                 ->where('id', '!=', $user->id)
                 ->get();
 
             foreach ($adminUsers as $admin) {
-                if ($this->getPreferences->execute($admin)['eligibility'][$adminPromotionEmail->type()->value] ?? false) {
-                    $admin->notify($adminPromotionEmail);
+                if ($this->preferenceService->getPreferences($admin)['eligibility'][$adminPromotionNotification->type()->value] ?? false) {
+                    $admin->notify($adminPromotionNotification);
                 }
             }
 
             // --- Notify the promoted user ---
             $userPromotionNotification = new UserPromotedToAdminNotification;
-            if ($this->getPreferences->execute($user)['eligibility'][$userPromotionNotification->type()->value] ?? false) {
+            if ($this->preferenceService->getPreferences($user)['eligibility'][$userPromotionNotification->type()->value] ?? false) {
                 $user->notify($userPromotionNotification);
             }
         }
@@ -164,20 +164,20 @@ class UserObserver
             $performedBy = Auth::user();
 
             // --- Notify admins ---
-            $maintenancePromotionEmail = new MaintenancePromotionEmail($user, $performedBy);
+            $maintenancePromotionNotification = new MaintenancePromotionNotification($user, $performedBy);
 
             $adminUsers = User::where('user_type', RoleType::Admin)
                 ->get();
 
             foreach ($adminUsers as $admin) {
-                if ($this->getPreferences->execute($admin)['eligibility'][$maintenancePromotionEmail->type()->value] ?? false) {
-                    $admin->notify($maintenancePromotionEmail);
+                if ($this->preferenceService->getPreferences($admin)['eligibility'][$maintenancePromotionNotification->type()->value] ?? false) {
+                    $admin->notify($maintenancePromotionNotification);
                 }
             }
 
             // --- Notify the promoted user ---
             $userPromotionNotification = new UserPromotedToMaintenanceNotification;
-            if ($this->getPreferences->execute($user)['eligibility'][$userPromotionNotification->type()->value] ?? false) {
+            if ($this->preferenceService->getPreferences($user)['eligibility'][$userPromotionNotification->type()->value] ?? false) {
                 $user->notify($userPromotionNotification);
             }
         }
@@ -187,14 +187,14 @@ class UserObserver
             $performedBy = Auth::user();
 
             // --- Notify other admins ---
-            $adminDemotionEmail = new AdminDemotionEmail($user, $performedBy);
+            $adminDemotionNotification = new AdminDemotionNotification($user, $performedBy);
 
             $adminUsers = User::where('user_type', RoleType::Admin)
                 ->get();
 
             foreach ($adminUsers as $admin) {
-                if ($this->getPreferences->execute($admin)['eligibility'][$adminDemotionEmail->type()->value] ?? false) {
-                    $admin->notify($adminDemotionEmail);
+                if ($this->preferenceService->getPreferences($admin)['eligibility'][$adminDemotionNotification->type()->value] ?? false) {
+                    $admin->notify($adminDemotionNotification);
                 }
             }
         }
@@ -204,14 +204,14 @@ class UserObserver
             $performedBy = Auth::user();
 
             // --- Notify admins ---
-            $maintenanceDemotionEmail = new MaintenanceDemotionEmail($user, $performedBy);
+            $maintenanceDemotionNotification = new MaintenanceDemotionNotification($user, $performedBy);
 
             $adminUsers = User::where('user_type', RoleType::Admin)
                 ->get();
 
             foreach ($adminUsers as $admin) {
-                if ($this->getPreferences->execute($admin)['eligibility'][$maintenanceDemotionEmail->type()->value] ?? false) {
-                    $admin->notify($maintenanceDemotionEmail);
+                if ($this->preferenceService->getPreferences($admin)['eligibility'][$maintenanceDemotionNotification->type()->value] ?? false) {
+                    $admin->notify($maintenanceDemotionNotification);
                 }
             }
         }

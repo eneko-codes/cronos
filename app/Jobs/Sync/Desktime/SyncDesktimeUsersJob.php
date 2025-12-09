@@ -7,7 +7,7 @@ namespace App\Jobs\Sync\Desktime;
 use App\Actions\Desktime\CheckDesktimeHealthAction;
 use App\Actions\Desktime\ProcessDesktimeUserAction;
 use App\Clients\DesktimeApiClient;
-use App\DataTransferObjects\Desktime\DesktimeEmployeeDTO;
+use App\DataTransferObjects\Desktime\DesktimeUserDTO;
 use App\Jobs\Sync\BaseSyncJob;
 
 /**
@@ -42,7 +42,7 @@ class SyncDesktimeUsersJob extends BaseSyncJob
     public function handle(ProcessDesktimeUserAction $action): void
     {
         $users = $this->desktime->getAllEmployees(null, 'month');
-        $users->each(function (DesktimeEmployeeDTO $userDto) use ($action): void {
+        $users->each(function (DesktimeUserDTO $userDto) use ($action): void {
             $action->execute($userDto);
         });
     }

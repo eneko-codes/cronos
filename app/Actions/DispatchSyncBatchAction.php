@@ -1,0 +1,108 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Actions;
+
+use App\Clients\DesktimeApiClient;
+use App\Clients\OdooApiClient;
+use App\Clients\ProofhubApiClient;
+use App\Clients\SystemPinApiClient;
+use App\Jobs\Sync\Desktime\SyncDesktimeAttendancesJob;
+use App\Jobs\Sync\Desktime\SyncDesktimeUsersJob;
+use App\Jobs\Sync\Odoo\SyncOdooCategoriesJob;
+use App\Jobs\Sync\Odoo\SyncOdooDepartmentsJob;
+use App\Jobs\Sync\Odoo\SyncOdooLeavesJob;
+use App\Jobs\Sync\Odoo\SyncOdooLeaveTypesJob;
+use App\Jobs\Sync\Odoo\SyncOdooScheduleDetailsJob;
+use App\Jobs\Sync\Odoo\SyncOdooSchedulesJob;
+use App\Jobs\Sync\Odoo\SyncOdooUsersJob;
+use App\Jobs\Sync\Proofhub\SyncProofhubProjectsJob;
+use App\Jobs\Sync\Proofhub\SyncProofhubTasksJob;
+use App\Jobs\Sync\Proofhub\SyncProofhubTimeEntriesJob;
+use App\Jobs\Sync\Proofhub\SyncProofhubUsersJob;
+use App\Jobs\Sync\SystemPin\SyncSystemPinAttendancesJob;
+use App\Jobs\Sync\SystemPin\SyncSystemPinUsersJob;
+use App\Models\Setting;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Log;
+
+/**
+ * Action to dispatch a full batch of data synchronization jobs for all platforms.
+ *
+ * - Resolves API clients for Odoo, ProofHub, DeskTime, and SystemPin
+ * - Prepares job chains for each platform and merges them into a single batch
+ * - Dispatches the jobs as a single chain to enforce strict order
+ * - Logs the batch dispatch for auditability
+ */
+class DispatchSyncBatchAction
+{
+    /**
+     * Dispatches a batch of sync jobs for all platforms and data types.
+     *
+     * Called by artisan command or scheduler.
+     */
+    public function __invoke(): void
+    {
+        $windowDays = (int) Setting::getValue('sync_window_days', 1);
+        $now = now();
+        $toDate = $now->format('Y-m-d');
+        $fromDate = $now->copy()->subDays($windowDays - 1)->format('Y-m-d');
+        $futureToDate = $now->copy()->addMonth()->format('Y-m-d');
+
+        // Resolve API clients from the container
+        $desktimeApi = app(DesktimeApiClient::class);
+        $odooApi = app(OdooApiClient::class);
+        $proofhubApi = app(ProofhubApiClient::class);
+        $systempinApi = app(SystemPinApiClient::class);
+
+        // Prepare job chains for each platform
+        $odooChain = [
+            new SyncOdooDepartmentsJob($odooApi),
+            new SyncOdooCategoriesJob($odooApi),
+            new SyncOdooLeaveTypesJob($odooApi),
+            new SyncOdooSchedulesJob($odooApi),
+            new SyncOdooScheduleDetailsJob($odooApi),
+            new SyncOdooUsersJob($odooApi),
+            new SyncOdooLeavesJob($odooApi, $fromDate, $futureToDate),
+        ];
+
+        $proofhubChain = [
+            new SyncProofhubUsersJob($proofhubApi),
+            new SyncProofhubProjectsJob($proofhubApi),
+            new SyncProofhubTasksJob($proofhubApi),
+            new SyncProofhubTimeEntriesJob($proofhubApi, $fromDate, $toDate),
+        ];
+
+        $desktimeChain = [
+            new SyncDesktimeUsersJob($desktimeApi),
+            new SyncDesktimeAttendancesJob($desktimeApi, $fromDate, $toDate),
+        ];
+
+        $systempinChain = [
+            new SyncSystemPinUsersJob($systempinApi),
+            new SyncSystemPinAttendancesJob($systempinApi, $fromDate, $toDate),
+        ];
+
+        // Merge all jobs into a single array to enforce strict order
+        // DO NOT CHANGE THE ORDER OF JOBS BECAUSE THE MIGRATION AND MODEL CONSTRAINTS WILL CAUSE EXCEPTIONS!
+        $allJobs = array_merge(
+            $odooChain,
+            $proofhubChain,
+            $desktimeChain,
+            $systempinChain,
+        );
+
+        // Log the batch dispatch
+        Log::info(
+            "Dispatching sync batch for {$windowDays} day window: {$fromDate} to {$toDate}"
+        );
+
+        // Dispatch as a batch (jobs will run sequentially with a single worker)
+        $batchName = "Data Sync Batch ({$windowDays} days: {$fromDate} to {$toDate})";
+
+        Bus::batch($allJobs)
+            ->name($batchName)
+            ->dispatch();
+    }
+}

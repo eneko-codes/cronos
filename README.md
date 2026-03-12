@@ -1,117 +1,150 @@
 # Cronos
 
-A comprehensive Laravel 12 application that synchronizes and aggregates data from multiple external platforms (Odoo, ProofHub, DeskTime, SystemPin) to provide a unified dashboard for employee time tracking, project management, and attendance monitoring.
+A workforce management application built with Laravel 12 and Livewire 3 that synchronizes data from Odoo, ProofHub, DeskTime, and SystemPin into a unified dashboard for employee time tracking, scheduling, attendance monitoring, and leave management.
 
-## 🎯 Overview
+## Demo Quick Start
 
-Cronos serves as a central hub that synchronizes employee data, schedules, and time entries from external platforms, providing unified dashboards and reporting capabilities for comprehensive workforce management.
-
-## ✨ Features
-
-- **Multi-Platform Integration**: Sync data from Odoo, ProofHub, DeskTime, and SystemPin
-- **Unified Dashboard**: Centralized view of all employee data and time tracking
-- **Real-time Synchronization**: Automatic data updates from external platforms
-- **Attendance Management**: Track both remote and office attendance
-- **Project Management**: Integrated project and task tracking
-- **Leave Management**: Comprehensive leave request and approval system
-- **Notification System**: Customizable user and global notifications
-
-## 🏗️ Architecture
-
-- **Laravel 12**: Backend framework with Eloquent ORM
-- **Livewire 3**: Dynamic frontend components
-- **PostgreSQL**: Primary database for data storage
-- **Queue System**: Background job processing for data synchronization
-- **TailwindCSS**: Utility-first CSS framework for styling
-- **Laravel Pulse**: Built-in application monitoring
-- **Laravel Telescope**: Development debugging and monitoring
-
-## 🚀 Quick Start
+Get Cronos running locally with realistic sample data in minutes -- no API keys required.
 
 ### Prerequisites
 
-- PHP 8.2+
-- Composer
-- Node.js & npm
-- PostgreSQL (or other Laravel-supported database)
+- PHP 8.2+, Composer, Node.js & npm
+- Docker (for PostgreSQL) or a local PostgreSQL instance
 
-### Installation
+### Steps
 
-1. **Clone and install dependencies:**
+```bash
+# 1. Clone and install
+git clone https://github.com/your-username/cronos.git
+cd cronos
+composer install
+npm install
 
-   ```bash
-   git clone <repository-url>
-   cd cronos
-   composer install
-   npm install
-   ```
+# 2. Start the database
+docker compose up -d
 
-2. **Environment setup:**
+# 3. Configure environment
+cp .env.example .env
+php artisan key:generate
+```
 
-   ```bash
-   cp .env.example .env
-   php artisan key:generate
-   ```
+Update `.env` with database credentials (if using Docker, the defaults work):
 
-3. **Configure environment variables:**
+```
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_DATABASE=cronos
+DB_USERNAME=cronos
+DB_PASSWORD=cronos
+DEMO_MODE=true
+```
 
-   Edit `.env` file with your database credentials and API keys (see [Local Development Setup](docs/deployment/LOCAL_DEPLOYMENT.md) for details).
+```bash
+# 4. Migrate and seed
+php artisan migrate:fresh --seed
 
-4. **Database setup:**
+# 5. Build frontend assets
+npm run build
 
-   ```bash
-   php artisan migrate
-   ```
+# 6. Start the application
+php artisan serve
+```
 
-5. **Build assets:**
+### Demo Credentials
 
-   ```bash
-   npm run build
-   ```
+| Role | Email | Password |
+|------|-------|----------|
+| **Admin** | `admin@cronos.demo` | `password` |
+| **Maintenance** | `maintenance@cronos.demo` | `password` |
 
-6. **Configure queue worker:**
-   ```bash
-   php artisan queue:work
-   ```
+## What to Explore
 
-## 📚 Documentation
+- **Dashboard** -- Today's schedule, attendance status (clocked in), and time entries for the logged-in user
+- **Users** -- 18 employees across 4 departments with different roles, including archived and do-not-track users
+- **Projects** -- 6 projects with ~25 tasks and assigned team members
+- **Timesheet** -- Past 30 days of time entries per user across projects
+- **Schedules** -- 3 schedule types (Standard 40h, Part-Time 20h, Flexible 37.5h) with detailed weekly breakdowns
+- **Leave Types** -- 6 leave types (Annual, Sick, Personal, Unpaid, Parental, Compensatory)
+- **Settings** -- Sync configuration, notification preferences, and data retention policies
+- **Notifications** -- Sample notifications in the sidebar (mix of read and unread)
 
-Comprehensive documentation is available in the [`docs/`](docs/) directory:
+## Features
 
-- **[Local Development Setup](docs/deployment/LOCAL_DEPLOYMENT.md)** - Local development environment setup
-- **[Development Guide](docs/development/)** - Coding standards and best practices
-- **[Database Schema](docs/database/DATABASE_SCHEMA.md)** - Database structure and relationships
-- **[API Documentation](docs/api/)** - External platform integration guides
-- **[Deployment Guide](docs/deployment/)** - Production deployment and monitoring
+- **Multi-Platform Integration** -- Syncs employees, schedules, and leaves from Odoo; projects and time entries from ProofHub; remote attendance from DeskTime; office attendance from SystemPin
+- **Unified Dashboard** -- Centralized view combining data from all platforms into a single interface
+- **Real-time Sync** -- Configurable automatic synchronization with external platforms via background jobs
+- **Attendance Management** -- Tracks both remote (DeskTime) and on-site (SystemPin) attendance with clock-in/out
+- **Project & Task Management** -- Integrated project tracking with time entry logging from ProofHub
+- **Leave Management** -- Full-day and half-day leave tracking with approval workflows from Odoo
+- **Notification System** -- Configurable notifications (email, in-app, Slack) with per-user and global preferences
+- **Role-Based Access** -- Admin, Maintenance, and User roles with appropriate permissions
+- **Privacy Controls** -- Do-not-track mode that purges user data and excludes from sync operations
 
-## 🔌 API Integrations
+## Tech Stack
 
-Cronos integrates with four external platforms:
+- **Backend**: Laravel 12, PHP 8.2+
+- **Frontend**: Livewire 3, Alpine.js, TailwindCSS 4
+- **Database**: PostgreSQL
+- **Monitoring**: Laravel Pulse, Laravel Telescope
+- **Search**: Laravel Scout (database driver)
+- **Queue**: Database driver for background job processing
 
-- **Odoo**: Employee management, schedules, and leave tracking
-- **ProofHub**: Project management and time tracking
-- **DeskTime**: Remote work attendance and productivity tracking
-- **SystemPin**: Office attendance from physical clocking machines
+## Architecture Highlights
 
-See [API Documentation](docs/api/) for detailed setup instructions.
+- **Actions Pattern** -- 24 action classes encapsulate business logic (sync operations, user management, data processing)
+- **DTOs** -- Data Transfer Objects for clean data passing between layers
+- **Multi-Platform Sync** -- 4 API clients with 17 sync jobs handle data synchronization
+- **Observer-Driven Notifications** -- 11 model observers trigger 27 notification types automatically
+- **External Identity Mapping** -- Users are linked to external platforms via a dedicated identity table, enabling cross-platform data correlation
 
-## 🛠️ Development
+## API Integrations
+
+| Platform | Purpose | Data Synced |
+|----------|---------|-------------|
+| **Odoo** | HR Management | Employees, departments, schedules, leaves, categories |
+| **ProofHub** | Project Management | Projects, tasks, time entries, team assignments |
+| **DeskTime** | Remote Attendance | Remote work clock-in/out, productivity tracking |
+| **SystemPin** | Office Attendance | Physical clocking machine data for on-site presence |
+
+## Project Structure
+
+```
+app/
+  Actions/         # 24 business logic action classes
+  ApiClients/      # 4 external API client implementations
+  DTOs/            # Data Transfer Objects
+  Enums/           # Application enumerations
+  Jobs/            # 17 sync jobs for background processing
+  Livewire/        # 29 Livewire components
+  Models/          # 22 Eloquent models
+  Notifications/   # 27 notification classes
+  Observers/       # 11 model observers
+  Services/        # Shared services
+```
+
+## Development Setup
 
 ### Code Quality Tools
 
-- **Pint**: PHP code formatting (`composer fix`)
-- **Rector**: Automated refactoring
-- **PHPStan**: Static analysis (`composer analyse`)
-- **Pest**: Testing framework (`composer test`)
+```bash
+# Format code (Laravel Pint)
+composer fix
 
-## 📋 Requirements
+# Static analysis (PHPStan)
+composer analyse
 
-- PHP 8.2+
-- Composer
-- Node.js & npm
-- PostgreSQL (recommended)
-- Queue worker management (see [Local Development Setup](docs/deployment/LOCAL_DEPLOYMENT.md))
+# Run tests (Pest)
+composer test
+```
 
-## 🤝 Contributing
+### Queue Worker
 
-Please read the [Development Guide](docs/development/) for coding standards and contribution guidelines.
+For background job processing (sync operations):
+
+```bash
+php artisan queue:work
+```
+
+## License
+
+This project is licensed under the MIT License -- see the [LICENSE](LICENSE) file for details.

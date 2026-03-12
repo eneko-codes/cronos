@@ -20,9 +20,17 @@
     @resize.window="handleResize"
     class="min-h-screen bg-gray-100 font-sans text-gray-900 antialiased dark:bg-gray-900 dark:text-gray-100"
   >
+    @if (config('app.demo_mode'))
+      <div
+        class="fixed inset-x-0 top-0 z-50 flex items-center justify-center bg-amber-400 px-4 py-1 text-center text-xs font-medium text-amber-900 dark:bg-amber-700 dark:text-amber-100"
+      >
+        Demo Mode &mdash; Sample data. No external APIs connected.
+      </div>
+    @endif
+
     <!-- Navigation Header -->
     <header
-      class="fixed inset-x-0 top-0 z-40 h-14 border-b border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900"
+      class="{{ config('app.demo_mode') ? 'top-6' : 'top-0' }} fixed inset-x-0 z-40 h-14 border-b border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900"
     >
       <div class="mx-auto h-full max-w-screen-2xl px-4">
         <div class="flex h-full items-center justify-between">
@@ -135,7 +143,7 @@
           x-show="navOpen && isMobile"
           x-cloak
           @click.outside="navOpen = false"
-          class="absolute inset-x-0 top-14 bg-white shadow-lg dark:bg-gray-900"
+          class="{{ config('app.demo_mode') ? 'top-20' : 'top-14' }} absolute inset-x-0 bg-white shadow-lg dark:bg-gray-900"
           x-transition:enter="transition duration-200 ease-out"
           x-transition:enter-start="opacity-0"
           x-transition:enter-end="opacity-100"
@@ -206,7 +214,9 @@
     </header>
 
     <!-- Main Content -->
-    <main class="mx-auto w-full max-w-screen-2xl pt-14">
+    <main
+      class="{{ config('app.demo_mode') ? 'pt-20' : 'pt-14' }} mx-auto w-full max-w-screen-2xl"
+    >
       <div class="px-4 py-6">
         {{ $slot }}
       </div>

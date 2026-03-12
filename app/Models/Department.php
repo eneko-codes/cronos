@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\Platform;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -40,6 +41,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Department extends Model
 {
+    use HasFactory;
+
     /**
      * The table associated with the model.
      *

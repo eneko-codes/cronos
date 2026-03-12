@@ -61,14 +61,35 @@ php artisan serve
 
 ## What to Explore
 
-- **Dashboard** -- Today's schedule, attendance status (clocked in), and time entries for the logged-in user
-- **Users** -- 18 employees across 4 departments with different roles, including archived and do-not-track users
-- **Projects** -- 6 projects with ~25 tasks and assigned team members
-- **Timesheet** -- Past 30 days of time entries per user across projects
-- **Schedules** -- 3 schedule types (Standard 40h, Part-Time 20h, Flexible 37.5h) with detailed weekly breakdowns
-- **Leave Types** -- 6 leave types (Annual, Sick, Personal, Unpaid, Parental, Compensatory)
-- **Settings** -- Sync configuration, notification preferences, and data retention policies
-- **Notifications** -- Sample notifications in the sidebar (mix of read and unread)
+### Users
+18 employees across 4 departments with different roles, including archived and do-not-track users.
+
+![Users](docs/screenshots/users.png)
+
+### Projects
+6 projects with ~25 tasks and assigned team members.
+
+![Projects](docs/screenshots/projects.png)
+
+### Schedules
+3 schedule types (Standard 40h, Part-Time 20h, Flexible 37.5h) with detailed weekly breakdowns.
+
+![Schedules](docs/screenshots/schedules.png)
+
+### Leave Types
+6 leave types (Annual, Sick, Personal, Unpaid, Parental, Compensatory).
+
+![Leave Types](docs/screenshots/leave-types.png)
+
+### Settings
+Sync configuration, notification preferences, data retention policies, and API health checks.
+
+![Settings](docs/screenshots/settings.png)
+
+### Notifications
+Sample notifications in the sidebar with different severity levels (mix of read and unread).
+
+![Notifications](docs/screenshots/notifications.png)
 
 ## Features
 

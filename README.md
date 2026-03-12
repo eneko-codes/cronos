@@ -2,6 +2,8 @@
 
 A workforce management application built with Laravel 12 and Livewire 3 that synchronizes data from Odoo, ProofHub, DeskTime, and SystemPin into a unified dashboard for employee time tracking, scheduling, attendance monitoring, and leave management.
 
+![Cronos Dashboard](docs/screenshots/dashboard.png)
+
 ## Demo Quick Start
 
 Get Cronos running locally with realistic sample data in minutes -- no API keys required.

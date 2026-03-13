@@ -14,7 +14,7 @@
     "laravel/pulse": "^1.4",
     "laravel/scout": "^10.23",
     "laravel/slack-notification-channel": "^3.6",
-    "livewire/livewire": "^3.0"
+    "livewire/livewire": "^4.2"
   },
   "require-dev": {
     "barryvdh/laravel-debugbar": "^3.15",

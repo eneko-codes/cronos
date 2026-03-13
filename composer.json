@@ -17,7 +17,7 @@
     "livewire/livewire": "^3.0"
   },
   "require-dev": {
-    "barryvdh/laravel-debugbar": "^3.15",
+    "barryvdh/laravel-debugbar": "^4.1",
     "barryvdh/laravel-ide-helper": "^3.5",
     "calebdw/larastan-livewire": "^2.2",
     "fakerphp/faker": "^1.23",

@@ -1,0 +1,55 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Observers;
+
+use App\Models\LeaveType;
+use Illuminate\Support\Facades\Log;
+
+class LeaveTypeObserver
+{
+    /**
+     * Handle the LeaveType "deleting" event.
+     */
+    public function deleting(LeaveType $leaveType): void
+    {
+        // Delete related UserLeave records
+        $leaveType->leaves()->delete();
+    }
+
+    public function created(LeaveType $leaveType): void
+    {
+        Log::debug('LeaveType created', [
+            'odoo_leave_type_id' => $leaveType->odoo_leave_type_id,
+            'attributes' => $leaveType->getAttributes(),
+        ]);
+    }
+
+    public function updated(LeaveType $leaveType): void
+    {
+        $changes = $leaveType->getChanges();
+        if (! empty($changes)) {
+            $old = [];
+            foreach (array_keys($changes) as $field) {
+                $old[$field] = $leaveType->getOriginal($field);
+            }
+            Log::debug('LeaveType updated', [
+                'odoo_leave_type_id' => $leaveType->odoo_leave_type_id,
+                'changed_fields' => $changes,
+                'old_values' => $old,
+                'new_values' => $changes,
+            ]);
+        }
+    }
+
+    public function deleted(LeaveType $leaveType): void
+    {
+        Log::debug('LeaveType deleted', [
+            'odoo_leave_type_id' => $leaveType->odoo_leave_type_id,
+            'attributes' => $leaveType->getOriginal(),
+        ]);
+    }
+
+    // Add other event methods if needed: created, updated, deleted, restored, forceDeleted
+}

@@ -1,0 +1,85 @@
+# Laravel Core
+/.phpunit.cache
+/vendor
+.env
+.env.backup
+.env.production
+.env.testing
+auth.json
+
+# Dependencies
+/node_modules
+npm-debug.log
+yarn-error.log
+
+# Build and Public Assets
+/public/build
+/public/hot*
+/public/storage
+/public/css
+/public/js
+/public/mix-manifest.json
+
+# Storage and Databases
+/storage/*.key
+/storage/pail
+/storage/telescope
+/storage/pulse
+/storage/logs/*.log
+storage/database.sqlite
+storage/database.sqlite-shm
+storage/database.sqlite-wal
+
+# Testing and Code Quality
+.phpunit.result.cache
+.phpstan.cache
+.phpactor.json
+.php_cs.cache
+.php-cs-fixer.cache
+_ide_helper*.php
+.phpstorm.meta.php
+/coverage
+/phpDocumentor.phar
+
+# IDE and Editor Directories
+/.fleet
+/.idea
+/.vscode
+/.zed
+/.cursor
+.sublime-project
+.sublime-workspace
+*.swp
+*.swo
+*~
+
+# Deployment and Server Config
+Homestead.json
+Homestead.yaml
+
+# System Files
+.DS_Store
+Thumbs.db
+
+# Git Files
+.git/FETCH_HEAD
+
+# Livewire temp files
+/storage/framework/livewire-tmp
+
+# Laravel Horizon
+/public/vendor/horizon
+/storage/framework/horizon
+
+# Laravel Telescope (more comprehensive)
+/public/vendor/telescope
+
+# Laravel Pulse
+/public/vendor/pulse
+
+# Tests coverage
+/tests/coverage
+
+**/caddy
+frankenphp
+frankenphp-worker.php
